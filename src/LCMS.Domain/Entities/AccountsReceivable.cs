@@ -5,7 +5,7 @@ namespace LCMS.Domain.Entities;
 /// <summary>
 /// Table: accounts_receivable (D08) — recognized AR record (separate from receivable_exposures).
 /// Outstanding is derived (C-015): RecognizedAmount + AdjustmentAmount − FinalizedSettledAmount.
-/// Collection allocations land in Sprint 8; FinalizedSettledAmount stays 0 in Pass 1.
+/// FinalizedSettledAmount increases only via finalized collection_allocations (AC-007 / C-008).
 /// </summary>
 public sealed class AccountsReceivable : TenantEntityBase
 {
@@ -19,7 +19,7 @@ public sealed class AccountsReceivable : TenantEntityBase
     /// <summary>Net adjustment after recognition (can be negative).</summary>
     public decimal AdjustmentAmount { get; set; }
 
-    /// <summary>Sum of finalized collection allocations (Sprint 8). Pass 1 always 0.</summary>
+    /// <summary>Sum of finalized (non-reversed) collection allocations — not user-entered.</summary>
     public decimal FinalizedSettledAmount { get; set; }
 
     public string CurrencyCode { get; set; } = "VND";

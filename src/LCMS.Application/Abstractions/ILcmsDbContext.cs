@@ -39,6 +39,10 @@ public interface ILcmsDbContext
     DbSet<ReceivableExposure> ReceivableExposures { get; }
     DbSet<AccountsPayable> AccountsPayable { get; }
     DbSet<AccountsReceivable> AccountsReceivable { get; }
+    DbSet<Payment> Payments { get; }
+    DbSet<Collection> Collections { get; }
+    DbSet<PaymentAllocation> PaymentAllocations { get; }
+    DbSet<CollectionAllocation> CollectionAllocations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

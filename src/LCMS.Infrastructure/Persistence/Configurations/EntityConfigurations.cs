@@ -867,3 +867,111 @@ internal sealed class AccountsReceivableConfiguration : IEntityTypeConfiguration
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
+{
+    public void Configure(EntityTypeBuilder<Payment> builder)
+    {
+        builder.ToTable("payments");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.ReferenceNo).HasMaxLength(128);
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+
+        // IDX-009
+        builder.HasIndex(e => new { e.TenantId, e.ValueDate, e.CounterpartyId });
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class CollectionConfiguration : IEntityTypeConfiguration<Collection>
+{
+    public void Configure(EntityTypeBuilder<Collection> builder)
+    {
+        builder.ToTable("collections");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.ReferenceNo).HasMaxLength(128);
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+
+        // IDX-010
+        builder.HasIndex(e => new { e.TenantId, e.ValueDate, e.CounterpartyId });
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class PaymentAllocationConfiguration : IEntityTypeConfiguration<PaymentAllocation>
+{
+    public void Configure(EntityTypeBuilder<PaymentAllocation> builder)
+    {
+        builder.ToTable("payment_allocations");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PaymentId).IsRequired();
+        builder.Property(e => e.AccountsPayableId).IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ReverseReason).HasMaxLength(1024);
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.PaymentId, e.AllocationStatus });
+        builder.HasIndex(e => new { e.TenantId, e.AccountsPayableId, e.AllocationStatus });
+
+        builder.HasOne(e => e.Payment)
+            .WithMany()
+            .HasForeignKey(e => e.PaymentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.AccountsPayable)
+            .WithMany()
+            .HasForeignKey(e => e.AccountsPayableId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class CollectionAllocationConfiguration : IEntityTypeConfiguration<CollectionAllocation>
+{
+    public void Configure(EntityTypeBuilder<CollectionAllocation> builder)
+    {
+        builder.ToTable("collection_allocations");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.CollectionId).IsRequired();
+        builder.Property(e => e.AccountsReceivableId).IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ReverseReason).HasMaxLength(1024);
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.CollectionId, e.AllocationStatus });
+        builder.HasIndex(e => new { e.TenantId, e.AccountsReceivableId, e.AllocationStatus });
+
+        builder.HasOne(e => e.Collection)
+            .WithMany()
+            .HasForeignKey(e => e.CollectionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.AccountsReceivable)
+            .WithMany()
+            .HasForeignKey(e => e.AccountsReceivableId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

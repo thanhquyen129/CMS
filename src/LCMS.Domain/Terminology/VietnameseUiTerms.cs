@@ -88,7 +88,19 @@ public static class VietnameseUiTerms
         ["PARTIAL_RECOGNITION"] = "Ghi nhận một phần",
         ["SETTLEMENT_OPEN"] = "Chưa tất toán",
         ["SETTLEMENT_PARTIAL"] = "Tất toán một phần",
-        ["SETTLEMENT_SETTLED"] = "Đã tất toán"
+        ["SETTLEMENT_SETTLED"] = "Đã tất toán",
+
+        // Settlement (D09 / E10) — Payment/Collection; allocation finalizes outstanding
+        ["PAYMENT"] = "Thanh toán",
+        ["COLLECTION"] = "Thu tiền",
+        ["PAYMENT_ALLOCATION"] = "Phân bổ thanh toán",
+        ["COLLECTION_ALLOCATION"] = "Phân bổ thu tiền",
+        ["UNAPPLIED_AMOUNT"] = "Số tiền chưa phân bổ",
+        ["PARTIAL_SETTLEMENT"] = "Tất toán một phần",
+        ["SETTLEMENT_REVERSAL"] = "Đảo tất toán",
+        ["ALLOCATION_DRAFT"] = "Nháp phân bổ",
+        ["ALLOCATION_FINALIZED"] = "Đã chốt phân bổ",
+        ["ALLOCATION_REVERSED"] = "Đã đảo phân bổ"
     };
 
     public static string Get(string codeKey)

@@ -1,0 +1,120 @@
+using FluentValidation;
+using LCMS.Application.Abstractions;
+using LCMS.Application.Common.Exceptions;
+using LCMS.Domain.Entities;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace LCMS.Application.Settlements.Commands;
+
+public sealed record AllocatePaymentCommand(
+    Guid PaymentId,
+    Guid AccountsPayableId,
+    decimal Amount,
+    string? Notes) : IRequest<Guid>;
+
+public sealed class AllocatePaymentCommandValidator : AbstractValidator<AllocatePaymentCommand>
+{
+    public AllocatePaymentCommandValidator()
+    {
+        RuleFor(x => x.PaymentId).NotEmpty().WithMessage("Thanh toán không hợp lệ.");
+        RuleFor(x => x.AccountsPayableId).NotEmpty().WithMessage("Khoản phải trả không hợp lệ.");
+        RuleFor(x => x.Amount)
+            .GreaterThan(0).WithMessage("Số tiền phân bổ thanh toán phải lớn hơn 0.");
+        RuleFor(x => x.Notes).MaximumLength(2048).When(x => x.Notes is not null);
+    }
+}
+
+/// <summary>
+/// Draft allocation Payment → AP. Does NOT change outstanding (AC-007).
+/// Enforces C-008 ceilings against payment amount and AP open obligation (over policy stub = 0).
+/// </summary>
+public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaymentCommand, Guid>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public AllocatePaymentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<Guid> Handle(AllocatePaymentCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var tenantId = _tenantContext.TenantId!.Value;
+        var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
+
+        var payment = await _db.Payments
+            .FirstOrDefaultAsync(p => p.Id == request.PaymentId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy thanh toán.");
+
+        if (payment.Status == PaymentStatuses.Cancelled)
+        {
+            throw new ConflictAppException("Không thể phân bổ thanh toán đã hủy.");
+        }
+
+        var ap = await _db.AccountsPayable
+            .FirstOrDefaultAsync(a => a.Id == request.AccountsPayableId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+
+        if (!string.Equals(payment.CurrencyCode, ap.CurrencyCode, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Không phân bổ khác tiền tệ (C-014).");
+        }
+
+        var paymentActive = await _db.PaymentAllocations.AsNoTracking()
+            .Where(a => a.PaymentId == payment.Id
+                && (a.AllocationStatus == SettlementAllocationStatuses.Draft
+                    || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
+            .SumAsync(a => a.Amount, cancellationToken);
+
+        var paymentRemaining = payment.Amount - paymentActive + SettlementHelpers.OverSettlementTolerance;
+        if (amount > paymentRemaining)
+        {
+            throw new ConflictAppException(
+                $"Tổng phân bổ vượt số tiền thanh toán (còn lại {paymentRemaining}) (C-008).");
+        }
+
+        var apActive = await _db.PaymentAllocations.AsNoTracking()
+            .Where(a => a.AccountsPayableId == ap.Id
+                && (a.AllocationStatus == SettlementAllocationStatuses.Draft
+                    || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
+            .SumAsync(a => a.Amount, cancellationToken);
+
+        var apCeiling = ap.RecognizedAmount + ap.AdjustmentAmount + SettlementHelpers.OverSettlementTolerance;
+        if (apActive + amount > apCeiling)
+        {
+            throw new ConflictAppException(
+                $"Tổng phân bổ vượt số dư còn lại của khoản phải trả (C-008).");
+        }
+
+        var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
+
+        var allocation = new PaymentAllocation
+        {
+            TenantId = tenantId,
+            PaymentId = payment.Id,
+            AccountsPayableId = ap.Id,
+            Amount = amount,
+            AllocationStatus = SettlementAllocationStatuses.Draft,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
+        };
+
+        _db.PaymentAllocations.Add(allocation);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var costCountAfter = await _db.Costs.CountAsync(cancellationToken);
+        if (costCountAfter != costCountBefore)
+        {
+            throw new ConflictAppException("Phân bổ thanh toán không được tạo Chi phí mới (C-003).");
+        }
+
+        return allocation.Id;
+    }
+}

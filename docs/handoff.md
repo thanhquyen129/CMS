@@ -1,5 +1,38 @@
 # Handoff
 
+## 2026-09-11 — Sprint 8 Settlement (E10)
+
+### User
+Implement Sprint 8 Pass 1 only: D09 payments/collections/payment_allocations/collection_allocations; outstanding changes only via finalized allocation (AC-007/C-008); partial settle; reject over-allocation; reversal without hard delete; tenant APIs + VI; no Cost/Revenue from settlement (C-003/C-004); tests; DoD + PR to main. Non-goals: reconciliation (Sprint 9), close (Sprint 10), JWT, Next.js.
+
+### Done
+- Domain: `Payment`, `Collection`, `PaymentAllocation`, `CollectionAllocation`.
+- Migration `Sprint8_Settlement` (four tables; IDX-009/010).
+- CQRS + API: create/list/get payment & collection; draft allocate; finalize; reverse.
+- AC-007: draft allocation does not change AP/AR outstanding; finalize updates `FinalizedSettledAmount` and derived Outstanding/SettlementStatus.
+- C-008: over-allocation rejected (policy stub = 0) vs transaction amount and AP/AR ceiling.
+- Partial settlement + unapplied/available-to-allocate on GET.
+- Reversal: status → `reversed`; restores outstanding; no hard delete / silent overwrite (C-013).
+- C-003/C-004: settlement never invents Cost/Revenue.
+- VI validation/errors; tenant filter + `X-Tenant-Id`.
+- Tests: suite green (3 new Sprint 8 — partial+finalize AC-007; over-allocate+reversal; collection+cross-tenant).
+- DoD: `docs/sprint/SPRINT-8-DOD.md`.
+
+### Files / API
+- APIs: `/api/payments`, `/api/payment-allocations`, `/api/collections`, `/api/collection-allocations`
+- Endpoints: `SettlementEndpoints`
+- Migration: `20260911191645_Sprint8_Settlement`
+
+### Verify
+- `dotnet test Cms.sln -c Release`
+
+### Deferred / Next
+- Reconciliation / exceptions (Sprint 9)
+- Financial close (Sprint 10)
+- Bank feed; over-settlement policy; JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-11 — Sprint 7 Exposure + AP/AR (E09)
 
 ### User

@@ -122,6 +122,7 @@ try
     app.MapRevenueEndpoints();
     app.MapFinancialDocumentEndpoints();
     app.MapExposureApArEndpoints();
+    app.MapSettlementEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

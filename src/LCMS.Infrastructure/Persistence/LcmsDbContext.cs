@@ -49,6 +49,10 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<ReceivableExposure> ReceivableExposures => Set<ReceivableExposure>();
     public DbSet<AccountsPayable> AccountsPayable => Set<AccountsPayable>();
     public DbSet<AccountsReceivable> AccountsReceivable => Set<AccountsReceivable>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Collection> Collections => Set<Collection>();
+    public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
+    public DbSet<CollectionAllocation> CollectionAllocations => Set<CollectionAllocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -731,3 +731,139 @@ internal sealed class DocumentMatchDetailConfiguration : IEntityTypeConfiguratio
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class PayableExposureConfiguration : IEntityTypeConfiguration<PayableExposure>
+{
+    public void Configure(EntityTypeBuilder<PayableExposure> builder)
+    {
+        builder.ToTable("payable_exposures");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.RecognizedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.SourceType).HasMaxLength(64);
+        builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.EffectiveDate });
+        builder.HasIndex(e => new { e.TenantId, e.CounterpartyId, e.DueDate });
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Cost)
+            .WithMany()
+            .HasForeignKey(e => e.CostId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.FinancialDocument)
+            .WithMany()
+            .HasForeignKey(e => e.FinancialDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class ReceivableExposureConfiguration : IEntityTypeConfiguration<ReceivableExposure>
+{
+    public void Configure(EntityTypeBuilder<ReceivableExposure> builder)
+    {
+        builder.ToTable("receivable_exposures");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.RecognizedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.SourceType).HasMaxLength(64);
+        builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.EffectiveDate });
+        builder.HasIndex(e => new { e.TenantId, e.CounterpartyId, e.DueDate });
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Revenue)
+            .WithMany()
+            .HasForeignKey(e => e.RevenueId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.FinancialDocument)
+            .WithMany()
+            .HasForeignKey(e => e.FinancialDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class AccountsPayableConfiguration : IEntityTypeConfiguration<AccountsPayable>
+{
+    public void Configure(EntityTypeBuilder<AccountsPayable> builder)
+    {
+        builder.ToTable("accounts_payable");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PayableExposureId).IsRequired();
+        builder.Property(e => e.RecognizedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.AdjustmentAmount).HasPrecision(18, 4);
+        builder.Property(e => e.FinalizedSettledAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.SettlementStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+
+        // IDX-007
+        builder.HasIndex(e => new { e.TenantId, e.CounterpartyId, e.DueDate, e.SettlementStatus });
+        builder.HasIndex(e => new { e.TenantId, e.PayableExposureId });
+
+        builder.HasOne(e => e.PayableExposure)
+            .WithMany()
+            .HasForeignKey(e => e.PayableExposureId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class AccountsReceivableConfiguration : IEntityTypeConfiguration<AccountsReceivable>
+{
+    public void Configure(EntityTypeBuilder<AccountsReceivable> builder)
+    {
+        builder.ToTable("accounts_receivable");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ReceivableExposureId).IsRequired();
+        builder.Property(e => e.RecognizedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.AdjustmentAmount).HasPrecision(18, 4);
+        builder.Property(e => e.FinalizedSettledAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.SettlementStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+
+        // IDX-008
+        builder.HasIndex(e => new { e.TenantId, e.CounterpartyId, e.DueDate, e.SettlementStatus });
+        builder.HasIndex(e => new { e.TenantId, e.ReceivableExposureId });
+
+        builder.HasOne(e => e.ReceivableExposure)
+            .WithMany()
+            .HasForeignKey(e => e.ReceivableExposureId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

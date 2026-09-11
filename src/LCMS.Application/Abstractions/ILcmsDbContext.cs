@@ -35,6 +35,10 @@ public interface ILcmsDbContext
     DbSet<FinancialDocumentLine> FinancialDocumentLines { get; }
     DbSet<DocumentMatch> DocumentMatches { get; }
     DbSet<DocumentMatchDetail> DocumentMatchDetails { get; }
+    DbSet<PayableExposure> PayableExposures { get; }
+    DbSet<ReceivableExposure> ReceivableExposures { get; }
+    DbSet<AccountsPayable> AccountsPayable { get; }
+    DbSet<AccountsReceivable> AccountsReceivable { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

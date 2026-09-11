@@ -20,7 +20,7 @@ Pass 1 đang chạy. Pass 2 bắt đầu khi Pass 1 hoàn tất Sprint 12.
 | 4 Cost | Done (see `SPRINT-4-DOD.md`) |
 | 5 Revenue & Profitability | Done (see `SPRINT-5-DOD.md`) |
 | 6 Financial Documents | Done (see `SPRINT-6-DOD.md`) |
-| 7 Exposure + AP/AR | In progress (cloud) |
+| 7 Exposure + AP/AR | Done (see `SPRINT-7-DOD.md`) |
 | 8–12 | Queued |
 
 ## How to run

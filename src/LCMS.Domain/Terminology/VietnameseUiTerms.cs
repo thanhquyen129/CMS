@@ -75,7 +75,20 @@ public static class VietnameseUiTerms
         ["REJECTED"] = "Từ chối",
         ["MATCHED"] = "Đã khớp",
         ["PARTIALLY_MATCHED"] = "Khớp một phần",
-        ["UNMATCHED"] = "Chưa khớp"
+        ["UNMATCHED"] = "Chưa khớp",
+
+        // Exposure & AP/AR (D08 / E09) — Exposure ≠ Recognized ≠ Settled
+        ["PAYABLE_EXPOSURE"] = "Nghĩa vụ phải trả (exposure)",
+        ["RECEIVABLE_EXPOSURE"] = "Quyền thu dự kiến (exposure)",
+        ["ACCOUNTS_PAYABLE"] = "Khoản phải trả",
+        ["ACCOUNTS_RECEIVABLE"] = "Khoản phải thu",
+        ["EXPOSURE"] = "Exposure",
+        ["RECOGNITION"] = "Ghi nhận",
+        ["OUTSTANDING"] = "Số dư còn lại",
+        ["PARTIAL_RECOGNITION"] = "Ghi nhận một phần",
+        ["SETTLEMENT_OPEN"] = "Chưa tất toán",
+        ["SETTLEMENT_PARTIAL"] = "Tất toán một phần",
+        ["SETTLEMENT_SETTLED"] = "Đã tất toán"
     };
 
     public static string Get(string codeKey)

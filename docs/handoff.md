@@ -1,5 +1,35 @@
 # Handoff
 
+## 2026-09-11 — Sprint 7 Exposure + AP/AR (E09)
+
+### User
+Implement Sprint 7 Pass 1 only: D08 payable/receivable exposures + accounts_payable/receivable; Exposure ≠ Recognized AP/AR; outstanding derived (C-015); partial recognition; tenant APIs + VI; no Cost/Revenue on recognize (C-003/C-004); tests; DoD + PR to main. Non-goals: settlement (Sprint 8), JWT, Next.js.
+
+### Done
+- Domain: `PayableExposure`, `ReceivableExposure`, `AccountsPayable`, `AccountsReceivable`.
+- Migration `Sprint7_ExposureApAr` (four tables; IDX-007/008).
+- CQRS + API: create/list/get exposures; recognize → AP/AR; list/get AP/AR with derived Outstanding; adjust AP/AR.
+- CP3/TD4: recognition creates separate AP/AR row — never merges into exposure status.
+- C-015: Outstanding = recognized + adjustment − finalized_settled (settled=0 Pass 1); no user-entered SoT.
+- C-003/C-004: recognize does not invent Cost/Revenue.
+- VI validation/errors; tenant filter + `X-Tenant-Id`.
+- Tests: 31 passed (3 new Sprint 7 — exposure≠AP + no invent; outstanding derived + partial; AR + cross-tenant).
+- DoD: `docs/sprint/SPRINT-7-DOD.md`.
+
+### Files / API
+- APIs: `/api/payable-exposures`, `/api/receivable-exposures`, `/api/accounts-payable`, `/api/accounts-receivable`
+- Endpoints: `ExposureApArEndpoints`
+- Migration: `20260911190832_Sprint7_ExposureApAr`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 31 passed
+
+### Deferred / Next
+- Settlement payments/collections (Sprint 8)
+- Dedicated AP/AR adjustment ledger; aging UI; JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-11 — Sprint 6 Financial Documents (E08)
 
 ### User

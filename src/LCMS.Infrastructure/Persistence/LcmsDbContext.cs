@@ -45,6 +45,10 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<FinancialDocumentLine> FinancialDocumentLines => Set<FinancialDocumentLine>();
     public DbSet<DocumentMatch> DocumentMatches => Set<DocumentMatch>();
     public DbSet<DocumentMatchDetail> DocumentMatchDetails => Set<DocumentMatchDetail>();
+    public DbSet<PayableExposure> PayableExposures => Set<PayableExposure>();
+    public DbSet<ReceivableExposure> ReceivableExposures => Set<ReceivableExposure>();
+    public DbSet<AccountsPayable> AccountsPayable => Set<AccountsPayable>();
+    public DbSet<AccountsReceivable> AccountsReceivable => Set<AccountsReceivable>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

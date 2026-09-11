@@ -1,6 +1,9 @@
+using LCMS.Api.Endpoints;
 using LCMS.Api.Middleware;
 using LCMS.Application;
 using LCMS.Infrastructure;
+using LCMS.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +23,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+await MigrateDatabaseAsync(app);
+
 app.MapGet("/health", () => Results.Ok(new
 {
     status = "ok",
@@ -27,12 +32,41 @@ app.MapGet("/health", () => Results.Ok(new
     utc = DateTime.UtcNow
 }));
 
-app.MapGet("/ready", () => Results.Ok(new
+app.MapGet("/ready", async (LcmsDbContext db, CancellationToken ct) =>
 {
-    status = "ready",
-    service = "cms-api",
-    utc = DateTime.UtcNow
-}));
+    try
+    {
+        var canConnect = await db.Database.CanConnectAsync(ct);
+        if (!canConnect)
+        {
+            return Results.Json(new
+            {
+                status = "not_ready",
+                service = "cms-api",
+                database = "unreachable",
+                utc = DateTime.UtcNow
+            }, statusCode: StatusCodes.Status503ServiceUnavailable);
+        }
+
+        return Results.Ok(new
+        {
+            status = "ready",
+            service = "cms-api",
+            database = "ok",
+            utc = DateTime.UtcNow
+        });
+    }
+    catch (Exception)
+    {
+        return Results.Json(new
+        {
+            status = "not_ready",
+            service = "cms-api",
+            database = "error",
+            utc = DateTime.UtcNow
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
 
 app.MapGet("/", () => Results.Ok(new
 {
@@ -41,6 +75,21 @@ app.MapGet("/", () => Results.Ok(new
     message = "LCMS API — Clean Architecture (TD1)"
 }));
 
+app.MapTenantBillEndpoints();
+
 app.Run();
+
+static async Task MigrateDatabaseAsync(WebApplication app)
+{
+    var migrate = app.Configuration.GetValue("Database:MigrateOnStartup", app.Environment.IsDevelopment());
+    if (!migrate)
+    {
+        return;
+    }
+
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
+    await db.Database.MigrateAsync();
+}
 
 public partial class Program;

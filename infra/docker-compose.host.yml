@@ -1,4 +1,22 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: cms-db
+    environment:
+      POSTGRES_DB: lcms
+      POSTGRES_USER: lcms
+      POSTGRES_PASSWORD: ${LCMS_DB_PASSWORD:-lcms}
+    ports:
+      - "5432:5432"
+    volumes:
+      - cms_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lcms -d lcms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   api:
     build:
       context: ..
@@ -6,6 +24,14 @@ services:
     container_name: cms-api
     ports:
       - "80:8080"
-    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      Database__MigrateOnStartup: "true"
+      ConnectionStrings__LcmsDb: "Host=db;Port=5432;Database=lcms;Username=lcms;Password=${LCMS_DB_PASSWORD:-lcms}"
+    restart: unless-stopped
+
+volumes:
+  cms_pgdata:

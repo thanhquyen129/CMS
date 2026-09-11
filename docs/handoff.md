@@ -1,5 +1,31 @@
 # Handoff
 
+## 2026-09-12 — Bill sống trên DB (migration + API Tenant/Bill)
+
+### User
+Làm bước 1–2: EF migration InitialTd1 + API Tenant/Bill thật + test cô lập tenant.
+
+### Done
+- Migration `InitialTd1` (`src/LCMS.Infrastructure/Persistence/Migrations/`).
+- Compose: `infra/docker-compose.dev.yml` (Postgres local), host compose thêm `db` + migrate on startup.
+- CQRS: `CreateTenant` / `GetTenantById` / `CreateBill` / `GetBillById` → `ILcmsDbContext`.
+- API: `POST/GET /api/tenants`, `POST/GET /api/bills` (Bill cần `X-Tenant-Id`).
+- `/ready` kiểm tra kết nối DB; `Database:MigrateOnStartup`.
+- Tests: `tests/LCMS.Api.Tests` — 4 passed (cross-tenant 404, thiếu tenant 401, duplicate 409).
+- CI: Postgres service + `dotnet test` + health smoke với migrate.
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 4 passed
+- Local DB: `docker compose -f infra/docker-compose.dev.yml up -d` rồi chạy API
+- Actions: https://github.com/thanhquyen129/CMS/actions
+
+### Next
+- Wire deploy job → `/opt/cms` (compose có Postgres)
+- JWT claims thay `X-Tenant-Id`
+- Cost Expected trên Bill (Phase 2)
+
+---
+
 ## 2026-09-12 — TD1 Clean Architecture scaffold (Tenant + Bill)
 
 ### User

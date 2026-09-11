@@ -1,6 +1,35 @@
-@LCMS.Api_HostAddress = http://localhost:5158
+@LCMS.Api_HostAddress = http://localhost:5088
 
-GET {{LCMS.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### Health
+GET {{LCMS.Api_HostAddress}}/health
 
-###
+### Ready
+GET {{LCMS.Api_HostAddress}}/ready
+
+### Create tenant
+POST {{LCMS.Api_HostAddress}}/api/tenants
+Content-Type: application/json
+
+{
+  "code": "DEMO",
+  "name": "Thuê bao demo"
+}
+
+### Get tenant (replace id)
+GET {{LCMS.Api_HostAddress}}/api/tenants/00000000-0000-0000-0000-000000000000
+
+### Create bill (requires X-Tenant-Id)
+POST {{LCMS.Api_HostAddress}}/api/bills
+Content-Type: application/json
+X-Tenant-Id: 00000000-0000-0000-0000-000000000000
+
+{
+  "billNo": "BL-2026-0001",
+  "billType": "freight",
+  "sourceSystem": "ops",
+  "externalId": "OPS-1001"
+}
+
+### Get bill
+GET {{LCMS.Api_HostAddress}}/api/bills/00000000-0000-0000-0000-000000000000
+X-Tenant-Id: 00000000-0000-0000-0000-000000000000

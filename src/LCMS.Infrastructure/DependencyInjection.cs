@@ -26,6 +26,8 @@ public static class DependencyInjection
             options.UseSnakeCaseNamingConvention();
         });
 
+        services.AddScoped<ILcmsDbContext>(sp => sp.GetRequiredService<LcmsDbContext>());
+
         return services;
     }
 }

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Infrastructure.Persistence;
 
-public sealed class LcmsDbContext : DbContext
+public sealed class LcmsDbContext : DbContext, ILcmsDbContext
 {
     private readonly ITenantContext _tenantContext;
 

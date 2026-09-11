@@ -9,6 +9,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: lcms
+          POSTGRES_USER: lcms
+          POSTGRES_PASSWORD: lcms
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lcms -d lcms"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -18,10 +32,15 @@ jobs:
         run: dotnet restore Cms.sln
       - name: Build
         run: dotnet build Cms.sln -c Release --no-restore
-      - name: Health smoke (local)
+      - name: Test
+        run: dotnet test Cms.sln -c Release --no-build --verbosity normal
+      - name: Health smoke (local + Postgres)
+        env:
+          ConnectionStrings__LcmsDb: "Host=localhost;Port=5432;Database=lcms;Username=lcms;Password=lcms"
+          Database__MigrateOnStartup: "true"
         run: |
           dotnet run --project src/LCMS.Api/LCMS.Api.csproj -c Release --urls http://127.0.0.1:5088 &
-          sleep 5
+          sleep 8
           curl -fsS http://127.0.0.1:5088/health
           curl -fsS http://127.0.0.1:5088/ready
 

@@ -1,5 +1,38 @@
 # Handoff
 
+## 2026-09-11 — Sprint 0 FULL Foundation (Pass 2)
+
+### User
+Pass 2 Sprint 0 FULL: JWT Bearer (`tenant_id` + `sub`); Production disables header bootstrap; Dev `POST /api/dev/token` + optional `X-Tenant-Id`; observability enrichment + Prometheus `/metrics`; tests JWT + Production 401; SPRINT-0-FULL-DOD + handoff + PR. Never secrets/alogex. Vietnamese errors remain.
+
+### Done
+- JWT Bearer auth (`Auth` options + ADR-0002). Claims `tenant_id` + `sub` drive `ITenantContext` / `ICurrentUserContext`.
+- Production defaults: `RequireJwt=true`, `AllowHeaderBootstrap=false`. Dev: headers allowed; `POST /api/dev/token`.
+- Serilog LogContext + request log enrich TenantId/UserId/CorrelationId.
+- `/metrics` = Prometheus text (`prometheus-net` HTTP metrics); anonymous.
+- Vietnamese JWT 401 challenge JSON (`unauthorized`).
+- Rate-limit remains in-process fixed window (Sprint 12) — single-node only; Redis deferred (documented).
+- Tests: `Sprint0FullJwtAuthTests` (Dev JWT path, Production 401, Production JWT + header ignored).
+- DoD: `docs/sprint/SPRINT-0-FULL-DOD.md`.
+
+### Ops before Production deploy
+- Set `Auth__Jwt__SigningKey` (≥32 chars) in host `infra/.env` (compose requires it). Never commit the real value.
+- Dev token helper: `docs/ops/dev-jwt-token.md`.
+
+### Files / API
+- Auth: `src/LCMS.Api/Auth/*`, `TenantResolutionMiddleware`, `Program.cs`
+- Dev: `POST /api/dev/token`
+- Config: `appsettings*.json`, `infra/.env.example`, `infra/docker-compose.host.yml`
+- ADR: `docs/adr/ADR-0002-jwt-bearer-tenant-claims.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → **50 passed** (4 new Sprint 0 FULL; Sprint 12 was 46)
+
+### Deferred / Next
+- OIDC IdP; refresh/revocation; OTel exporter; Redis rate-limit; Pass 2 Sprint 1+ domain depth
+
+---
+
 ## 2026-09-11 — Sprint 12 Hardening & UAT (E14/E15/E16) — **Pass 1 COMPLETE**
 
 ### User
@@ -29,6 +62,7 @@ Implement Sprint 12 Pass 1 final slice only: audit_events + writes on key money 
 ### Deferred / Next (Pass 2)
 - Full outbox/retry; load/soak; JWT/OIDC; Next.js UAT; AC-001… matrix hardening
 - See Pass 2 pointers in `SPRINT-12-DOD.md`
+
 
 ---
 

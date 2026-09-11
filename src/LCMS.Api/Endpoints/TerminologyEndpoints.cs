@@ -9,7 +9,8 @@ public static class TerminologyEndpoints
         // UI must consume Vietnamese terms from this contract — never show raw English enums.
         app.MapGet("/api/terminology", () => Results.Ok(VietnameseUiTerms.All))
             .WithTags("Terminology")
-            .WithSummary("CP6.5 Vietnamese UI terminology dictionary (CodeKey → Vietnamese term)");
+            .WithSummary("CP6.5 Vietnamese UI terminology dictionary (CodeKey → Vietnamese term)")
+            .AllowAnonymous();
 
         return app;
     }

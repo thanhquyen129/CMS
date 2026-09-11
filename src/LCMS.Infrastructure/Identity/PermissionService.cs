@@ -30,7 +30,7 @@ public sealed class PermissionService : IPermissionService
             throw new TenantRequiredAppException();
         }
 
-        // Soft bootstrap: no actor identity yet (JWT deferred) ⇒ allow.
+        // Soft bootstrap: no actor identity (Dev header omitted / claim absent) ⇒ allow.
         if (!_userContext.HasUser)
         {
             return;

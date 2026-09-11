@@ -16,7 +16,7 @@ All Done — see prior `SPRINT-N-DOD.md`.
 ## Status Pass 2
 | Sprint | Status |
 |--------|--------|
-| 0 Foundation FULL | In progress (cloud) |
+| 0 Foundation FULL | In progress (this PR) — see `SPRINT-0-FULL-DOD.md` |
 | 1–12 FULL | Queued |
 
 ## How to run Pass 2

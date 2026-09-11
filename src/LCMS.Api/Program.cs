@@ -1,10 +1,11 @@
-using System.Diagnostics;
+using LCMS.Api.Auth;
 using LCMS.Api.Endpoints;
 using LCMS.Api.Middleware;
 using LCMS.Application;
 using LCMS.Infrastructure;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Prometheus;
 using Serilog;
 using Serilog.Formatting.Compact;
 
@@ -31,6 +32,7 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.Configure<RateLimitingOptions>(
         builder.Configuration.GetSection(RateLimitingOptions.SectionName));
+    builder.Services.AddLcmsAuth(builder.Configuration, builder.Environment);
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
@@ -41,6 +43,9 @@ try
     app.UseMiddleware<RateLimitingMiddleware>();
     app.UseMiddleware<RequestLoggingMiddleware>();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
+    app.UseHttpMetrics();
+    app.UseAuthentication();
+    app.UseAuthorization();
     app.UseMiddleware<TenantResolutionMiddleware>();
 
     if (app.Environment.IsDevelopment())
@@ -56,7 +61,7 @@ try
         status = "ok",
         service = "cms-api",
         utc = DateTime.UtcNow
-    }));
+    })).AllowAnonymous();
 
     app.MapGet("/ready", async (LcmsDbContext db, CancellationToken ct) =>
     {
@@ -92,30 +97,22 @@ try
                 utc = DateTime.UtcNow
             }, statusCode: StatusCodes.Status503ServiceUnavailable);
         }
-    });
+    }).AllowAnonymous();
 
-    // Sprint 0 placeholder — process basics only (not full Prometheus).
-    app.MapGet("/metrics", () =>
-    {
-        using var proc = Process.GetCurrentProcess();
-        return Results.Ok(new
-        {
-            service = "cms-api",
-            utc = DateTime.UtcNow,
-            processId = proc.Id,
-            workingSetBytes = proc.WorkingSet64,
-            privateMemoryBytes = proc.PrivateMemorySize64,
-            threadCount = proc.Threads.Count,
-            gcHeapBytes = GC.GetTotalMemory(forceFullCollection: false)
-        });
-    });
+    // Prometheus text exposition + HTTP request metrics (UseHttpMetrics).
+    app.MapMetrics().AllowAnonymous();
 
     app.MapGet("/", () => Results.Ok(new
     {
         product = "Cost Management System",
         shortName = "CMS",
         message = "LCMS API — Clean Architecture (TD1)"
-    }));
+    })).AllowAnonymous();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapDevAuthEndpoints();
+    }
 
     app.MapTenantBillEndpoints();
     app.MapIdentityEndpoints();

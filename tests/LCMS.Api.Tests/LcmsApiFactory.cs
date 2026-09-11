@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LCMS.Api.Tests;
 
-public sealed class LcmsApiFactory : WebApplicationFactory<Program>
+public class LcmsApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"lcms-tests-{Guid.NewGuid():N}.db");
 
@@ -16,6 +16,9 @@ public sealed class LcmsApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("Database:MigrateOnStartup", "false");
+        builder.UseSetting("Auth:RequireJwt", "false");
+        builder.UseSetting("Auth:AllowHeaderBootstrap", "true");
+        builder.UseSetting("Auth:Jwt:SigningKey", LCMS.Api.Auth.AuthServiceCollectionExtensions.DevFallbackSigningKey);
 
         builder.ConfigureServices(services =>
         {

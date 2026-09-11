@@ -3,11 +3,12 @@ using LCMS.Infrastructure.Tenancy;
 namespace LCMS.Api.Middleware;
 
 /// <summary>
-/// Temporary tenant resolution via X-Tenant-Id until JWT claims (Phase 1 identity).
+/// Temporary tenant + actor resolution via headers until JWT claims.
 /// </summary>
 public sealed class TenantResolutionMiddleware
 {
     public const string TenantHeaderName = "X-Tenant-Id";
+    public const string UserHeaderName = "X-User-Id";
 
     private readonly RequestDelegate _next;
 
@@ -16,13 +17,23 @@ public sealed class TenantResolutionMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context, HttpTenantContext tenantContext)
+    public async Task InvokeAsync(
+        HttpContext context,
+        HttpTenantContext tenantContext,
+        HttpCurrentUserContext userContext)
     {
-        if (context.Request.Headers.TryGetValue(TenantHeaderName, out var raw)
-            && Guid.TryParse(raw.ToString(), out var tenantId)
+        if (context.Request.Headers.TryGetValue(TenantHeaderName, out var rawTenant)
+            && Guid.TryParse(rawTenant.ToString(), out var tenantId)
             && tenantId != Guid.Empty)
         {
             tenantContext.TenantId = tenantId;
+        }
+
+        if (context.Request.Headers.TryGetValue(UserHeaderName, out var rawUser)
+            && Guid.TryParse(rawUser.ToString(), out var userId)
+            && userId != Guid.Empty)
+        {
+            userContext.UserId = userId;
         }
 
         await _next(context);

@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,11 +45,16 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public CreateBillCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreateBillCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(CreateBillCommand request, CancellationToken cancellationToken)
@@ -57,6 +63,11 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.BillCreate,
+            "Bạn không có quyền tạo Bill.",
+            cancellationToken);
 
         var tenantId = _tenantContext.TenantId!.Value;
 

@@ -4,7 +4,8 @@ using System.Text.Json;
 
 namespace LCMS.Api.Tests;
 
-public sealed class TenantBillApiTests : IClassFixture<LcmsApiFactory>, IAsyncLifetime
+[Collection("Api")]
+public sealed class TenantBillApiTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

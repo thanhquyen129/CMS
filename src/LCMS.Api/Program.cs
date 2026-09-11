@@ -12,7 +12,7 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Service", "cms-api")
     .WriteTo.Console(new RenderedCompactJsonFormatter())
-    .CreateBootstrapLogger();
+    .CreateLogger();
 
 try
 {
@@ -24,7 +24,8 @@ try
         .Enrich.FromLogContext()
         .Enrich.WithProperty("Service", "cms-api")
         .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
-        .WriteTo.Console(new RenderedCompactJsonFormatter()));
+        .WriteTo.Console(new RenderedCompactJsonFormatter()),
+        preserveStaticLogger: true);
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
@@ -113,6 +114,8 @@ try
     }));
 
     app.MapTenantBillEndpoints();
+    app.MapIdentityEndpoints();
+    app.MapMasterDataEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

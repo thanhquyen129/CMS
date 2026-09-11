@@ -1,5 +1,36 @@
 # Handoff
 
+## 2026-09-12 — Sprint 1 Identity + Master Data (E01/E02)
+
+### User
+Implement Sprint 1: Tenant/user/access; Organization/BusinessParty/Currency; permission skeleton; isolation tests; ship.
+
+### Done
+- Domain: `Role`, `Permission`, `RolePermission`, `UserRole`, `Currency`; User polished.
+- Migration `Sprint1_IdentityMaster` (roles, permissions, role_permissions, user_roles, currencies).
+- CQRS + API: users, roles (+ assign), organizations CRUD, business-parties CRUD, currencies list/upsert.
+- `CreateTenant` seeds Admin + core Action permissions; `IPermissionService` gates Bill create.
+- Bootstrap: `X-Tenant-Id` + optional `X-User-Id` (JWT deferred). Soft allow when no user header.
+- Tests: 12 passed (cross-tenant User/Org/Party; permission 403 VI + correlation id).
+- DoD: `docs/sprint/SPRINT-1-DOD.md`.
+
+### Files / API
+- APIs: `/api/users`, `/api/roles`, `/api/users/{id}/roles/{roleId}`, `/api/organizations`, `/api/business-parties`, `/api/currencies`
+- Identity: `PermissionService`, `TenantAccessSeeder`, `PermissionCodes`
+- Migration: `20260911181636_Sprint1_IdentityMaster`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 12 passed
+- Actions: https://github.com/thanhquyen129/CMS/actions
+- Health: http://194.233.89.26/health (post-deploy)
+
+### Next
+- JWT/OIDC replace header bootstrap
+- Cost Expected on Bill
+- Full Data Scope matrix / Approval (deferred)
+
+---
+
 ## 2026-09-12 — Fix CI Health smoke race (exit 7)
 
 ### User

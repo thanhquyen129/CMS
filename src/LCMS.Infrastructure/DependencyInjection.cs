@@ -1,4 +1,5 @@
 using LCMS.Application.Abstractions;
+using LCMS.Infrastructure.Identity;
 using LCMS.Infrastructure.Persistence;
 using LCMS.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,9 @@ public static class DependencyInjection
     {
         services.AddScoped<HttpTenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<HttpTenantContext>());
+        services.AddScoped<HttpCurrentUserContext>();
+        services.AddScoped<ICurrentUserContext>(sp => sp.GetRequiredService<HttpCurrentUserContext>());
+        services.AddScoped<IPermissionService, PermissionService>();
 
         var connectionString = configuration.GetConnectionString("LcmsDb")
             ?? "Host=localhost;Port=5432;Database=lcms;Username=lcms;Password=lcms";

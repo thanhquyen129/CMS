@@ -1,0 +1,103 @@
+using LCMS.Application.BusinessParties.Commands;
+using LCMS.Application.BusinessParties.Queries;
+using LCMS.Application.Currencies.Commands;
+using LCMS.Application.Currencies.Queries;
+using LCMS.Application.Organizations.Commands;
+using LCMS.Application.Organizations.Queries;
+using MediatR;
+
+namespace LCMS.Api.Endpoints;
+
+public static class MasterDataEndpoints
+{
+    public static IEndpointRouteBuilder MapMasterDataEndpoints(this IEndpointRouteBuilder app)
+    {
+        var orgs = app.MapGroup("/api/organizations").WithTags("Organizations");
+        orgs.MapPost("/", async (CreateOrganizationRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(
+                new CreateOrganizationCommand(body.Code, body.Name, body.ParentId),
+                ct);
+            return Results.Created($"/api/organizations/{id}", new { id });
+        });
+        orgs.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListOrganizationsQuery(), ct);
+            return Results.Ok(list);
+        });
+        orgs.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var org = await sender.Send(new GetOrganizationByIdQuery(id), ct);
+            return Results.Ok(org);
+        });
+        orgs.MapPut("/{id:guid}", async (
+            Guid id,
+            UpdateOrganizationRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new UpdateOrganizationCommand(id, body.Name, body.ParentId, body.IsActive),
+                ct);
+            return Results.NoContent();
+        });
+        orgs.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new SoftDeleteOrganizationCommand(id), ct);
+            return Results.NoContent();
+        });
+
+        var parties = app.MapGroup("/api/business-parties").WithTags("BusinessParties");
+        parties.MapPost("/", async (CreateBusinessPartyRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(new CreateBusinessPartyCommand(body.Code, body.Name), ct);
+            return Results.Created($"/api/business-parties/{id}", new { id });
+        });
+        parties.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListBusinessPartiesQuery(), ct);
+            return Results.Ok(list);
+        });
+        parties.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var party = await sender.Send(new GetBusinessPartyByIdQuery(id), ct);
+            return Results.Ok(party);
+        });
+        parties.MapPut("/{id:guid}", async (
+            Guid id,
+            UpdateBusinessPartyRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UpdateBusinessPartyCommand(id, body.Name, body.IsActive), ct);
+            return Results.NoContent();
+        });
+        parties.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new SoftDeleteBusinessPartyCommand(id), ct);
+            return Results.NoContent();
+        });
+
+        var currencies = app.MapGroup("/api/currencies").WithTags("Currencies");
+        currencies.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListCurrenciesQuery(), ct);
+            return Results.Ok(list);
+        });
+        currencies.MapPut("/", async (UpsertCurrencyRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(
+                new UpsertCurrencyCommand(body.Code, body.Name, body.DecimalPlaces, body.IsActive),
+                ct);
+            return Results.Ok(new { id });
+        });
+
+        return app;
+    }
+}
+
+public sealed record CreateOrganizationRequest(string Code, string Name, Guid? ParentId);
+public sealed record UpdateOrganizationRequest(string Name, Guid? ParentId, bool IsActive);
+public sealed record CreateBusinessPartyRequest(string Code, string Name);
+public sealed record UpdateBusinessPartyRequest(string Name, bool IsActive);
+public sealed record UpsertCurrencyRequest(string Code, string Name, int DecimalPlaces, bool IsActive);

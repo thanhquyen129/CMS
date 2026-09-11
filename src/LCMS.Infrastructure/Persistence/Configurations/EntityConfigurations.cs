@@ -139,3 +139,70 @@ internal sealed class RevenueConfiguration : IEntityTypeConfiguration<Revenue>
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity });
     }
 }
+
+internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
+{
+    public void Configure(EntityTypeBuilder<Role> builder)
+    {
+        builder.ToTable("roles");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.IsSystem).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+    }
+}
+
+internal sealed class PermissionConfiguration : IEntityTypeConfiguration<Permission>
+{
+    public void Configure(EntityTypeBuilder<Permission> builder)
+    {
+        builder.ToTable("permissions");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.ActionCode).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.HasIndex(e => e.ActionCode).IsUnique();
+    }
+}
+
+internal sealed class RolePermissionConfiguration : IEntityTypeConfiguration<RolePermission>
+{
+    public void Configure(EntityTypeBuilder<RolePermission> builder)
+    {
+        builder.ToTable("role_permissions");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RoleId).IsRequired();
+        builder.Property(e => e.PermissionId).IsRequired();
+        builder.Property(e => e.DataScope).HasMaxLength(32).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.RoleId, e.PermissionId }).IsUnique();
+    }
+}
+
+internal sealed class UserRoleConfiguration : IEntityTypeConfiguration<UserRole>
+{
+    public void Configure(EntityTypeBuilder<UserRole> builder)
+    {
+        builder.ToTable("user_roles");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.UserId).IsRequired();
+        builder.Property(e => e.RoleId).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.UserId, e.RoleId }).IsUnique();
+    }
+}
+
+internal sealed class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
+{
+    public void Configure(EntityTypeBuilder<Currency> builder)
+    {
+        builder.ToTable("currencies");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.Code).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Name).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.DecimalPlaces).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired();
+        builder.HasIndex(e => e.Code).IsUnique();
+    }
+}

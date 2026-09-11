@@ -11,9 +11,10 @@ See `docs/ops/github-actions.md` for secrets (`CMS_DEPLOY_SSH_KEY`).
 ## Bootstrap / fallback (operator machine)
 1. Ensure `/opt/cms` exists and is owned by `deploy`.
 2. On host, create `infra/.env` from `infra/.env.example` (set `LCMS_DB_PASSWORD`) — **once**; do not overwrite on later deploys.
-3. Sync release (exclude secrets):
+3. Sync release (exclude secrets). On Linux/macOS use `rsync`; on Windows operator without rsync use tar+scp:
 
 ```bash
+# Linux/macOS
 rsync -az --delete \
   --exclude '.git/' \
   --exclude 'infra/.env' \
@@ -24,6 +25,12 @@ rsync -az --delete \
   ./ deploy@194.233.89.26:/opt/cms/
 ```
 
+```powershell
+# Windows PowerShell fallback
+tar -czf cms-release.tgz --exclude=.git --exclude=infra/.env --exclude=hailybato.txt --exclude=.secrets .
+scp -i $env:USERPROFILE\.ssh\id_ed25519_a1 cms-release.tgz deploy@194.233.89.26:/tmp/
+ssh -i $env:USERPROFILE\.ssh\id_ed25519_a1 deploy@194.233.89.26 "tar -xzf /tmp/cms-release.tgz -C /opt/cms && rm /tmp/cms-release.tgz"
+```
 4. Restart stack:
 
 ```bash

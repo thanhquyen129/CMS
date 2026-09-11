@@ -1,6 +1,35 @@
 # Handoff
 
+## 2026-09-12 — Sprint 2 Operational Reference (E03/E14)
+
+### User
+Implement Sprint 2: orders/shipments + N:N links to Bill; idempotent order upsert; bill graph; isolation/idempotency/graph tests; DoD + ship via PR.
+
+### Done
+- Domain: `Order`, `Shipment`, `OrderBillLink`, `BillShipmentLink` (UUIDv7, tenant_id, soft-delete, row_version).
+- Migration `Sprint2_OperationalReference` (`orders`, `shipments`, `order_bill_links`, `bill_shipment_links`).
+- CQRS + API: order upsert/list/get; shipment upsert; link Order↔Bill / Bill↔Shipment; `GET /api/bills/{id}/graph`.
+- Idempotent upsert by `(tenant_id, source_system, external_id)`; VI validation; tenant filter + `X-Tenant-Id`.
+- Tests: 16 passed (4 new Sprint 2 — isolation, idempotency, graph, graph cross-tenant).
+- DoD: `docs/sprint/SPRINT-2-DOD.md`.
+
+### Files / API
+- APIs: `/api/orders`, `/api/shipments`, `/api/orders/{orderId}/bills/{billId}`, `/api/bills/{billId}/shipments/{shipmentId}`, `/api/bills/{id}/graph`
+- Migration: `20260911182340_Sprint2_OperationalReference`
+- Endpoints: `OperationalReferenceEndpoints`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 16 passed
+
+### Deferred / Next
+- transport_legs / movements (deferred)
+- Cost Expected on Bill (Phase 2)
+- JWT/OIDC replace header bootstrap
+
+---
+
 ## 2026-09-12 — Sprint 1 Identity + Master Data (E01/E02)
+
 
 ### User
 Implement Sprint 1: Tenant/user/access; Organization/BusinessParty/Currency; permission skeleton; isolation tests; ship.

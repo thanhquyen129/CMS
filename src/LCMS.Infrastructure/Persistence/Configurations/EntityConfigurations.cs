@@ -206,3 +206,108 @@ internal sealed class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
         builder.HasIndex(e => e.Code).IsUnique();
     }
 }
+
+internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
+{
+    public void Configure(EntityTypeBuilder<Order> builder)
+    {
+        builder.ToTable("orders");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.OrderNo).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.SourceSystem).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ExternalId).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.ExternalVersion).HasMaxLength(64);
+        builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired();
+
+        // C-002 / sync idempotency — unique external identity per tenant
+        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.OrderNo });
+
+        builder.HasOne(e => e.Tenant)
+            .WithMany()
+            .HasForeignKey(e => e.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class ShipmentConfiguration : IEntityTypeConfiguration<Shipment>
+{
+    public void Configure(EntityTypeBuilder<Shipment> builder)
+    {
+        builder.ToTable("shipments");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ShipmentNo).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.SourceSystem).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ExternalId).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.ExternalVersion).HasMaxLength(64);
+        builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.ShipmentNo });
+
+        builder.HasOne(e => e.Tenant)
+            .WithMany()
+            .HasForeignKey(e => e.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class OrderBillLinkConfiguration : IEntityTypeConfiguration<OrderBillLink>
+{
+    public void Configure(EntityTypeBuilder<OrderBillLink> builder)
+    {
+        builder.ToTable("order_bill_links");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.OrderId).IsRequired();
+        builder.Property(e => e.BillId).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.OrderId, e.BillId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+        builder.HasIndex(e => new { e.TenantId, e.OrderId });
+
+        builder.HasOne(e => e.Order)
+            .WithMany()
+            .HasForeignKey(e => e.OrderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class BillShipmentLinkConfiguration : IEntityTypeConfiguration<BillShipmentLink>
+{
+    public void Configure(EntityTypeBuilder<BillShipmentLink> builder)
+    {
+        builder.ToTable("bill_shipment_links");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.BillId).IsRequired();
+        builder.Property(e => e.ShipmentId).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.BillId, e.ShipmentId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+        builder.HasIndex(e => new { e.TenantId, e.ShipmentId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Shipment)
+            .WithMany()
+            .HasForeignKey(e => e.ShipmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

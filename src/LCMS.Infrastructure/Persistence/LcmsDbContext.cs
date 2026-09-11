@@ -27,6 +27,10 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<Cost> Costs => Set<Cost>();
     public DbSet<Revenue> Revenues => Set<Revenue>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<Shipment> Shipments => Set<Shipment>();
+    public DbSet<OrderBillLink> OrderBillLinks => Set<OrderBillLink>();
+    public DbSet<BillShipmentLink> BillShipmentLinks => Set<BillShipmentLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

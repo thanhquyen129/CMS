@@ -116,6 +116,7 @@ try
     app.MapTenantBillEndpoints();
     app.MapIdentityEndpoints();
     app.MapMasterDataEndpoints();
+    app.MapOperationalReferenceEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

@@ -17,6 +17,10 @@ public interface ILcmsDbContext
     DbSet<Currency> Currencies { get; }
     DbSet<Cost> Costs { get; }
     DbSet<Revenue> Revenues { get; }
+    DbSet<Order> Orders { get; }
+    DbSet<Shipment> Shipments { get; }
+    DbSet<OrderBillLink> OrderBillLinks { get; }
+    DbSet<BillShipmentLink> BillShipmentLinks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

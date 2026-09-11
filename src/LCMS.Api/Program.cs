@@ -118,6 +118,7 @@ try
     app.MapMasterDataEndpoints();
     app.MapOperationalReferenceEndpoints();
     app.MapRatePricingEndpoints();
+    app.MapCostEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

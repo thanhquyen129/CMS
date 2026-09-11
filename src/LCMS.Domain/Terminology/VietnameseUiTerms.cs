@@ -45,6 +45,12 @@ public static class VietnameseUiTerms
 
         // CP6.5 examples locked in TD6 (foundation subset)
         ["COST_ALLOCATION"] = "Phân bổ chi phí",
+        ["COST_ALLOCATION_DETAIL"] = "Chi tiết phân bổ chi phí",
+        ["COST_ADJUSTMENT"] = "Điều chỉnh chi phí",
+        ["DIRECT_COST"] = "Chi phí trực tiếp",
+        ["SHARED_COST"] = "Chi phí chung",
+        ["ATTRIBUTION_DIRECT"] = "Trực tiếp",
+        ["ATTRIBUTION_SHARED"] = "Chung",
         ["AP"] = "Khoản phải trả",
         ["AR"] = "Khoản phải thu",
         ["RECONCILIATION"] = "Đối soát",

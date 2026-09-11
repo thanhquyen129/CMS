@@ -16,6 +16,9 @@ public interface ILcmsDbContext
     DbSet<UserRole> UserRoles { get; }
     DbSet<Currency> Currencies { get; }
     DbSet<Cost> Costs { get; }
+    DbSet<CostAdjustment> CostAdjustments { get; }
+    DbSet<CostAllocation> CostAllocations { get; }
+    DbSet<CostAllocationDetail> CostAllocationDetails { get; }
     DbSet<Revenue> Revenues { get; }
     DbSet<Order> Orders { get; }
     DbSet<Shipment> Shipments { get; }

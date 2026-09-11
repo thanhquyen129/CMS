@@ -26,6 +26,9 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<Cost> Costs => Set<Cost>();
+    public DbSet<CostAdjustment> CostAdjustments => Set<CostAdjustment>();
+    public DbSet<CostAllocation> CostAllocations => Set<CostAllocation>();
+    public DbSet<CostAllocationDetail> CostAllocationDetails => Set<CostAllocationDetail>();
     public DbSet<Revenue> Revenues => Set<Revenue>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Shipment> Shipments => Set<Shipment>();

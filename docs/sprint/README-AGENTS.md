@@ -9,7 +9,8 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | 1 Identity + Master | Done (see `SPRINT-1-DOD.md`) |
 | 2 Operational Reference | Done (merged) |
 | 3 Rate & Pricing | Done (see `SPRINT-3-DOD.md`) |
-| 4–12 | Queued |
+| 4 Cost | Done (see `SPRINT-4-DOD.md`) |
+| 5–12 | Queued |
 
 ## How to run
 1. Cursor: **New Agent Chat** (hoặc Cloud Agent).

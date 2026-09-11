@@ -116,11 +116,112 @@ internal sealed class CostConfiguration : IEntityTypeConfiguration<Cost>
         builder.ToTable("costs");
         EntityBaseConfiguration.ConfigureEntityBase(builder);
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.CostTypeCode).HasMaxLength(64);
+        builder.Property(e => e.FinancialMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.AttributionType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ExpectedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.ConfirmedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.ActualAmount).HasPrecision(18, 4);
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
-        builder.Property(e => e.FinancialMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
+        builder.Property(e => e.SourceType).HasMaxLength(64);
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
-        builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity });
+        builder.Property(e => e.ApprovalStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.EffectiveDate).IsRequired();
+
+        // IDX-003
+        builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity, e.EffectiveDate });
+        // IDX-004
+        builder.HasIndex(e => new { e.TenantId, e.VendorPartyId, e.EffectiveDate });
+        // Idempotent seed from rating_detail (NULLs allowed for manual costs)
+        builder.HasIndex(e => new { e.TenantId, e.SourceType, e.SourceId }).IsUnique();
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class CostAdjustmentConfiguration : IEntityTypeConfiguration<CostAdjustment>
+{
+    public void Configure(EntityTypeBuilder<CostAdjustment> builder)
+    {
+        builder.ToTable("cost_adjustments");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.CostId).IsRequired();
+        builder.Property(e => e.AdjustmentType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.DeltaAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Reason).HasMaxLength(1024).IsRequired();
+        builder.Property(e => e.EffectiveDate).IsRequired();
+        builder.Property(e => e.AppliedToMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.AmountBefore).HasPrecision(18, 4);
+        builder.Property(e => e.AmountAfter).HasPrecision(18, 4);
+
+        builder.HasIndex(e => new { e.TenantId, e.CostId, e.CreatedAt });
+
+        builder.HasOne(e => e.Cost)
+            .WithMany()
+            .HasForeignKey(e => e.CostId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class CostAllocationConfiguration : IEntityTypeConfiguration<CostAllocation>
+{
+    public void Configure(EntityTypeBuilder<CostAllocation> builder)
+    {
+        builder.ToTable("cost_allocations");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.CostId).IsRequired();
+        builder.Property(e => e.VersionNo).IsRequired();
+        builder.Property(e => e.AllocationBasis).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ApplicabilityMode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.AllocatableAmount).HasPrecision(18, 4);
+        builder.Property(e => e.AllocatedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RuleVersion).HasMaxLength(64);
+
+        builder.HasIndex(e => new { e.TenantId, e.CostId, e.VersionNo }).IsUnique();
+
+        builder.HasOne(e => e.Cost)
+            .WithMany()
+            .HasForeignKey(e => e.CostId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class CostAllocationDetailConfiguration : IEntityTypeConfiguration<CostAllocationDetail>
+{
+    public void Configure(EntityTypeBuilder<CostAllocationDetail> builder)
+    {
+        builder.ToTable("cost_allocation_details");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.AllocationId).IsRequired();
+        builder.Property(e => e.BillId).IsRequired();
+        builder.Property(e => e.BasisValue).HasPrecision(18, 6);
+        builder.Property(e => e.BasisRatio).HasPrecision(18, 8);
+        builder.Property(e => e.AllocatedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.RoundingAdjustment).HasPrecision(18, 4);
+        builder.Property(e => e.ManualOverrideAmount).HasPrecision(18, 4);
+        builder.Property(e => e.OverrideReason).HasMaxLength(512);
+
+        builder.HasIndex(e => new { e.TenantId, e.AllocationId, e.BillId }).IsUnique();
+
+        builder.HasOne(e => e.Allocation)
+            .WithMany()
+            .HasForeignKey(e => e.AllocationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

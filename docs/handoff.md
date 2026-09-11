@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-09-12 — Sprint 4 Cost (E05/E06)
+
+### User
+Implement Sprint 4 only: full costs TD1 fields; cost_adjustments; allocations+finalize conservation; maturity no-overwrite; seed Expected from ratings; tenant APIs; tests; DoD + PR to main.
+
+### Done
+- Domain: expanded `Cost` (layer amounts + attribution/maturity/source/audit); `CostAdjustment`; `CostAllocation`; `CostAllocationDetail`.
+- Migration `Sprint4_Cost` (alters `costs`; creates adjustment/allocation tables).
+- CQRS + API: create/list/get cost; confirm/actualize; adjust; allocate/finalize; seed from rating.
+- C-003/C-005/C-006/C-009: Single Economic Cost; conservation; basis gate; no silent maturity overwrite.
+- VI validation/errors; tenant filter + `X-Tenant-Id`.
+- Tests: 22 passed (3 new — maturity, allocation conservation, isolation+idempotent seed).
+- DoD: `docs/sprint/SPRINT-4-DOD.md`.
+
+### Files / API
+- APIs: `/api/costs`, `/api/cost-allocations/{id}/finalize`, `/api/ratings/{id}/seed-expected-costs`
+- Endpoints: `CostEndpoints`
+- Migration: `20260911184233_Sprint4_Cost`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 22 passed
+
+### Deferred / Next
+- Revenue lifecycle (Sprint 5)
+- Documents/AP/AR; full approval; JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-12 — Sprint 3 Rate & Pricing (E04)
 
 ### User

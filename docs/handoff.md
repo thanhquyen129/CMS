@@ -1,5 +1,31 @@
 # Handoff
 
+## 2026-09-11 — Sprint 3 FULL Rate & Pricing (Pass 2)
+
+### User
+Pass 2 Sprint 3 FULL: rule applicability filters; formula types `percent_of_base` + `min_max_clamp`; re-rate with `supersedes_rating_id` history; C-011 publish immutability; optional `seedExpectedCosts` on rating; tests + SPRINT-3-FULL-DOD + PR. Base after Pass 2 S0–S2. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- `pricing_rules`: `service_type_code` / `party_type_code` / `route_code` + `min_amount` / `max_amount`; filtered when rating.
+- Calc methods: `percent_of_base` (explicit base or running total), `min_max_clamp` (unit×qty clamped), keep `fixed`/`unit_rate`.
+- `ratings`: `supersedes_rating_id`, weight/context fields; prior → `superseded` (details immutable).
+- `POST /api/ratings` accepts `seedExpectedCosts` → Sprint 4 idempotent Expected Cost seed.
+- `GET /api/bills/{billId}/ratings` history.
+- Migration `Sprint3Full_RatePricing`; tests `Sprint3FullRatePricingTests`; DoD `SPRINT-3-FULL-DOD.md`.
+
+### Files / API
+- APIs: `/api/ratings` (extended), `/api/bills/{billId}/ratings`, rules payload extended
+- Endpoints: `RatePricingEndpoints`
+- Migration: `20260911204607_Sprint3Full_RatePricing`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → (run after commit)
+
+### Deferred / Next
+- Full DSL formula language; route master; Next.js rate UI; Pass 2 Sprint 4 FULL
+
+---
+
 ## 2026-09-11 — Sprint 2 FULL Operational Reference (Pass 2)
 
 ### User

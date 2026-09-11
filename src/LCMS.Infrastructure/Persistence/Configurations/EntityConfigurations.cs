@@ -676,10 +676,16 @@ internal sealed class PricingRuleConfiguration : IEntityTypeConfiguration<Pricin
         builder.Property(e => e.UnitAmount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.Applicability).HasMaxLength(512);
+        builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
+        builder.Property(e => e.PartyTypeCode).HasMaxLength(32);
+        builder.Property(e => e.RouteCode).HasMaxLength(64);
+        builder.Property(e => e.MinAmount).HasPrecision(18, 4);
+        builder.Property(e => e.MaxAmount).HasPrecision(18, 4);
         builder.Property(e => e.SortOrder).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
 
         builder.HasIndex(e => new { e.TenantId, e.RateVersionId, e.Code }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.RateVersionId, e.ServiceTypeCode });
 
         builder.HasOne(e => e.RateVersion)
             .WithMany()
@@ -729,10 +735,17 @@ internal sealed class RatingConfiguration : IEntityTypeConfiguration<Rating>
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.TotalAmount).HasPrecision(18, 4);
         builder.Property(e => e.Quantity).HasPrecision(18, 4);
+        builder.Property(e => e.Weight).HasPrecision(18, 4);
+        builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
+        builder.Property(e => e.PartyTypeCode).HasMaxLength(32);
+        builder.Property(e => e.RouteCode).HasMaxLength(64);
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.SupersedesRatingId);
 
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.RatedAt });
         builder.HasIndex(e => new { e.TenantId, e.RateVersionId });
+        builder.HasIndex(e => new { e.TenantId, e.SupersedesRatingId });
 
         builder.HasOne(e => e.Bill)
             .WithMany()
@@ -742,6 +755,11 @@ internal sealed class RatingConfiguration : IEntityTypeConfiguration<Rating>
         builder.HasOne(e => e.RateVersion)
             .WithMany()
             .HasForeignKey(e => e.RateVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.SupersedesRating)
+            .WithMany()
+            .HasForeignKey(e => e.SupersedesRatingId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

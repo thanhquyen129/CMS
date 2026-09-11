@@ -108,6 +108,11 @@ public static class RatePricingEndpoints
                     body.UnitAmount,
                     body.CurrencyCode,
                     body.Applicability,
+                    body.ServiceTypeCode,
+                    body.PartyTypeCode,
+                    body.RouteCode,
+                    body.MinAmount,
+                    body.MaxAmount,
                     body.SortOrder ?? 0),
                 ct);
             return Results.Created($"/api/pricing-rules/{id}", new { id });
@@ -147,7 +152,17 @@ public static class RatePricingEndpoints
         ratings.MapPost("/", async (CreateRatingRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
-                new CreateRatingCommand(body.BillId, body.RateVersionId, body.Quantity),
+                new CreateRatingCommand(
+                    body.BillId,
+                    body.RateVersionId,
+                    body.Quantity,
+                    body.Weight,
+                    body.ServiceTypeCode,
+                    body.PartyTypeCode,
+                    body.RouteCode,
+                    body.BaseAmount,
+                    body.SupersedesRatingId,
+                    body.SeedExpectedCosts ?? false),
                 ct);
             return Results.Created($"/api/ratings/{id}", new { id });
         });
@@ -155,6 +170,13 @@ public static class RatePricingEndpoints
         {
             var rating = await sender.Send(new GetRatingByIdQuery(id), ct);
             return Results.Ok(rating);
+        });
+
+        var bills = app.MapGroup("/api/bills").WithTags("Bills");
+        bills.MapGet("/{billId:guid}/ratings", async (Guid billId, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListRatingsByBillQuery(billId), ct);
+            return Results.Ok(list);
         });
 
         return app;
@@ -187,6 +209,11 @@ public sealed record AddPricingRuleRequest(
     decimal UnitAmount,
     string CurrencyCode,
     string? Applicability,
+    string? ServiceTypeCode,
+    string? PartyTypeCode,
+    string? RouteCode,
+    decimal? MinAmount,
+    decimal? MaxAmount,
     int? SortOrder);
 
 public sealed record AddPricingRuleComponentRequest(
@@ -202,4 +229,11 @@ public sealed record AddPricingRuleComponentRequest(
 public sealed record CreateRatingRequest(
     Guid BillId,
     Guid RateVersionId,
-    decimal? Quantity);
+    decimal? Quantity,
+    decimal? Weight,
+    string? ServiceTypeCode,
+    string? PartyTypeCode,
+    string? RouteCode,
+    decimal? BaseAmount,
+    Guid? SupersedesRatingId,
+    bool? SeedExpectedCosts);

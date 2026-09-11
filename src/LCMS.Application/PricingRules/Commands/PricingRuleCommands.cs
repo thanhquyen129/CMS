@@ -15,6 +15,11 @@ public sealed record AddPricingRuleCommand(
     decimal UnitAmount,
     string CurrencyCode,
     string? Applicability,
+    string? ServiceTypeCode,
+    string? PartyTypeCode,
+    string? RouteCode,
+    decimal? MinAmount,
+    decimal? MaxAmount,
     int SortOrder) : IRequest<Guid>;
 
 public sealed class AddPricingRuleCommandValidator : AbstractValidator<AddPricingRuleCommand>
@@ -30,8 +35,8 @@ public sealed class AddPricingRuleCommandValidator : AbstractValidator<AddPricin
             .MaximumLength(256).WithMessage("Tên quy tắc không được vượt quá 256 ký tự.");
         RuleFor(x => x.CalcMethod)
             .NotEmpty().WithMessage("Phương pháp tính giá không được để trống.")
-            .Must(m => m is PricingCalcMethods.Fixed or PricingCalcMethods.UnitRate)
-            .WithMessage("Phương pháp tính giá phải là fixed hoặc unit_rate.");
+            .Must(m => PricingCalcMethods.All.Contains(m))
+            .WithMessage("Phương pháp tính giá phải là fixed, unit_rate, percent_of_base hoặc min_max_clamp.");
         RuleFor(x => x.UnitAmount)
             .GreaterThanOrEqualTo(0).WithMessage("Đơn giá / số tiền không được âm.");
         RuleFor(x => x.CurrencyCode)
@@ -40,6 +45,29 @@ public sealed class AddPricingRuleCommandValidator : AbstractValidator<AddPricin
         RuleFor(x => x.Applicability)
             .MaximumLength(512)
             .When(x => x.Applicability is not null);
+        RuleFor(x => x.ServiceTypeCode)
+            .MaximumLength(64)
+            .When(x => x.ServiceTypeCode is not null);
+        RuleFor(x => x.PartyTypeCode)
+            .MaximumLength(32)
+            .When(x => x.PartyTypeCode is not null);
+        RuleFor(x => x.RouteCode)
+            .MaximumLength(64)
+            .When(x => x.RouteCode is not null);
+        RuleFor(x => x.MinAmount)
+            .GreaterThanOrEqualTo(0).WithMessage("Số tiền tối thiểu không được âm.")
+            .When(x => x.MinAmount.HasValue);
+        RuleFor(x => x.MaxAmount)
+            .GreaterThanOrEqualTo(0).WithMessage("Số tiền tối đa không được âm.")
+            .When(x => x.MaxAmount.HasValue);
+        RuleFor(x => x)
+            .Must(x => !x.MinAmount.HasValue || !x.MaxAmount.HasValue || x.MinAmount <= x.MaxAmount)
+            .WithMessage("Số tiền tối thiểu không được lớn hơn số tiền tối đa.");
+        RuleFor(x => x)
+            .Must(x => !string.Equals(x.CalcMethod, PricingCalcMethods.MinMaxClamp, StringComparison.OrdinalIgnoreCase)
+                       || x.MinAmount.HasValue
+                       || x.MaxAmount.HasValue)
+            .WithMessage("min_max_clamp yêu cầu ít nhất một trong minAmount hoặc maxAmount.");
     }
 }
 
@@ -87,6 +115,11 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             UnitAmount = request.UnitAmount,
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
             Applicability = string.IsNullOrWhiteSpace(request.Applicability) ? null : request.Applicability.Trim(),
+            ServiceTypeCode = string.IsNullOrWhiteSpace(request.ServiceTypeCode) ? null : request.ServiceTypeCode.Trim(),
+            PartyTypeCode = string.IsNullOrWhiteSpace(request.PartyTypeCode) ? null : request.PartyTypeCode.Trim().ToLowerInvariant(),
+            RouteCode = string.IsNullOrWhiteSpace(request.RouteCode) ? null : request.RouteCode.Trim(),
+            MinAmount = request.MinAmount,
+            MaxAmount = request.MaxAmount,
             SortOrder = request.SortOrder,
             IsActive = true
         };
@@ -232,6 +265,11 @@ public sealed record PricingRuleDto(
     decimal UnitAmount,
     string CurrencyCode,
     string? Applicability,
+    string? ServiceTypeCode,
+    string? PartyTypeCode,
+    string? RouteCode,
+    decimal? MinAmount,
+    decimal? MaxAmount,
     int SortOrder,
     bool IsActive);
 
@@ -270,7 +308,9 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
             .ThenBy(r => r.Code)
             .Select(r => new PricingRuleDto(
                 r.Id, r.RateVersionId, r.Code, r.Name, r.CalcMethod,
-                r.UnitAmount, r.CurrencyCode, r.Applicability, r.SortOrder, r.IsActive))
+                r.UnitAmount, r.CurrencyCode, r.Applicability,
+                r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode,
+                r.MinAmount, r.MaxAmount, r.SortOrder, r.IsActive))
             .ToListAsync(cancellationToken);
     }
 }

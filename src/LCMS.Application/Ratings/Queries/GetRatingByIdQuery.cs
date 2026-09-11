@@ -25,8 +25,26 @@ public sealed record RatingDto(
     string CurrencyCode,
     decimal TotalAmount,
     decimal Quantity,
+    decimal? Weight,
+    string? ServiceTypeCode,
+    string? PartyTypeCode,
+    string? RouteCode,
+    decimal? BaseAmount,
     string Status,
+    Guid? SupersedesRatingId,
     IReadOnlyList<RatingDetailDto> Details);
+
+public sealed record RatingHistoryItemDto(
+    Guid Id,
+    Guid BillId,
+    Guid RateVersionId,
+    DateTimeOffset RatedAt,
+    string CurrencyCode,
+    decimal TotalAmount,
+    decimal Quantity,
+    decimal? Weight,
+    string Status,
+    Guid? SupersedesRatingId);
 
 public sealed record GetRatingByIdQuery(Guid Id) : IRequest<RatingDto>;
 
@@ -83,7 +101,62 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
             rating.CurrencyCode,
             rating.TotalAmount,
             rating.Quantity,
+            rating.Weight,
+            rating.ServiceTypeCode,
+            rating.PartyTypeCode,
+            rating.RouteCode,
+            rating.BaseAmount,
             rating.Status,
+            rating.SupersedesRatingId,
             details);
+    }
+}
+
+public sealed record ListRatingsByBillQuery(Guid BillId) : IRequest<IReadOnlyList<RatingHistoryItemDto>>;
+
+public sealed class ListRatingsByBillQueryHandler
+    : IRequestHandler<ListRatingsByBillQuery, IReadOnlyList<RatingHistoryItemDto>>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public ListRatingsByBillQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<IReadOnlyList<RatingHistoryItemDto>> Handle(
+        ListRatingsByBillQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var billExists = await _db.Bills.AnyAsync(b => b.Id == request.BillId, cancellationToken);
+        if (!billExists)
+        {
+            throw new NotFoundAppException("Không tìm thấy Bill.");
+        }
+
+        return await _db.Ratings
+            .AsNoTracking()
+            .Where(r => r.BillId == request.BillId)
+            .OrderByDescending(r => r.RatedAt)
+            .ThenByDescending(r => r.CreatedAt)
+            .Select(r => new RatingHistoryItemDto(
+                r.Id,
+                r.BillId,
+                r.RateVersionId,
+                r.RatedAt,
+                r.CurrencyCode,
+                r.TotalAmount,
+                r.Quantity,
+                r.Weight,
+                r.Status,
+                r.SupersedesRatingId))
+            .ToListAsync(cancellationToken);
     }
 }

@@ -21,6 +21,12 @@ public interface ILcmsDbContext
     DbSet<Shipment> Shipments { get; }
     DbSet<OrderBillLink> OrderBillLinks { get; }
     DbSet<BillShipmentLink> BillShipmentLinks { get; }
+    DbSet<RateCard> RateCards { get; }
+    DbSet<RateVersion> RateVersions { get; }
+    DbSet<PricingRule> PricingRules { get; }
+    DbSet<PricingRuleComponent> PricingRuleComponents { get; }
+    DbSet<Rating> Ratings { get; }
+    DbSet<RatingDetail> RatingDetails { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

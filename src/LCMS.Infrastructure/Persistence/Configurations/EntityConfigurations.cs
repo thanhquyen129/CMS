@@ -311,3 +311,157 @@ internal sealed class BillShipmentLinkConfiguration : IEntityTypeConfiguration<B
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class RateCardConfiguration : IEntityTypeConfiguration<RateCard>
+{
+    public void Configure(EntityTypeBuilder<RateCard> builder)
+    {
+        builder.ToTable("rate_cards");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.PartyType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(1024);
+        builder.Property(e => e.IsActive).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+    }
+}
+
+internal sealed class RateVersionConfiguration : IEntityTypeConfiguration<RateVersion>
+{
+    public void Configure(EntityTypeBuilder<RateVersion> builder)
+    {
+        builder.ToTable("rate_versions");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RateCardId).IsRequired();
+        builder.Property(e => e.VersionNo).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Note).HasMaxLength(1024);
+        builder.Ignore(e => e.IsPublished);
+
+        builder.HasIndex(e => new { e.TenantId, e.RateCardId, e.VersionNo }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.RateCardId, e.Status });
+
+        builder.HasOne(e => e.RateCard)
+            .WithMany()
+            .HasForeignKey(e => e.RateCardId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class PricingRuleConfiguration : IEntityTypeConfiguration<PricingRule>
+{
+    public void Configure(EntityTypeBuilder<PricingRule> builder)
+    {
+        builder.ToTable("pricing_rules");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RateVersionId).IsRequired();
+        builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.CalcMethod).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.UnitAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Applicability).HasMaxLength(512);
+        builder.Property(e => e.SortOrder).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.RateVersionId, e.Code }).IsUnique();
+
+        builder.HasOne(e => e.RateVersion)
+            .WithMany()
+            .HasForeignKey(e => e.RateVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class PricingRuleComponentConfiguration : IEntityTypeConfiguration<PricingRuleComponent>
+{
+    public void Configure(EntityTypeBuilder<PricingRuleComponent> builder)
+    {
+        builder.ToTable("pricing_rule_components");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PricingRuleId).IsRequired();
+        builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.FinancialNature).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.CostTypeCode).HasMaxLength(64);
+        builder.Property(e => e.RevenueTypeCode).HasMaxLength(64);
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.SortOrder).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.PricingRuleId, e.Code }).IsUnique();
+
+        builder.HasOne(e => e.PricingRule)
+            .WithMany()
+            .HasForeignKey(e => e.PricingRuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class RatingConfiguration : IEntityTypeConfiguration<Rating>
+{
+    public void Configure(EntityTypeBuilder<Rating> builder)
+    {
+        builder.ToTable("ratings");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.BillId).IsRequired();
+        builder.Property(e => e.RateVersionId).IsRequired();
+        builder.Property(e => e.RatedAt).IsRequired();
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.TotalAmount).HasPrecision(18, 4);
+        builder.Property(e => e.Quantity).HasPrecision(18, 4);
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.BillId, e.RatedAt });
+        builder.HasIndex(e => new { e.TenantId, e.RateVersionId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.RateVersion)
+            .WithMany()
+            .HasForeignKey(e => e.RateVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class RatingDetailConfiguration : IEntityTypeConfiguration<RatingDetail>
+{
+    public void Configure(EntityTypeBuilder<RatingDetail> builder)
+    {
+        builder.ToTable("rating_details");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RatingId).IsRequired();
+        builder.Property(e => e.RuleCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ComponentCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ComponentName).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.FinancialNature).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.FinancialMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.RatingId });
+
+        builder.HasOne(e => e.Rating)
+            .WithMany()
+            .HasForeignKey(e => e.RatingId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

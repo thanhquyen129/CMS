@@ -117,6 +117,7 @@ try
     app.MapIdentityEndpoints();
     app.MapMasterDataEndpoints();
     app.MapOperationalReferenceEndpoints();
+    app.MapRatePricingEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

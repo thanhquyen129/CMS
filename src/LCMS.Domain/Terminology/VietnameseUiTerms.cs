@@ -24,6 +24,13 @@ public static class VietnameseUiTerms
         ["ORGANIZATION"] = "Tổ chức",
         ["USER"] = "Người dùng",
         ["BUSINESS_PARTY"] = "Đối tác kinh doanh",
+        ["RATE_CARD"] = "Bảng giá",
+        ["RATE_VERSION"] = "Phiên bản bảng giá",
+        ["PRICING_RULE"] = "Quy tắc tính giá",
+        ["PRICING_RULE_COMPONENT"] = "Thành phần giá",
+        ["RATING"] = "Lần tính giá",
+        ["RATING_DETAIL"] = "Chi tiết tính giá",
+        ["RATE_PRICING"] = "Bảng giá & Tính giá",
 
         // Financial maturity (Expected / Confirmed / Actual — never overwrite layers)
         ["EXPECTED"] = "Dự kiến",

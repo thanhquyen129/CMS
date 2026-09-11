@@ -1,0 +1,51 @@
+---
+description: "Documentation & ADRs: decision records, runbooks, architecture sketches for AI+human continuity. Use when making lasting decisions or production ops docs."
+alwaysApply: false
+---
+
+# Documentation & ADR / Tài liệu & ADR
+
+## Architecture Decision Records / Ghi nhận quyết định
+- ADR for irreversible or expensive-to-change choices: context → decision → consequences → alternatives rejected.
+- ADR cho lựa chọn khó đảo / đắt để đổi: bối cảnh → quyết định → hậu quả → phương án bị loại.
+- Keep ADRs short (one to two screens). Date them; mark superseded instead of rewriting history.
+- ADR ngắn (1–2 màn hình). Có ngày; đánh dấu superseded thay vì sửa sử.
+
+## What must be written down / Thứ bắt buộc ghi lại
+- System context diagram (modules, DB, queue, external parties) kept roughly current.
+- Sơ đồ ngữ cảnh hệ thống (module, DB, queue, bên ngoài) giữ gần đúng hiện tại.
+- Runbooks for top alerts and money/auth failure modes.
+- Runbook cho các alert hàng đầu và failure mode tiền/auth.
+- Env/config catalog: required vars, defaults, and who owns rotation.
+- Catalog config/env: biến bắt buộc, mặc định, ai sở hữu việc rotate.
+
+## Working with AI / Làm việc với AI
+- Prefer repo docs/ADRs over tribal chat memory — agents and humans both read the repo.
+- Ưu tiên docs/ADR trong repo hơn trí nhớ chat — agent và người đều đọc repo.
+- Update the ADR/doc in the same PR when the decision changes.
+- Đổi quyết định thì cập nhật ADR/doc trong cùng PR.
+
+## Anti-patterns / Anti-pattern
+- No novel-length wiki nobody maintains. No “docs later” on public contracts or money flows.
+- Không wiki dài không ai giữ. Không “docs sau” với hợp đồng công khai hoặc luồng tiền.
+
+---
+description: "Architectural Decision Records (ADR) framework for irreversible core choices. EN/VI."
+alwaysApply: true
+---
+
+# Architectural Decision Records (ADR) / Nhật ký quyết định kiến trúc
+
+## When to write / Khi nào cần ghi ADR
+- Enforce an ADR for every irreversible choice: identity model, money ledger, public API shape, and tenancy isolation.
+- Bắt buộc ghi ADR cho mọi lựa chọn khó đảo ngược: model định danh, sổ cái tiền, khuôn dạng API công khai, và cô lập thuê bao.
+- Document irreversible forks before coding; do not bury architectural constraints only in chat history.
+- Ghi nhận các ngã rẽ kiến trúc trước khi code; không chôn vùi ràng buộc thiết kế chỉ trong chat log.
+
+## Structure & Immutability / Cấu trúc & Tính bất biến
+- Use the standard baseline: Context, Decision, Consequences, and Approved Status.
+- Sử dụng cấu trúc chuẩn: Ngữ cảnh, Quyết định, Hệ quả, và Trạng thái phê duyệt.
+- Keep published ADRs strictly immutable; record subsequent evolutions via new sequential ADR files.
+- Giữ các ADR đã công bố bất biến tuyệt đối; ghi nhận các tiến hóa tiếp theo qua file ADR tuần tự mới.
+- Reference the active ADR number in related code commits and Pull Requests for full traceability.
+- Tham chiếu số hiệu ADR đang áp dụng vào commit code và Pull Request để đồng bộ vết tracking.

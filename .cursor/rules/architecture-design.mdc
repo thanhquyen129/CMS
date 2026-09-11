@@ -1,0 +1,50 @@
+---
+description: "Architecture standards: modular monolith boundaries, layers, APIs, events for ASP.NET Core. Use when designing systems, modules, APIs, or solution structure."
+alwaysApply: false
+---
+
+# Architecture Standards / Chuẩn Architecture
+
+## Shape / Hình dạng
+- Default: **ASP.NET Core modular monolith**. Split services only for clear scale, team, or failure-isolation reasons.
+- Mặc định: **ASP.NET Core modular monolith**. Tách service chỉ khi có lý do scale / team / cô lập lỗi rõ.
+- Each module owns its domain logic and data access; no “shared god DbContext” across unrelated domains when it blurs ownership.
+- Mỗi module sở hữu logic + data access; tránh DbContext thần dùng chung làm mờ ownership.
+- Small projects: thin vertical slices OK. Large projects: modules (Ordering, Identity, …) with explicit public APIs.
+- Dự án nhỏ: vertical slice mỏng OK. Dự án lớn: module (Ordering, Identity, …) với API công khai rõ.
+
+## Boundaries / Ranh giới
+- Enforce **three layers**: **Route/API** (controllers, minimal APIs, DTOs) → **Logic** (use-cases/application services, domain) → **Data** (DbContext, repositories, external adapters).
+- Bắt buộc **ba tầng**: **Route/API** (controller, minimal API, DTO) → **Logic** (use-case/application service, domain) → **Data** (DbContext, repository, adapter ngoài).
+- Route/API: HTTP mapping, auth attributes, validation of input shape only — **no business rules, no SQL**.
+- Route/API: map HTTP, auth attribute, validate shape input — **không business rule, không SQL**.
+- Logic: orchestrates domain rules and transactions; depends on abstractions, not concrete EF types when it blurs tests.
+- Logic: điều phối domain rule và transaction; phụ thuộc abstraction, không dính EF cụ thể khi làm mờ test.
+- Data: persistence and I/O only; no HTTP concerns; no UI/DTO leakage upward without mapping.
+- Data: chỉ persistence và I/O; không concern HTTP; không để UI/DTO lộ lên trên thiếu mapping.
+- Depend inward: API/transport → application use-cases → domain. Infrastructure implements ports.
+- Phụ thuộc vào trong: API/transport → use-case → domain. Infrastructure triển khai port.
+- Cross-module calls via application services/interfaces — not reaching into another module’s tables ad hoc.
+- Gọi cross-module qua application service/interface — không đụng bảng module khác tùy tiện.
+- Prefer simple, explicit designs. Complexity must pay rent; no CQRS/event-sourcing by default.
+- Ưu tiên thiết kế đơn giản, rõ. Độ phức tạp phải đáng tiền; không CQRS/event-sourcing mặc định.
+
+## APIs / API
+- Public HTTP contracts live in `api-contracts.mdc` (versioning, errors, pagination, idempotency).
+- Hợp đồng HTTP công khai nằm ở `api-contracts.mdc` (version, lỗi, phân trang, idempotency).
+
+## Tenancy / Đa thuê bao
+- Decide early: single-tenant vs multi-tenant. If multi-tenant, isolate by tenant id on every query and token claim — no cross-tenant leaks.
+- Quyết sớm: single-tenant vs multi-tenant. Nếu multi-tenant, cô lập bằng tenant id trên mọi query và claim token — không rò chéo.
+- Defer complex tenancy (shared DB row-level vs DB-per-tenant) until the business model needs it; record the choice as an ADR.
+- Hoãn tenancy phức tạp (row-level vs DB-per-tenant) đến khi mô hình kinh doanh cần; ghi ADR.
+
+## Async & consistency / Bất đồng bộ & nhất quán
+- Queues/events: follow `messaging-integration.mdc`. Races: `concurrency-correctness.mdc`.
+- Queue/event: theo `messaging-integration.mdc`. Đua tranh: `concurrency-correctness.mdc`.
+- Public HTTP contracts: `api-contracts.mdc`. Mobile clients: `mobile-clients.mdc`.
+- Hợp đồng HTTP công khai: `api-contracts.mdc`. Client mobile: `mobile-clients.mdc`.
+- State machines for order/booking/payment — illegal transitions rejected.
+- State machine cho vòng đời order/booking/payment — từ chối chuyển trái phép.
+- Expand → migrate → contract for schema; rolling-deploy safe.
+- Schema theo expand → migrate → contract; an toàn rolling deploy.

@@ -1,0 +1,46 @@
+---
+description: "Monitoring & alerting: golden signals, SLOs, dashboards, on-call. Use when adding metrics, alerts, dashboards, or production readiness checks."
+alwaysApply: false
+---
+
+# Monitoring Standards / Chuẩn Monitoring
+
+## What to measure / Đo cái gì
+- Golden signals per critical route: **latency, traffic, errors, saturation**.
+- Tín hiệu vàng mỗi route tới hạn: **latency, traffic, errors, saturation**.
+- Track dependency health: PostgreSQL, Redis, queue lag, external APIs, disk, CPU, memory.
+- Theo dõi dependency: PostgreSQL, Redis, độ trễ queue, API ngoài, disk, CPU, memory.
+- Business counters that matter: cost confirmations, allocations finalized, AP/AR recognition, settlement success/fail, close completions, integration failures.
+- Counter nghiệp vụ quan trọng: xác nhận chi phí, phân bổ hoàn tất, ghi nhận AP/AR, tất toán thành công/fail, chốt tài chính, lỗi tích hợp.
+
+## SLOs & alerts / SLO & cảnh báo
+- Define SLOs (e.g. p99 API < X ms, error rate < Y%). Alert on **burn / user impact**, not every blip.
+- Định nghĩa SLO (vd p99 API < X ms, error rate < Y%). Alert theo **đốt budget / ảnh hưởng user**, không mọi nhiễu.
+- Every alert needs a **runbook** (what it means, where to look, mitigate, escalate).
+- Mỗi alert cần **runbook** (ý nghĩa, xem đâu, mitigate, escalate).
+- Page only for actionable severity. Route noisy signals to dashboards/tickets.
+- Chỉ page mức actionable. Tín hiệu ồn → dashboard/ticket.
+- Wire Sev-1 to automated mitigation where safe; see `incident-automation.mdc` (3am loop + launch tabletop).
+- Nối Sev-1 với giảm hại tự động khi an toàn; xem `incident-automation.mdc` (vòng 3h sáng + tabletop launch).
+
+## Dashboards / Dashboard
+- One service overview + one business overview. Link panels to logs/traces.
+- Một overview service + một overview nghiệp vụ. Panel link sang log/trace.
+- Include deploy markers on charts to correlate regressions.
+- Có mốc deploy trên chart để tương quan regression.
+
+## Instrumentation / Gắn đo
+- Prefer OpenTelemetry metrics/traces in ASP.NET Core. Consistent label names (route, status, tenant).
+- Ưu tiên OpenTelemetry metric/trace trên ASP.NET Core. Label thống nhất (route, status, tenant).
+- Do not high-cardinality label unbounded IDs (userId as metric label) — use logs/traces instead.
+- Không gắn label metric bằng ID vô hạn (userId) — dùng log/trace.
+
+## CMS financial controls / Kiểm soát tài chính CMS
+- Monitor financial command conflicts and integration failure repeat rates continuously.
+- Giám sát liên tục xung đột lệnh tài chính và tần suất lỗi tích hợp lặp lại.
+- Page a human instantly (Sev-1) on user-facing SLO burn, money-path failures, auth down, or data-loss suspicion.
+- Gọi người trực ngay (Sev-1) khi đốt SLO phía user, hỏng đường tiền, chết auth, hoặc nghi mất dữ liệu.
+- Track exception backlogs, reconciliation issues, and close blockers as business monitoring views.
+- Theo dõi tồn ngoại lệ, vấn đề đối soát, và blocker chốt tài chính trên view nghiệp vụ.
+- Keep business control metrics strictly separated from infrastructure alerts.
+- Giữ chỉ số kiểm soát nghiệp vụ tách biệt nghiêm ngặt với cảnh báo hạ tầng.

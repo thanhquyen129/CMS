@@ -1,0 +1,36 @@
+---
+description: "Performance standards: latency, caching, queries, async offload, client/edge. Use when optimizing slow endpoints, payloads, or perceived performance."
+alwaysApply: false
+---
+
+# Performance Standards / Chuẩn Performance
+
+## Targets / Mục tiêu
+- Define latency budgets: p50/p95/p99 per critical API before optimizing blindly.
+- Định ngân sách latency: p50/p95/p99 từng API tới hạn trước khi tối ưu mù.
+- Optimize the measured hot path — profile first (APM, traces, slow SQL).
+- Tối ưu hot path đã đo — profile trước (APM, trace, SQL chậm).
+
+## Request path / Đường request
+- Cache-aside with explicit TTL/invalidation; prevent cache stampede (lock/singleflight).
+- Cache-aside với TTL/invalidation rõ; chống stampede (lock/singleflight).
+- Ban N+1 and over-fetch. Project only needed columns; compress large JSON responses.
+- Cấm N+1 và over-fetch. Chỉ lấy cột cần; nén JSON lớn.
+- Timeouts on all outbound calls; retries only when idempotent, with jitter + cap.
+- Timeout mọi call ra ngoài; retry chỉ khi idempotent, có jitter + trần.
+- Offload heavy work to queue/workers; keep HTTP handlers thin.
+- Đẩy việc nặng sang queue/worker; giữ HTTP handler mỏng.
+
+## Payloads & clients / Payload & client
+- Paginate/cursor all lists. Cap page size. Avoid huge includes in one response.
+- Phân trang/cursor mọi list. Trần page size. Tránh include khổng lồ một response.
+- CDN + cache headers for static assets; minify/compress; code-split mobile/web bundles.
+- CDN + cache header cho static; minify/nén; code-split bundle mobile/web.
+- Skeletons / optimistic UI where safe to improve perceived speed.
+- Skeleton / optimistic UI khi an toàn để tăng tốc độ cảm nhận.
+
+## Anti-patterns / Anti-pattern
+- No sync-over-async, unbounded fan-out, or loading entire tables into memory.
+- Không sync-over-async, fan-out vô hạn, hoặc load cả bảng vào memory.
+- Do not “fix slowness” by only adding more CPU replicas when SQL is the bottleneck.
+- Không “chữa chậm” bằng thêm replica CPU khi bottleneck là SQL.

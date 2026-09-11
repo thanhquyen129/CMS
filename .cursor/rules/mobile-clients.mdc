@@ -1,0 +1,28 @@
+---
+description: "Mobile client standards for RN/Flutter: offline, push, API versioning, store release, security on device. Use when building or changing mobile apps."
+alwaysApply: false
+---
+
+# Mobile Client Standards / Chuẩn Mobile
+
+## Coupling to API / Ghép với API
+- Mobile follows `api-contracts.mdc`. Tolerate additive API fields; pin min supported API version.
+- Mobile bám `api-contracts.mdc`. Chịu field API additive; pin phiên bản API tối thiểu hỗ trợ.
+- Ship app updates knowing store review lag — backend must stay compatible across N app versions.
+- Biết độ trễ duyệt store — backend phải tương thích N phiên bản app.
+
+## Experience & resilience / Trải nghiệm & chống chịu
+- Design offline/poor-network paths for core actions: queue, retry, clear sync status.
+- Thiết kế offline/mạng kém cho hành động lõi: xếp hàng, retry, trạng thái đồng bộ rõ.
+- Push notifications are unreliable signals — always reconcile from API as source of truth.
+- Push không đáng tin tuyệt đối — luôn reconcile từ API là nguồn chân lý.
+- Secure storage for tokens; certificate pinning only with a rotation/break-glass plan.
+- Lưu token an toàn; certificate pinning chỉ khi có kế hoạch rotate/break-glass.
+
+## Release & quality / Phát hành & chất lượng
+- Staged rollouts / percentage releases. Crash-free and startup-time budgets monitored.
+- Rollout theo giai / phần trăm. Theo dõi crash-free và ngân sách thời gian startup.
+- Feature-flag risky mobile UX; remote kill-switch for broken flows when possible.
+- Feature-flag UX mobile rủi ro; kill-switch từ xa cho flow hỏng khi có thể.
+- Do not hardcode secrets/env in the binary. Use build flavors for staging/prod.
+- Không hardcode secret/env trong binary. Dùng build flavor cho staging/prod.

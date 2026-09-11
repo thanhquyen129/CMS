@@ -1,0 +1,50 @@
+---
+description: "Backup vs rollback vs business compensation: code bugs, bad deploys, data disasters. Use when planning releases, incidents, migrations, or money-flow failures."
+alwaysApply: false
+---
+
+# Backup, Rollback & Compensation / Backup, rollback & bù trừ
+
+## Do not mix these three / Đừng lẫn ba việc này
+- **Rollback code** = ship the previous app artifact (or flip a flag). Fast. Does **not** undo data already written.
+- **Rollback code** = đưa bản app trước đó (hoặc tắt flag). Nhanh. **Không** tự xóa dữ liệu đã ghi.
+- **Compensate business** = reverse a wrong *effect* (cancel booking, refund, ledger reversing entry) via explicit domain actions.
+- **Bù trừ nghiệp vụ** = đảo *hiệu ứng* sai (hủy booking, hoàn tiền, bút toán đảo) bằng hành động domain rõ.
+- **Restore backup / PITR** = recover from data loss or corruption. Last resort — you may lose later legitimate work.
+- **Restore backup / PITR** = cứu khi mất/hỏng dữ liệu. Phương án cuối — có thể mất việc hợp lệ xảy ra sau điểm restore.
+
+## When code is wrong / Khi code lỗi
+- Prefer **feature flag / kill-switch** first — disable the bad path without a full redeploy.
+- Ưu tiên **feature flag / kill-switch** trước — tắt đường hỏng không cần deploy lại cả app.
+- Next: redeploy the **previous immutable artifact** (canary/blue-green). Keep images; never “rebuild to rollback”.
+- Tiếp: deploy lại **artifact bất biến trước đó** (canary/blue-green). Giữ image; không “build lại để rollback”.
+- Schema must stay **backward compatible** during rollout so old code can run after a code rollback (`expand → migrate → contract`).
+- Schema phải **tương thích ngược** lúc rollout để code cũ vẫn chạy sau khi rollback code (`expand → migrate → contract`).
+- Prefer **forward-fix** for irreversible migrations (drop column, destructive rewrite) — do not rely on `Down()` in production.
+- Ưu tiên **forward-fix** với migration khó đảo (drop cột, rewrite phá hủy) — đừng dựa vào `Down()` trên production.
+
+## When business data is wrong / Khi nghiệp vụ sai
+- Design **compensating actions** up front for money/booking (refund, void, cancel, reverse ledger). Test them.
+- Thiết kế **hành động bù trừ** sẵn cho tiền/booking (hoàn, hủy, đảo sổ). Phải có test.
+- Never “fix” money by editing rows by hand or restoring yesterday’s DB — that erases good orders and breaks audit.
+- Không “sửa” tiền bằng sửa tay từng dòng hoặc restore DB hôm qua — xóa đơn tốt và phá audit.
+- Append-only money movements + audit trail beat in-place overwrite.
+- Biến động tiền kiểu append + audit trail hơn ghi đè tại chỗ.
+
+## When data is lost or corrupted / Khi mất hoặc hỏng dữ liệu
+- Automated backups + **PITR** (Postgres WAL) so you can restore to *just before* a bad DELETE/migration.
+- Backup tự động + **PITR** (WAL Postgres) để restore *ngay trước* lệnh DELETE/migration hại.
+- Write **RPO/RTO**. Drill restore on a schedule — an untested backup is not a backup.
+- Ghi **RPO/RTO**. Diễn tập restore định kỳ — backup chưa tập restore coi như chưa có.
+- Restore to a **side instance**, verify, then cut over — do not overwrite prod blindly.
+- Restore ra **instance phụ**, kiểm tra, rồi mới cắt — không đè prod mù.
+
+## Decision order in an incident / Thứ tự xử lý sự cố
+1. Mitigate user harm (flag off, read-only, stop workers) / Giảm hại (tắt flag, read-only, dừng worker)
+2. Rollback or forward-fix **code** if the binary is the cause / Rollback hoặc forward-fix **code** nếu lỗi do bản chạy
+3. Compensate **business** records that already committed / Bù trừ bản ghi **nghiệp vụ** đã commit
+4. PITR/restore only if data is gone or untrustworthy / PITR/restore chỉ khi dữ liệu mất hoặc không còn tin được
+
+## Related / Liên quan
+- Release mechanics → `delivery-ops.mdc`. Schema/PITR details → `database.mdc`. DR/HA → `reliability-crosscutting.mdc`.
+- Cơ chế release → `delivery-ops.mdc`. Schema/PITR → `database.mdc`. DR/HA → `reliability-crosscutting.mdc`.

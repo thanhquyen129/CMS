@@ -1,0 +1,36 @@
+---
+description: "Naming conventions and code comments/XML docs for .NET (and TS clients). Use when writing or reviewing classes, methods, or public APIs."
+alwaysApply: false
+---
+
+# Naming & Comments / Đặt tên & chú thích
+
+## Naming (.NET) / Quy ước tên (.NET)
+- Types, methods, properties, events: **PascalCase**. Locals/parameters: **camelCase**. Constants: PascalCase.
+- Kiểu, method, property, event: **PascalCase**. Biến cục bộ/tham số: **camelCase**. Hằng: PascalCase.
+- Interfaces: `I` prefix (`IOrderService`). Async methods: `Async` suffix. Booleans: `Is`/`Has`/`Can`…
+- Interface: tiền tố `I`. Method async: hậu tố `Async`. Boolean: `Is`/`Has`/`Can`…
+- Controllers: `*Controller`. DbContext: `*DbContext`. Exceptions: `*Exception`. DTOs: `*Request`/`*Response`/`*Dto`.
+- Controller: `*Controller`. DbContext: `*DbContext`. Exception: `*Exception`. DTO: `*Request`/`*Response`/`*Dto`.
+- Names reveal intent in business language — no cryptic abbreviations (`ord`, `tmp2`) in public APIs.
+- Tên thể hiện ý định bằng ngôn ngữ nghiệp vụ — không viết tắt khó hiểu (`ord`, `tmp2`) trên API công khai.
+
+## Naming (TS/mobile when used) / Tên TS/mobile khi dùng
+- Components/types: PascalCase. Functions/vars: camelCase. Constants: UPPER_SNAKE or PascalCase per project norm — stay consistent.
+- Component/type: PascalCase. Hàm/biến: camelCase. Hằng: UPPER_SNAKE hoặc PascalCase theo chuẩn project — giữ nhất quán.
+
+## Comments & docs / Chú thích & tài liệu
+- **Every class and every method** gets a short doc comment stating purpose (XML `///` in C#, JSDoc in TS).
+- **Mỗi class và mỗi method** có chú thích ngắn nêu mục đích (XML `///` trong C#, JSDoc trong TS).
+- Public APIs: document parameters, return values, and thrown domain failures when not obvious.
+- API công khai: ghi tham số, giá trị trả về, và lỗi domain khi không hiển nhiên.
+- Comments explain **why** and constraints — not a narration of what the next line does.
+- Chú thích giải thích **vì sao** và ràng buộc — không kể lại dòng code kế tiếp.
+- Keep comments updated in the same change; delete stale comments. Prefer clearer names over long essays.
+- Cập nhật chú thích trong cùng thay đổi; xóa chú thích cũ. Ưu tiên tên rõ hơn bài văn dài.
+- Do not leave `TODO`/`HACK` without owner + ticket/date.
+- Không để `TODO`/`HACK` thiếu owner + ticket/ngày.
+
+## Anti-patterns / Anti-pattern
+- No misleading names (`Save` that also sends email). No commented-out dead code in merges.
+- Không tên gây hiểu nhầm (`Save` mà còn gửi email). Không để code chết bị comment trong merge.

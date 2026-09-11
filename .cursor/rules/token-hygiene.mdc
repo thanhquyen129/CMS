@@ -1,0 +1,22 @@
+---
+description: "Token cost hygiene, minimal diff enforcement, and strict context pruning. EN/VI."
+alwaysApply: true
+---
+
+# Token Hygiene & Efficiency / Tiết kiệm Token & Tối ưu ngữ cảnh
+
+## Code generation limits / Giới hạn sinh mã
+- Never rewrite an entire file to change a few lines; generate only the specific, minimal structural diff required.
+- Không bao giờ viết lại cả file để đổi vài dòng; chỉ xuất ra đoạn diff nhỏ, chính xác và tối giản.
+- Omit boilerplate, unchanged methods, and redundant namespaces by using placeholders (e.g., `// ... existing code ...`).
+- Lược bỏ boilerplate, các hàm không đổi, và namespace thừa bằng cách dùng dấu đóng gói `// ... existing code ...`.
+
+## Conversation hygiene / Tiết kiệm hội thoại
+- Ban chatty preambles, conversational filler, and post-fix summaries. Start directly with the technical output.
+- Cấm lời mở đầu tán gẫu, từ ngữ đệm dài dòng và tóm tắt sau khi code. Vào thẳng kết quả kỹ thuật.
+- Do not explain standard syntax, patterns, or language features unless explicitly requested.
+- Không giải thích cú pháp, pattern chuẩn, hoặc tính năng ngôn ngữ trừ khi được yêu cầu rõ.
+
+## Context pruning / Thu hẹp ngữ cảnh
+- Reference files explicitly using `@filename` only for the immediate atomic task; do not load the whole codebase context.
+- Chỉ reference đích danh file bằng `@filename` cho tác vụ tới hạn hiện tại; không load bừa bãi toàn bộ codebase.

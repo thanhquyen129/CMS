@@ -1,0 +1,2160 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SoftRule — Cẩm nang kiến trúc &amp; quy tắc phát triển sản phẩm</title>
+  <meta name="description" content="Tổng hợp toàn bộ trao đổi SoftRule: tư duy sản phẩm, stack .NET + PostgreSQL, kiến trúc, vận hành, sự cố 3h sáng." />
+  <style>
+    :root {
+      --bg: #0f1419;
+      --bg-elev: #171e27;
+      --bg-card: #1c2530;
+      --line: #2a3544;
+      --text: #e8eef4;
+      --muted: #9aa8b7;
+      --faint: #6d7b8a;
+      --accent: #3d9cf0;
+      --accent-2: #5ee0b5;
+      --warn: #f0b429;
+      --danger: #f07178;
+      --ok: #7fd99a;
+      --sidebar: 280px;
+      --radius: 14px;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .35);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1a3350 0%, transparent 50%),
+                  radial-gradient(900px 500px at 100% 0%, #16352d 0%, transparent 45%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .skip {
+      position: absolute; left: -999px; top: 0;
+      background: var(--accent); color: #041018; padding: .5rem 1rem;
+    }
+    .skip:focus { left: 1rem; top: 1rem; z-index: 50; }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    aside {
+      width: var(--sidebar);
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      background: rgba(15, 20, 25, .92);
+      border-right: 1px solid var(--line);
+      padding: 1.25rem 1rem 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex; gap: .75rem; align-items: center;
+      padding: .35rem .4rem 1rem;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: .85rem;
+    }
+    .mark {
+      width: 40px; height: 40px; border-radius: 11px;
+      background: linear-gradient(145deg, var(--accent), #1b6bb3 55%, var(--accent-2));
+      display: grid; place-items: center;
+      font-weight: 800; color: #041018; letter-spacing: -1px;
+      box-shadow: var(--shadow);
+    }
+    .brand h1 {
+      font-size: .95rem; margin: 0; letter-spacing: .02em;
+    }
+    .brand p { margin: .1rem 0 0; font-size: .72rem; color: var(--muted); }
+
+    nav h2 {
+      font-size: .68rem; text-transform: uppercase; letter-spacing: .12em;
+      color: var(--faint); margin: 1rem .4rem .4rem; font-weight: 700;
+    }
+    nav a {
+      display: block;
+      color: var(--muted);
+      padding: .38rem .55rem;
+      border-radius: 8px;
+      font-size: .84rem;
+      text-decoration: none;
+    }
+    nav a:hover, nav a.active {
+      background: #243040;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .menu-btn {
+      display: none;
+      position: fixed; top: .85rem; left: .85rem; z-index: 40;
+      border: 1px solid var(--line); background: var(--bg-elev);
+      color: var(--text); border-radius: 10px; padding: .45rem .7rem;
+      font-weight: 600;
+    }
+
+    main { flex: 1; min-width: 0; padding: 2.2rem 2.4rem 5rem; max-width: 980px; }
+
+    .hero {
+      background: linear-gradient(160deg, #22364c 0%, #1c2530 55%, #18242c 100%);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 2rem 2.1rem 1.7rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
+    }
+    .hero .kicker {
+      color: var(--accent-2); font-size: .78rem; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 700; margin: 0 0 .5rem;
+    }
+    .hero h2 { font-size: 2rem; line-height: 1.25; margin: 0 0 .7rem; font-weight: 750; }
+    .hero p { color: var(--muted); margin: 0 0 .85rem; max-width: 62ch; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .chip {
+      font-size: .75rem; padding: .22rem .55rem; border-radius: 999px;
+      border: 1px solid var(--line); color: var(--muted); background: #12181f;
+    }
+
+    section {
+      margin: 2.6rem 0;
+      scroll-margin-top: 1.2rem;
+    }
+    section > h2 {
+      font-size: 1.55rem; margin: 0 0 .8rem;
+      padding-bottom: .45rem;
+      border-bottom: 1px solid var(--line);
+    }
+    h3 { font-size: 1.15rem; margin: 1.5rem 0 .55rem; }
+    h4 { font-size: 1rem; margin: 1.15rem 0 .4rem; color: #d5e4f2; }
+
+    p { margin: .55rem 0; }
+    .lead { font-size: 1.05rem; color: #c9d5e0; }
+
+    .note, .warn, .ok, .danger {
+      border-radius: var(--radius);
+      padding: .9rem 1rem;
+      margin: 1rem 0;
+      border: 1px solid var(--line);
+      background: var(--bg-card);
+    }
+    .note { border-left: 4px solid var(--accent); }
+    .warn { border-left: 4px solid var(--warn); }
+    .ok { border-left: 4px solid var(--ok); }
+    .danger { border-left: 4px solid var(--danger); }
+    .note strong, .warn strong, .ok strong, .danger strong { display: inline; }
+
+    table {
+      width: 100%; border-collapse: collapse; font-size: .9rem;
+      margin: .9rem 0 1.2rem; background: var(--bg-card);
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    th, td {
+      text-align: left; padding: .65rem .75rem;
+      border-bottom: 1px solid var(--line); vertical-align: top;
+    }
+    th { background: #222c38; color: #dbe7f3; font-weight: 650; }
+    tr:last-child td { border-bottom: 0; }
+    code, .mono {
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      font-size: .86em;
+      background: #12181f;
+      padding: .08em .35em;
+      border-radius: 5px;
+      border: 1px solid #2b3644;
+    }
+    pre {
+      background: #12181f;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      overflow: auto;
+      font-size: .82rem;
+      line-height: 1.5;
+    }
+
+    .grid-2, .grid-3 {
+      display: grid; gap: .85rem; margin: 1rem 0;
+    }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1rem 1.05rem;
+    }
+    .card h3 { margin-top: 0; }
+    .card .tag {
+      font-size: .7rem; color: var(--accent-2); letter-spacing: .08em;
+      text-transform: uppercase; font-weight: 700;
+    }
+
+    ol.pretty, ul.pretty { padding-left: 1.2rem; }
+    li { margin: .28rem 0; }
+
+    .toc-mobile { display: none; }
+
+
+    .rule-doc {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.15rem 1.2rem 1.25rem;
+      margin: 1.35rem 0 1.8rem;
+    }
+    .rule-meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .55rem; }
+    .chip-ok { border-color: #2d6a4f; color: var(--ok); }
+    .rule-desc { color: var(--muted); font-size: .92rem; margin: .2rem 0 .8rem; }
+    .rule-body h3 { margin-top: .3rem; font-size: 1.2rem; }
+    .rule-body h4 { color: var(--accent-2); font-size: 1.02rem; }
+    .rule-body ul, .rule-body ol { padding-left: 1.15rem; }
+    
+    footer {
+      margin-top: 3rem; padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--faint); font-size: .85rem;
+    }
+
+    @media (max-width: 980px) {
+      .grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 820px) {
+      aside {
+        position: fixed; left: 0; top: 0; z-index: 30;
+        transform: translateX(-105%);
+        transition: transform .2s ease;
+        width: min(86vw, 300px);
+      }
+      aside.open { transform: none; box-shadow: var(--shadow); }
+      .menu-btn { display: inline-block; }
+      main { padding: 4.2rem 1.1rem 3.5rem; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .hero h2 { font-size: 1.45rem; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#noi-dung">Bỏ qua tới nội dung</a>
+  <button class="menu-btn" type="button" id="menuBtn" aria-expanded="false">Mục lục</button>
+
+  <div class="layout">
+    <aside id="sidebar" aria-label="Mục lục">
+      <div class="brand">
+        <div class="mark">SR</div>
+        <div>
+          <h1>SoftRule Handbook</h1>
+          <p>Cẩm nang cho newbie → ship sản phẩm lớn</p>
+        </div>
+      </div>
+      <nav>
+        <h2>Mở đầu</h2>
+        <a href="#gioi-thieu">SoftRule là gì</a>
+        <a href="#cach-dung">Cách dùng trong Cursor</a>
+        <a href="#ngu-canh">Ngữ cảnh &amp; tham vọng</a>
+
+        <h2>Tư duy</h2>
+        <a href="#san-pham">Tư duy sản phẩm</a>
+        <a href="#lam-viec-ai">Làm việc với AI</a>
+
+        <h2>Chọn công nghệ</h2>
+        <a href="#chon-ngon-ngu">.NET / Nest / PHP</a>
+        <a href="#database">PostgreSQL hay gì</a>
+        <a href="#stack-chot">Stack đã chốt</a>
+
+        <h2>Kiến trúc</h2>
+        <a href="#ba-tang">3 tầng không phải giáo điều</a>
+        <a href="#modular">Modular monolith</a>
+        <a href="#api">Thiết kế API</a>
+
+        <h2>Bộ rule</h2>
+        <a href="#ban-do-rule">Bản đồ 28 file</a>
+        <a href="#chi-tiet-rule">Diễn giải từng nhóm</a>
+
+        <h2>Vận hành &amp; sự cố</h2>
+        <a href="#backup">Backup ≠ rollback ≠ bù trừ</a>
+        <a href="#rui-ro">10 họ rủi ro hệ lớn</a>
+        <a href="#tabletop">15 kịch bản diễn tập</a>
+        <a href="#3am">Tự động lúc 3h sáng</a>
+
+        <h2>Toàn văn rules</h2>
+        <a href="#rule-00-core-product">00-core-product</a>
+        <a href="#rule-01-ai-collaboration">01-ai-collaboration</a>
+        <a href="#rule-02-rule-i18n">02-rule-i18n</a>
+        <a href="#rule-03-stack-dotnet-postgres">03-stack-dotnet-postgres</a>
+        <a href="#rule-04-architect-guardrails">04-architect-guardrails</a>
+        <a href="#rule-architecture-design">architecture-design</a>
+        <a href="#rule-api-contracts">api-contracts</a>
+        <a href="#rule-database">database</a>
+        <a href="#rule-concurrency-correctness">concurrency-correctness</a>
+        <a href="#rule-messaging-integration">messaging-integration</a>
+        <a href="#rule-time-money-locale">time-money-locale</a>
+        <a href="#rule-security">security</a>
+        <a href="#rule-supply-chain-deps">supply-chain-deps</a>
+        <a href="#rule-performance">performance</a>
+        <a href="#rule-scale">scale</a>
+        <a href="#rule-deployment">deployment</a>
+        <a href="#rule-monitoring">monitoring</a>
+        <a href="#rule-logging-debug">logging-debug</a>
+        <a href="#rule-testing">testing</a>
+        <a href="#rule-delivery-ops">delivery-ops</a>
+        <a href="#rule-backup-rollback">backup-rollback</a>
+        <a href="#rule-incident-automation">incident-automation</a>
+        <a href="#rule-reliability-crosscutting">reliability-crosscutting</a>
+        <a href="#rule-mobile-clients">mobile-clients</a>
+        <a href="#rule-ux-ui">ux-ui</a>
+        <a href="#rule-engineering-quality">engineering-quality</a>
+        <a href="#rule-coding-conventions">coding-conventions</a>
+        <a href="#rule-documentation-adr">documentation-adr</a>
+
+        <h2>Chốt</h2>
+        <a href="#con-lai">Việc rule không thay được</a>
+        <a href="#go-live">Checklist go-live</a>
+        <a href="#phu-luc">Phụ lục copy lệnh</a>
+      </nav>
+    </aside>
+
+    <main id="noi-dung">
+      <header class="hero">
+        <p class="kicker">SoftRule · Handbook · 2026</p>
+        <h2>Tổng hợp toàn bộ trao đổi: từ “cần bộ rule Cursor” tới “3h sáng máy làm gì, người làm gì”.</h2>
+        <p>
+          Tài liệu này diễn giải lại mọi quyết định đã thống nhất — bằng tiếng Việt, dành cho người mới —
+          nhưng giữ đúng tinh thần kiến trúc sư hệ lớn: đơn giản có chủ đích, không ảo tưởng undo bằng backup,
+          không microservice ngày đầu.
+        </p>
+        <div class="chips">
+          <span class="chip">ASP.NET Core</span>
+          <span class="chip">PostgreSQL</span>
+          <span class="chip">Modular monolith</span>
+          <span class="chip">React Native / Flutter</span>
+          <span class="chip">~100k user</span>
+          <span class="chip">Song ngữ EN/VI</span>
+        </div>
+      </header>
+
+      <section id="gioi-thieu">
+        <h2>1. SoftRule là gì?</h2>
+        <p class="lead">
+          SoftRule là <strong>bộ quy tắc persistent trong Cursor</strong> (file <code>.mdc</code> trong
+          <code>.cursor/rules/</code> + một User Rule toàn cục) để AI và bạn cùng làm sản phẩm theo một “hiến pháp”
+          chung — không phải framework chạy được, cũng không phải thay thế não người.
+        </p>
+        <p>
+          Ban đầu bạn muốn một bộ rule cốt lõi, dùng lại cho nhiều dự án sau này. Chúng ta đã thống nhất:
+        </p>
+        <ul class="pretty">
+          <li><strong>Phạm vi hỗn hợp:</strong> vài rule luôn áp dụng; phần chuyên sâu agent tự gọi khi đúng việc.</li>
+          <li><strong>Ngôn ngữ:</strong> song ngữ English (bản canonical cho AI) + tiếng Việt; có thể thêm <code>[JA]</code>, <code>[KO]</code>…</li>
+          <li><strong>Đặt ở cả hai nơi:</strong> template trong repo <code>softrule</code>, và User Rule tóm tắt cho mọi project Cursor.</li>
+          <li><strong>Trọng tâm:</strong> tư duy sản phẩm, kiến trúc, kỹ thuật, UX, bảo mật, giao hàng, cách làm việc với AI — cộng performance, scale, reliability.</li>
+        </ul>
+        <div class="ok">
+          <strong>Việc SoftRule làm tốt:</strong> nhắc AI (và bạn) đừng quên SLO, authz, idempotency, rollback, Postgres, không chọn PHP/MySQL mặc định.
+          <br /><strong>Việc SoftRule không làm:</strong> bấm nút restore lúc 3h sáng, review hộ đường tiền do AI viết, hay thay luật sư / on-call người thật.
+        </div>
+      </section>
+
+      <section id="cach-dung">
+        <h2>2. Cách dùng trong Cursor</h2>
+        <h3>Hai lớp rule</h3>
+        <div class="grid-2">
+          <article class="card">
+            <div class="tag">Always apply · 00–04</div>
+            <h3>Luôn có trong mọi chat</h3>
+            <p>Tư duy sản phẩm, cách pair với AI, quy ước song ngữ, stack mặc định, lan can kiến trúc sư. Ngắn, không được phình.</p>
+          </article>
+          <article class="card">
+            <div class="tag">Agent requestable</div>
+            <h3>Chỉ khi đúng ngữ cảnh</h3>
+            <p>Database, security, deploy, test, messaging… Cursor đọc <code>description</code> rồi kéo file khi bạn đang làm việc đó — tránh nhồi 28 file vào mọi câu hỏi.</p>
+          </article>
+        </div>
+        <h3>Sang dự án mới</h3>
+        <ol class="pretty">
+          <li>Copy thư mục <code>.cursor/rules/</code> vào root repo sản phẩm.</li>
+          <li>Giữ <code>00</code>–<code>04</code> always-apply.</li>
+          <li>Viết SLO thật của dự án (peak RPS, p99, error budget) + ADR cho quyết định khó đảo.</li>
+          <li>Chỉ xóa rule chuyên sâu nếu sản phẩm <em>thật sự</em> không bao giờ cần.</li>
+        </ol>
+        <div class="note">
+          User Rule toàn cục tiêu đề <strong>SoftRule — Core Product Development</strong> là bản rút. Chi tiết vẫn nằm ở file trong repo — agent và người đều đọc repo, không dựa trí nhớ chat.
+        </div>
+      </section>
+
+      <section id="ngu-canh">
+        <h2>3. Ngữ cảnh bạn đặt ra</h2>
+        <p>Bạn hình dung phần mềm có lượng user lớn (~100.000), truy cập đồng thời lớn, request liên tục. Đây là <strong>tham vọng thiết kế</strong>, chưa phải SLO đã đo.</p>
+        <div class="warn">
+          <strong>Bẫy đơn vị:</strong> “1 triệu cùng lúc” không bằng “1 triệu request/ngày”.
+          Concurrent session, RPS, và volume ngày là ba số khác nhau. Mọi thiết kế đáng kể phải trả lời:
+          ảnh hưởng SLO? fail lúc peak? chi phí ×10? rollback thế nào?
+        </div>
+        <p>
+          Ví dụ nghiệp vụ từng nhắc: <strong>sàn giao dịch logistics + mobile</strong>. SoftRule không khóa riêng logistics —
+          nhưng quyết định stack (.NET + Postgres) được chốt vì loại sản phẩm này <em>có tiền / booking sớm</em>, không phải CMS.
+        </p>
+      </section>
+
+      <section id="san-pham">
+        <h2>4. Tư duy sản phẩm (luôn áp dụng)</h2>
+        <p>Không bắt đầu từ công nghệ vì thích. Đường đi:</p>
+        <p><strong>Vấn đề người dùng → chỉ số thành công → thay đổi nhỏ nhất có thể ship.</strong></p>
+        <ul class="pretty">
+          <li>Mục tiêu / user / ràng buộc chưa rõ: hỏi 1–3 câu sắc rồi mới làm.</li>
+          <li>MVP: lát cắt mỏng chứng minh outcome. Cắt nice-to-have; ghi follow-up. Từ chối phình scope trừ khi bắt buộc cho đúng đắn / bảo mật.</li>
+          <li>Ưu tiên quyết định <em>đảo được</em>. Quyết định khó đảo (identity, sổ tiền, API công khai, tenancy, nơi lưu data) phải có <strong>ADR ngắn</strong>.</li>
+          <li><strong>Definition of done:</strong> đạt outcome + test đường tới hạn + log/metric nhìn thấy được + mặc định an toàn + rollback được.</li>
+        </ul>
+        <p>File: <code>00-core-product.mdc</code>, <code>04-architect-guardrails.mdc</code>, <code>documentation-adr.mdc</code>.</p>
+      </section>
+
+      <section id="lam-viec-ai">
+        <h2>5. Làm việc với AI trong Cursor</h2>
+        <p>Vì bạn nói team “phụ thuộc hoàn toàn vào AI”: AI là senior pair, không phải autopilot.</p>
+        <ul class="pretty">
+          <li>Diễn lại mục tiêu 1 câu; nêu ràng buộc và non-goals.</li>
+          <li>Việc nhiều file: phác plan ngắn rồi mới sửa.</li>
+          <li>Bám pattern repo; không refactor lan man; không bịa API/config.</li>
+          <li>Chạy test/lint/build khi có thể; nêu rủi ro còn lại.</li>
+          <li>Hỏi trước force push, drop DB, đổi production.</li>
+        </ul>
+        <div class="danger">
+          <strong>Đường tiền, auth, migration, idempotency:</strong> đọc như review junior.
+          “Compile được” không có nghĩa “không double-payout”. Compiler không hiểu nghiệp vụ.
+        </div>
+      </section>
+
+      <section id="chon-ngon-ngu">
+        <h2>6. Chọn ngôn ngữ: cuộc tranh luận đã chốt thế nào</h2>
+        <p class="lead">Bạn hỏi .NET, Node, PHP. Rồi: sàn logistics + mobile, team mạnh PHP nhưng làm việc qua AI. Rồi phản biện đúng: “nếu payment rồi cũng .NET thì sao không làm .NET từ đầu?”</p>
+
+        <h3>So sánh nhanh cho dự án lớn</h3>
+        <table>
+          <thead>
+            <tr><th>Mặt</th><th>NestJS (TypeScript)</th><th>.NET (ASP.NET Core)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Ship MVP + AI / cùng ngôn ngữ mobile</td><td>Thường nhanh hơn</td><td>Ceremony nhiều hơn một chút</td></tr>
+            <tr><td>Type safety, bảo trì 3–5 năm</td><td>Phụ thuộc discipline (dễ lọt <code>any</code>)</td><td>Compiler chặt hơn, “ray ga” mặc định cao</td></tr>
+            <tr><td>Perf / p99 / CPU</td><td>Rất tốt I/O</td><td>Thường nhỉnh hơn khi nặng tính toán/JSON</td></tr>
+            <tr><td>Tiền, đối soát, state machine</td><td>Làm được nếu kỷ luật</td><td>Văn hóa/pattern enterprise dày hơn</td></tr>
+            <tr><td>Realtime</td><td>Socket.io tự nhiên</td><td>SignalR chín</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Vì sao lời khuyên từng đổi</h3>
+        <p>
+          Lần đầu có người khuyên “TS trước, .NET payment sau”. Với <strong>sàn logistics</strong> đó là lời khuyên yếu:
+          đặt cọc, cước, hoa hồng, hoàn/hủy xuất hiện sớm — payment không phải vệ tinh phase 2.
+          Tách stack sau = hai cách ops + nợ migrate, thường đắt hơn học .NET ngay (nhất là khi AI đỡ C# được).
+        </p>
+        <div class="ok">
+          <strong>Chốt:</strong> backend <strong>.NET modular monolith từ ngày đầu</strong>.
+          Mobile <strong>không cần C#</strong> — React Native (Expo) hoặc Flutter, nói chuyện qua API versioned.
+          Không polyglot backend (Nest + .NET) trừ lý do cực mạnh.
+        </div>
+        <p><strong>PHP:</strong> ổn CMS/CRUD; không mặc định cho hệ concurrent lâu + tiền. Team giữ kiến thức PHP, không lấy Laravel làm nền tảng sản phẩm này.</p>
+        <p><strong>Dự án nhỏ:</strong> vẫn dùng .NET + Postgres được — chỉ giữ kiến trúc mỏng (ít project, EF Core, không CQRS). Trừ landing/script vài ngày.</p>
+      </section>
+
+      <section id="database">
+        <h2>7. Database: Postgres, MySQL hay SQL Server?</h2>
+        <table>
+          <thead>
+            <tr><th></th><th>PostgreSQL</th><th>SQL Server</th><th>MySQL</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Greenfield + .NET</td><td><strong>Mặc định</strong></td><td>Khi lock-in Azure/Microsoft có chủ đích</td><td>Không ưu tiên</td></tr>
+            <tr><td>Geo / khoảng cách / geofence</td><td>PostGIS rất mạnh</td><td>Có spatial, kém “chuẩn ngành”</td><td>Yếu hơn</td></tr>
+            <tr><td>JSON / query phức tạp</td><td>JSONB mạnh</td><td>Mạnh</td><td>Đủ dùng, kém Postgres</td></tr>
+            <tr><td>Chi phí license</td><td>Mở</td><td>Thường đắt hơn</td><td>Mở</td></tr>
+          </tbody>
+        </table>
+        <p>Kèm theo: <strong>Redis</strong> (cache/session/rate-limit), queue cho việc nặng, object storage cho file/chứng từ — không nhét blob vào OLTP.</p>
+      </section>
+
+      <section id="stack-chot">
+        <h2>8. Stack mặc định đã ghi vào rule</h2>
+        <table>
+          <thead><tr><th>Lớp</th><th>Chọn</th></tr></thead>
+          <tbody>
+            <tr><td>Backend</td><td>ASP.NET Core — modular monolith, chưa microservice ngày đầu</td></tr>
+            <tr><td>DB</td><td>PostgreSQL (+ PostGIS khi cần geo)</td></tr>
+            <tr><td>Cache / async</td><td>Redis + queue khi cần</td></tr>
+            <tr><td>Mobile</td><td>React Native (Expo) hoặc Flutter</td></tr>
+            <tr><td>Admin / web</td><td>Blazor hoặc Next.js — không ép một SPA toàn cục</td></tr>
+            <tr><td>Không mặc định</td><td>PHP, NestJS, MySQL — trừ khi bạn yêu cầu rõ</td></tr>
+          </tbody>
+        </table>
+        <p>File: <code>03-stack-dotnet-postgres.mdc</code> (always apply).</p>
+      </section>
+
+      <section id="ba-tang">
+        <h2>9. “Chỉ có 3 tầng hay sao?” — câu hỏi kiến trúc quan trọng nhất</h2>
+        <p class="lead">
+          Không. <strong>3 tầng là la bàn trách nhiệm</strong> để newbie không viết controller gọi thẳng SQL.
+          Hệ thật có thể zoom chi tiết hơn — nhưng vẫn gói vào 3 việc: cửa, luật, kho.
+        </p>
+
+        <h3>Ba tầng tối thiểu (Route – Logic – Data)</h3>
+        <table>
+          <thead><tr><th>Tầng</th><th>Được làm</th><th>Cấm</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Route / API</strong></td>
+              <td>HTTP, JWT/auth ở cửa, validate shape JSON, map DTO</td>
+              <td>Business rule, SQL, gọi cổng thanh toán “len lỏi”</td>
+            </tr>
+            <tr>
+              <td><strong>Logic</strong></td>
+              <td>Đặt đơn, tính phí, chuyển trạng thái, biên transaction</td>
+              <td>Bám HTTP status, SQL thô, chi tiết UI</td>
+            </tr>
+            <tr>
+              <td><strong>Data</strong></td>
+              <td>EF/Postgres, Redis, S3, API ngoài</td>
+              <td>Quyết “đơn có được hủy không?”</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>“API → use-case → domain” không phải hệ đếm khác</h3>
+        <p>Đó là <strong>zoom vào tầng Logic</strong> khi nghiệp vụ nặng:</p>
+        <pre>Route / API     →  Controller, Minimal API, DTO
+Logic
+  ├ Use-case     →  “Tạo booking”, “Thanh toán”
+  └ Domain       →  Luật thuần: state máy, tiền, invariant
+Data             →  EF, Redis, Stripe, file</pre>
+        <ul class="pretty">
+          <li>Dự án nhỏ: một lớp service gộp use-case + domain vẫn ổn.</li>
+          <li>Có tiền / booking rối: tách Domain để rule không dính EF.</li>
+        </ul>
+
+        <h3>Các mô hình bạn sẽ gặp — đừng sợ số tầng</h3>
+        <ul class="pretty">
+          <li><strong>2 tầng UI+DB:</strong> nhanh chết khi lớn — tránh.</li>
+          <li><strong>Clean / Hexagonal / Onion:</strong> Domain ở giữa; HTTP và DB là adapter ngoài. Cùng ý: nghiệp vụ không phụ thuộc framework.</li>
+          <li><strong>Vertical slice:</strong> cắt theo tính năng (Booking, Payment); <em>trong</em> mỗi slice vẫn route → logic → data.</li>
+          <li><strong>Modular monolith (SoftRule chọn):</strong> nhiều module nghiệp vụ trong một process; mỗi module giữ layer; chưa tách service.</li>
+        </ul>
+        <p><strong>Nguyên tắc già:</strong> số folder không quan trọng bằng <em>hướng phụ thuộc</em> (ngoài → trong). Data/HTTP không được “ra lệnh” cho Domain.</p>
+        <div class="warn">
+          Anti-pattern newbie: controller chứa SQL + tính tiền; service 2000 dòng; DbContext thần dùng chung mọi module; đưa entity DB ra mobile rồi phá schema mỗi lần đổi app.
+        </div>
+      </section>
+
+      <section id="modular">
+        <h2>10. Modular monolith và những “không mặc định”</h2>
+        <ul class="pretty">
+          <li>Tách microservice chỉ khi có lý do đo được: scale, team, cô lập lỗi.</li>
+          <li>Không CQRS / event-sourcing / broker phức tạp khi chưa có nỗi đau.</li>
+          <li>Tenancy: quyết sớm single vs multi; nếu multi thì <code>tenant_id</code> trên mọi query và token. Mô hình DB-per-tenant hoãn đến khi business buộc — ghi ADR.</li>
+          <li>Queue cho spike, fan-out, việc dài — consumer <strong>idempotent</strong>, ưu tiên <strong>outbox</strong>, có DLQ.</li>
+          <li>State machine cho order/booking/payment: chuyển trái phép phải bị từ chối (kèm constraint DB).</li>
+        </ul>
+      </section>
+
+      <section id="api">
+        <h2>11. API design (hợp đồng là sản phẩm)</h2>
+        <p>Phá client mobile/web = sự cố production, vì app store có độ trễ duyệt.</p>
+        <ul class="pretty">
+          <li>Xuất OpenAPI; ưu tiên thay đổi <em>additive</em>; deprecate có ngày sunset.</li>
+          <li>Không đổi nghĩa field cũ; không đổi nullability/type thầm lặng.</li>
+          <li>Lỗi ổn định (Problem Details), mã máy đọc được; <strong>không trả stack trace</strong> ra client.</li>
+          <li>Phân trang cursor/offset có trần; sort xác định.</li>
+          <li><code>Idempotency-Key</code> trên create / payment / webhook.</li>
+          <li>CORS chỉ origin web đã biết; app native không sống nhờ CORS.</li>
+        </ul>
+      </section>
+
+      <section id="ban-do-rule">
+        <h2>12. Bản đồ bộ rule hiện tại (28 file)</h2>
+        <p class="ok">
+          Nguyên văn từng file nằm ở mục <a href="#toan-van-rules">21. Toàn văn 28 SoftRule</a>
+          (mục lục bên trái, nhóm “Toàn văn rules”).
+        </p>
+        <h3>Always apply</h3>
+        <table>
+          <thead><tr><th>File</th><th>Việc</th></tr></thead>
+          <tbody>
+            <tr><td><code>00-core-product</code></td><td>Problem → outcome, MVP, DoD</td></tr>
+            <tr><td><code>01-ai-collaboration</code></td><td>Pair với Cursor: plan, verify, không phá hủy tự tiện</td></tr>
+            <tr><td><code>02-rule-i18n</code></td><td>EN + VI; cách thêm ngôn ngữ</td></tr>
+            <tr><td><code>03-stack-dotnet-postgres</code></td><td>Stack mặc định nhỏ và lớn</td></tr>
+            <tr><td><code>04-architect-guardrails</code></td><td>Khó đảo, operability, chống over-complexity</td></tr>
+          </tbody>
+        </table>
+        <h3>Chuyên sâu — agent tự gọi</h3>
+        <div class="grid-2">
+          <article class="card">
+            <div class="tag">Kỹ thuật lõi</div>
+            <p><code>architecture-design</code> · <code>api-contracts</code> · <code>database</code> · <code>concurrency-correctness</code> · <code>messaging-integration</code> · <code>time-money-locale</code> · <code>security</code> · <code>supply-chain-deps</code> · <code>performance</code> · <code>scale</code></p>
+          </article>
+          <article class="card">
+            <div class="tag">Vận hành &amp; client</div>
+            <p><code>deployment</code> · <code>monitoring</code> · <code>logging-debug</code> · <code>testing</code> · <code>delivery-ops</code> · <code>backup-rollback</code> · <code>incident-automation</code> · <code>reliability-crosscutting</code> · <code>mobile-clients</code> · <code>ux-ui</code> · <code>engineering-quality</code> · <code>coding-conventions</code> · <code>documentation-adr</code></p>
+          </article>
+        </div>
+      </section>
+
+      <section id="chi-tiet-rule">
+        <h2>13. Diễn giải từng nhóm chuyên sâu</h2>
+
+        <h3>Database</h3>
+        <p>Access pattern trước, chuẩn hóa sau. Constraint giữ invariant. Migration versioned: expand → migrate → contract. Transaction ngắn, không gọi HTTP trong transaction. Cấm N+1 và <code>ToList</code> vô hạn. Trần pool so với <code>max_connections</code>. Soft-delete phải có job purge.</p>
+
+        <h3>Bảo mật + audit định kỳ</h3>
+        <p>Deny-by-default, không commit secret, OIDC/OAuth2, authz mọi thao tác nhạy cảm phía server, HTTPS, parameterize SQL, rate-limit, MFA admin, không PII trong log.</p>
+        <p><strong>Audit hàng quý</strong> (sản phẩm có user/tiền): review quyền, rotate secret, CVE, auth/session, spot-check restore, OWASP trên bề mặt đã đổi. Finding có owner + hạn. Hàng năm / trước launch lớn: review hoặc pentest sâu hơn. Liên tục: quét dependency + secret trên mọi merge.</p>
+
+        <h3>Đặt tên &amp; chú thích</h3>
+        <p>PascalCase kiểu/method; camelCase biến. Interface <code>I</code>, async hậu tố <code>Async</code>, DTO <code>*Request/*Response</code>. <strong>Mỗi class và mỗi method</strong> có XML <code>///</code> (C#) hoặc JSDoc (TS) nêu mục đích. Comment nói <em>vì sao</em>, không kể lại dòng kế. TODO phải có owner + ticket.</p>
+
+        <h3>Concurrency &amp; tiền/giờ</h3>
+        <p>Mọi retry/tab/worker đều có thể đua. Idempotency key + optimistic lock + unique constraint. Không float cho tiền; luôn có mã currency; làm tròn thống nhất. Lưu UTC; timezone nghiệp vụ lưu riêng; không lấy giờ local server làm chân lý.</p>
+
+        <h3>Performance vs Scale</h3>
+        <p><strong>Performance:</strong> đo hot path rồi mới tối ưu; cache-aside + chống stampede; timeout; retry chỉ khi idempotent.</p>
+        <p><strong>Scale:</strong> đổi mục tiêu thành RPS / connection / tăng data; dự phòng 2–3× peak; app stateless; shard chỉ khi có bằng chứng; backpressure hơn bão retry.</p>
+
+        <h3>Deploy</h3>
+        <p>Tách local/staging/prod. Domain → proxy/LB. Chỉ HTTPS, cert tự renew. Env/secret manager, <code>.env.example</code> giả, fail-fast thiếu config. Health live + ready. Container non-root. Migration là bước release có kiểm soát — không để mọi replica đua migrate lúc boot.</p>
+
+        <h3>Monitor, log, test, CI/CD</h3>
+        <ul class="pretty">
+          <li>Tín hiệu vàng: latency, traffic, errors, saturation + counter nghiệp vụ.</li>
+          <li>Log cấu trúc + correlation ID; không secret/PII; debug prod đọc trước.</li>
+          <li>Nhiều unit + integration Postgres + ít e2e. Cover auth, tiền, idempotency, migration.</li>
+          <li>Artifact bất biến promote qua env. Canary + flag + kill-switch.</li>
+        </ul>
+      </section>
+
+      <section id="backup">
+        <h2>14. Backup, rollback, bù trừ — đừng lẫn ba nút</h2>
+        <table>
+          <thead><tr><th>Tình huống</th><th>Nút đúng</th><th>Nút sai</th></tr></thead>
+          <tbody>
+            <tr><td>Bản code 500</td><td>Tắt flag hoặc deploy lại <em>image cũ</em></td><td>Restore DB hôm qua</td></tr>
+            <tr><td>Tính phí sai, sai trạng thái đơn</td><td>Hành động bù trừ (hoàn, hủy, đảo sổ) + audit</td><td>Sửa tay SQL / restore DB</td></tr>
+            <tr><td>DELETE nhầm, disk chết</td><td>PITR / backup (restore ra máy phụ rồi cắt)</td><td>Chỉ rollback code</td></tr>
+          </tbody>
+        </table>
+        <p>Điều kiện rollback code được: schema còn tương thích bản cũ (expand–migrate–contract). Migration phá hủy: <strong>forward-fix</strong>, đừng ảo tưởng <code>Down()</code> trên prod.</p>
+        <p>Thứ tự sự cố: giảm hại → rollback/forward-fix code → bù trừ bản ghi đã commit → PITR chỉ khi data mất/hỏng.</p>
+      </section>
+
+      <section id="rui-ro">
+        <h2>15. Hệ lớn có “bao nhiêu kịch bản nguy hiểm”?</h2>
+        <p>Không có số thần thánh. Architect nhớ <strong>10 họ</strong> — phủ khoảng 90% chuyện chết người:</p>
+        <ol class="pretty">
+          <li>Mất / hỏng dữ liệu</li>
+          <li>Tiền / sổ lệch (double-charge, dual-write)</li>
+          <li>Đua tranh &amp; trạng thái bất hợp pháp</li>
+          <li>Bảo mật &amp; lạm dụng (lộ secret, authz chỉ ở UI)</li>
+          <li>Sập tải / sập dây chuyền (retry storm, stampede, pool cạn)</li>
+          <li>Deploy không đảo được (drop cột rồi mới biết)</li>
+          <li>Đồng hồ / timezone / làm tròn</li>
+          <li>Nhầm tenant / rò data chéo</li>
+          <li>Bên thứ ba &amp; chi phí (cổng pay, map, TLS hết hạn)</li>
+          <li>Con người &amp; quy trình (bus factor 1, hotfix tay, CI đèn xanh giả)</li>
+        </ol>
+        <p>Ưu tiên với sản phẩm kiểu sàn + tải cao: tiền &amp; idempotency → mất data/migration → authz/PII → sập DB + retry storm → phá API mobile → schema không rollback được.</p>
+      </section>
+
+      <section id="tabletop">
+        <h2>16. Top 15 kịch bản diễn tập trước launch</h2>
+        <p>Làm trên giấy 30–60 phút với team. Đọc triệu chứng → nói 10 phút đầu → máy làm gì / lúc nào gọi người.</p>
+        <table>
+          <thead>
+            <tr><th>#</th><th>Kịch bản</th><th>Triệu chứng</th><th>10 phút đầu</th><th>Rule</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Deploy hỏng</td><td>5xx sau release</td><td>Freeze; rollback artifact</td><td>delivery-ops, backup-rollback</td></tr>
+            <tr><td>2</td><td>Migration khóa DB</td><td>Wait↑, /ready fail</td><td>Không Down(); dừng migrate</td><td>database, deployment</td></tr>
+            <tr><td>3</td><td>Hết connection</td><td>too many connections</td><td>Shed load; giảm app, đừng tăng</td><td>database, scale</td></tr>
+            <tr><td>4</td><td>Bão retry</td><td>RPS và lỗi cùng tăng</td><td>Rate-limit edge</td><td>scale, reliability</td></tr>
+            <tr><td>5</td><td>Webhook / tiền lệch</td><td>Cổng OK, sổ không</td><td>Dừng worker chi; không hoàn loạt</td><td>messaging, time-money</td></tr>
+            <tr><td>6</td><td>Postgres chết</td><td>Mọi ghi fail</td><td>HA nếu có; không tự restore</td><td>reliability, backup</td></tr>
+            <tr><td>7</td><td>Redis chết</td><td>Chậm / 500 cache</td><td>Bỏ cache, giữ DB</td><td>performance</td></tr>
+            <tr><td>8</td><td>Queue / poison</td><td>Depth↑, message lặp</td><td>DLQ; pause consumer</td><td>messaging</td></tr>
+            <tr><td>9</td><td>SMS/map/pay treo</td><td>Request treo</td><td>Circuit open; UX suy giảm</td><td>reliability, ux-ui</td></tr>
+            <tr><td>10</td><td>Auth chết</td><td>401/503 login</td><td>Rollback / tắt flag IdP</td><td>security, delivery-ops</td></tr>
+            <tr><td>11</td><td>TLS / DNS / cert</td><td>Handshake fail</td><td>Gọi người nếu renew fail</td><td>deployment</td></tr>
+            <tr><td>12</td><td>Disk đầy</td><td>Không ghi, crash loop</td><td>Nới disk; cắt log</td><td>logging, deployment</td></tr>
+            <tr><td>13</td><td>Spike launch</td><td>RPS↑ còn success</td><td>Autoscale, queue, shed</td><td>scale, performance</td></tr>
+            <tr><td>14</td><td>Phá API mobile</td><td>Crash-free↓</td><td>Tắt flag hành vi mới</td><td>api-contracts, mobile</td></tr>
+            <tr><td>15</td><td>Nghi mất data</td><td>Số đếm sụp</td><td>Dừng ghi; gọi người; cấm máy restore</td><td>backup-rollback</td></tr>
+          </tbody>
+        </table>
+        <p>#1–4, 7–10, 12–14: máy làm phần lớn. #5, #6, #11, #15: máy chỉ dừng hại.</p>
+      </section>
+
+      <section id="3am">
+        <h2>17. Tự động hóa khi người ngủ quên lúc 3h sáng</h2>
+        <p class="lead">Người không được là điểm thất bại duy nhất — máy cũng không được tự hoàn tiền hay đè prod bằng backup.</p>
+        <pre>Probe / SLO lệch
+  → khớp playbook đã biết?
+       có  → flag / rollback image / circuit / rate-limit / restart
+             → SLO hồi? ghi log + ticket sáng
+             → vẫn cháy? đánh thức on-call
+       không / việc khó đảo → gọi người ngay (không đoán thêm)</pre>
+
+        <div class="grid-2">
+          <article class="card">
+            <div class="tag">Máy được phép</div>
+            <ul>
+              <li>Probe login, tạo đơn, /ready, pay sandbox</li>
+              <li>Canary đốt SLO → auto-rollback image</li>
+              <li>Kill-switch, circuit breaker, autoscale, WAF</li>
+              <li>Restart pod; DLQ; cert renew</li>
+            </ul>
+          </article>
+          <article class="card">
+            <div class="tag">Máy cấm (năm đầu)</div>
+            <ul>
+              <li>PITR đè production</li>
+              <li>Hoàn tiền / đảo sổ hàng loạt</li>
+              <li>Failover multi-region</li>
+              <li>Migration Down(), xóa data, tắt auth</li>
+            </ul>
+          </article>
+        </div>
+        <p>On-call (PagerDuty/tương đương) vẫn cần: primary → secondary → lead. Tự động hóa <em>giảm số lần gọi</em>, không xóa người cho việc khó đảo.</p>
+      </section>
+
+      <section id="con-lai">
+        <h2>18. Còn gì rule không phủ — chuyên gia dặn thêm</h2>
+        <p>SoftRule <strong>đủ để chốt và bắt đầu làm sản phẩm</strong>. Thêm file lúc này dễ thành sách không ai đọc. Phần còn lại:</p>
+        <h3>Trước user trả tiền</h3>
+        <ul class="pretty">
+          <li>Hai người biết tắt flag / rollback image (bus factor ≠ 1).</li>
+          <li>Admin đầu tiên, mất MFA, impersonation có audit.</li>
+          <li>Lịch đối soát ngân hàng / COD (đặc biệt logistics VN).</li>
+          <li>Pháp lý: điều khoản, khiếu nại, hóa đơn/thuế, dữ liệu cá nhân.</li>
+          <li>Gian lận đơn giản: trần, xác minh SĐT, review payout đầu — chưa cần AI fraud.</li>
+          <li>Staging không copy PII production.</li>
+        </ul>
+        <h3>Cố ý để sau</h3>
+        <p>Microservice, Kafka “cho đỡ sợ”, multi-region, chaos formal, search cluster, warehouse — khi có nỗi đau đo được.</p>
+      </section>
+
+      <section id="go-live">
+        <h2>19. Checklist go-live (một trang, dán repo sản phẩm)</h2>
+        <ul class="pretty">
+          <li>Load test một happy path với RPS thật (login → tạo đơn → pay giả lập)</li>
+          <li>Tabletop 15 kịch bản + một lần restore Postgres ra máy phụ</li>
+          <li>Probe chạy từ <em>bên ngoài</em> cluster</li>
+          <li>Status page + câu trả lời support khi chậm / pay treo</li>
+          <li>Flag tắt được matching / payout / notify</li>
+          <li>Cert, DNS, env prod fail-fast</li>
+          <li>App store: bản cũ còn tương thích API</li>
+          <li>SMS/email sender hợp lệ; map/SDK có hạn mức và key không nhét binary</li>
+          <li>On-call nghe được máy đêm launch</li>
+        </ul>
+      </section>
+
+
+      <section id="toan-van-rules">
+        <h2>21. Toàn văn 28 SoftRule</h2>
+        <p class="lead">
+          Đây là <strong>nguyên văn</strong> các file <code>.mdc</code> đang dùng trong Cursor
+          (đã bỏ YAML frontmatter khỏi phần đọc, nhưng giữ <code>alwaysApply</code> và mô tả).
+          File gốc vẫn là nguồn sự thật khi copy sang dự án.
+        </p>
+        <div class="warn">
+          <strong>Ghi chú:</strong> Handbook diễn giải ở các mục trước.
+          Mục này để tra cứu đúng từng câu rule song ngữ EN/VI.
+        </div>
+        
+        <article class="rule-doc" id="rule-00-core-product">
+          <div class="rule-meta">
+            <span class="chip">01 / 28</span>
+            <span class="chip">00-core-product.mdc</span>
+            <span class="chip chip-ok">Luôn áp dụng</span>
+          </div>
+          <p class="rule-desc">Core product mindset: problem→outcome, MVP, scope control. EN/VI. Apply to every product task.</p>
+          <div class="rule-body">
+            <h3>Core Product Development / Phát triển sản phẩm cốt lõi</h3>
+<h4>Outcome first / Ưu tiên kết quả</h4>
+<ul>
+<li>Start from <strong>user problem → success metric → smallest shippable change</strong>. Never start from tech for its own sake.</li>
+<li>Bắt đầu từ <strong>vấn đề người dùng → chỉ số thành công → thay đổi nhỏ nhất có thể ship</strong>. Không bắt đầu từ công nghệ vì thích.</li>
+</ul>
+<h4>Clarify before building / Làm rõ trước khi làm</h4>
+<ul>
+<li>If goal, user, constraint, or success criteria are unclear: <strong>ask 1–3 sharp questions</strong>, then proceed.</li>
+<li>Nếu mục tiêu / user / ràng buộc / tiêu chí thành công chưa rõ: <strong>hỏi 1–3 câu sắc</strong>, rồi mới làm.</li>
+</ul>
+<h4>MVP &amp; scope control / MVP &amp; kiểm soát phạm vi</h4>
+<ul>
+<li>Prefer the thinnest slice that validates the outcome. Cut nice-to-haves; log them as follow-ups.</li>
+<li>Ưu tiên lát cắt mỏng nhất chứng minh được outcome. Cắt nice-to-have; ghi lại làm follow-up.</li>
+<li>Reject scope creep unless it is required for the stated outcome, security, or correctness.</li>
+<li>Từ chối phình scope trừ khi bắt buộc cho outcome, bảo mật, hoặc tính đúng đắn.</li>
+</ul>
+<h4>Decision quality / Chất lượng quyết định</h4>
+<ul>
+<li>State trade-offs explicitly (speed vs quality, complexity vs flexibility, cost vs latency).</li>
+<li>Nêu rõ trade-off (tốc độ vs chất lượng, phức tạp vs linh hoạt, chi phí vs độ trễ).</li>
+<li>Default to reversible decisions; escalate irreversible ones (data model, auth, public API, billing).</li>
+<li>Ưu tiên quyết định đảo ngược được; escalate quyết định khó đảo (data model, auth, API công khai, billing).</li>
+<li>Record irreversible choices as ADRs (<code>documentation-adr.mdc</code>); follow <code>04-architect-guardrails.mdc</code>.</li>
+<li>Ghi lựa chọn khó đảo bằng ADR (<code>documentation-adr.mdc</code>); bám <code>04-architect-guardrails.mdc</code>.</li>
+</ul>
+<h4>Scale-aware product / Sản phẩm ý thức quy mô</h4>
+<ul>
+<li>Target context: ~100k users, high concurrent load, continuous requests. Design for growth without over-building day one.</li>
+<li>Ngữ cảnh mục tiêu: ~100k user, tải đồng thời cao, request liên tục. Thiết kế để lớn dần, không over-engineer ngày đầu.</li>
+<li>Every feature must answer: What is the SLO impact? Failure mode at peak? Cost at 10× traffic?</li>
+<li>Mọi tính năng phải trả lời: Ảnh hưởng SLO? Failure mode lúc peak? Chi phí khi traffic ×10?</li>
+</ul>
+<h4>Definition of done / Định nghĩa hoàn thành</h4>
+<ul>
+<li>Done = user outcome + critical-path tests + observable (logs/metrics) + secure defaults + safe rollback.</li>
+<li>Xong = outcome user + test đường tới hạn + quan sát được (log/metric) + mặc định an toàn + rollback được.</li>
+<li>For money/auth/API contract changes: include auditability and compatibility notes in the PR.</li>
+<li>Với thay đổi tiền/auth/hợp đồng API: PR phải có ghi chú auditability và tương thích.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-01-ai-collaboration">
+          <div class="rule-meta">
+            <span class="chip">02 / 28</span>
+            <span class="chip">01-ai-collaboration.mdc</span>
+            <span class="chip chip-ok">Luôn áp dụng</span>
+          </div>
+          <p class="rule-desc">How to collaborate with Cursor AI agents: clarify, plan, implement, verify. EN/VI.</p>
+          <div class="rule-body">
+            <h3>AI Collaboration in Cursor / Làm việc với AI trong Cursor</h3>
+<h4>Working style / Cách làm việc</h4>
+<ul>
+<li>Be a senior pair: propose, challenge assumptions, implement carefully, verify.</li>
+<li>Đóng vai senior pair: đề xuất, phản biện giả định, implement cẩn thận, verify.</li>
+<li>Prefer small, reviewable diffs over large speculative rewrites.</li>
+<li>Ưu tiên diff nhỏ, dễ review hơn rewrite lớn mang tính suy đoán.</li>
+</ul>
+<h4>Before coding / Trước khi code</h4>
+<ul>
+<li>Restate the goal in one sentence; list constraints and non-goals.</li>
+<li>Diễn lại mục tiêu 1 câu; liệt kê ràng buộc và non-goals.</li>
+<li>For multi-file or architectural work: outline the plan briefly, then execute.</li>
+<li>Với việc nhiều file / kiến trúc: phác plan ngắn, rồi mới làm.</li>
+</ul>
+<h4>While coding / Khi code</h4>
+<ul>
+<li>Match existing project patterns before inventing new ones.</li>
+<li>Bám pattern hiện có trước khi invent pattern mới.</li>
+<li>Touch only files required for the task; no drive-by refactors.</li>
+<li>Chỉ sửa file cần cho task; không refactor lan man.</li>
+<li>Never invent APIs, configs, or metrics — read the codebase / docs first.</li>
+<li>Không bịa API, config, metric — đọc codebase / docs trước.</li>
+</ul>
+<h4>Verification / Kiểm chứng</h4>
+<ul>
+<li>Run the relevant tests/linters/build when possible; report what was verified.</li>
+<li>Chạy test/lint/build liên quan khi có thể; báo rõ đã verify gì.</li>
+<li>Call out residual risks (scale, security, migration, rollback).</li>
+<li>Nêu rủi ro còn lại (scale, bảo mật, migration, rollback).</li>
+</ul>
+<h4>Communication / Giao tiếp</h4>
+<ul>
+<li>Match the user&#x27;s language (VI/EN). Keep answers direct and outcome-focused.</li>
+<li>Theo ngôn ngữ user (VI/EN). Trả lời thẳng, tập trung outcome.</li>
+<li>Ask before destructive actions (force push, drop DB, production changes).</li>
+<li>Hỏi trước hành động phá hủy (force push, drop DB, thay đổi production).</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-02-rule-i18n">
+          <div class="rule-meta">
+            <span class="chip">03 / 28</span>
+            <span class="chip">02-rule-i18n.mdc</span>
+            <span class="chip chip-ok">Luôn áp dụng</span>
+          </div>
+          <p class="rule-desc">Bilingual / multilingual rule format. How to extend SoftRule to more languages. EN/VI.</p>
+          <div class="rule-body">
+            <h3>Rule Language Convention / Quy ước ngôn ngữ quy tắc</h3>
+<h4>Format / Định dạng</h4>
+<ul>
+<li>Write rules <strong>bilingual</strong>: English first, Vietnamese immediately after (or paired bullets).</li>
+<li>Viết quy tắc <strong>song ngữ</strong>: English trước, tiếng Việt ngay sau (hoặc cặp bullet).</li>
+<li>Keep each idea to one short EN line + one short VI line. Avoid long paragraphs.</li>
+<li>Mỗi ý: 1 dòng EN ngắn + 1 dòng VI ngắn. Tránh đoạn dài.</li>
+</ul>
+<h4>Extending languages / Mở rộng đa ngôn ngữ</h4>
+<ul>
+<li>To add a language (e.g. JP, KO): append a third line with ISO tag, e.g. <code>[JA] ...</code></li>
+<li>Để thêm ngôn ngữ (vd JP, KO): thêm dòng thứ 3 có tag ISO, vd <code>[JA] ...</code></li>
+<li>Do not remove EN — it remains the canonical machine-facing wording.</li>
+<li>Không xóa EN — EN là bản canonical cho AI.</li>
+<li>Prefer updating existing rule files over creating language-only duplicates.</li>
+<li>Ưu tiên cập nhật file rule hiện có thay vì tạo bản chỉ-một-ngôn-ngữ.</li>
+</ul>
+<h4>When responding / Khi trả lời user</h4>
+<ul>
+<li>Default to the user&#x27;s message language; keep code/identifiers in English.</li>
+<li>Mặc định theo ngôn ngữ tin nhắn user; giữ code/identifier bằng English.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-03-stack-dotnet-postgres">
+          <div class="rule-meta">
+            <span class="chip">04 / 28</span>
+            <span class="chip">03-stack-dotnet-postgres.mdc</span>
+            <span class="chip chip-ok">Luôn áp dụng</span>
+          </div>
+          <p class="rule-desc">Default tech stack: ASP.NET Core + PostgreSQL modular monolith; RN/Flutter mobile. Use when choosing stack, scaffolding, or starting a project.</p>
+          <div class="rule-body">
+            <h3>Default Stack / Stack mặc định</h3>
+<h4>Backend &amp; data / Backend &amp; dữ liệu</h4>
+<ul>
+<li>Default backend: <strong>ASP.NET Core (.NET)</strong> as a <strong>modular monolith</strong> — not microservices on day one.</li>
+<li>Backend mặc định: <strong>ASP.NET Core (.NET)</strong> dạng <strong>modular monolith</strong> — chưa microservice ngày đầu.</li>
+<li>Default database: <strong>PostgreSQL</strong>. Use <strong>PostGIS</strong> when geo/distance/geofence matters.</li>
+<li>Database mặc định: <strong>PostgreSQL</strong>. Dùng <strong>PostGIS</strong> khi cần geo/khoảng cách/geofence.</li>
+<li>Prefer <strong>Redis</strong> for cache/session/rate-limit; queues for heavy/async work; object storage for files.</li>
+<li>Ưu tiên <strong>Redis</strong> cho cache/session/rate-limit; queue cho việc nặng/async; object storage cho file.</li>
+<li>Do <strong>not</strong> default to MySQL. Choose <strong>SQL Server / Azure SQL</strong> only with explicit Microsoft/Azure lock-in.</li>
+<li><strong>Không</strong> mặc định MySQL. Chỉ chọn <strong>SQL Server / Azure SQL</strong> khi chủ đích gắn Microsoft/Azure.</li>
+</ul>
+<h4>Clients / Phía client</h4>
+<ul>
+<li>Mobile default: <strong>React Native (Expo)</strong> or <strong>Flutter</strong> — API contracts versioned; mobile language ≠ backend language.</li>
+<li>Mobile mặc định: <strong>React Native (Expo)</strong> hoặc <strong>Flutter</strong> — version API; ngôn ngữ mobile ≠ backend.</li>
+<li>Admin/web: Blazor or Next.js as needed; do not force one SPA framework globally.</li>
+<li>Admin/web: Blazor hoặc Next.js tùy nhu cầu; không ép một SPA cho mọi dự án.</li>
+</ul>
+<h4>Applies to small and large projects / Áp dụng cả dự án nhỏ và lớn</h4>
+<ul>
+<li>Use this same stack for small apps unless the work is a tiny static/CMS/script throwaway.</li>
+<li>Dùng cùng stack cho app nhỏ, trừ việc static/CMS/script vài ngày rồi bỏ.</li>
+<li>Small project ⇒ thin architecture (few projects, EF Core, no CQRS/event-sourcing unless needed).</li>
+<li>Dự án nhỏ ⇒ kiến trúc mỏng (ít project, EF Core, không CQRS/event-sourcing trừ khi cần).</li>
+</ul>
+<h4>Explicit non-defaults / Không mặc định</h4>
+<ul>
+<li>Do not start new products on <strong>PHP</strong> or <strong>NestJS</strong> unless the user explicitly requests that stack.</li>
+<li>Không khởi tạo sản phẩm mới bằng <strong>PHP</strong> hoặc <strong>NestJS</strong> trừ khi user yêu cầu rõ.</li>
+<li>Avoid polyglot backends (e.g. Nest + .NET). One backend stack per product.</li>
+<li>Tránh backend đa ngôn ngữ (vd Nest + .NET). Mỗi sản phẩm một backend stack.</li>
+</ul>
+<h4>When scaffolding / Khi khởi tạo</h4>
+<ul>
+<li>Propose ASP.NET Core + PostgreSQL first; state trade-offs only if the user asks for alternatives.</li>
+<li>Đề xuất ASP.NET Core + PostgreSQL trước; chỉ nêu trade-off khi user hỏi phương án khác.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-04-architect-guardrails">
+          <div class="rule-meta">
+            <span class="chip">05 / 28</span>
+            <span class="chip">04-architect-guardrails.mdc</span>
+            <span class="chip chip-ok">Luôn áp dụng</span>
+          </div>
+          <p class="rule-desc">Chief-architect guardrails for large systems: irreversible decisions, operability, correctness. Apply to every substantial design or implementation task.</p>
+          <div class="rule-body">
+            <h3>Architect Guardrails / Lan can kiến trúc sư</h3>
+<h4>Irreversible first / Ưu tiên quyết định khó đảo</h4>
+<ul>
+<li>Before coding: flag decisions that are hard to reverse (identity model, money ledger, public API shape, tenancy, data residency).</li>
+<li>Trước khi code: đánh dấu quyết định khó đảo (identity, sổ tiền, shape API công khai, tenancy, nơi lưu dữ liệu).</li>
+<li>Write a short ADR for those decisions (see <code>documentation-adr.mdc</code>). Do not bury them only in chat.</li>
+<li>Ghi ADR ngắn cho các quyết định đó. Không chỉ để trong chat.</li>
+</ul>
+<h4>Non-negotiables on critical paths / Không thỏa hiệp trên đường tới hạn</h4>
+<ul>
+<li>Money, auth, booking/state transitions, and personal data paths require: authz, audit, idempotency, tests, and rollback thinking.</li>
+<li>Đường tiền, auth, booking/chuyển trạng thái, dữ liệu cá nhân cần: authz, audit, idempotency, test, và tư duy rollback.</li>
+<li>Prefer boring, proven patterns over novel infrastructure on the critical path.</li>
+<li>Ưu tiên pattern nhàm chán đã chứng minh hơn hạ tầng mới lạ trên đường tới hạn.</li>
+</ul>
+<h4>Operability is part of design / Khả năng vận hành là một phần thiết kế</h4>
+<ul>
+<li>If you cannot answer how it fails, how you see it, and how you roll back — the design is incomplete.</li>
+<li>Nếu chưa trả lời được: fail thế nào, nhìn thấy thế nào, rollback thế nào — thiết kế chưa xong.</li>
+<li>Optimize for the 3am incident: clear ownership, correlation IDs, runbooks, and safe defaults.</li>
+<li>Tối ưu cho sự cố 3 giờ sáng: ownership rõ, correlation ID, runbook, mặc định an toàn.</li>
+</ul>
+<h4>Complexity control / Kiểm soát độ phức tạp</h4>
+<ul>
+<li>Modular monolith first. No new service, broker topology, or CQRS without a measured pain.</li>
+<li>Modular monolith trước. Không thêm service, topology broker, hay CQRS khi chưa có nỗi đau đo được.</li>
+<li>Delete or defer speculative generality. YAGNI under load beats elegant futures.</li>
+<li>Xóa hoặc hoãn tính tổng quát suy đoán. YAGNI dưới tải thắng tương lai “đẹp”.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-architecture-design">
+          <div class="rule-meta">
+            <span class="chip">06 / 28</span>
+            <span class="chip">architecture-design.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Architecture standards: modular monolith boundaries, layers, APIs, events for ASP.NET Core. Use when designing systems, modules, APIs, or solution structure.</p>
+          <div class="rule-body">
+            <h3>Architecture Standards / Chuẩn Architecture</h3>
+<h4>Shape / Hình dạng</h4>
+<ul>
+<li>Default: <strong>ASP.NET Core modular monolith</strong>. Split services only for clear scale, team, or failure-isolation reasons.</li>
+<li>Mặc định: <strong>ASP.NET Core modular monolith</strong>. Tách service chỉ khi có lý do scale / team / cô lập lỗi rõ.</li>
+<li>Each module owns its domain logic and data access; no “shared god DbContext” across unrelated domains when it blurs ownership.</li>
+<li>Mỗi module sở hữu logic + data access; tránh DbContext thần dùng chung làm mờ ownership.</li>
+<li>Small projects: thin vertical slices OK. Large projects: modules (Ordering, Identity, …) with explicit public APIs.</li>
+<li>Dự án nhỏ: vertical slice mỏng OK. Dự án lớn: module (Ordering, Identity, …) với API công khai rõ.</li>
+</ul>
+<h4>Boundaries / Ranh giới</h4>
+<ul>
+<li>Enforce <strong>three layers</strong>: <strong>Route/API</strong> (controllers, minimal APIs, DTOs) → <strong>Logic</strong> (use-cases/application services, domain) → <strong>Data</strong> (DbContext, repositories, external adapters).</li>
+<li>Bắt buộc <strong>ba tầng</strong>: <strong>Route/API</strong> (controller, minimal API, DTO) → <strong>Logic</strong> (use-case/application service, domain) → <strong>Data</strong> (DbContext, repository, adapter ngoài).</li>
+<li>Route/API: HTTP mapping, auth attributes, validation of input shape only — <strong>no business rules, no SQL</strong>.</li>
+<li>Route/API: map HTTP, auth attribute, validate shape input — <strong>không business rule, không SQL</strong>.</li>
+<li>Logic: orchestrates domain rules and transactions; depends on abstractions, not concrete EF types when it blurs tests.</li>
+<li>Logic: điều phối domain rule và transaction; phụ thuộc abstraction, không dính EF cụ thể khi làm mờ test.</li>
+<li>Data: persistence and I/O only; no HTTP concerns; no UI/DTO leakage upward without mapping.</li>
+<li>Data: chỉ persistence và I/O; không concern HTTP; không để UI/DTO lộ lên trên thiếu mapping.</li>
+<li>Depend inward: API/transport → application use-cases → domain. Infrastructure implements ports.</li>
+<li>Phụ thuộc vào trong: API/transport → use-case → domain. Infrastructure triển khai port.</li>
+<li>Cross-module calls via application services/interfaces — not reaching into another module’s tables ad hoc.</li>
+<li>Gọi cross-module qua application service/interface — không đụng bảng module khác tùy tiện.</li>
+<li>Prefer simple, explicit designs. Complexity must pay rent; no CQRS/event-sourcing by default.</li>
+<li>Ưu tiên thiết kế đơn giản, rõ. Độ phức tạp phải đáng tiền; không CQRS/event-sourcing mặc định.</li>
+</ul>
+<h4>APIs / API</h4>
+<ul>
+<li>Public HTTP contracts live in <code>api-contracts.mdc</code> (versioning, errors, pagination, idempotency).</li>
+<li>Hợp đồng HTTP công khai nằm ở <code>api-contracts.mdc</code> (version, lỗi, phân trang, idempotency).</li>
+</ul>
+<h4>Tenancy / Đa thuê bao</h4>
+<ul>
+<li>Decide early: single-tenant vs multi-tenant. If multi-tenant, isolate by tenant id on every query and token claim — no cross-tenant leaks.</li>
+<li>Quyết sớm: single-tenant vs multi-tenant. Nếu multi-tenant, cô lập bằng tenant id trên mọi query và claim token — không rò chéo.</li>
+<li>Defer complex tenancy (shared DB row-level vs DB-per-tenant) until the business model needs it; record the choice as an ADR.</li>
+<li>Hoãn tenancy phức tạp (row-level vs DB-per-tenant) đến khi mô hình kinh doanh cần; ghi ADR.</li>
+</ul>
+<h4>Async &amp; consistency / Bất đồng bộ &amp; nhất quán</h4>
+<ul>
+<li>Queues/events: follow <code>messaging-integration.mdc</code>. Races: <code>concurrency-correctness.mdc</code>.</li>
+<li>Queue/event: theo <code>messaging-integration.mdc</code>. Đua tranh: <code>concurrency-correctness.mdc</code>.</li>
+<li>Public HTTP contracts: <code>api-contracts.mdc</code>. Mobile clients: <code>mobile-clients.mdc</code>.</li>
+<li>Hợp đồng HTTP công khai: <code>api-contracts.mdc</code>. Client mobile: <code>mobile-clients.mdc</code>.</li>
+<li>State machines for order/booking/payment — illegal transitions rejected.</li>
+<li>State machine cho vòng đời order/booking/payment — từ chối chuyển trái phép.</li>
+<li>Expand → migrate → contract for schema; rolling-deploy safe.</li>
+<li>Schema theo expand → migrate → contract; an toàn rolling deploy.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-api-contracts">
+          <div class="rule-meta">
+            <span class="chip">07 / 28</span>
+            <span class="chip">api-contracts.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Public API &amp; contract standards: versioning, errors, pagination, OpenAPI, compatibility with mobile. Use when designing or changing HTTP/gRPC APIs.</p>
+          <div class="rule-body">
+            <h3>API Contract Standards / Chuẩn hợp đồng API</h3>
+<h4>Contract first / Hợp đồng trước</h4>
+<ul>
+<li>Treat the public API as a product. Breaking mobile/web clients is a production incident.</li>
+<li>Coi API công khai là sản phẩm. Phá client mobile/web là sự cố production.</li>
+<li>Publish OpenAPI (or equivalent). Generate/validate clients when practical.</li>
+<li>Xuất bản OpenAPI (hoặc tương đương). Generate/validate client khi khả thi.</li>
+</ul>
+<h4>Versioning &amp; compatibility / Version &amp; tương thích</h4>
+<ul>
+<li>Prefer additive changes. Deprecate with sunset dates; keep overlap long enough for app store lag.</li>
+<li>Ưu tiên thay đổi additive. Deprecate có ngày sunset; giữ chồng chéo đủ cho độ trễ app store.</li>
+<li>URL or header versioning — pick one convention per product and stick to it.</li>
+<li>Version bằng URL hoặc header — chọn một ước lệ mỗi sản phẩm và giữ vững.</li>
+<li>Never reuse fields with new meaning. Never change nullability/type silently.</li>
+<li>Không tái sử dụng field với nghĩa mới. Không đổi nullability/type thầm lặng.</li>
+</ul>
+<h4>Shape &amp; behavior / Shape &amp; hành vi</h4>
+<ul>
+<li>Stable error format (Problem Details / agreed envelope) with machine-readable codes.</li>
+<li>Format lỗi ổn định (Problem Details / envelope thống nhất) có mã máy đọc được.</li>
+<li>Never return stack traces or internal exception details to clients; log them server-side with correlation IDs.</li>
+<li>Không trả stack trace / chi tiết exception nội bộ cho client; log phía server kèm correlation ID.</li>
+<li>Cursor/offset pagination with max page size. Deterministic sort for stable pages.</li>
+<li>Phân trang cursor/offset có trần size. Sort xác định để trang ổn định.</li>
+<li>Idempotency-Key on creates/payments/webhooks. Document replay semantics.</li>
+<li>Idempotency-Key trên create/payment/webhook. Ghi rõ ngữ nghĩa replay.</li>
+<li>Explicit auth schemes per endpoint. Rate-limit headers when limiting.</li>
+<li>Auth scheme tường minh từng endpoint. Header rate-limit khi đang giới hạn.</li>
+<li>CORS: allow only known web origins; mobile native apps do not rely on CORS.</li>
+<li>CORS: chỉ origin web đã biết; app mobile native không phụ thuộc CORS.</li>
+</ul>
+<h4>Anti-patterns / Anti-pattern</h4>
+<ul>
+<li>No undocumented “internal” fields leaked to mobile. No chatty N+1 endpoint designs.</li>
+<li>Không lộ field “internal” chưa document ra mobile. Không thiết kế endpoint N+1 tán gẫu.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-database">
+          <div class="rule-meta">
+            <span class="chip">08 / 28</span>
+            <span class="chip">database.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Database standards for PostgreSQL + EF Core: schema, indexes, migrations, transactions, pooling. Use when designing schema, queries, migrations, or data access.</p>
+          <div class="rule-body">
+            <h3>Database Standards / Chuẩn Database</h3>
+<h4>Defaults / Mặc định</h4>
+<ul>
+<li>Primary OLTP store: <strong>PostgreSQL</strong>. Enable <strong>PostGIS</strong> only when geo queries are required.</li>
+<li>OLTP chính: <strong>PostgreSQL</strong>. Bật <strong>PostGIS</strong> chỉ khi cần query geo.</li>
+<li>Access via EF Core and/or Dapper; raw SQL must be parameterized — never string-concat.</li>
+<li>Truy cập qua EF Core và/hoặc Dapper; SQL thô phải parameterize — không nối chuỗi.</li>
+</ul>
+<h4>Schema &amp; modeling / Schema &amp; mô hình</h4>
+<ul>
+<li>Model for <strong>access patterns</strong> first; normalize second. Explicit PKs; prefer UUIDs or snowflakes for public IDs if needed.</li>
+<li>Thiết kế theo <strong>access pattern</strong> trước; chuẩn hóa sau. PK rõ; ID công khai dùng UUID/snowflake nếu cần.</li>
+<li>Every FK indexed when used in joins/filters. Add composite indexes matching real WHERE/ORDER BY.</li>
+<li>Mọi FK dùng join/filter đều có index. Composite index khớp WHERE/ORDER BY thật.</li>
+<li>Use constraints (NOT NULL, UNIQUE, CHECK, FK) to enforce invariants in the database.</li>
+<li>Dùng constraint (NOT NULL, UNIQUE, CHECK, FK) để giữ invariant trong DB.</li>
+</ul>
+<h4>Migrations / Migration</h4>
+<ul>
+<li>All schema changes via versioned migrations. No manual prod DDL as the happy path.</li>
+<li>Mọi đổi schema qua migration có version. Không coi DDL tay trên prod là đường chính.</li>
+<li>Expand → migrate data → contract. Backward-compatible during rolling deploys.</li>
+<li>Expand → migrate data → contract. Tương thích ngược khi rolling deploy.</li>
+<li>Avoid long locks on hot tables; use batched backfills for large data changes.</li>
+<li>Tránh lock lâu trên bảng nóng; backfill lớn theo batch.</li>
+</ul>
+<h4>Transactions &amp; integrity / Giao dịch &amp; toàn vẹn</h4>
+<ul>
+<li>Keep transactions short. No external HTTP inside a DB transaction.</li>
+<li>Giữ transaction ngắn. Không gọi HTTP ngoài trong transaction DB.</li>
+<li>Money/booking paths: explicit transaction boundaries + <strong>idempotency keys</strong>.</li>
+<li>Đường tiền/booking: biên transaction rõ + <strong>idempotency key</strong>.</li>
+<li>Choose isolation level deliberately; default Read Committed unless a case needs stronger.</li>
+<li>Chọn isolation có chủ đích; mặc định Read Committed trừ khi cần chặt hơn.</li>
+</ul>
+<h4>Performance hygiene / Vệ sinh hiệu năng</h4>
+<ul>
+<li>Ban N+1; use Include/projections/batching. No unbounded <code>ToList</code> on large sets — paginate/cursor.</li>
+<li>Cấm N+1; dùng Include/projection/batch. Không <code>ToList</code> vô hạn — phân trang/cursor.</li>
+<li>Connection pooling on; cap pool vs Postgres <code>max_connections</code>. Tune timeouts.</li>
+<li>Bật connection pool; trần pool so với <code>max_connections</code> Postgres. Chỉnh timeout.</li>
+<li>Watch <code>pg_stat_statements</code> / slow-query logs. Blobs → object storage. Partition only with evidence.</li>
+<li>Theo dõi <code>pg_stat_statements</code> / slow-query. Blob → object storage. Partition chỉ khi có bằng chứng.</li>
+</ul>
+<h4>Durability / Bền vững dữ liệu</h4>
+<ul>
+<li>Prod: automated backups, PITR when available, and a tested restore path (<code>reliability-crosscutting.mdc</code>, <code>backup-rollback.mdc</code>).</li>
+<li>Prod: backup tự động, PITR khi có, và đường restore đã test (<code>reliability-crosscutting.mdc</code>, <code>backup-rollback.mdc</code>).</li>
+<li>Soft-delete only with an explicit retention/purge job — never “delete = gone” without policy.</li>
+<li>Soft-delete chỉ khi có job retention/purge rõ — không “xóa là mất” thiếu policy.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-concurrency-correctness">
+          <div class="rule-meta">
+            <span class="chip">09 / 28</span>
+            <span class="chip">concurrency-correctness.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Concurrency &amp; correctness: optimistic locking, idempotency, distributed locks, race conditions. Use for bookings, inventory, payments, or parallel workers.</p>
+          <div class="rule-body">
+            <h3>Concurrency &amp; Correctness / Đồng thời &amp; tính đúng</h3>
+<h4>Assume races / Giả định đua tranh</h4>
+<ul>
+<li>Any double-submit, dual-tab, retried mobile call, or scaled worker can race — design for it.</li>
+<li>Mọi double-submit, hai tab, mobile retry, hoặc worker scale đều có thể đua — phải thiết kế cho điều đó.</li>
+<li>Make illegal state transitions impossible (DB constraints + domain state machine).</li>
+<li>Làm chuyển trạng thái trái phép không thể xảy ra (constraint DB + state machine domain).</li>
+</ul>
+<h4>Preferred controls / Kiểm soát ưu tiên</h4>
+<ul>
+<li><strong>Idempotency keys</strong> for creates/payments/webhooks. Persist key + response for replay window.</li>
+<li><strong>Idempotency key</strong> cho create/payment/webhook. Lưu key + response trong cửa sổ replay.</li>
+<li><strong>Optimistic concurrency</strong> (row version / xmin) for contested entities; return 409 on conflict.</li>
+<li><strong>Optimistic concurrency</strong> (row version / xmin) cho entity tranh chấp; trả 409 khi conflict.</li>
+<li>Unique constraints as the last line of defense (e.g. one active booking per slot).</li>
+<li>Unique constraint là tuyến cuối (vd một booking active / slot).</li>
+</ul>
+<h4>Locks / Khóa</h4>
+<ul>
+<li>Prefer short DB transactions over long distributed locks.</li>
+<li>Ưu tiên transaction DB ngắn hơn distributed lock dài.</li>
+<li>If using Redis/DB locks: TTL, safe owner token, and never hold locks across user think-time.</li>
+<li>Nếu dùng khóa Redis/DB: TTL, owner token an toàn, không giữ khóa suốt lúc user suy nghĩ.</li>
+<li>Avoid “check then act” without a constraint or transaction — TOCTOU bugs follow.</li>
+<li>Tránh “check rồi act” thiếu constraint/transaction — dính TOCTOU.</li>
+</ul>
+<h4>Testing / Kiểm thử</h4>
+<ul>
+<li>Add concurrency/regression tests for inventory, matching, and money paths when feasible.</li>
+<li>Thêm test concurrency/regression cho inventory, matching, và đường tiền khi khả thi.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-messaging-integration">
+          <div class="rule-meta">
+            <span class="chip">10 / 28</span>
+            <span class="chip">messaging-integration.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Messaging &amp; integration: outbox, consumers, webhooks, poison queues, saga boundaries. Use for queues, events, integrations, or async workflows.</p>
+          <div class="rule-body">
+            <h3>Messaging &amp; Integration / Messaging &amp; tích hợp</h3>
+<h4>When to go async / Khi nào bất đồng bộ</h4>
+<ul>
+<li>Use messaging for spikes, fan-out, long work, and non-critical side effects — not to hide poor API design.</li>
+<li>Dùng messaging cho spike, fan-out, việc dài, side-effect không tới hạn — không để che API kém.</li>
+<li>Keep the request path for user-critical acknowledgements; process the rest asynchronously.</li>
+<li>Giữ request path cho xác nhận tới hạn với user; phần còn lại xử lý async.</li>
+</ul>
+<h4>Delivery semantics / Ngữ nghĩa giao nhận</h4>
+<ul>
+<li>Assume <strong>at-least-once</strong> delivery. Consumers <strong>must be idempotent</strong> (inbox / idempotency store).</li>
+<li>Giả định giao <strong>ít nhất một lần</strong>. Consumer <strong>phải idempotent</strong> (inbox / kho idempotency).</li>
+<li>Prefer transactional <strong>outbox</strong> over dual-write (DB + publish in two steps without coordination).</li>
+<li>Ưu tiên <strong>outbox</strong> giao dịch hơn dual-write (DB + publish hai bước không phối hợp).</li>
+<li>Poison / dead-letter queues with alert + replay tooling. Cap retries with backoff + jitter.</li>
+<li>Poison / dead-letter queue có alert + tool replay. Trần retry + backoff + jitter.</li>
+</ul>
+<h4>Contracts between systems / Hợp đồng giữa hệ thống</h4>
+<ul>
+<li>Version integration events. Consumers tolerate unknown fields (forward compatibility).</li>
+<li>Version event tích hợp. Consumer chịu được field lạ (tương thích tới).</li>
+<li>Webhooks: sign payloads, verify timestamps, idempotent handlers, retry-safe.</li>
+<li>Webhook: ký payload, verify timestamp, handler idempotent, an toàn retry.</li>
+</ul>
+<h4>Distributed workflows / Workflow phân tán</h4>
+<ul>
+<li>Avoid distributed transactions. Use careful sagas/state machines only when business requires.</li>
+<li>Tránh distributed transaction. Saga/state machine chỉ khi nghiệp vụ bắt buộc.</li>
+<li>Make compensation explicit and testable. Never leave money/booking in undefined states.</li>
+<li>Compensation phải tường minh và test được. Không để tiền/booking ở trạng thái không xác định.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-time-money-locale">
+          <div class="rule-meta">
+            <span class="chip">11 / 28</span>
+            <span class="chip">time-money-locale.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Time, money, and locale correctness: UTC storage, currency, rounding, timezones. Use for billing, booking schedules, pricing, or multi-country products.</p>
+          <div class="rule-body">
+            <h3>Time, Money &amp; Locale / Thời gian, tiền &amp; locale</h3>
+<h4>Time / Thời gian</h4>
+<ul>
+<li>Store instants in <strong>UTC</strong>. Persist the user/business <strong>timezone</strong> separately when displaying schedules.</li>
+<li>Lưu thời điểm theo <strong>UTC</strong>. Lưu <strong>timezone</strong> user/nghiệp vụ riêng khi hiển thị lịch.</li>
+<li>Never use server local time as business truth. Be explicit about DST boundaries for bookings.</li>
+<li>Không lấy giờ local server làm chân lý nghiệp vụ. Rõ ràng với biên DST cho booking.</li>
+<li>Deadlines and auctions need monotonic server time + clear rules when clocks skew.</li>
+<li>Deadline/đấu giá cần giờ server monotonic + rule rõ khi lệch đồng hồ.</li>
+</ul>
+<h4>Money / Tiền</h4>
+<ul>
+<li>Use major/minor units deliberately (e.g. integer <strong>cents</strong>) or a decimal type with explicit precision — never IEEE float for money.</li>
+<li>Dùng đơn vị lớn/nhỏ có chủ đích (vd integer <strong>cents</strong>) hoặc decimal đủ precision — không float IEEE cho tiền.</li>
+<li>Record <strong>currency code</strong> on every monetary amount. No implicit “always VND/USD”.</li>
+<li>Ghi <strong>mã tiền tệ</strong> trên mọi số tiền. Không ngầm “luôn VND/USD”.</li>
+<li>Define rounding rules (half-up/banker) once for fees/tax; test them.</li>
+<li>Định nghĩa làm tròn (half-up/banker) một lần cho phí/thuế; phải có test.</li>
+<li>Ledger-style append for critical money movements when reconciliation matters; immutable audit entries.</li>
+<li>Sổ cái append cho biến động tiền tới hạn khi cần đối soát; audit entry bất biến.</li>
+</ul>
+<h4>Locale / Địa phương</h4>
+<ul>
+<li>Format money/dates in the UI layer, not as stored canonical values.</li>
+<li>Format tiền/ngày ở lớp UI, không phải giá trị canonical lưu DB.</li>
+<li>Separate language (i18n strings) from business country rules (tax, ID, address).</li>
+<li>Tách ngôn ngữ (chuỗi i18n) khỏi rule quốc gia nghiệp vụ (thuế, giấy tờ, địa chỉ).</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-security">
+          <div class="rule-meta">
+            <span class="chip">12 / 28</span>
+            <span class="chip">security.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Security standards: authn/z, secrets, OWASP, TLS, headers, abuse controls for ASP.NET APIs. Use for auth, APIs, data handling, infra, or threat-sensitive changes.</p>
+          <div class="rule-body">
+            <h3>Security Standards / Chuẩn Security</h3>
+<h4>Defaults / Mặc định</h4>
+<ul>
+<li>Deny-by-default authorization; least privilege; short-lived credentials.</li>
+<li>Authz deny-by-default; least privilege; credential ngắn hạn.</li>
+<li>Never commit secrets. Env / secret manager only; rotate on exposure.</li>
+<li>Không commit secret. Chỉ env / secret manager; rotate khi lộ.</li>
+<li>For non-trivial features: quick threat sketch (assets, actors, entry points, abuse cases) before build.</li>
+<li>Với tính năng không tầm thường: phác threat nhanh (tài sản, actor, điểm vào, abuse) trước khi làm.</li>
+<li>Dependency risk → <code>supply-chain-deps.mdc</code>. Money/time correctness → <code>time-money-locale.mdc</code>.</li>
+<li>Rủi ro dependency → <code>supply-chain-deps.mdc</code>. Đúng đắn tiền/giờ → <code>time-money-locale.mdc</code>.</li>
+</ul>
+<h4>AuthN / AuthZ</h4>
+<ul>
+<li>Prefer OIDC/OAuth2. Passwords: modern KDF only (e.g. ASP.NET Identity defaults / Argon2/bcrypt).</li>
+<li>Ưu tiên OIDC/OAuth2. Mật khẩu: chỉ KDF hiện đại (Identity defaults / Argon2/bcrypt).</li>
+<li>Enforce authz on <strong>every</strong> sensitive server operation — never trust client roles alone.</li>
+<li>Enforce authz <strong>mọi</strong> thao tác nhạy cảm phía server — không tin role từ client.</li>
+<li>Sessions: HttpOnly + Secure cookies; CSRF when cookie-based; MFA for admin/privileged.</li>
+<li>Session: cookie HttpOnly + Secure; CSRF nếu cookie auth; MFA cho admin/đặc quyền.</li>
+</ul>
+<h4>HTTP &amp; API hardening / Siết HTTP &amp; API</h4>
+<ul>
+<li>HTTPS only in staging/prod; redirect HTTP→HTTPS; HSTS when stable.</li>
+<li>Staging/prod chỉ HTTPS; redirect HTTP→HTTPS; HSTS khi ổn định.</li>
+<li>Validate and encode untrusted input. Parameterized SQL only. Guard XSS, SSRF, path traversal.</li>
+<li>Validate/encode input không tin cậy. Chỉ SQL parameterize. Chặn XSS, SSRF, path traversal.</li>
+<li>Security headers: CSP (as applicable), X-Content-Type-Options, Frame protections, Referrer-Policy.</li>
+<li>Security header: CSP (khi phù hợp), X-Content-Type-Options, chống frame, Referrer-Policy.</li>
+<li>Rate-limit auth, write, and expensive endpoints; WAF/bot defenses at the edge under flood.</li>
+<li>Rate-limit auth, ghi, endpoint đắt; WAF/bot ở edge khi flood.</li>
+<li>CORS allowlists for browsers; validate Host/forwarded headers behind proxies.</li>
+<li>CORS allowlist cho browser; validate Host/forwarded header sau proxy.</li>
+</ul>
+<h4>Data &amp; privacy / Dữ liệu &amp; riêng tư</h4>
+<ul>
+<li>TLS in transit; encrypt sensitive data at rest. Minimize PII; classify data.</li>
+<li>TLS lúc truyền; mã hóa dữ liệu nhạy cảm lúc nghỉ. Thu hẹp PII; phân loại dữ liệu.</li>
+<li>No secrets/PII in logs. Support account export/delete early when required.</li>
+<li>Không secret/PII trong log. Hỗ trợ xuất/xóa tài khoản sớm khi bắt buộc.</li>
+<li>Audit privileged and money-moving actions.</li>
+<li>Audit hành động đặc quyền và liên quan tiền.</li>
+</ul>
+<h4>Periodic security audit / Audit bảo mật định kỳ</h4>
+<ul>
+<li>Schedule recurring reviews — default <strong>quarterly</strong> for products with users/money (adjust by risk).</li>
+<li>Lịch review định kỳ — mặc định <strong>hàng quý</strong> với sản phẩm có user/tiền (chỉnh theo rủi ro).</li>
+<li>Each cycle covers at least: access &amp; privilege review, secret/key rotation check, dependency CVEs, auth/session config, backup restore spot-check, top OWASP risks on changed surfaces.</li>
+<li>Mỗi chu kỳ tối thiểu: review quyền truy cập, kiểm tra rotate secret/key, CVE dependency, cấu hình auth/session, spot-check restore backup, rủi ro OWASP hàng đầu trên bề mặt đã đổi.</li>
+<li>Record findings, owners, and due dates; verify remediations. Annual (or pre-major-launch) deeper review / pentest when warranted.</li>
+<li>Ghi finding, owner, hạn xử lý; verify remediation. Hàng năm (hoặc trước launch lớn) review/pentest sâu hơn khi cần.</li>
+<li>Continuous: CI dependency scan + secret scanning on every merge (<code>supply-chain-deps.mdc</code>, <code>delivery-ops.mdc</code>).</li>
+<li>Liên tục: quét dependency + secret trên mọi merge (<code>supply-chain-deps.mdc</code>, <code>delivery-ops.mdc</code>).</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-supply-chain-deps">
+          <div class="rule-meta">
+            <span class="chip">13 / 28</span>
+            <span class="chip">supply-chain-deps.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Dependency &amp; supply-chain security: pin versions, audit, SBOM, least privilege packages. Use when adding NuGet/npm packages or reviewing dependencies.</p>
+          <div class="rule-body">
+            <h3>Supply Chain &amp; Dependencies / Chuỗi cung ứng &amp; dependency</h3>
+<h4>Adding dependencies / Thêm dependency</h4>
+<ul>
+<li>Every package is an adoption of risk. Prefer stdlib / already-used libs over new ones.</li>
+<li>Mỗi package là nhận rủi ro. Ưu tiên stdlib / lib đã dùng hơn lib mới.</li>
+<li>Pin versions (lockfiles committed). No floating <code>*</code> in production manifests.</li>
+<li>Pin phiên bản (commit lockfile). Không <code>*</code> dao động trên production.</li>
+<li>Review license, maintenance activity, and transitive attack surface before adopting.</li>
+<li>Xem license, mức bảo trì, và bề mặt tấn transitive trước khi nhận.</li>
+</ul>
+<h4>Hygiene / Vệ sinh</h4>
+<ul>
+<li>Run vulnerability scanning in CI (NuGet/npm audit or equivalent). Triage high/critical promptly.</li>
+<li>Quét lỗ hổng trong CI (NuGet/npm audit hoặc tương đương). Xử lý high/critical kịp thời.</li>
+<li>Prefer official/maintained images and digests for containers; avoid <code>latest</code> in prod.</li>
+<li>Ưu tiên image chính thức/có maintain và digest; tránh <code>latest</code> trên prod.</li>
+<li>Generate/keep SBOM when releasing serious products; know what you ship.</li>
+<li>Tạo/giữ SBOM khi release sản phẩm nghiêm túc; biết mình đang ship gì.</li>
+</ul>
+<h4>Secrets in the chain / Secret trong chuỗi</h4>
+<ul>
+<li>No credentials in package feeds committed to git. Use private feed auth via CI secrets.</li>
+<li>Không để credential feed trong git. Auth feed riêng qua CI secret.</li>
+<li>Disable unnecessary scripts/lifecycle hooks where the ecosystem allows.</li>
+<li>Tắt script/lifecycle hook không cần khi ecosystem cho phép.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-performance">
+          <div class="rule-meta">
+            <span class="chip">14 / 28</span>
+            <span class="chip">performance.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Performance standards: latency, caching, queries, async offload, client/edge. Use when optimizing slow endpoints, payloads, or perceived performance.</p>
+          <div class="rule-body">
+            <h3>Performance Standards / Chuẩn Performance</h3>
+<h4>Targets / Mục tiêu</h4>
+<ul>
+<li>Define latency budgets: p50/p95/p99 per critical API before optimizing blindly.</li>
+<li>Định ngân sách latency: p50/p95/p99 từng API tới hạn trước khi tối ưu mù.</li>
+<li>Optimize the measured hot path — profile first (APM, traces, slow SQL).</li>
+<li>Tối ưu hot path đã đo — profile trước (APM, trace, SQL chậm).</li>
+</ul>
+<h4>Request path / Đường request</h4>
+<ul>
+<li>Cache-aside with explicit TTL/invalidation; prevent cache stampede (lock/singleflight).</li>
+<li>Cache-aside với TTL/invalidation rõ; chống stampede (lock/singleflight).</li>
+<li>Ban N+1 and over-fetch. Project only needed columns; compress large JSON responses.</li>
+<li>Cấm N+1 và over-fetch. Chỉ lấy cột cần; nén JSON lớn.</li>
+<li>Timeouts on all outbound calls; retries only when idempotent, with jitter + cap.</li>
+<li>Timeout mọi call ra ngoài; retry chỉ khi idempotent, có jitter + trần.</li>
+<li>Offload heavy work to queue/workers; keep HTTP handlers thin.</li>
+<li>Đẩy việc nặng sang queue/worker; giữ HTTP handler mỏng.</li>
+</ul>
+<h4>Payloads &amp; clients / Payload &amp; client</h4>
+<ul>
+<li>Paginate/cursor all lists. Cap page size. Avoid huge includes in one response.</li>
+<li>Phân trang/cursor mọi list. Trần page size. Tránh include khổng lồ một response.</li>
+<li>CDN + cache headers for static assets; minify/compress; code-split mobile/web bundles.</li>
+<li>CDN + cache header cho static; minify/nén; code-split bundle mobile/web.</li>
+<li>Skeletons / optimistic UI where safe to improve perceived speed.</li>
+<li>Skeleton / optimistic UI khi an toàn để tăng tốc độ cảm nhận.</li>
+</ul>
+<h4>Anti-patterns / Anti-pattern</h4>
+<ul>
+<li>No sync-over-async, unbounded fan-out, or loading entire tables into memory.</li>
+<li>Không sync-over-async, fan-out vô hạn, hoặc load cả bảng vào memory.</li>
+<li>Do not “fix slowness” by only adding more CPU replicas when SQL is the bottleneck.</li>
+<li>Không “chữa chậm” bằng thêm replica CPU khi bottleneck là SQL.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-scale">
+          <div class="rule-meta">
+            <span class="chip">15 / 28</span>
+            <span class="chip">scale.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Scale standards: horizontal scale, capacity, backpressure, sharding readiness for high concurrency. Use when planning growth, load tests, or peak traffic design.</p>
+          <div class="rule-body">
+            <h3>Scale Standards / Chuẩn Scale</h3>
+<h4>Capacity language / Ngôn ngữ capacity</h4>
+<ul>
+<li>Translate goals into measurable units: peak <strong>RPS</strong>, concurrent connections, data growth/month, queue depth.</li>
+<li>Đổi mục tiêu thành đơn vị đo: peak <strong>RPS</strong>, concurrent connection, tăng dữ liệu/tháng, độ sâu queue.</li>
+<li>Plan headroom <strong>2–3×</strong> expected peak. Load-test before campaigns/launches.</li>
+<li>Dự phòng <strong>2–3×</strong> peak kỳ vọng. Load-test trước campaign/launch.</li>
+</ul>
+<h4>Scale-out defaults / Mặc định scale ngang</h4>
+<ul>
+<li>Stateless app tier behind a load balancer; session state in Redis/DB if needed.</li>
+<li>App tier stateless sau load balancer; session ở Redis/DB nếu cần.</li>
+<li>Autoscale on CPU/RPS/queue lag — with cool-down to avoid flapping.</li>
+<li>Autoscale theo CPU/RPS/độ trễ queue — có cool-down tránh dao động.</li>
+<li>DB scale: vertical + read replicas first; partition/shard only with evidence and re-shard plan.</li>
+<li>Scale DB: dọc + read replica trước; partition/shard chỉ khi có bằng chứng và kế hoạch re-shard.</li>
+</ul>
+<h4>Absorbing spikes / Hấp thụ spike</h4>
+<ul>
+<li>Queue writes that can wait; shed non-critical load; serve stale/cached reads when degraded.</li>
+<li>Queue các ghi có thể chờ; bỏ tải không tới hạn; trả read stale/cache khi suy giảm.</li>
+<li>Rate-limit at edge and app. Backpressure &gt; blind retry storms.</li>
+<li>Rate-limit ở edge và app. Backpressure &gt; bão retry mù.</li>
+<li>Idempotent consumers so scaled workers can retry safely.</li>
+<li>Consumer idempotent để worker scale vẫn retry an toàn.</li>
+</ul>
+<h4>Growth checklist / Checklist tăng trưởng</h4>
+<ul>
+<li>Before 10× traffic: indexes reviewed, pool sizes tuned, caches warm strategy, multi-AZ, backup restore tested.</li>
+<li>Trước traffic ×10: review index, chỉnh pool, chiến lược cache warm, multi-AZ, backup restore đã test.</li>
+<li>Track unit cost per request/user; reject linearly expensive designs without need.</li>
+<li>Theo dõi unit cost / request / user; từ chối thiết kế đắt tuyến tính không cần thiết.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-deployment">
+          <div class="rule-meta">
+            <span class="chip">16 / 28</span>
+            <span class="chip">deployment.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Deployment standards: domains, TLS/SSL, env vars, secrets, health checks, config per environment. Use when deploying, configuring infra, DNS, SSL, or environment settings.</p>
+          <div class="rule-body">
+            <h3>Deployment Standards / Chuẩn Deployment</h3>
+<h4>Environments / Môi trường</h4>
+<ul>
+<li>Separate <strong>local / staging / production</strong> configs. Never share prod secrets with lower envs.</li>
+<li>Tách config <strong>local / staging / production</strong>. Không chia sẻ secret prod cho môi trường thấp hơn.</li>
+<li>Infrastructure as code when possible (compose/K8s/Terraform). Document one-command deploy path.</li>
+<li>Infrastructure as code khi có thể. Có đường deploy một lệnh được ghi rõ.</li>
+</ul>
+<h4>Domain &amp; TLS / Domain &amp; SSL</h4>
+<ul>
+<li>Custom domain via DNS (A/AAAA/CNAME) → reverse proxy or cloud load balancer.</li>
+<li>Domain qua DNS (A/AAAA/CNAME) → reverse proxy hoặc load balancer cloud.</li>
+<li><strong>HTTPS only</strong> in staging/prod. Terminate TLS at edge (Caddy/Nginx/Traefik/cloud LB). Redirect HTTP→HTTPS.</li>
+<li>Staging/prod <strong>chỉ HTTPS</strong>. Terminate TLS ở edge. Redirect HTTP→HTTPS.</li>
+<li>Use managed certificates (Let&#x27;s Encrypt / cloud certs). Auto-renew; alert on expiry.</li>
+<li>Dùng cert quản lý (Let&#x27;s Encrypt / cloud). Tự renew; alert khi gần hết hạn.</li>
+<li>HSTS in production once HTTPS is stable. Prefer TLS 1.2+.</li>
+<li>HSTS trên production khi HTTPS ổn định. Ưu tiên TLS 1.2+.</li>
+</ul>
+<h4>Env vars &amp; secrets / Biến môi trường &amp; secret</h4>
+<ul>
+<li>Config via env / secret manager — <strong>never commit</strong> <code>.env</code> with real secrets, connection strings, or private keys.</li>
+<li>Config qua env / secret manager — <strong>không commit</strong> <code>.env</code> có secret thật, connection string, private key.</li>
+<li>Provide <code>.env.example</code> with dummy values and required keys documented.</li>
+<li>Có <code>.env.example</code> giá trị giả + liệt kê key bắt buộc.</li>
+<li>ASP.NET: <code>appsettings.json</code> for non-secrets; secrets in env / User Secrets (dev) / vault (prod).</li>
+<li>ASP.NET: <code>appsettings.json</code> cho non-secret; secret ở env / User Secrets (dev) / vault (prod).</li>
+<li>Different connection strings per env. Fail fast on missing required config at startup.</li>
+<li>Connection string khác nhau từng env. Fail fast nếu thiếu config bắt buộc lúc startup.</li>
+</ul>
+<h4>Process &amp; networking / Process &amp; mạng</h4>
+<ul>
+<li>Bind app to internal port; expose 80/443 only via proxy. Health: <code>/health</code> live + <code>/ready</code> (DB/deps).</li>
+<li>App listen port nội bộ; chỉ mở 80/443 qua proxy. Health: <code>/health</code> live + <code>/ready</code> (DB/deps).</li>
+<li>Run as non-root in containers. Set resource requests/limits. Graceful shutdown on SIGTERM.</li>
+<li>Container chạy non-root. Có request/limit tài nguyên. Shutdown êm với SIGTERM.</li>
+<li>Migrations: run as controlled release step, not raced by every replica on boot (unless locked migrator).</li>
+<li>Migration: bước release có kiểm soát, không để mọi replica đua migrate lúc boot (trừ migrator có lock).</li>
+<li>Prod change window + rollback owner named before risky deploys. Prefer forward-fix migrations.</li>
+<li>Thay đổi prod: có cửa sổ + người rollback trước khi deploy rủi ro. Ưu tiên migration forward-fix.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-monitoring">
+          <div class="rule-meta">
+            <span class="chip">17 / 28</span>
+            <span class="chip">monitoring.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Monitoring &amp; alerting: golden signals, SLOs, dashboards, on-call. Use when adding metrics, alerts, dashboards, or production readiness checks.</p>
+          <div class="rule-body">
+            <h3>Monitoring Standards / Chuẩn Monitoring</h3>
+<h4>What to measure / Đo cái gì</h4>
+<ul>
+<li>Golden signals per critical route: <strong>latency, traffic, errors, saturation</strong>.</li>
+<li>Tín hiệu vàng mỗi route tới hạn: <strong>latency, traffic, errors, saturation</strong>.</li>
+<li>Track dependency health: PostgreSQL, Redis, queue lag, external APIs, disk, CPU, memory.</li>
+<li>Theo dõi dependency: PostgreSQL, Redis, độ trễ queue, API ngoài, disk, CPU, memory.</li>
+<li>Business counters that matter: signups, bookings, payments success/fail, matching rate.</li>
+<li>Counter nghiệp vụ quan trọng: signup, booking, payment success/fail, tỷ lệ matching.</li>
+</ul>
+<h4>SLOs &amp; alerts / SLO &amp; cảnh báo</h4>
+<ul>
+<li>Define SLOs (e.g. p99 API &lt; X ms, error rate &lt; Y%). Alert on <strong>burn / user impact</strong>, not every blip.</li>
+<li>Định nghĩa SLO (vd p99 API &lt; X ms, error rate &lt; Y%). Alert theo <strong>đốt budget / ảnh hưởng user</strong>, không mọi nhiễu.</li>
+<li>Every alert needs a <strong>runbook</strong> (what it means, where to look, mitigate, escalate).</li>
+<li>Mỗi alert cần <strong>runbook</strong> (ý nghĩa, xem đâu, mitigate, escalate).</li>
+<li>Page only for actionable severity. Route noisy signals to dashboards/tickets.</li>
+<li>Chỉ page mức actionable. Tín hiệu ồn → dashboard/ticket.</li>
+<li>Wire Sev-1 to automated mitigation where safe; see <code>incident-automation.mdc</code> (3am loop + launch tabletop).</li>
+<li>Nối Sev-1 với giảm hại tự động khi an toàn; xem <code>incident-automation.mdc</code> (vòng 3h sáng + tabletop launch).</li>
+</ul>
+<h4>Dashboards / Dashboard</h4>
+<ul>
+<li>One service overview + one business overview. Link panels to logs/traces.</li>
+<li>Một overview service + một overview nghiệp vụ. Panel link sang log/trace.</li>
+<li>Include deploy markers on charts to correlate regressions.</li>
+<li>Có mốc deploy trên chart để tương quan regression.</li>
+</ul>
+<h4>Instrumentation / Gắn đo</h4>
+<ul>
+<li>Prefer OpenTelemetry metrics/traces in ASP.NET Core. Consistent label names (route, status, tenant).</li>
+<li>Ưu tiên OpenTelemetry metric/trace trên ASP.NET Core. Label thống nhất (route, status, tenant).</li>
+<li>Do not high-cardinality label unbounded IDs (userId as metric label) — use logs/traces instead.</li>
+<li>Không gắn label metric bằng ID vô hạn (userId) — dùng log/trace.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-logging-debug">
+          <div class="rule-meta">
+            <span class="chip">18 / 28</span>
+            <span class="chip">logging-debug.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Logging &amp; debugging: structured logs, correlation IDs, log levels, PII redaction, local debug practice. Use when adding logs, diagnosing bugs, or configuring Serilog/App Insights.</p>
+          <div class="rule-body">
+            <h3>Logging &amp; Debug / Log &amp; Debug</h3>
+<h4>Structured logging / Log có cấu trúc</h4>
+<ul>
+<li>Use structured logs (Serilog / <code>ILogger</code> + JSON sinks). Prefer properties over string interpolation soup.</li>
+<li>Dùng log có cấu trúc (Serilog / <code>ILogger</code> + sink JSON). Ưu tiên property hơn nối chuỗi loạn.</li>
+<li>Every request gets a <strong>correlation / trace ID</strong>; propagate to logs, downstream calls, and clients when useful.</li>
+<li>Mỗi request có <strong>correlation / trace ID</strong>; truyền sang log, call downstream, và client khi hữu ích.</li>
+<li>Levels: Debug=dev detail, Information=business milestones, Warning=recoverable, Error=failed op, Fatal=process dying.</li>
+<li>Mức: Debug=chi tiết dev, Information=mốc nghiệp vụ, Warning=recoverable, Error=thao tác fail, Fatal=process sắp chết.</li>
+</ul>
+<h4>What to log / Log cái gì</h4>
+<ul>
+<li>Log auth failures, money-state transitions, external API failures, and unhandled exceptions with context.</li>
+<li>Log lỗi auth, chuyển trạng thái tiền, lỗi API ngoài, exception chưa bắt kèm context.</li>
+<li><strong>Never log</strong> secrets, tokens, passwords, full card data, or raw PII. Redact connection strings.</li>
+<li><strong>Không log</strong> secret, token, mật khẩu, dữ liệu thẻ, PII thô. Redact connection string.</li>
+<li>Bound log volume on hot paths; sample or aggregate high-frequency events.</li>
+<li>Giới hạn volume trên hot path; sample hoặc gộp sự kiện tần suất cao.</li>
+</ul>
+<h4>Retention &amp; access / Lưu trữ &amp; truy cập</h4>
+<ul>
+<li>Define retention per env (e.g. prod 15–30 days hot). Restrict who can read prod logs.</li>
+<li>Định retention từng env (vd prod 15–30 ngày hot). Giới hạn ai đọc được log prod.</li>
+<li>Ship logs to a central store; do not SSH-grep production as the primary workflow.</li>
+<li>Đẩy log về kho trung tâm; không lấy SSH-grep production làm quy trình chính.</li>
+</ul>
+<h4>Debugging practice / Thực hành debug</h4>
+<ul>
+<li>Reproduce with correlation ID → traces → related logs → DB state. Prefer evidence over guesswork.</li>
+<li>Tái hiện bằng correlation ID → trace → log liên quan → trạng thái DB. Ưu tiên bằng chứng hơn đoán.</li>
+<li>Local: User Secrets + clear log level overrides. Feature-flag noisy diagnostics; remove temporary print junk before merge.</li>
+<li>Local: User Secrets + chỉnh log level rõ. Feature-flag diagnostic ồn; xóa print tạm trước khi merge.</li>
+<li>Production debug: read-only first; no ad-hoc writes/fixes without change control.</li>
+<li>Debug production: đọc trước; không ghi/fix tay thiếu kiểm soát thay đổi.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-testing">
+          <div class="rule-meta">
+            <span class="chip">19 / 28</span>
+            <span class="chip">testing.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Testing standards: unit, integration, e2e, test data, CI gates for ASP.NET + Postgres. Use when writing tests, reviewing coverage, or setting CI test policy.</p>
+          <div class="rule-body">
+            <h3>Testing Standards / Chuẩn Test</h3>
+<h4>Pyramid / Kim tự tháp</h4>
+<ul>
+<li>Prefer <strong>many fast unit</strong> + <strong>focused integration</strong> + <strong>few e2e</strong> critical journeys.</li>
+<li>Ưu tiên <strong>nhiều unit nhanh</strong> + <strong>integration trọng điểm</strong> + <strong>ít e2e</strong> hành trình tới hạn.</li>
+<li>Unit: domain rules, pure logic, mappers — no DB/network.</li>
+<li>Unit: rule domain, logic thuần, mapper — không DB/network.</li>
+<li>Integration: API + PostgreSQL (Testcontainers or dedicated test DB), authz, migrations.</li>
+<li>Integration: API + PostgreSQL (Testcontainers hoặc DB test), authz, migration.</li>
+<li>E2E: login → core happy path → money/booking path only when stable enough.</li>
+<li>E2E: login → happy path lõi → đường tiền/booking chỉ khi đủ ổn định.</li>
+</ul>
+<h4>Must-cover before merge / Bắt buộc trước merge</h4>
+<ul>
+<li>Authn/authz denials, payment/booking state transitions, idempotency, and migration smoke.</li>
+<li>Từ chối authn/authz, chuyển trạng thái payment/booking, idempotency, và smoke migration.</li>
+<li>Money rounding/currency and timezone-sensitive booking rules when those domains change.</li>
+<li>Làm tròn tiền/currency và rule booking nhạy timezone khi đụng các domain đó.</li>
+<li>Breaking API changes: compatibility checks against published OpenAPI / consumer contract when available.</li>
+<li>Đổi API phá tương thích: kiểm tra so với OpenAPI / consumer contract đã công bố khi có.</li>
+<li>Regression test for every production bug that could recur.</li>
+<li>Có regression test cho mọi bug production có thể tái diễn.</li>
+</ul>
+<h4>Test design / Thiết kế test</h4>
+<ul>
+<li>Name tests by behavior (<code>Method_Scenario_Expected</code>). Arrange–Act–Assert clearly.</li>
+<li>Đặt tên theo hành vi (<code>Method_Scenario_Expected</code>). Arrange–Act–Assert rõ.</li>
+<li>Deterministic: no <code>Thread.Sleep</code> flakiness; control time/random via clocks/fakes.</li>
+<li>Deterministic: không <code>Thread.Sleep</code> flake; kiểm soát time/random bằng clock/fake.</li>
+<li>Build test data with builders/fixtures; never depend on uncleared prod-like dumps.</li>
+<li>Data test bằng builder/fixture; không phụ thuộc dump giống prod chưa làm sạch.</li>
+</ul>
+<h4>CI policy / Chính sách CI</h4>
+<ul>
+<li>PR pipeline runs unit + integration. Fail the build on flaky-ignored tests — fix or delete.</li>
+<li>Pipeline PR chạy unit + integration. Fail nếu test bị ignore vì flake — sửa hoặc xóa.</li>
+<li>Load/soak tests are scheduled or pre-release — document if deferred.</li>
+<li>Load/soak chạy định kỳ hoặc pre-release — ghi rõ nếu hoãn.</li>
+<li>Coverage is a guide, not a vanity metric; protect critical paths over % targets alone.</li>
+<li>Coverage là hướng dẫn, không phải chỉ số ảo; bảo vệ đường tới hạn hơn là chạy theo %.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-delivery-ops">
+          <div class="rule-meta">
+            <span class="chip">20 / 28</span>
+            <span class="chip">delivery-ops.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Delivery &amp; CI/CD: pipelines, progressive release, feature flags, rollback. Use for pipelines, deploys, release strategy — see also deployment.mdc and monitoring.mdc.</p>
+          <div class="rule-body">
+            <h3>Delivery &amp; CI/CD / Giao hàng &amp; CI/CD</h3>
+<h4>Pipeline / Pipeline</h4>
+<ul>
+<li>Every merge: lint/analyze, unit + integration tests, basic security checks, dependency vulnerability scan (<code>supply-chain-deps.mdc</code>). Keep main releasable.</li>
+<li>Mỗi merge: lint/analyze, unit + integration, security cơ bản, quét lỗ hổng dependency (<code>supply-chain-deps.mdc</code>). Giữ main releasable.</li>
+<li>Build immutable artifacts (container image / package) promoted across envs — no “rebuild for prod”.</li>
+<li>Build artifact bất biến, promote qua env — không “build lại cho prod”.</li>
+</ul>
+<h4>Release / Phát hành</h4>
+<ul>
+<li>Prefer canary/blue-green + automated rollback on SLO burn.</li>
+<li>Ưu tiên canary/blue-green + rollback tự động khi đốt SLO.</li>
+<li>Risky changes behind feature flags; ramp by %/cohort; kill-switch ready.</li>
+<li>Thay đổi rủi ro sau feature flag; ramp theo %/cohort; sẵn kill-switch.</li>
+<li>Separate deploy from release when possible. Document rollback before prod change.</li>
+<li>Tách deploy khỏi release khi có thể. Ghi rollback trước khi đổi prod.</li>
+</ul>
+<h4>Related rules / Rule liên quan</h4>
+<ul>
+<li>Domain, TLS, env vars → <code>deployment.mdc</code>. Metrics/alerts → <code>monitoring.mdc</code>. Logs → <code>logging-debug.mdc</code>.</li>
+<li>Domain, TLS, env vars → <code>deployment.mdc</code>. Metric/alert → <code>monitoring.mdc</code>. Log → <code>logging-debug.mdc</code>.</li>
+<li>Code vs data vs business undo → <code>backup-rollback.mdc</code>. 3am auto-mitigate → <code>incident-automation.mdc</code>.</li>
+<li>Đảo code / dữ liệu / nghiệp vụ → <code>backup-rollback.mdc</code>. Tự giảm hại 3h sáng → <code>incident-automation.mdc</code>.</li>
+</ul>
+<h4>Incidents / Sự cố</h4>
+<ul>
+<li>Severity by user impact. Mitigate first, then root-cause. Blameless postmortems with actions.</li>
+<li>Mức độ theo ảnh hưởng user. Mitigate trước, rồi root-cause. Postmortem không đổ lỗi + hành động.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-backup-rollback">
+          <div class="rule-meta">
+            <span class="chip">21 / 28</span>
+            <span class="chip">backup-rollback.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Backup vs rollback vs business compensation: code bugs, bad deploys, data disasters. Use when planning releases, incidents, migrations, or money-flow failures.</p>
+          <div class="rule-body">
+            <h3>Backup, Rollback &amp; Compensation / Backup, rollback &amp; bù trừ</h3>
+<h4>Do not mix these three / Đừng lẫn ba việc này</h4>
+<ul>
+<li><strong>Rollback code</strong> = ship the previous app artifact (or flip a flag). Fast. Does <strong>not</strong> undo data already written.</li>
+<li><strong>Rollback code</strong> = đưa bản app trước đó (hoặc tắt flag). Nhanh. <strong>Không</strong> tự xóa dữ liệu đã ghi.</li>
+<li><strong>Compensate business</strong> = reverse a wrong <em>effect</em> (cancel booking, refund, ledger reversing entry) via explicit domain actions.</li>
+<li><strong>Bù trừ nghiệp vụ</strong> = đảo <em>hiệu ứng</em> sai (hủy booking, hoàn tiền, bút toán đảo) bằng hành động domain rõ.</li>
+<li><strong>Restore backup / PITR</strong> = recover from data loss or corruption. Last resort — you may lose later legitimate work.</li>
+<li><strong>Restore backup / PITR</strong> = cứu khi mất/hỏng dữ liệu. Phương án cuối — có thể mất việc hợp lệ xảy ra sau điểm restore.</li>
+</ul>
+<h4>When code is wrong / Khi code lỗi</h4>
+<ul>
+<li>Prefer <strong>feature flag / kill-switch</strong> first — disable the bad path without a full redeploy.</li>
+<li>Ưu tiên <strong>feature flag / kill-switch</strong> trước — tắt đường hỏng không cần deploy lại cả app.</li>
+<li>Next: redeploy the <strong>previous immutable artifact</strong> (canary/blue-green). Keep images; never “rebuild to rollback”.</li>
+<li>Tiếp: deploy lại <strong>artifact bất biến trước đó</strong> (canary/blue-green). Giữ image; không “build lại để rollback”.</li>
+<li>Schema must stay <strong>backward compatible</strong> during rollout so old code can run after a code rollback (<code>expand → migrate → contract</code>).</li>
+<li>Schema phải <strong>tương thích ngược</strong> lúc rollout để code cũ vẫn chạy sau khi rollback code (<code>expand → migrate → contract</code>).</li>
+<li>Prefer <strong>forward-fix</strong> for irreversible migrations (drop column, destructive rewrite) — do not rely on <code>Down()</code> in production.</li>
+<li>Ưu tiên <strong>forward-fix</strong> với migration khó đảo (drop cột, rewrite phá hủy) — đừng dựa vào <code>Down()</code> trên production.</li>
+</ul>
+<h4>When business data is wrong / Khi nghiệp vụ sai</h4>
+<ul>
+<li>Design <strong>compensating actions</strong> up front for money/booking (refund, void, cancel, reverse ledger). Test them.</li>
+<li>Thiết kế <strong>hành động bù trừ</strong> sẵn cho tiền/booking (hoàn, hủy, đảo sổ). Phải có test.</li>
+<li>Never “fix” money by editing rows by hand or restoring yesterday’s DB — that erases good orders and breaks audit.</li>
+<li>Không “sửa” tiền bằng sửa tay từng dòng hoặc restore DB hôm qua — xóa đơn tốt và phá audit.</li>
+<li>Append-only money movements + audit trail beat in-place overwrite.</li>
+<li>Biến động tiền kiểu append + audit trail hơn ghi đè tại chỗ.</li>
+</ul>
+<h4>When data is lost or corrupted / Khi mất hoặc hỏng dữ liệu</h4>
+<ul>
+<li>Automated backups + <strong>PITR</strong> (Postgres WAL) so you can restore to <em>just before</em> a bad DELETE/migration.</li>
+<li>Backup tự động + <strong>PITR</strong> (WAL Postgres) để restore <em>ngay trước</em> lệnh DELETE/migration hại.</li>
+<li>Write <strong>RPO/RTO</strong>. Drill restore on a schedule — an untested backup is not a backup.</li>
+<li>Ghi <strong>RPO/RTO</strong>. Diễn tập restore định kỳ — backup chưa tập restore coi như chưa có.</li>
+<li>Restore to a <strong>side instance</strong>, verify, then cut over — do not overwrite prod blindly.</li>
+<li>Restore ra <strong>instance phụ</strong>, kiểm tra, rồi mới cắt — không đè prod mù.</li>
+</ul>
+<h4>Decision order in an incident / Thứ tự xử lý sự cố</h4>
+<ol>
+<li>Mitigate user harm (flag off, read-only, stop workers) / Giảm hại (tắt flag, read-only, dừng worker)</li>
+<li>Rollback or forward-fix <strong>code</strong> if the binary is the cause / Rollback hoặc forward-fix <strong>code</strong> nếu lỗi do bản chạy</li>
+<li>Compensate <strong>business</strong> records that already committed / Bù trừ bản ghi <strong>nghiệp vụ</strong> đã commit</li>
+<li>PITR/restore only if data is gone or untrustworthy / PITR/restore chỉ khi dữ liệu mất hoặc không còn tin được</li>
+</ol>
+<h4>Related / Liên quan</h4>
+<ul>
+<li>Release mechanics → <code>delivery-ops.mdc</code>. Schema/PITR details → <code>database.mdc</code>. DR/HA → <code>reliability-crosscutting.mdc</code>.</li>
+<li>Cơ chế release → <code>delivery-ops.mdc</code>. Schema/PITR → <code>database.mdc</code>. DR/HA → <code>reliability-crosscutting.mdc</code>.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-incident-automation">
+          <div class="rule-meta">
+            <span class="chip">22 / 28</span>
+            <span class="chip">incident-automation.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">3am incident automation vs human: auto-mitigate known failures, never auto-restore money/data. Use for on-call, launch readiness, runbooks, or alert design.</p>
+          <div class="rule-body">
+            <h3>Incident Automation &amp; Tabletop / Tự động sự cố &amp; diễn tập</h3>
+<h4>Principle / Nguyên tắc</h4>
+<ul>
+<li>Automate <strong>pre-agreed mitigation</strong> of known signatures. Do not automate diagnosis of novel failures or irreversible money/data actions.</li>
+<li>Tự động <strong>giảm hại đã thống nhất trước</strong> với tín hiệu đã biết. Không tự chẩn đoán sự cố lạ, không tự làm việc tiền/data khó đảo.</li>
+<li>Machine loop: detect → match playbook → mitigate → verify SLO → <strong>page a human only if still burning or action is irreversible</strong>.</li>
+<li>Vòng máy: phát hiện → khớp playbook → giảm hại → kiểm tra SLO → <strong>chỉ gọi người nếu vẫn cháy hoặc việc khó đảo</strong>.</li>
+<li>Every Sev-1 alert has an owner, a runbook link, and a <strong>safe automated action</strong> or an explicit “wake human”.</li>
+<li>Mỗi alert Sev-1 có owner, link runbook, và <strong>hành động máy an toàn</strong> hoặc ghi rõ “gọi người”.</li>
+</ul>
+<h4>Automate before first launch / Tự động trước launch đầu</h4>
+<ul>
+<li>Synthetic probes on login, core create, payment sandbox, <code>/ready</code>. Fail probe → page + optional auto-rollback if just deployed.</li>
+<li>Probe tổng hợp: login, create lõi, payment sandbox, <code>/ready</code>. Probe fail → page + có thể auto-rollback nếu vừa deploy.</li>
+<li>Auto-rollback canary/blue-green when error-rate or p99 burns SLO for N minutes after a release.</li>
+<li>Auto-rollback canary/blue-green khi error-rate/p99 đốt SLO N phút sau release.</li>
+<li>Kill-switch / feature flags remotely; circuit-break dead dependencies; shed load; autoscale with cool-down.</li>
+<li>Kill-switch/flag từ xa; circuit-break dependency chết; bỏ tải; autoscale có cool-down.</li>
+<li>Restart unhealthy pods; rotate to last-known-good artifact; pause workers on poison/DLQ burst; block abusive IPs at edge.</li>
+<li>Restart pod unhealthy; về artifact tốt đã biết; tạm dừng worker khi nổ DLQ; chặn IP abuse ở edge.</li>
+<li>Cert auto-renew + expiry alert days ahead. Disk/connection-pool saturation → scale or fail-fast, not hang.</li>
+<li>Cert tự renew + alert trước hạn. Disk/pool cạn → scale hoặc fail-fast, không treo.</li>
+</ul>
+<h4>Never auto at 3am (first years) / Không tự làm lúc 3h (năm đầu)</h4>
+<ul>
+<li>No auto <strong>PITR/restore prod</strong>, no auto <strong>mass refund</strong>, no auto <strong>multi-region failover</strong>, no auto <strong>schema Down()</strong>.</li>
+<li>Không tự <strong>PITR/đè prod</strong>, không tự <strong>hoàn tiền hàng loạt</strong>, không tự <strong>failover đa vùng</strong>, không tự <strong>migration Down()</strong>.</li>
+<li>No auto-delete data, no auto-widen permissions, no auto-disable auth “to recover”.</li>
+<li>Không tự xóa data, không tự nới quyền, không tự tắt auth “cho hệ sống”.</li>
+<li>Those require a woken human + second pair of eyes (<code>backup-rollback.mdc</code>).</li>
+<li>Những việc đó cần người dậy + người thứ hai (<code>backup-rollback.mdc</code>).</li>
+</ul>
+<h4>Page vs ticket / Gọi vs ticket</h4>
+<ul>
+<li>Page: user-facing SLO burn, money-path fail, data-loss suspicion, auth down, TLS down, probe fail.</li>
+<li>Gọi: đốt SLO phía user, hỏng đường tiền, nghi mất data, auth/TLS chết, probe fail.</li>
+<li>Ticket: noisy saturation, single-instance flap already self-healed, non-critical widget.</li>
+<li>Ticket: saturation ồn, một instance tự lành, widget không tới hạn.</li>
+</ul>
+<h4>Launch tabletop (15) / 15 kịch bản diễn tập launch</h4>
+<ol>
+<li><strong>Bad deploy 5xx</strong> — Symptom: error%↑ after release. 10m: freeze deploys, auto/manual rollback artifact, confirm probes. Rules: <code>delivery-ops</code>, <code>backup-rollback</code>.</li>
+<li><strong>Migration lock</strong> — Symptom: DB waits↑, <code>/ready</code> fail. 10m: stop new migrate, do not Down(), read-only if needed. Rules: <code>database</code>, <code>deployment</code>.</li>
+<li><strong>Pool / max_connections</strong> — Symptom: timeout, <code>too many connections</code>. 10m: shed load, cap pool, scale app down not up. Rules: <code>database</code>, <code>scale</code>, <code>performance</code>.</li>
+<li><strong>Retry storm</strong> — Symptom: RPS↑ + error%↑ together. 10m: edge rate-limit, stop client retry amplification. Rules: <code>scale</code>, <code>reliability-crosscutting</code>.</li>
+<li><strong>Payment webhook fail / double</strong> — Symptom: pay success≠ledger, webhook 4xx/5xx. 10m: pause payout workers, do not mass-refund; replay later. Rules: <code>messaging-integration</code>, <code>time-money-locale</code>, <code>backup-rollback</code>.</li>
+<li><strong>Postgres down</strong> — Symptom: all writes fail. 10m: rely on HA failover if configured; else fail loud + status page; no DIY restore. Rules: <code>reliability-crosscutting</code>, <code>backup-rollback</code>.</li>
+<li><strong>Redis down</strong> — Symptom: latency↑ or 500 on cache path. 10m: degrade (skip cache), keep DB alive; disable non-critical sessions. Rules: <code>performance</code>, <code>reliability-crosscutting</code>.</li>
+<li><strong>Queue lag / poison</strong> — Symptom: depth↑, same message loops. 10m: auto-park poison to DLQ, pause consumer group, keep HTTP up. Rules: <code>messaging-integration</code>.</li>
+<li><strong>Dependency timeout</strong> (SMS/map/pay) — Symptom: thread/request hang. 10m: circuit open, serve degraded UX. Rules: <code>reliability-crosscutting</code>, <code>ux-ui</code>.</li>
+<li><strong>Auth/login down</strong> — Symptom: 401/503 on login, probe fail. 10m: rollback last auth change or disable new IdP feature flag. Rules: <code>security</code>, <code>delivery-ops</code>.</li>
+<li><strong>TLS/DNS/cert</strong> — Symptom: clients fail handshake. 10m: if auto-renew failed, page (often not fully auto). Rules: <code>deployment</code>, <code>security</code>.</li>
+<li><strong>Disk full</strong> — Symptom: cannot write, crash loops. 10m: auto-expand disk or fail instance + reschedule; trim logs. Rules: <code>logging-debug</code>, <code>deployment</code>.</li>
+<li><strong>Launch traffic spike</strong> — Symptom: RPS↑, saturation↑, still some success. 10m: autoscale, queue writes, shed extras, cache more. Rules: <code>scale</code>, <code>performance</code>.</li>
+<li><strong>Breaking mobile API</strong> — Symptom: crash-free↓, one app version 4xx. 10m: flag off field/behavior; do not force-upgrade only. Rules: <code>api-contracts</code>, <code>mobile-clients</code>.</li>
+<li><strong>Suspected data loss / bad DELETE</strong> — Symptom: counts collapse, user reports missing. 10m: <strong>stop writers</strong>, snapshot/PITR prep, <strong>wake human</strong> — never auto-restore. Rules: <code>backup-rollback</code>, <code>database</code>.</li>
+</ol>
+<h4>Drill cadence / Nhịp diễn tập</h4>
+<ul>
+<li>Before first launch: walk all 15 on paper (30–60 min). After launch: restore drill + one game-day per quarter.</li>
+<li>Trước launch đầu: bàn 15 cái trên giấy (30–60 phút). Sau launch: diễn tập restore + một game-day mỗi quý.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-reliability-crosscutting">
+          <div class="rule-meta">
+            <span class="chip">23 / 28</span>
+            <span class="chip">reliability-crosscutting.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Reliability, DR, FinOps, compliance for large-scale products. Use for resilience, backups, multi-region, cost, or governance.</p>
+          <div class="rule-body">
+            <h3>Reliability &amp; Cross-cutting / Độ tin cậy &amp; vấn đề xuyên suốt</h3>
+<h4>Resilience / Chống chịu lỗi</h4>
+<ul>
+<li>Expect dependency failure. Timeouts, retries (idempotent only), bulkheads, circuit breakers, graceful degradation.</li>
+<li>Giả định dependency lỗi. Timeout, retry (chỉ idempotent), bulkhead, circuit breaker, suy giảm có kiểm soát.</li>
+<li>Backpressure under overload: shed load, queue, or serve stale/cached reads. Fail loud on critical paths.</li>
+<li>Backpressure khi quá tải: bỏ tải, xếp hàng, hoặc read stale/cache. Fail rõ trên đường tới hạn.</li>
+<li>Define degraded modes in advance (read-only, delay settlement, disable non-critical features).</li>
+<li>Định nghĩa chế độ suy giảm trước (read-only, hoãn settlement, tắt tính năng không tới hạn).</li>
+</ul>
+<h4>Backup vs rollback / Backup khác rollback</h4>
+<ul>
+<li>Backup/PITR is for <strong>data loss</strong>. Rolling back a bad release is <strong>code/flags</strong>. Wrong bookings/payments need <strong>compensation</strong>, not yesterday’s dump — see <code>backup-rollback.mdc</code>.</li>
+<li>Backup/PITR để <strong>cứu dữ liệu</strong>. Rollback release lỗi là <strong>code/flag</strong>. Booking/tiền sai cần <strong>bù trừ</strong>, không phải dump hôm qua — xem <code>backup-rollback.mdc</code>.</li>
+</ul>
+<h4>Disaster recovery / Khôi phục thảm họa</h4>
+<ul>
+<li>Written <strong>RPO/RTO</strong> per critical datastore. Automated backups + <strong>restore drills</strong> on a schedule.</li>
+<li><strong>RPO/RTO</strong> ghi rõ từng datastore tới hạn. Backup tự động + <strong>diễn tập restore</strong> định kỳ.</li>
+<li>Paying / SLA prod: multi-AZ (or equivalent HA). Tiny internal tools may defer HA — document the risk.</li>
+<li>Prod có SLA/thu phí: multi-AZ (hoặc HA tương đương). Tool nội bộ nhỏ có thể hoãn HA — ghi rõ rủi ro.</li>
+<li>Multi-region only with clear failover ownership and runbook — never “set and forget”.</li>
+<li>Multi-region chỉ khi có ownership failover và runbook — không “bật rồi quên”.</li>
+<li>Avoid split-brain; one write source of truth. Document who declares disaster failover.</li>
+<li>Tránh split-brain; một nguồn ghi chân lý. Ghi rõ ai tuyên bố failover thảm họa.</li>
+</ul>
+<h4>Data integrity / Toàn vẹn dữ liệu</h4>
+<ul>
+<li>Consistency per use case (strong vs eventual); show stale in UX when eventual.</li>
+<li>Nhất quán theo use case (mạnh vs eventual); hiện stale trên UX khi eventual.</li>
+<li>See also <code>concurrency-correctness.mdc</code> and <code>messaging-integration.mdc</code> for races and outbox.</li>
+<li>Xem thêm <code>concurrency-correctness.mdc</code> và <code>messaging-integration.mdc</code> cho đua tranh và outbox.</li>
+</ul>
+<h4>FinOps / Chi phí</h4>
+<ul>
+<li>Budget alerts; right-size; kill idle; efficient queries before bigger machines; unit cost per request/user.</li>
+<li>Alert ngân sách; right-size; tắt idle; query hiệu quả trước khi tăng máy; unit cost / request / user.</li>
+</ul>
+<h4>Compliance &amp; product ops / Tuân thủ &amp; vận hành sản phẩm</h4>
+<ul>
+<li>Classify data; audit admin and money actions; status page; controlled impersonation; enforce abuse limits in product+infra.</li>
+<li>Phân loại dữ liệu; audit admin và tiền; status page; impersonation kiểm soát; chống abuse ở product+infra.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-mobile-clients">
+          <div class="rule-meta">
+            <span class="chip">24 / 28</span>
+            <span class="chip">mobile-clients.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Mobile client standards for RN/Flutter: offline, push, API versioning, store release, security on device. Use when building or changing mobile apps.</p>
+          <div class="rule-body">
+            <h3>Mobile Client Standards / Chuẩn Mobile</h3>
+<h4>Coupling to API / Ghép với API</h4>
+<ul>
+<li>Mobile follows <code>api-contracts.mdc</code>. Tolerate additive API fields; pin min supported API version.</li>
+<li>Mobile bám <code>api-contracts.mdc</code>. Chịu field API additive; pin phiên bản API tối thiểu hỗ trợ.</li>
+<li>Ship app updates knowing store review lag — backend must stay compatible across N app versions.</li>
+<li>Biết độ trễ duyệt store — backend phải tương thích N phiên bản app.</li>
+</ul>
+<h4>Experience &amp; resilience / Trải nghiệm &amp; chống chịu</h4>
+<ul>
+<li>Design offline/poor-network paths for core actions: queue, retry, clear sync status.</li>
+<li>Thiết kế offline/mạng kém cho hành động lõi: xếp hàng, retry, trạng thái đồng bộ rõ.</li>
+<li>Push notifications are unreliable signals — always reconcile from API as source of truth.</li>
+<li>Push không đáng tin tuyệt đối — luôn reconcile từ API là nguồn chân lý.</li>
+<li>Secure storage for tokens; certificate pinning only with a rotation/break-glass plan.</li>
+<li>Lưu token an toàn; certificate pinning chỉ khi có kế hoạch rotate/break-glass.</li>
+</ul>
+<h4>Release &amp; quality / Phát hành &amp; chất lượng</h4>
+<ul>
+<li>Staged rollouts / percentage releases. Crash-free and startup-time budgets monitored.</li>
+<li>Rollout theo giai / phần trăm. Theo dõi crash-free và ngân sách thời gian startup.</li>
+<li>Feature-flag risky mobile UX; remote kill-switch for broken flows when possible.</li>
+<li>Feature-flag UX mobile rủi ro; kill-switch từ xa cho flow hỏng khi có thể.</li>
+<li>Do not hardcode secrets/env in the binary. Use build flavors for staging/prod.</li>
+<li>Không hardcode secret/env trong binary. Dùng build flavor cho staging/prod.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-ux-ui">
+          <div class="rule-meta">
+            <span class="chip">25 / 28</span>
+            <span class="chip">ux-ui.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">UX/UI product standards: clarity, accessibility, performance of experience, mobile. Use when designing UI, flows, copy, or frontend interactions.</p>
+          <div class="rule-body">
+            <h3>UX / UI Standards / Chuẩn UX/UI</h3>
+<h4>Clarity first / Rõ ràng trước</h4>
+<ul>
+<li>One primary action per screen/section. Reduce cognitive load.</li>
+<li>Mỗi màn/section một hành động chính. Giảm tải nhận thức.</li>
+<li>Show system status: loading, empty, success, partial failure — never a blank void.</li>
+<li>Hiện trạng thái hệ thống: loading, empty, success, lỗi một phần — không để trống.</li>
+<li>Errors tell users what happened and what to do next in plain language.</li>
+<li>Lỗi nói rõ chuyện gì xảy ra và bước tiếp theo bằng ngôn ngữ dễ hiểu.</li>
+</ul>
+<h4>Performance of experience / Hiệu năng trải nghiệm</h4>
+<ul>
+<li>Optimize perceived speed: skeletons, optimistic UI where safe, progressive loading.</li>
+<li>Tối ưu tốc độ cảm nhận: skeleton, optimistic UI khi an toàn, tải dần.</li>
+<li>Keep interaction latency low under load; degrade gracefully (read-only, queue, retry).</li>
+<li>Giữ latency tương tác thấp khi tải cao; suy giảm có kiểm soát (read-only, xếp hàng, retry).</li>
+<li>Never block the whole app on a non-critical widget failure.</li>
+<li>Không khóa cả app vì một widget không tới hạn lỗi.</li>
+</ul>
+<h4>Accessibility &amp; inclusion / Tiếp cận &amp; hòa nhập</h4>
+<ul>
+<li>Keyboard navigable, sufficient contrast, semantic HTML/labels, visible focus.</li>
+<li>Điều hướng bằng bàn phím, tương phản đủ, HTML/label ngữ nghĩa, focus rõ.</li>
+<li>Support locale/timezone/currency correctly when multi-language is in scope.</li>
+<li>Hỗ trợ locale/timezone/currency đúng khi có đa ngôn ngữ.</li>
+</ul>
+<h4>Trust at scale / Niềm tin ở quy mô lớn</h4>
+<ul>
+<li>Confirm destructive actions; make undo available when feasible.</li>
+<li>Xác nhận hành động phá hủy; cho undo khi khả thi.</li>
+<li>Be transparent about sync delays, rate limits, and queued work.</li>
+<li>Minh bạch về trễ đồng bộ, rate limit, và việc đang xếp hàng.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-engineering-quality">
+          <div class="rule-meta">
+            <span class="chip">26 / 28</span>
+            <span class="chip">engineering-quality.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Engineering quality: clean code, PR hygiene, refactoring. For test strategy details see testing.mdc.</p>
+          <div class="rule-body">
+            <h3>Engineering Quality / Chất lượng kỹ thuật</h3>
+<h4>Code quality / Chất lượng code</h4>
+<ul>
+<li>Readability &gt; cleverness. Names reveal intent; functions do one thing.</li>
+<li>Dễ đọc &gt; khéo. Tên thể hiện ý định; hàm làm một việc.</li>
+<li>Handle errors explicitly; never swallow. Propagate context for debugging.</li>
+<li>Xử lý lỗi tường minh; không nuốt lỗi. Mang theo context để debug.</li>
+<li>Map domain failures to stable API problem codes; unexpected errors → generic client message + detailed server log.</li>
+<li>Map lỗi domain sang mã API ổn định; lỗi bất ngờ → thông báo generic cho client + log chi tiết phía server.</li>
+<li>Avoid premature abstraction; wait for a second real use case.</li>
+<li>Tránh abstraction sớm; đợi use case thứ hai thật sự.</li>
+</ul>
+<h4>Testing pointer / Con trỏ test</h4>
+<ul>
+<li>Follow <code>testing.mdc</code> for unit/integration/e2e, CI gates, and must-cover paths.</li>
+<li>Theo <code>testing.mdc</code> cho unit/integration/e2e, cổng CI, và đường bắt buộc cover.</li>
+</ul>
+<h4>Naming &amp; comments / Đặt tên &amp; chú thích</h4>
+<ul>
+<li>Follow <code>coding-conventions.mdc</code> for naming and required class/method documentation.</li>
+<li>Theo <code>coding-conventions.mdc</code> cho đặt tên và chú thích bắt buộc class/method.</li>
+</ul>
+<h4>PR hygiene / Vệ sinh PR</h4>
+<ul>
+<li>One PR = one intent. Small diffs, clear description, test plan, rollback note.</li>
+<li>Một PR = một ý định. Diff nhỏ, mô tả rõ, test plan, ghi chú rollback.</li>
+<li>Do not mix renames/format with logic changes.</li>
+<li>Không trộn rename/format với thay đổi logic.</li>
+</ul>
+<h4>Refactoring / Refactor</h4>
+<ul>
+<li>Refactor with tests green; keep behavior unchanged unless the task says otherwise.</li>
+<li>Refactor khi test xanh; giữ hành vi trừ khi task yêu cầu đổi.</li>
+<li>Leave the module better than you found it — locally, not repo-wide.</li>
+<li>Để module tốt hơn lúc tới — cục bộ, không quét cả repo.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-coding-conventions">
+          <div class="rule-meta">
+            <span class="chip">27 / 28</span>
+            <span class="chip">coding-conventions.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Naming conventions and code comments/XML docs for .NET (and TS clients). Use when writing or reviewing classes, methods, or public APIs.</p>
+          <div class="rule-body">
+            <h3>Naming &amp; Comments / Đặt tên &amp; chú thích</h3>
+<h4>Naming (.NET) / Quy ước tên (.NET)</h4>
+<ul>
+<li>Types, methods, properties, events: <strong>PascalCase</strong>. Locals/parameters: <strong>camelCase</strong>. Constants: PascalCase.</li>
+<li>Kiểu, method, property, event: <strong>PascalCase</strong>. Biến cục bộ/tham số: <strong>camelCase</strong>. Hằng: PascalCase.</li>
+<li>Interfaces: <code>I</code> prefix (<code>IOrderService</code>). Async methods: <code>Async</code> suffix. Booleans: <code>Is</code>/<code>Has</code>/<code>Can</code>…</li>
+<li>Interface: tiền tố <code>I</code>. Method async: hậu tố <code>Async</code>. Boolean: <code>Is</code>/<code>Has</code>/<code>Can</code>…</li>
+<li>Controllers: <code><em>Controller</code>. DbContext: <code></em>DbContext</code>. Exceptions: <code><em>Exception</code>. DTOs: <code></em>Request</code>/<code><em>Response</code>/<code></em>Dto</code>.</li>
+<li>Controller: <code><em>Controller</code>. DbContext: <code></em>DbContext</code>. Exception: <code><em>Exception</code>. DTO: <code></em>Request</code>/<code><em>Response</code>/<code></em>Dto</code>.</li>
+<li>Names reveal intent in business language — no cryptic abbreviations (<code>ord</code>, <code>tmp2</code>) in public APIs.</li>
+<li>Tên thể hiện ý định bằng ngôn ngữ nghiệp vụ — không viết tắt khó hiểu (<code>ord</code>, <code>tmp2</code>) trên API công khai.</li>
+</ul>
+<h4>Naming (TS/mobile when used) / Tên TS/mobile khi dùng</h4>
+<ul>
+<li>Components/types: PascalCase. Functions/vars: camelCase. Constants: UPPER_SNAKE or PascalCase per project norm — stay consistent.</li>
+<li>Component/type: PascalCase. Hàm/biến: camelCase. Hằng: UPPER_SNAKE hoặc PascalCase theo chuẩn project — giữ nhất quán.</li>
+</ul>
+<h4>Comments &amp; docs / Chú thích &amp; tài liệu</h4>
+<ul>
+<li><strong>Every class and every method</strong> gets a short doc comment stating purpose (XML <code>///</code> in C#, JSDoc in TS).</li>
+<li><strong>Mỗi class và mỗi method</strong> có chú thích ngắn nêu mục đích (XML <code>///</code> trong C#, JSDoc trong TS).</li>
+<li>Public APIs: document parameters, return values, and thrown domain failures when not obvious.</li>
+<li>API công khai: ghi tham số, giá trị trả về, và lỗi domain khi không hiển nhiên.</li>
+<li>Comments explain <strong>why</strong> and constraints — not a narration of what the next line does.</li>
+<li>Chú thích giải thích <strong>vì sao</strong> và ràng buộc — không kể lại dòng code kế tiếp.</li>
+<li>Keep comments updated in the same change; delete stale comments. Prefer clearer names over long essays.</li>
+<li>Cập nhật chú thích trong cùng thay đổi; xóa chú thích cũ. Ưu tiên tên rõ hơn bài văn dài.</li>
+<li>Do not leave <code>TODO</code>/<code>HACK</code> without owner + ticket/date.</li>
+<li>Không để <code>TODO</code>/<code>HACK</code> thiếu owner + ticket/ngày.</li>
+</ul>
+<h4>Anti-patterns / Anti-pattern</h4>
+<ul>
+<li>No misleading names (<code>Save</code> that also sends email). No commented-out dead code in merges.</li>
+<li>Không tên gây hiểu nhầm (<code>Save</code> mà còn gửi email). Không để code chết bị comment trong merge.</li>
+</ul>
+          </div>
+        </article>
+        <article class="rule-doc" id="rule-documentation-adr">
+          <div class="rule-meta">
+            <span class="chip">28 / 28</span>
+            <span class="chip">documentation-adr.mdc</span>
+            <span class="chip ">Khi đúng ngữ cảnh</span>
+          </div>
+          <p class="rule-desc">Documentation &amp; ADRs: decision records, runbooks, architecture sketches for AI+human continuity. Use when making lasting decisions or production ops docs.</p>
+          <div class="rule-body">
+            <h3>Documentation &amp; ADR / Tài liệu &amp; ADR</h3>
+<h4>Architecture Decision Records / Ghi nhận quyết định</h4>
+<ul>
+<li>ADR for irreversible or expensive-to-change choices: context → decision → consequences → alternatives rejected.</li>
+<li>ADR cho lựa chọn khó đảo / đắt để đổi: bối cảnh → quyết định → hậu quả → phương án bị loại.</li>
+<li>Keep ADRs short (one to two screens). Date them; mark superseded instead of rewriting history.</li>
+<li>ADR ngắn (1–2 màn hình). Có ngày; đánh dấu superseded thay vì sửa sử.</li>
+</ul>
+<h4>What must be written down / Thứ bắt buộc ghi lại</h4>
+<ul>
+<li>System context diagram (modules, DB, queue, external parties) kept roughly current.</li>
+<li>Sơ đồ ngữ cảnh hệ thống (module, DB, queue, bên ngoài) giữ gần đúng hiện tại.</li>
+<li>Runbooks for top alerts and money/auth failure modes.</li>
+<li>Runbook cho các alert hàng đầu và failure mode tiền/auth.</li>
+<li>Env/config catalog: required vars, defaults, and who owns rotation.</li>
+<li>Catalog config/env: biến bắt buộc, mặc định, ai sở hữu việc rotate.</li>
+</ul>
+<h4>Working with AI / Làm việc với AI</h4>
+<ul>
+<li>Prefer repo docs/ADRs over tribal chat memory — agents and humans both read the repo.</li>
+<li>Ưu tiên docs/ADR trong repo hơn trí nhớ chat — agent và người đều đọc repo.</li>
+<li>Update the ADR/doc in the same PR when the decision changes.</li>
+<li>Đổi quyết định thì cập nhật ADR/doc trong cùng PR.</li>
+</ul>
+<h4>Anti-patterns / Anti-pattern</h4>
+<ul>
+<li>No novel-length wiki nobody maintains. No “docs later” on public contracts or money flows.</li>
+<li>Không wiki dài không ai giữ. Không “docs sau” với hợp đồng công khai hoặc luồng tiền.</li>
+</ul>
+          </div>
+        </article>
+      </section>
+
+      <section id="phu-luc">
+        <h2>20. Phụ lục</h2>
+        <h3>Copy rule sang dự án mới</h3>
+        <pre>Copy-Item -Recurse "C:\A1\git\softrule\.cursor\rules" "C:\path\to\project\.cursor\rules"</pre>
+        <h3>Mở file này</h3>
+        <p>Mở <code>softrule-handbook.html</code> bằng trình duyệt (double-click hoặc kéo vào Chrome/Edge). Không cần server.</p>
+        <h3>Quyết định đã khóa trong hội thoại</h3>
+        <table>
+          <thead><tr><th>Chủ đề</th><th>Kết luận</th></tr></thead>
+          <tbody>
+            <tr><td>Rule Cursor</td><td>Hỗn hợp always + requestable; EN/VI; repo + User Rule</td></tr>
+            <tr><td>Backend</td><td>.NET modular monolith từ đầu (cả app nhỏ)</td></tr>
+            <tr><td>DB</td><td>PostgreSQL; không mặc định MySQL</td></tr>
+            <tr><td>Mobile</td><td>RN/Flutter; không cùng ngôn ngữ backend</td></tr>
+            <tr><td>Kiến trúc</td><td>3 tầng trách nhiệm; zoom Logic khi cần</td></tr>
+            <tr><td>Sự cố</td><td>Máy giảm hại đã biết; người làm việc khó đảo</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer>
+        SoftRule Handbook — tổng hợp từ chuỗi trao đổi thiết kế bộ rule.
+        Nội dung kỹ thuật nằm ở <code>.cursor/rules/*.mdc</code>; file HTML này là bản diễn giải cho người đọc.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const sidebar = document.getElementById("sidebar");
+    const btn = document.getElementById("menuBtn");
+    btn.addEventListener("click", () => {
+      const open = sidebar.classList.toggle("open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.querySelectorAll("aside nav a").forEach((a) => {
+      a.addEventListener("click", () => sidebar.classList.remove("open"));
+    });
+
+    const links = [...document.querySelectorAll("aside nav a")];
+    const sections = links
+      .map((a) => document.querySelector(a.getAttribute("href")))
+      .filter(Boolean);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          const id = "#" + e.target.id;
+          links.forEach((l) => l.classList.toggle("active", l.getAttribute("href") === id));
+        });
+      },
+      { rootMargin: "-20% 0px -70% 0px", threshold: 0 }
+    );
+    sections.forEach((s) => io.observe(s));
+  </script>
+</body>
+</html>

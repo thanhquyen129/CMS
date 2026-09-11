@@ -1,0 +1,38 @@
+---
+description: "Public API & contract standards: versioning, errors, pagination, OpenAPI, compatibility with mobile. Use when designing or changing HTTP/gRPC APIs."
+alwaysApply: false
+---
+
+# API Contract Standards / Chuẩn hợp đồng API
+
+## Contract first / Hợp đồng trước
+- Treat the public API as a product. Breaking mobile/web clients is a production incident.
+- Coi API công khai là sản phẩm. Phá client mobile/web là sự cố production.
+- Publish OpenAPI (or equivalent). Generate/validate clients when practical.
+- Xuất bản OpenAPI (hoặc tương đương). Generate/validate client khi khả thi.
+
+## Versioning & compatibility / Version & tương thích
+- Prefer additive changes. Deprecate with sunset dates; keep overlap long enough for app store lag.
+- Ưu tiên thay đổi additive. Deprecate có ngày sunset; giữ chồng chéo đủ cho độ trễ app store.
+- URL or header versioning — pick one convention per product and stick to it.
+- Version bằng URL hoặc header — chọn một ước lệ mỗi sản phẩm và giữ vững.
+- Never reuse fields with new meaning. Never change nullability/type silently.
+- Không tái sử dụng field với nghĩa mới. Không đổi nullability/type thầm lặng.
+
+## Shape & behavior / Shape & hành vi
+- Stable error format (Problem Details / agreed envelope) with machine-readable codes.
+- Format lỗi ổn định (Problem Details / envelope thống nhất) có mã máy đọc được.
+- Never return stack traces or internal exception details to clients; log them server-side with correlation IDs.
+- Không trả stack trace / chi tiết exception nội bộ cho client; log phía server kèm correlation ID.
+- Cursor/offset pagination with max page size. Deterministic sort for stable pages.
+- Phân trang cursor/offset có trần size. Sort xác định để trang ổn định.
+- Idempotency-Key on creates/payments/webhooks. Document replay semantics.
+- Idempotency-Key trên create/payment/webhook. Ghi rõ ngữ nghĩa replay.
+- Explicit auth schemes per endpoint. Rate-limit headers when limiting.
+- Auth scheme tường minh từng endpoint. Header rate-limit khi đang giới hạn.
+- CORS: allow only known web origins; mobile native apps do not rely on CORS.
+- CORS: chỉ origin web đã biết; app mobile native không phụ thuộc CORS.
+
+## Anti-patterns / Anti-pattern
+- No undocumented “internal” fields leaked to mobile. No chatty N+1 endpoint designs.
+- Không lộ field “internal” chưa document ra mobile. Không thiết kế endpoint N+1 tán gẫu.

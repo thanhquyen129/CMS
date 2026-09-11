@@ -1,0 +1,46 @@
+---
+description: "After each completed CMS task: update handoff, commit, push GitHub, deploy production. PO-authorized. Always apply."
+alwaysApply: true
+---
+
+# Ship after every completed task / Ship sau mỗi task xong
+
+## Authorization / Ủy quyền
+- PO authorized: when a CMS task is **done**, do not wait for another “commit/deploy?” prompt.
+- PO ủy quyền: task CMS **xong** thì không hỏi lại “commit/deploy chưa?”.
+- This overrides “ask before production deploy” for CMS. Still **ask** before force-push, drop DB, or deleting production data.
+- Ghi đè “hỏi trước khi deploy prod” cho CMS. **Vẫn hỏi** trước force-push, drop DB, hoặc xóa dữ liệu production.
+
+## Before ship / Trước khi ship
+- Update `docs/handoff.md` (date + this turn). This greenfield repo has no `wwwroot/handoff/` yet.
+- Cập nhật `docs/handoff.md` (ngày + lượt này). Repo greenfield chưa có `wwwroot/handoff/`.
+- Append the user question + the answer (no secrets, no passwords, no keys). Note files/API/schema for the next developer.
+- Thêm câu hỏi + trả lời (không secret). Ghi file/API/schema cho dev tiếp theo.
+- End-user flow/UI/copy: mention in the same handoff when it changed.
+- Luồng/UI người dùng đổi thì ghi luôn trong handoff.
+
+## Git / Git
+- Commit with a short why-message. Push `origin` of the current branch (usually `main`).
+- Commit message ngắn nêu lý do. Push nhánh hiện tại lên `origin` (thường `main`).
+- Never commit secrets (`.env`, `hailybato.txt`, `docs/hailybato.txt`, `.secrets/`, keys). Never `--no-verify`, never force-push `main`.
+- Không commit secret. Không `--no-verify`, không force-push `main`.
+- Skip commit when there is nothing to commit; still deploy only if the host is behind.
+- Không có diff thì không commit rỗng; chỉ deploy nếu host đang chậm hơn git.
+
+## Deploy / Deploy
+- Production: `cms-sg-01` (`deploy@194.233.89.26`), app dir `/opt/cms`.
+- Production: `cms-sg-01`, thư mục `/opt/cms`.
+- **Never** deploy onto `a1logex-sg-01` / `/opt/alogex`.
+- **Không** deploy lên `a1logex-sg-01` / `/opt/alogex`.
+- **Normal path:** push `origin/main` and let GitHub Actions deploy. Tab: `https://github.com/thanhquyen129/CMS/actions`.
+- **Đường thường:** push `origin/main` rồi để Actions deploy. Tab Actions repo CMS.
+- Do not tar/scp from the operator machine unless the Actions `deploy` job failed or the runner is down.
+- Không tar/scp từ máy operator trừ khi job `deploy` fail hoặc runner chết.
+- The VPS copy is **not** a git clone. Do not `git pull` on the host. Never overwrite `infra/.env`.
+- Bản trên VPS **không** phải git clone. Không `git pull` trên máy. **Không ghi đè** `infra/.env`.
+- After push: wait for workflow `CI` (job `test` then `deploy`). Verify `http://194.233.89.26/health` and `/ready`. Report the Actions URL + health URL.
+- Sau push: chờ workflow `CI`. Kiểm tra `/health` và `/ready`. Báo URL Actions + health.
+- If tests on the money/auth/cost-financial critical path failed, **do not deploy**; fix or report.
+- Test đường tiền/auth/chi phí-tài chính tới hạn fail thì **không deploy**; sửa hoặc báo.
+- Fallback runbook: `docs/ops/vps-bootstrap.md` + `docs/ops/github-actions.md`.
+- Khi Actions chết: runbook fallback ở hai file trên.

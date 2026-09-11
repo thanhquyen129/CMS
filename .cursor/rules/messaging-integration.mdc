@@ -1,0 +1,32 @@
+---
+description: "Messaging & integration: outbox, consumers, webhooks, poison queues, saga boundaries. Use for queues, events, integrations, or async workflows."
+alwaysApply: false
+---
+
+# Messaging & Integration / Messaging & tích hợp
+
+## When to go async / Khi nào bất đồng bộ
+- Use messaging for spikes, fan-out, long work, and non-critical side effects — not to hide poor API design.
+- Dùng messaging cho spike, fan-out, việc dài, side-effect không tới hạn — không để che API kém.
+- Keep the request path for user-critical acknowledgements; process the rest asynchronously.
+- Giữ request path cho xác nhận tới hạn với user; phần còn lại xử lý async.
+
+## Delivery semantics / Ngữ nghĩa giao nhận
+- Assume **at-least-once** delivery. Consumers **must be idempotent** (inbox / idempotency store).
+- Giả định giao **ít nhất một lần**. Consumer **phải idempotent** (inbox / kho idempotency).
+- Prefer transactional **outbox** over dual-write (DB + publish in two steps without coordination).
+- Ưu tiên **outbox** giao dịch hơn dual-write (DB + publish hai bước không phối hợp).
+- Poison / dead-letter queues with alert + replay tooling. Cap retries with backoff + jitter.
+- Poison / dead-letter queue có alert + tool replay. Trần retry + backoff + jitter.
+
+## Contracts between systems / Hợp đồng giữa hệ thống
+- Version integration events. Consumers tolerate unknown fields (forward compatibility).
+- Version event tích hợp. Consumer chịu được field lạ (tương thích tới).
+- Webhooks: sign payloads, verify timestamps, idempotent handlers, retry-safe.
+- Webhook: ký payload, verify timestamp, handler idempotent, an toàn retry.
+
+## Distributed workflows / Workflow phân tán
+- Avoid distributed transactions. Use careful sagas/state machines only when business requires.
+- Tránh distributed transaction. Saga/state machine chỉ khi nghiệp vụ bắt buộc.
+- Make compensation explicit and testable. Never leave money/booking in undefined states.
+- Compensation phải tường minh và test được. Không để tiền/booking ở trạng thái không xác định.

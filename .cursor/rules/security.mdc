@@ -1,0 +1,54 @@
+---
+description: "Security standards: authn/z, secrets, OWASP, TLS, headers, abuse controls for ASP.NET APIs. Use for auth, APIs, data handling, infra, or threat-sensitive changes."
+alwaysApply: false
+---
+
+# Security Standards / Chuẩn Security
+
+## Defaults / Mặc định
+- Deny-by-default authorization; least privilege; short-lived credentials.
+- Authz deny-by-default; least privilege; credential ngắn hạn.
+- Never commit secrets. Env / secret manager only; rotate on exposure.
+- Không commit secret. Chỉ env / secret manager; rotate khi lộ.
+- For non-trivial features: quick threat sketch (assets, actors, entry points, abuse cases) before build.
+- Với tính năng không tầm thường: phác threat nhanh (tài sản, actor, điểm vào, abuse) trước khi làm.
+- Dependency risk → `supply-chain-deps.mdc`. Money/time correctness → `time-money-locale.mdc`.
+- Rủi ro dependency → `supply-chain-deps.mdc`. Đúng đắn tiền/giờ → `time-money-locale.mdc`.
+
+## AuthN / AuthZ
+- Prefer OIDC/OAuth2. Passwords: modern KDF only (e.g. ASP.NET Identity defaults / Argon2/bcrypt).
+- Ưu tiên OIDC/OAuth2. Mật khẩu: chỉ KDF hiện đại (Identity defaults / Argon2/bcrypt).
+- Enforce authz on **every** sensitive server operation — never trust client roles alone.
+- Enforce authz **mọi** thao tác nhạy cảm phía server — không tin role từ client.
+- Sessions: HttpOnly + Secure cookies; CSRF when cookie-based; MFA for admin/privileged.
+- Session: cookie HttpOnly + Secure; CSRF nếu cookie auth; MFA cho admin/đặc quyền.
+
+## HTTP & API hardening / Siết HTTP & API
+- HTTPS only in staging/prod; redirect HTTP→HTTPS; HSTS when stable.
+- Staging/prod chỉ HTTPS; redirect HTTP→HTTPS; HSTS khi ổn định.
+- Validate and encode untrusted input. Parameterized SQL only. Guard XSS, SSRF, path traversal.
+- Validate/encode input không tin cậy. Chỉ SQL parameterize. Chặn XSS, SSRF, path traversal.
+- Security headers: CSP (as applicable), X-Content-Type-Options, Frame protections, Referrer-Policy.
+- Security header: CSP (khi phù hợp), X-Content-Type-Options, chống frame, Referrer-Policy.
+- Rate-limit auth, write, and expensive endpoints; WAF/bot defenses at the edge under flood.
+- Rate-limit auth, ghi, endpoint đắt; WAF/bot ở edge khi flood.
+- CORS allowlists for browsers; validate Host/forwarded headers behind proxies.
+- CORS allowlist cho browser; validate Host/forwarded header sau proxy.
+
+## Data & privacy / Dữ liệu & riêng tư
+- TLS in transit; encrypt sensitive data at rest. Minimize PII; classify data.
+- TLS lúc truyền; mã hóa dữ liệu nhạy cảm lúc nghỉ. Thu hẹp PII; phân loại dữ liệu.
+- No secrets/PII in logs. Support account export/delete early when required.
+- Không secret/PII trong log. Hỗ trợ xuất/xóa tài khoản sớm khi bắt buộc.
+- Audit privileged and money-moving actions.
+- Audit hành động đặc quyền và liên quan tiền.
+
+## Periodic security audit / Audit bảo mật định kỳ
+- Schedule recurring reviews — default **quarterly** for products with users/money (adjust by risk).
+- Lịch review định kỳ — mặc định **hàng quý** với sản phẩm có user/tiền (chỉnh theo rủi ro).
+- Each cycle covers at least: access & privilege review, secret/key rotation check, dependency CVEs, auth/session config, backup restore spot-check, top OWASP risks on changed surfaces.
+- Mỗi chu kỳ tối thiểu: review quyền truy cập, kiểm tra rotate secret/key, CVE dependency, cấu hình auth/session, spot-check restore backup, rủi ro OWASP hàng đầu trên bề mặt đã đổi.
+- Record findings, owners, and due dates; verify remediations. Annual (or pre-major-launch) deeper review / pentest when warranted.
+- Ghi finding, owner, hạn xử lý; verify remediation. Hàng năm (hoặc trước launch lớn) review/pentest sâu hơn khi cần.
+- Continuous: CI dependency scan + secret scanning on every merge (`supply-chain-deps.mdc`, `delivery-ops.mdc`).
+- Liên tục: quét dependency + secret trên mọi merge (`supply-chain-deps.mdc`, `delivery-ops.mdc`).

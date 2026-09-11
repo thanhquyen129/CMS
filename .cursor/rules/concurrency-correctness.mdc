@@ -1,0 +1,32 @@
+---
+description: "Concurrency & correctness: optimistic locking, idempotency, distributed locks, race conditions. Use for bookings, inventory, payments, or parallel workers."
+alwaysApply: false
+---
+
+# Concurrency & Correctness / Đồng thời & tính đúng
+
+## Assume races / Giả định đua tranh
+- Any double-submit, dual-tab, retried mobile call, or scaled worker can race — design for it.
+- Mọi double-submit, hai tab, mobile retry, hoặc worker scale đều có thể đua — phải thiết kế cho điều đó.
+- Make illegal state transitions impossible (DB constraints + domain state machine).
+- Làm chuyển trạng thái trái phép không thể xảy ra (constraint DB + state machine domain).
+
+## Preferred controls / Kiểm soát ưu tiên
+- **Idempotency keys** for creates/payments/webhooks. Persist key + response for replay window.
+- **Idempotency key** cho create/payment/webhook. Lưu key + response trong cửa sổ replay.
+- **Optimistic concurrency** (row version / xmin) for contested entities; return 409 on conflict.
+- **Optimistic concurrency** (row version / xmin) cho entity tranh chấp; trả 409 khi conflict.
+- Unique constraints as the last line of defense (e.g. one active booking per slot).
+- Unique constraint là tuyến cuối (vd một booking active / slot).
+
+## Locks / Khóa
+- Prefer short DB transactions over long distributed locks.
+- Ưu tiên transaction DB ngắn hơn distributed lock dài.
+- If using Redis/DB locks: TTL, safe owner token, and never hold locks across user think-time.
+- Nếu dùng khóa Redis/DB: TTL, owner token an toàn, không giữ khóa suốt lúc user suy nghĩ.
+- Avoid “check then act” without a constraint or transaction — TOCTOU bugs follow.
+- Tránh “check rồi act” thiếu constraint/transaction — dính TOCTOU.
+
+## Testing / Kiểm thử
+- Add concurrency/regression tests for inventory, matching, and money paths when feasible.
+- Thêm test concurrency/regression cho inventory, matching, và đường tiền khi khả thi.

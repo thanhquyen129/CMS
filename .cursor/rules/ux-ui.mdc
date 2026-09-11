@@ -1,0 +1,47 @@
+---
+description: "UX: operable B2B finance-control flows, honesty, a11y. Vietnamese UI per CP6.5."
+globs: apps/web/**,apps/admin/**
+alwaysApply: false
+---
+
+# UX / UI Standards / Chuẩn UX/UI
+
+## Look-and-feel source / Nguồn giao diện
+- Keep a serious Vietnamese B2B financial-control look. Do **not** invent a second skin catalog in Cursor rules or dump decorative mockups as the source of truth.
+- Giữ look B2B kiểm soát tài chính Việt Nam nghiêm túc. **Không** invent catalog skin thứ hai trong Cursor rules hay coi mockup trang trí là nguồn chuẩn.
+- Vietnamese UI Term (CP6.5) is mandatory on user-facing labels; Canonical English/Code Key must not leak to end users.
+- Nhãn UI tiếng Việt (CP6.5) bắt buộc; Canonical English/Code Key không lộ cho end user.
+
+## Clarity first / Rõ ràng trước
+- One primary action per screen/section. Reduce cognitive load.
+- Mỗi màn/section một hành động chính. Giảm tải nhận thức.
+- Show system status: loading, empty, success, partial failure — never a blank void.
+- Hiện trạng thái hệ thống: loading, empty, success, lỗi một phần — không để trống.
+- Errors tell users what happened and what to do next in plain language.
+- Lỗi nói rõ chuyện gì xảy ra và bước tiếp theo bằng ngôn ngữ dễ hiểu.
+
+## Honesty / Trung thực
+- Never ship a control that looks real but does nothing.
+- Không ship control trông như thật nhưng không làm gì.
+- Marketing never hides fees, states, or “not settled yet”.
+- Marketing không che phí, trạng thái, hay “chưa tất toán”.
+- Do not collapse independent financial state dimensions into one fake status.
+- Không gộp các chiều trạng thái tài chính độc lập thành một status giả.
+
+## Performance of experience / Hiệu năng trải nghiệm
+- Optimize perceived speed: skeletons, optimistic UI where safe, progressive loading.
+- Tối ưu tốc độ cảm nhận: skeleton, optimistic UI khi an toàn, tải dần.
+- Never block the whole app on a non-critical widget failure.
+- Không khóa cả app vì một widget không tới hạn lỗi.
+
+## Accessibility & inclusion / Tiếp cận & hòa nhập
+- Keyboard navigable, sufficient contrast, semantic HTML/labels, visible focus.
+- Điều hướng bằng bàn phím, tương phản đủ, HTML/label ngữ nghĩa, focus rõ.
+- Support locale/timezone/currency correctly when multi-language is in scope.
+- Hỗ trợ locale/timezone/currency đúng khi có đa ngôn ngữ.
+
+## Trust at scale / Niềm tin ở quy mô lớn
+- Confirm destructive actions; make undo available when feasible.
+- Xác nhận hành động phá hủy; cho undo khi khả thi.
+- Be transparent about sync delays, rate limits, and queued work.
+- Minh bạch về trễ đồng bộ, rate limit, và việc đang xếp hàng.

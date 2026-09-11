@@ -1,0 +1,24 @@
+---
+description: "Bilingual / multilingual rule format. How to extend SoftRule to more languages. EN/VI."
+alwaysApply: true
+---
+
+# Rule Language Convention / Quy ước ngôn ngữ quy tắc
+
+## Format / Định dạng
+- Write rules **bilingual**: English first, Vietnamese immediately after (or paired bullets).
+- Viết quy tắc **song ngữ**: English trước, tiếng Việt ngay sau (hoặc cặp bullet).
+- Keep each idea to one short EN line + one short VI line. Avoid long paragraphs.
+- Mỗi ý: 1 dòng EN ngắn + 1 dòng VI ngắn. Tránh đoạn dài.
+
+## Extending languages / Mở rộng đa ngôn ngữ
+- To add a language (e.g. JP, KO): append a third line with ISO tag, e.g. `[JA] ...`
+- Để thêm ngôn ngữ (vd JP, KO): thêm dòng thứ 3 có tag ISO, vd `[JA] ...`
+- Do not remove EN — it remains the canonical machine-facing wording.
+- Không xóa EN — EN là bản canonical cho AI.
+- Prefer updating existing rule files over creating language-only duplicates.
+- Ưu tiên cập nhật file rule hiện có thay vì tạo bản chỉ-một-ngôn-ngữ.
+
+## When responding / Khi trả lời user
+- Default to the user's message language; keep code/identifiers in English.
+- Mặc định theo ngôn ngữ tin nhắn user; giữ code/identifier bằng English.

@@ -1,0 +1,54 @@
+---
+description: "Product identity & VPS host context for Cost Management System (CMS). Always apply. No secrets."
+alwaysApply: true
+---
+
+# Cost Management System (CMS) / Product & host
+
+## Product / Sản phẩm
+- Product name: **Cost Management System** (short: **CMS** / **LCMS** when logistics-focused).
+- Tên sản phẩm: **Cost Management System** (gọi tắt: **CMS** / **LCMS** khi tập trung logistics).
+- Domain: Financial Control & Cost/Profitability Management — not an operational TMS and not a marketplace.
+- Nghiệp vụ: lớp kiểm soát tài chính & quản lý chi phí/lợi nhuận — không phải TMS vận hành, không phải sàn giao dịch.
+- Primary vertical: Logistics (Bill-centric). Core model must stay tenant-configurable for other businesses later (one Core Model + capability flags — CP5/TD3).
+- Vertical chính: Logistics (neo Bill). Core model phải cấu hình được theo tenant cho ngành khác sau này (một Core Model + capability — CP5/TD3).
+- Default stack: ASP.NET Core modular monolith + PostgreSQL; Redis/queue when needed. **Web/admin:** Next.js.
+- Stack mặc định: ASP.NET Core modular monolith + PostgreSQL; Redis/queue khi cần. **Web/admin:** Next.js.
+- Authoritative BA/TD: `LCMS_BA_docs/` (synced from PO Drive package CP1–CP7, CP6.5, TD1–TD6).
+- Nguồn BA/TD chuẩn: `LCMS_BA_docs/` (đồng bộ từ bộ PO Drive CP1–CP7, CP6.5, TD1–TD6).
+
+## Production host / Máy production
+- Hostname alias: `cms-sg-01` (Contabo VPS in `hailybato.txt`). IPv4: `194.233.89.26`. Location: Singapore. OS: Ubuntu 24.04.
+- Alias host: `cms-sg-01` (VPS Contabo trong `hailybato.txt`). IPv4: `194.233.89.26`. Nơi: Singapore. OS: Ubuntu 24.04.
+- IPv6 (on NIC; DNS later): `2407:3640:2352:1700::1`.
+- IPv6 (đã gắn NIC; DNS sau): `2407:3640:2352:1700::1`.
+- SSH as user `deploy`, key-only, port 22. Host alias in SSH config may still be `a1-sg-01` until renamed.
+- SSH bằng user `deploy`, chỉ key, cổng 22. Alias SSH có thể vẫn là `a1-sg-01` đến khi đổi tên.
+- App directory on the host: `/opt/cms`. Run via Docker Compose (`infra/docker-compose.host.yml`).
+- Thư mục app trên host: `/opt/cms`. Chạy Docker Compose host.
+- **Never** deploy CMS onto `a1logex-sg-01` (`217.216.36.192`) / `/opt/alogex` (A1LogEx product).
+- **Không** deploy CMS lên `a1logex-sg-01` / `/opt/alogex` (sản phẩm A1LogEx).
+- Clearing `/opt/sanlogistics` or other live stacks on this VPS requires explicit PO confirmation (destructive).
+- Xóa `/opt/sanlogistics` hoặc stack sống khác trên VPS này cần PO xác nhận rõ (phá hủy).
+
+## Secrets / Bí mật
+- Never put passwords, VNC, GitHub, or private keys in rules, ADRs, or tracked docs.
+- Không ghi mật khẩu, VNC, GitHub, hay private key vào rule, ADR, hay docs tracked.
+- Local secrets live in gitignored `hailybato.txt` (and/or `docs/hailybato.txt`). Ops steps: `docs/ops/vps-bootstrap.md`.
+- Secret local nằm ở `hailybato.txt` (gitignore). Quy trình ops: `docs/ops/vps-bootstrap.md`.
+- GitHub: SSH key or PAT only — never store the GitHub account password in the repo.
+- GitHub: chỉ SSH key hoặc PAT — không lưu mật khẩu tài khoản GitHub trong repo.
+- Private repo: `https://github.com/thanhquyen129/CMS` (account `thanhquyen129`).
+- Repo private: `https://github.com/thanhquyen129/CMS` (tài khoản `thanhquyen129`).
+
+## Source of truth / Nguồn chuẩn
+- Operational System remains SoT for operations; CMS is the financial control layer (H-002).
+- Hệ thống vận hành vẫn là SoT vận hành; CMS là lớp kiểm soát tài chính (H-002).
+- Bill is the central Financial Anchor (H-003). Vietnamese UI terms per CP6.5 (H-012).
+- Bill là neo tài chính trung tâm (H-003). Nhãn UI tiếng Việt theo CP6.5 (H-012).
+
+## Hosting panel / Panel hosting
+- Provider: Contabo Cloud VPS. Reseller/panel: phaata.com (credentials local-only).
+- Nhà cung cấp: Contabo Cloud VPS. Panel: phaata.com (credential chỉ local).
+- Emergency console: Contabo VNC (host/port in local secrets only).
+- Console khẩn: VNC Contabo (host/cổng chỉ trong secret local).

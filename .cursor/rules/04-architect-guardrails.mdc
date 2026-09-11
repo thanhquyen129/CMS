@@ -1,0 +1,30 @@
+---
+description: "Chief-architect guardrails for large systems: irreversible decisions, operability, correctness. Apply to every substantial design or implementation task."
+alwaysApply: true
+---
+
+# Architect Guardrails / Lan can kiến trúc sư
+
+## Irreversible first / Ưu tiên quyết định khó đảo
+- Before coding: flag decisions that are hard to reverse (identity model, money ledger, public API shape, tenancy, data residency).
+- Trước khi code: đánh dấu quyết định khó đảo (identity, sổ tiền, shape API công khai, tenancy, nơi lưu dữ liệu).
+- Write a short ADR for those decisions (see `documentation-adr.mdc`). Do not bury them only in chat.
+- Ghi ADR ngắn cho các quyết định đó. Không chỉ để trong chat.
+
+## Non-negotiables on critical paths / Không thỏa hiệp trên đường tới hạn
+- Money, auth, booking/state transitions, and personal data paths require: authz, audit, idempotency, tests, and rollback thinking.
+- Đường tiền, auth, booking/chuyển trạng thái, dữ liệu cá nhân cần: authz, audit, idempotency, test, và tư duy rollback.
+- Prefer boring, proven patterns over novel infrastructure on the critical path.
+- Ưu tiên pattern nhàm chán đã chứng minh hơn hạ tầng mới lạ trên đường tới hạn.
+
+## Operability is part of design / Khả năng vận hành là một phần thiết kế
+- If you cannot answer how it fails, how you see it, and how you roll back — the design is incomplete.
+- Nếu chưa trả lời được: fail thế nào, nhìn thấy thế nào, rollback thế nào — thiết kế chưa xong.
+- Optimize for the 3am incident: clear ownership, correlation IDs, runbooks, and safe defaults.
+- Tối ưu cho sự cố 3 giờ sáng: ownership rõ, correlation ID, runbook, mặc định an toàn.
+
+## Complexity control / Kiểm soát độ phức tạp
+- Modular monolith first. No new service, broker topology, or CQRS without a measured pain.
+- Modular monolith trước. Không thêm service, topology broker, hay CQRS khi chưa có nỗi đau đo được.
+- Delete or defer speculative generality. YAGNI under load beats elegant futures.
+- Xóa hoặc hoãn tính tổng quát suy đoán. YAGNI dưới tải thắng tương lai “đẹp”.

@@ -1,0 +1,50 @@
+---
+description: "Database standards for PostgreSQL + EF Core: schema, indexes, migrations, transactions, pooling. Use when designing schema, queries, migrations, or data access."
+alwaysApply: false
+---
+
+# Database Standards / Chuẩn Database
+
+## Defaults / Mặc định
+- Primary OLTP store: **PostgreSQL**. Enable **PostGIS** only when geo queries are required.
+- OLTP chính: **PostgreSQL**. Bật **PostGIS** chỉ khi cần query geo.
+- Access via EF Core and/or Dapper; raw SQL must be parameterized — never string-concat.
+- Truy cập qua EF Core và/hoặc Dapper; SQL thô phải parameterize — không nối chuỗi.
+
+## Schema & modeling / Schema & mô hình
+- Model for **access patterns** first; normalize second. Explicit PKs; prefer UUIDs or snowflakes for public IDs if needed.
+- Thiết kế theo **access pattern** trước; chuẩn hóa sau. PK rõ; ID công khai dùng UUID/snowflake nếu cần.
+- Every FK indexed when used in joins/filters. Add composite indexes matching real WHERE/ORDER BY.
+- Mọi FK dùng join/filter đều có index. Composite index khớp WHERE/ORDER BY thật.
+- Use constraints (NOT NULL, UNIQUE, CHECK, FK) to enforce invariants in the database.
+- Dùng constraint (NOT NULL, UNIQUE, CHECK, FK) để giữ invariant trong DB.
+
+## Migrations / Migration
+- All schema changes via versioned migrations. No manual prod DDL as the happy path.
+- Mọi đổi schema qua migration có version. Không coi DDL tay trên prod là đường chính.
+- Expand → migrate data → contract. Backward-compatible during rolling deploys.
+- Expand → migrate data → contract. Tương thích ngược khi rolling deploy.
+- Avoid long locks on hot tables; use batched backfills for large data changes.
+- Tránh lock lâu trên bảng nóng; backfill lớn theo batch.
+
+## Transactions & integrity / Giao dịch & toàn vẹn
+- Keep transactions short. No external HTTP inside a DB transaction.
+- Giữ transaction ngắn. Không gọi HTTP ngoài trong transaction DB.
+- Money/booking paths: explicit transaction boundaries + **idempotency keys**.
+- Đường tiền/booking: biên transaction rõ + **idempotency key**.
+- Choose isolation level deliberately; default Read Committed unless a case needs stronger.
+- Chọn isolation có chủ đích; mặc định Read Committed trừ khi cần chặt hơn.
+
+## Performance hygiene / Vệ sinh hiệu năng
+- Ban N+1; use Include/projections/batching. No unbounded `ToList` on large sets — paginate/cursor.
+- Cấm N+1; dùng Include/projection/batch. Không `ToList` vô hạn — phân trang/cursor.
+- Connection pooling on; cap pool vs Postgres `max_connections`. Tune timeouts.
+- Bật connection pool; trần pool so với `max_connections` Postgres. Chỉnh timeout.
+- Watch `pg_stat_statements` / slow-query logs. Blobs → object storage. Partition only with evidence.
+- Theo dõi `pg_stat_statements` / slow-query. Blob → object storage. Partition chỉ khi có bằng chứng.
+
+## Durability / Bền vững dữ liệu
+- Prod: automated backups, PITR when available, and a tested restore path (`reliability-crosscutting.mdc`, `backup-rollback.mdc`).
+- Prod: backup tự động, PITR khi có, và đường restore đã test (`reliability-crosscutting.mdc`, `backup-rollback.mdc`).
+- Soft-delete only with an explicit retention/purge job — never “delete = gone” without policy.
+- Soft-delete chỉ khi có job retention/purge rõ — không “xóa là mất” thiếu policy.

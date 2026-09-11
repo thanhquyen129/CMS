@@ -1,0 +1,42 @@
+---
+description: "Deployment standards: domains, TLS/SSL, env vars, secrets, health checks, config per environment. Use when deploying, configuring infra, DNS, SSL, or environment settings."
+alwaysApply: false
+---
+
+# Deployment Standards / Chuẩn Deployment
+
+## Environments / Môi trường
+- Separate **local / staging / production** configs. Never share prod secrets with lower envs.
+- Tách config **local / staging / production**. Không chia sẻ secret prod cho môi trường thấp hơn.
+- Infrastructure as code when possible (compose/K8s/Terraform). Document one-command deploy path.
+- Infrastructure as code khi có thể. Có đường deploy một lệnh được ghi rõ.
+
+## Domain & TLS / Domain & SSL
+- Custom domain via DNS (A/AAAA/CNAME) → reverse proxy or cloud load balancer.
+- Domain qua DNS (A/AAAA/CNAME) → reverse proxy hoặc load balancer cloud.
+- **HTTPS only** in staging/prod. Terminate TLS at edge (Caddy/Nginx/Traefik/cloud LB). Redirect HTTP→HTTPS.
+- Staging/prod **chỉ HTTPS**. Terminate TLS ở edge. Redirect HTTP→HTTPS.
+- Use managed certificates (Let's Encrypt / cloud certs). Auto-renew; alert on expiry.
+- Dùng cert quản lý (Let's Encrypt / cloud). Tự renew; alert khi gần hết hạn.
+- HSTS in production once HTTPS is stable. Prefer TLS 1.2+.
+- HSTS trên production khi HTTPS ổn định. Ưu tiên TLS 1.2+.
+
+## Env vars & secrets / Biến môi trường & secret
+- Config via env / secret manager — **never commit** `.env` with real secrets, connection strings, or private keys.
+- Config qua env / secret manager — **không commit** `.env` có secret thật, connection string, private key.
+- Provide `.env.example` with dummy values and required keys documented.
+- Có `.env.example` giá trị giả + liệt kê key bắt buộc.
+- ASP.NET: `appsettings.json` for non-secrets; secrets in env / User Secrets (dev) / vault (prod).
+- ASP.NET: `appsettings.json` cho non-secret; secret ở env / User Secrets (dev) / vault (prod).
+- Different connection strings per env. Fail fast on missing required config at startup.
+- Connection string khác nhau từng env. Fail fast nếu thiếu config bắt buộc lúc startup.
+
+## Process & networking / Process & mạng
+- Bind app to internal port; expose 80/443 only via proxy. Health: `/health` live + `/ready` (DB/deps).
+- App listen port nội bộ; chỉ mở 80/443 qua proxy. Health: `/health` live + `/ready` (DB/deps).
+- Run as non-root in containers. Set resource requests/limits. Graceful shutdown on SIGTERM.
+- Container chạy non-root. Có request/limit tài nguyên. Shutdown êm với SIGTERM.
+- Migrations: run as controlled release step, not raced by every replica on boot (unless locked migrator).
+- Migration: bước release có kiểm soát, không để mọi replica đua migrate lúc boot (trừ migrator có lock).
+- Prod change window + rollback owner named before risky deploys. Prefer forward-fix migrations.
+- Thay đổi prod: có cửa sổ + người rollback trước khi deploy rủi ro. Ưu tiên migration forward-fix.

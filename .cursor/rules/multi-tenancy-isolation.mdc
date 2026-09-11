@@ -1,0 +1,20 @@
+---
+description: "Strict multi-tenant isolation, repository guards, and independent data scope enforcement. EN/VI."
+alwaysApply: true
+---
+
+# Multi-Tenancy & Data Scope / Cô lập thuê bao & Phạm vi dữ liệu
+
+## Database Isolation / Cô lập cơ sở dữ liệu
+- Enforce `tenant_id` context filtering on every repository query and database constraint; ban cross-tenant leaks.
+- Bắt buộc lọc ngữ cảnh `tenant_id` trên mọi truy vấn repository và constraint DB; nghiêm cấm rò rỉ chéo thuê bao.
+- Every asynchronous background job, API request, and inbound integration must resolve a valid tenant context first.
+- Mọi async job chạy ngầm, request API, và tích hợp inbound đều phải phân giải ngữ cảnh thuê bao hợp lệ trước.
+
+## Authorization & Scope Separation / Tách biệt quyền hành và phạm vi
+- Keep action permissions and data scopes as two independent dimensions; never infer data boundaries from role names.
+- Giữ quyền thao tác và phạm vi dữ liệu là hai chiều độc lập; không tự suy ra ranh giới dữ liệu từ tên vai trò.
+- View Cost permission does not grant View Revenue or Margin access; decouple financial privileges strictly.
+- Quyền xem Chi phí không đồng nghĩa được xem Doanh thu hoặc Biên lợi nhuận; tách biệt nghiêm ngặt đặc quyền tài chính.
+- Enforce server-side authorization on every operation; treat UI element hiding as a cosmetic layout, not a security boundary.
+- Bắt buộc kiểm tra quyền phía server trên mọi thao tác; coi việc ẩn nút trên UI chỉ là bố cục, không phải ranh giới bảo mật.

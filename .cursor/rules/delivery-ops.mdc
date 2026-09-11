@@ -1,0 +1,30 @@
+---
+description: "Delivery & CI/CD: pipelines, progressive release, feature flags, rollback. Use for pipelines, deploys, release strategy — see also deployment.mdc and monitoring.mdc."
+alwaysApply: false
+---
+
+# Delivery & CI/CD / Giao hàng & CI/CD
+
+## Pipeline / Pipeline
+- Every merge: lint/analyze, unit + integration tests, basic security checks, dependency vulnerability scan (`supply-chain-deps.mdc`). Keep main releasable.
+- Mỗi merge: lint/analyze, unit + integration, security cơ bản, quét lỗ hổng dependency (`supply-chain-deps.mdc`). Giữ main releasable.
+- Build immutable artifacts (container image / package) promoted across envs — no “rebuild for prod”.
+- Build artifact bất biến, promote qua env — không “build lại cho prod”.
+
+## Release / Phát hành
+- Prefer canary/blue-green + automated rollback on SLO burn.
+- Ưu tiên canary/blue-green + rollback tự động khi đốt SLO.
+- Risky changes behind feature flags; ramp by %/cohort; kill-switch ready.
+- Thay đổi rủi ro sau feature flag; ramp theo %/cohort; sẵn kill-switch.
+- Separate deploy from release when possible. Document rollback before prod change.
+- Tách deploy khỏi release khi có thể. Ghi rollback trước khi đổi prod.
+
+## Related rules / Rule liên quan
+- Domain, TLS, env vars → `deployment.mdc`. Metrics/alerts → `monitoring.mdc`. Logs → `logging-debug.mdc`.
+- Domain, TLS, env vars → `deployment.mdc`. Metric/alert → `monitoring.mdc`. Log → `logging-debug.mdc`.
+- Code vs data vs business undo → `backup-rollback.mdc`. 3am auto-mitigate → `incident-automation.mdc`.
+- Đảo code / dữ liệu / nghiệp vụ → `backup-rollback.mdc`. Tự giảm hại 3h sáng → `incident-automation.mdc`.
+
+## Incidents / Sự cố
+- Severity by user impact. Mitigate first, then root-cause. Blameless postmortems with actions.
+- Mức độ theo ảnh hưởng user. Mitigate trước, rồi root-cause. Postmortem không đổ lỗi + hành động.

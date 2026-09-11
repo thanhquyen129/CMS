@@ -1,0 +1,62 @@
+---
+description: "3am incident automation vs human: auto-mitigate known failures, never auto-restore money/data. Use for on-call, launch readiness, runbooks, or alert design."
+alwaysApply: false
+---
+
+# Incident Automation & Tabletop / Tự động sự cố & diễn tập
+
+## Principle / Nguyên tắc
+- Automate **pre-agreed mitigation** of known signatures. Do not automate diagnosis of novel failures or irreversible money/data actions.
+- Tự động **giảm hại đã thống nhất trước** với tín hiệu đã biết. Không tự chẩn đoán sự cố lạ, không tự làm việc tiền/data khó đảo.
+- Machine loop: detect → match playbook → mitigate → verify SLO → **page a human only if still burning or action is irreversible**.
+- Vòng máy: phát hiện → khớp playbook → giảm hại → kiểm tra SLO → **chỉ gọi người nếu vẫn cháy hoặc việc khó đảo**.
+- Every Sev-1 alert has an owner, a runbook link, and a **safe automated action** or an explicit “wake human”.
+- Mỗi alert Sev-1 có owner, link runbook, và **hành động máy an toàn** hoặc ghi rõ “gọi người”.
+
+## Automate before first launch / Tự động trước launch đầu
+- Synthetic probes on login, core create, payment sandbox, `/ready`. Fail probe → page + optional auto-rollback if just deployed.
+- Probe tổng hợp: login, create lõi, payment sandbox, `/ready`. Probe fail → page + có thể auto-rollback nếu vừa deploy.
+- Auto-rollback canary/blue-green when error-rate or p99 burns SLO for N minutes after a release.
+- Auto-rollback canary/blue-green khi error-rate/p99 đốt SLO N phút sau release.
+- Kill-switch / feature flags remotely; circuit-break dead dependencies; shed load; autoscale with cool-down.
+- Kill-switch/flag từ xa; circuit-break dependency chết; bỏ tải; autoscale có cool-down.
+- Restart unhealthy pods; rotate to last-known-good artifact; pause workers on poison/DLQ burst; block abusive IPs at edge.
+- Restart pod unhealthy; về artifact tốt đã biết; tạm dừng worker khi nổ DLQ; chặn IP abuse ở edge.
+- Cert auto-renew + expiry alert days ahead. Disk/connection-pool saturation → scale or fail-fast, not hang.
+- Cert tự renew + alert trước hạn. Disk/pool cạn → scale hoặc fail-fast, không treo.
+
+## Never auto at 3am (first years) / Không tự làm lúc 3h (năm đầu)
+- No auto **PITR/restore prod**, no auto **mass refund**, no auto **multi-region failover**, no auto **schema Down()**.
+- Không tự **PITR/đè prod**, không tự **hoàn tiền hàng loạt**, không tự **failover đa vùng**, không tự **migration Down()**.
+- No auto-delete data, no auto-widen permissions, no auto-disable auth “to recover”.
+- Không tự xóa data, không tự nới quyền, không tự tắt auth “cho hệ sống”.
+- Those require a woken human + second pair of eyes (`backup-rollback.mdc`).
+- Những việc đó cần người dậy + người thứ hai (`backup-rollback.mdc`).
+
+## Page vs ticket / Gọi vs ticket
+- Page: user-facing SLO burn, money-path fail, data-loss suspicion, auth down, TLS down, probe fail.
+- Gọi: đốt SLO phía user, hỏng đường tiền, nghi mất data, auth/TLS chết, probe fail.
+- Ticket: noisy saturation, single-instance flap already self-healed, non-critical widget.
+- Ticket: saturation ồn, một instance tự lành, widget không tới hạn.
+
+## Launch tabletop (15) / 15 kịch bản diễn tập launch
+
+1. **Bad deploy 5xx** — Symptom: error%↑ after release. 10m: freeze deploys, auto/manual rollback artifact, confirm probes. Rules: `delivery-ops`, `backup-rollback`.
+2. **Migration lock** — Symptom: DB waits↑, `/ready` fail. 10m: stop new migrate, do not Down(), read-only if needed. Rules: `database`, `deployment`.
+3. **Pool / max_connections** — Symptom: timeout, `too many connections`. 10m: shed load, cap pool, scale app down not up. Rules: `database`, `scale`, `performance`.
+4. **Retry storm** — Symptom: RPS↑ + error%↑ together. 10m: edge rate-limit, stop client retry amplification. Rules: `scale`, `reliability-crosscutting`.
+5. **Payment webhook fail / double** — Symptom: pay success≠ledger, webhook 4xx/5xx. 10m: pause payout workers, do not mass-refund; replay later. Rules: `messaging-integration`, `time-money-locale`, `backup-rollback`.
+6. **Postgres down** — Symptom: all writes fail. 10m: rely on HA failover if configured; else fail loud + status page; no DIY restore. Rules: `reliability-crosscutting`, `backup-rollback`.
+7. **Redis down** — Symptom: latency↑ or 500 on cache path. 10m: degrade (skip cache), keep DB alive; disable non-critical sessions. Rules: `performance`, `reliability-crosscutting`.
+8. **Queue lag / poison** — Symptom: depth↑, same message loops. 10m: auto-park poison to DLQ, pause consumer group, keep HTTP up. Rules: `messaging-integration`.
+9. **Dependency timeout** (SMS/map/pay) — Symptom: thread/request hang. 10m: circuit open, serve degraded UX. Rules: `reliability-crosscutting`, `ux-ui`.
+10. **Auth/login down** — Symptom: 401/503 on login, probe fail. 10m: rollback last auth change or disable new IdP feature flag. Rules: `security`, `delivery-ops`.
+11. **TLS/DNS/cert** — Symptom: clients fail handshake. 10m: if auto-renew failed, page (often not fully auto). Rules: `deployment`, `security`.
+12. **Disk full** — Symptom: cannot write, crash loops. 10m: auto-expand disk or fail instance + reschedule; trim logs. Rules: `logging-debug`, `deployment`.
+13. **Launch traffic spike** — Symptom: RPS↑, saturation↑, still some success. 10m: autoscale, queue writes, shed extras, cache more. Rules: `scale`, `performance`.
+14. **Breaking mobile API** — Symptom: crash-free↓, one app version 4xx. 10m: flag off field/behavior; do not force-upgrade only. Rules: `api-contracts`, `mobile-clients`.
+15. **Suspected data loss / bad DELETE** — Symptom: counts collapse, user reports missing. 10m: **stop writers**, snapshot/PITR prep, **wake human** — never auto-restore. Rules: `backup-rollback`, `database`.
+
+## Drill cadence / Nhịp diễn tập
+- Before first launch: walk all 15 on paper (30–60 min). After launch: restore drill + one game-day per quarter.
+- Trước launch đầu: bàn 15 cái trên giấy (30–60 phút). Sau launch: diễn tập restore + một game-day mỗi quý.

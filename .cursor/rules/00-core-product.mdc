@@ -1,0 +1,42 @@
+---
+description: "Core product mindset: problem→outcome, MVP, scope control. EN/VI. Apply to every product task."
+alwaysApply: true
+---
+
+# Core Product Development / Phát triển sản phẩm cốt lõi
+
+## Outcome first / Ưu tiên kết quả
+- Start from **user problem → success metric → smallest shippable change**. Never start from tech for its own sake.
+- Bắt đầu từ **vấn đề người dùng → chỉ số thành công → thay đổi nhỏ nhất có thể ship**. Không bắt đầu từ công nghệ vì thích.
+
+## Clarify before building / Làm rõ trước khi làm
+- PO docs (`LCMS_BA_docs/`, `docs/po/`) are **intent + locked BA/TD**, not code to paste blindly. Propose the operable slice and keep shipping toward full financial go-live (`07-expert-stance.mdc`).
+- Tài liệu PO (`LCMS_BA_docs/`, `docs/po/`) là **ý tưởng + BA/TD đã khóa**, không phải code copy mù. Đề xuất lát cắt vận hành được và làm tiếp đến go-live tài chính đủ (`07-expert-stance.mdc`).
+- If goal, user, constraint, or success criteria are unclear: **ask 1–3 sharp questions**, then proceed. Do not stall waiting for a rewritten PO.
+- Nếu mục tiêu / user / ràng buộc / tiêu chí thành công chưa rõ: **hỏi 1–3 câu sắc**, rồi làm. Không đứng chờ PO viết lại tài liệu.
+
+## MVP & scope control / MVP & kiểm soát phạm vi
+- Prefer the thinnest slice that validates the outcome. Cut nice-to-haves; log them as follow-ups.
+- Ưu tiên lát cắt mỏng nhất chứng minh được outcome. Cắt nice-to-have; ghi lại làm follow-up.
+- Reject scope creep unless it is required for the stated outcome, security, correctness, or an operable gap on the path to full financial go-live (`07-expert-stance.mdc`).
+- Từ chối phình scope trừ khi bắt buộc cho outcome, bảo mật, tính đúng đắn, hoặc phần thiếu để go-live tài chính đủ (`07-expert-stance.mdc`).
+
+## Decision quality / Chất lượng quyết định
+- State trade-offs explicitly (speed vs quality, complexity vs flexibility, cost vs latency).
+- Nêu rõ trade-off (tốc độ vs chất lượng, phức tạp vs linh hoạt, chi phí vs độ trễ).
+- Default to reversible decisions; escalate irreversible ones (data model, auth, public API, billing).
+- Ưu tiên quyết định đảo ngược được; escalate quyết định khó đảo (data model, auth, API công khai, billing).
+- Record irreversible choices as ADRs (`documentation-adr.mdc`); follow `04-architect-guardrails.mdc`.
+- Ghi lựa chọn khó đảo bằng ADR (`documentation-adr.mdc`); bám `04-architect-guardrails.mdc`.
+
+## Scale-aware product / Sản phẩm ý thức quy mô
+- Target context: ~100k users, high concurrent load, continuous requests. Design for growth without over-building day one.
+- Ngữ cảnh mục tiêu: ~100k user, tải đồng thời cao, request liên tục. Thiết kế để lớn dần, không over-engineer ngày đầu.
+- Every feature must answer: What is the SLO impact? Failure mode at peak? Cost at 10× traffic?
+- Mọi tính năng phải trả lời: Ảnh hưởng SLO? Failure mode lúc peak? Chi phí khi traffic ×10?
+
+## Definition of done / Định nghĩa hoàn thành
+- Done = user outcome + critical-path tests + observable (logs/metrics) + secure defaults + safe rollback.
+- Xong = outcome user + test đường tới hạn + quan sát được (log/metric) + mặc định an toàn + rollback được.
+- For money/auth/API contract changes: include auditability and compatibility notes in the PR.
+- Với thay đổi tiền/auth/hợp đồng API: PR phải có ghi chú auditability và tương thích.

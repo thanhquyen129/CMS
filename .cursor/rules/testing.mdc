@@ -1,0 +1,42 @@
+---
+description: "Testing standards: unit, integration, e2e, test data, CI gates for ASP.NET + Postgres. Use when writing tests, reviewing coverage, or setting CI test policy."
+alwaysApply: false
+---
+
+# Testing Standards / Chuẩn Test
+
+## Pyramid / Kim tự tháp
+- Prefer **many fast unit** + **focused integration** + **few e2e** critical journeys.
+- Ưu tiên **nhiều unit nhanh** + **integration trọng điểm** + **ít e2e** hành trình tới hạn.
+- Unit: domain rules, pure logic, mappers — no DB/network.
+- Unit: rule domain, logic thuần, mapper — không DB/network.
+- Integration: API + PostgreSQL (Testcontainers or dedicated test DB), authz, migrations.
+- Integration: API + PostgreSQL (Testcontainers hoặc DB test), authz, migration.
+- E2E: login → core happy path → money/booking path only when stable enough.
+- E2E: login → happy path lõi → đường tiền/booking chỉ khi đủ ổn định.
+
+## Must-cover before merge / Bắt buộc trước merge
+- Authn/authz denials, payment/booking state transitions, idempotency, and migration smoke.
+- Từ chối authn/authz, chuyển trạng thái payment/booking, idempotency, và smoke migration.
+- Money rounding/currency and timezone-sensitive booking rules when those domains change.
+- Làm tròn tiền/currency và rule booking nhạy timezone khi đụng các domain đó.
+- Breaking API changes: compatibility checks against published OpenAPI / consumer contract when available.
+- Đổi API phá tương thích: kiểm tra so với OpenAPI / consumer contract đã công bố khi có.
+- Regression test for every production bug that could recur.
+- Có regression test cho mọi bug production có thể tái diễn.
+
+## Test design / Thiết kế test
+- Name tests by behavior (`Method_Scenario_Expected`). Arrange–Act–Assert clearly.
+- Đặt tên theo hành vi (`Method_Scenario_Expected`). Arrange–Act–Assert rõ.
+- Deterministic: no `Thread.Sleep` flakiness; control time/random via clocks/fakes.
+- Deterministic: không `Thread.Sleep` flake; kiểm soát time/random bằng clock/fake.
+- Build test data with builders/fixtures; never depend on uncleared prod-like dumps.
+- Data test bằng builder/fixture; không phụ thuộc dump giống prod chưa làm sạch.
+
+## CI policy / Chính sách CI
+- PR pipeline runs unit + integration. Fail the build on flaky-ignored tests — fix or delete.
+- Pipeline PR chạy unit + integration. Fail nếu test bị ignore vì flake — sửa hoặc xóa.
+- Load/soak tests are scheduled or pre-release — document if deferred.
+- Load/soak chạy định kỳ hoặc pre-release — ghi rõ nếu hoãn.
+- Coverage is a guide, not a vanity metric; protect critical paths over % targets alone.
+- Coverage là hướng dẫn, không phải chỉ số ảo; bảo vệ đường tới hạn hơn là chạy theo %.

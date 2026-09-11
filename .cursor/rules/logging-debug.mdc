@@ -1,0 +1,36 @@
+---
+description: "Logging & debugging: structured logs, correlation IDs, log levels, PII redaction, local debug practice. Use when adding logs, diagnosing bugs, or configuring Serilog/App Insights."
+alwaysApply: false
+---
+
+# Logging & Debug / Log & Debug
+
+## Structured logging / Log có cấu trúc
+- Use structured logs (Serilog / `ILogger` + JSON sinks). Prefer properties over string interpolation soup.
+- Dùng log có cấu trúc (Serilog / `ILogger` + sink JSON). Ưu tiên property hơn nối chuỗi loạn.
+- Every request gets a **correlation / trace ID**; propagate to logs, downstream calls, and clients when useful.
+- Mỗi request có **correlation / trace ID**; truyền sang log, call downstream, và client khi hữu ích.
+- Levels: Debug=dev detail, Information=business milestones, Warning=recoverable, Error=failed op, Fatal=process dying.
+- Mức: Debug=chi tiết dev, Information=mốc nghiệp vụ, Warning=recoverable, Error=thao tác fail, Fatal=process sắp chết.
+
+## What to log / Log cái gì
+- Log auth failures, money-state transitions, external API failures, and unhandled exceptions with context.
+- Log lỗi auth, chuyển trạng thái tiền, lỗi API ngoài, exception chưa bắt kèm context.
+- **Never log** secrets, tokens, passwords, full card data, or raw PII. Redact connection strings.
+- **Không log** secret, token, mật khẩu, dữ liệu thẻ, PII thô. Redact connection string.
+- Bound log volume on hot paths; sample or aggregate high-frequency events.
+- Giới hạn volume trên hot path; sample hoặc gộp sự kiện tần suất cao.
+
+## Retention & access / Lưu trữ & truy cập
+- Define retention per env (e.g. prod 15–30 days hot). Restrict who can read prod logs.
+- Định retention từng env (vd prod 15–30 ngày hot). Giới hạn ai đọc được log prod.
+- Ship logs to a central store; do not SSH-grep production as the primary workflow.
+- Đẩy log về kho trung tâm; không lấy SSH-grep production làm quy trình chính.
+
+## Debugging practice / Thực hành debug
+- Reproduce with correlation ID → traces → related logs → DB state. Prefer evidence over guesswork.
+- Tái hiện bằng correlation ID → trace → log liên quan → trạng thái DB. Ưu tiên bằng chứng hơn đoán.
+- Local: User Secrets + clear log level overrides. Feature-flag noisy diagnostics; remove temporary print junk before merge.
+- Local: User Secrets + chỉnh log level rõ. Feature-flag diagnostic ồn; xóa print tạm trước khi merge.
+- Production debug: read-only first; no ad-hoc writes/fixes without change control.
+- Debug production: đọc trước; không ghi/fix tay thiếu kiểm soát thay đổi.

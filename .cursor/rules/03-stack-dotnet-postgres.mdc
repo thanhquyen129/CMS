@@ -1,0 +1,38 @@
+---
+description: "Default tech stack: ASP.NET Core + PostgreSQL modular monolith; RN/Flutter mobile. Use when choosing stack, scaffolding, or starting a project."
+alwaysApply: true
+---
+
+# Default Stack / Stack mặc định
+
+## Backend & data / Backend & dữ liệu
+- Default backend: **ASP.NET Core (.NET)** as a **modular monolith** — not microservices on day one.
+- Backend mặc định: **ASP.NET Core (.NET)** dạng **modular monolith** — chưa microservice ngày đầu.
+- Default database: **PostgreSQL**. Use **PostGIS** when geo/distance/geofence matters.
+- Database mặc định: **PostgreSQL**. Dùng **PostGIS** khi cần geo/khoảng cách/geofence.
+- Prefer **Redis** for cache/session/rate-limit; queues for heavy/async work; object storage for files.
+- Ưu tiên **Redis** cho cache/session/rate-limit; queue cho việc nặng/async; object storage cho file.
+- Do **not** default to MySQL. Choose **SQL Server / Azure SQL** only with explicit Microsoft/Azure lock-in.
+- **Không** mặc định MySQL. Chỉ chọn **SQL Server / Azure SQL** khi chủ đích gắn Microsoft/Azure.
+
+## Clients / Phía client
+- Mobile default: **React Native (Expo)** or **Flutter** — API contracts versioned; mobile language ≠ backend language.
+- Mobile mặc định: **React Native (Expo)** hoặc **Flutter** — version API; ngôn ngữ mobile ≠ backend.
+- Admin/web: Blazor or Next.js as needed; do not force one SPA framework globally.
+- Admin/web: Blazor hoặc Next.js tùy nhu cầu; không ép một SPA cho mọi dự án.
+
+## Applies to small and large projects / Áp dụng cả dự án nhỏ và lớn
+- Use this same stack for small apps unless the work is a tiny static/CMS/script throwaway.
+- Dùng cùng stack cho app nhỏ, trừ việc static/CMS/script vài ngày rồi bỏ.
+- Small project ⇒ thin architecture (few projects, EF Core, no CQRS/event-sourcing unless needed).
+- Dự án nhỏ ⇒ kiến trúc mỏng (ít project, EF Core, không CQRS/event-sourcing trừ khi cần).
+
+## Explicit non-defaults / Không mặc định
+- Do not start new products on **PHP** or **NestJS** unless the user explicitly requests that stack.
+- Không khởi tạo sản phẩm mới bằng **PHP** hoặc **NestJS** trừ khi user yêu cầu rõ.
+- Avoid polyglot backends (e.g. Nest + .NET). One backend stack per product.
+- Tránh backend đa ngôn ngữ (vd Nest + .NET). Mỗi sản phẩm một backend stack.
+
+## When scaffolding / Khi khởi tạo
+- Propose ASP.NET Core + PostgreSQL first; state trade-offs only if the user asks for alternatives.
+- Đề xuất ASP.NET Core + PostgreSQL trước; chỉ nêu trade-off khi user hỏi phương án khác.

@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Restore
+        run: dotnet restore Cms.sln
+      - name: Build
+        run: dotnet build Cms.sln -c Release --no-restore
+      - name: Health smoke (local)
+        run: |
+          dotnet run --project src/Cms.Api/Cms.Api.csproj -c Release --urls http://127.0.0.1:5088 &
+          sleep 5
+          curl -fsS http://127.0.0.1:5088/health
+          curl -fsS http://127.0.0.1:5088/ready
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy placeholder
+        run: |
+          echo "Deploy to cms-sg-01 /opt/cms after VPS clear + self-hosted runner is wired."
+          echo "See docs/ops/vps-bootstrap.md"

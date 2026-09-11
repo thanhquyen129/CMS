@@ -1,0 +1,30 @@
+---
+description: "Time, money, and locale correctness: UTC storage, currency, rounding, timezones. Use for billing, booking schedules, pricing, or multi-country products."
+alwaysApply: false
+---
+
+# Time, Money & Locale / Thời gian, tiền & locale
+
+## Time / Thời gian
+- Store instants in **UTC**. Persist the user/business **timezone** separately when displaying schedules.
+- Lưu thời điểm theo **UTC**. Lưu **timezone** user/nghiệp vụ riêng khi hiển thị lịch.
+- Never use server local time as business truth. Be explicit about DST boundaries for bookings.
+- Không lấy giờ local server làm chân lý nghiệp vụ. Rõ ràng với biên DST cho booking.
+- Deadlines and auctions need monotonic server time + clear rules when clocks skew.
+- Deadline/đấu giá cần giờ server monotonic + rule rõ khi lệch đồng hồ.
+
+## Money / Tiền
+- Use major/minor units deliberately (e.g. integer **cents**) or a decimal type with explicit precision — never IEEE float for money.
+- Dùng đơn vị lớn/nhỏ có chủ đích (vd integer **cents**) hoặc decimal đủ precision — không float IEEE cho tiền.
+- Record **currency code** on every monetary amount. No implicit “always VND/USD”.
+- Ghi **mã tiền tệ** trên mọi số tiền. Không ngầm “luôn VND/USD”.
+- Define rounding rules (half-up/banker) once for fees/tax; test them.
+- Định nghĩa làm tròn (half-up/banker) một lần cho phí/thuế; phải có test.
+- Ledger-style append for critical money movements when reconciliation matters; immutable audit entries.
+- Sổ cái append cho biến động tiền tới hạn khi cần đối soát; audit entry bất biến.
+
+## Locale / Địa phương
+- Format money/dates in the UI layer, not as stored canonical values.
+- Format tiền/ngày ở lớp UI, không phải giá trị canonical lưu DB.
+- Separate language (i18n strings) from business country rules (tax, ID, address).
+- Tách ngôn ngữ (chuỗi i18n) khỏi rule quốc gia nghiệp vụ (thuế, giấy tờ, địa chỉ).

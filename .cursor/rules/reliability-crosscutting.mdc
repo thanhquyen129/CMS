@@ -1,0 +1,42 @@
+---
+description: "Reliability, DR, FinOps, compliance for large-scale products. Use for resilience, backups, multi-region, cost, or governance."
+alwaysApply: false
+---
+
+# Reliability & Cross-cutting / Độ tin cậy & vấn đề xuyên suốt
+
+## Resilience / Chống chịu lỗi
+- Expect dependency failure. Timeouts, retries (idempotent only), bulkheads, circuit breakers, graceful degradation.
+- Giả định dependency lỗi. Timeout, retry (chỉ idempotent), bulkhead, circuit breaker, suy giảm có kiểm soát.
+- Backpressure under overload: shed load, queue, or serve stale/cached reads. Fail loud on critical paths.
+- Backpressure khi quá tải: bỏ tải, xếp hàng, hoặc read stale/cache. Fail rõ trên đường tới hạn.
+- Define degraded modes in advance (read-only, delay settlement, disable non-critical features).
+- Định nghĩa chế độ suy giảm trước (read-only, hoãn settlement, tắt tính năng không tới hạn).
+
+## Backup vs rollback / Backup khác rollback
+- Backup/PITR is for **data loss**. Rolling back a bad release is **code/flags**. Wrong bookings/payments need **compensation**, not yesterday’s dump — see `backup-rollback.mdc`.
+- Backup/PITR để **cứu dữ liệu**. Rollback release lỗi là **code/flag**. Booking/tiền sai cần **bù trừ**, không phải dump hôm qua — xem `backup-rollback.mdc`.
+
+## Disaster recovery / Khôi phục thảm họa
+- Written **RPO/RTO** per critical datastore. Automated backups + **restore drills** on a schedule.
+- **RPO/RTO** ghi rõ từng datastore tới hạn. Backup tự động + **diễn tập restore** định kỳ.
+- Paying / SLA prod: multi-AZ (or equivalent HA). Tiny internal tools may defer HA — document the risk.
+- Prod có SLA/thu phí: multi-AZ (hoặc HA tương đương). Tool nội bộ nhỏ có thể hoãn HA — ghi rõ rủi ro.
+- Multi-region only with clear failover ownership and runbook — never “set and forget”.
+- Multi-region chỉ khi có ownership failover và runbook — không “bật rồi quên”.
+- Avoid split-brain; one write source of truth. Document who declares disaster failover.
+- Tránh split-brain; một nguồn ghi chân lý. Ghi rõ ai tuyên bố failover thảm họa.
+
+## Data integrity / Toàn vẹn dữ liệu
+- Consistency per use case (strong vs eventual); show stale in UX when eventual.
+- Nhất quán theo use case (mạnh vs eventual); hiện stale trên UX khi eventual.
+- See also `concurrency-correctness.mdc` and `messaging-integration.mdc` for races and outbox.
+- Xem thêm `concurrency-correctness.mdc` và `messaging-integration.mdc` cho đua tranh và outbox.
+
+## FinOps / Chi phí
+- Budget alerts; right-size; kill idle; efficient queries before bigger machines; unit cost per request/user.
+- Alert ngân sách; right-size; tắt idle; query hiệu quả trước khi tăng máy; unit cost / request / user.
+
+## Compliance & product ops / Tuân thủ & vận hành sản phẩm
+- Classify data; audit admin and money actions; status page; controlled impersonation; enforce abuse limits in product+infra.
+- Phân loại dữ liệu; audit admin và tiền; status page; impersonation kiểm soát; chống abuse ở product+infra.

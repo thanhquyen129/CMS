@@ -1,0 +1,34 @@
+---
+description: "Scale standards: horizontal scale, capacity, backpressure, sharding readiness for high concurrency. Use when planning growth, load tests, or peak traffic design."
+alwaysApply: false
+---
+
+# Scale Standards / Chuẩn Scale
+
+## Capacity language / Ngôn ngữ capacity
+- Translate goals into measurable units: peak **RPS**, concurrent connections, data growth/month, queue depth.
+- Đổi mục tiêu thành đơn vị đo: peak **RPS**, concurrent connection, tăng dữ liệu/tháng, độ sâu queue.
+- Plan headroom **2–3×** expected peak. Load-test before campaigns/launches.
+- Dự phòng **2–3×** peak kỳ vọng. Load-test trước campaign/launch.
+
+## Scale-out defaults / Mặc định scale ngang
+- Stateless app tier behind a load balancer; session state in Redis/DB if needed.
+- App tier stateless sau load balancer; session ở Redis/DB nếu cần.
+- Autoscale on CPU/RPS/queue lag — with cool-down to avoid flapping.
+- Autoscale theo CPU/RPS/độ trễ queue — có cool-down tránh dao động.
+- DB scale: vertical + read replicas first; partition/shard only with evidence and re-shard plan.
+- Scale DB: dọc + read replica trước; partition/shard chỉ khi có bằng chứng và kế hoạch re-shard.
+
+## Absorbing spikes / Hấp thụ spike
+- Queue writes that can wait; shed non-critical load; serve stale/cached reads when degraded.
+- Queue các ghi có thể chờ; bỏ tải không tới hạn; trả read stale/cache khi suy giảm.
+- Rate-limit at edge and app. Backpressure > blind retry storms.
+- Rate-limit ở edge và app. Backpressure > bão retry mù.
+- Idempotent consumers so scaled workers can retry safely.
+- Consumer idempotent để worker scale vẫn retry an toàn.
+
+## Growth checklist / Checklist tăng trưởng
+- Before 10× traffic: indexes reviewed, pool sizes tuned, caches warm strategy, multi-AZ, backup restore tested.
+- Trước traffic ×10: review index, chỉnh pool, chiến lược cache warm, multi-AZ, backup restore đã test.
+- Track unit cost per request/user; reject linearly expensive designs without need.
+- Theo dõi unit cost / request / user; từ chối thiết kế đắt tuyến tính không cần thiết.

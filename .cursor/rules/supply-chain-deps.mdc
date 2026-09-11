@@ -1,0 +1,28 @@
+---
+description: "Dependency & supply-chain security: pin versions, audit, SBOM, least privilege packages. Use when adding NuGet/npm packages or reviewing dependencies."
+alwaysApply: false
+---
+
+# Supply Chain & Dependencies / Chuỗi cung ứng & dependency
+
+## Adding dependencies / Thêm dependency
+- Every package is an adoption of risk. Prefer stdlib / already-used libs over new ones.
+- Mỗi package là nhận rủi ro. Ưu tiên stdlib / lib đã dùng hơn lib mới.
+- Pin versions (lockfiles committed). No floating `*` in production manifests.
+- Pin phiên bản (commit lockfile). Không `*` dao động trên production.
+- Review license, maintenance activity, and transitive attack surface before adopting.
+- Xem license, mức bảo trì, và bề mặt tấn transitive trước khi nhận.
+
+## Hygiene / Vệ sinh
+- Run vulnerability scanning in CI (NuGet/npm audit or equivalent). Triage high/critical promptly.
+- Quét lỗ hổng trong CI (NuGet/npm audit hoặc tương đương). Xử lý high/critical kịp thời.
+- Prefer official/maintained images and digests for containers; avoid `latest` in prod.
+- Ưu tiên image chính thức/có maintain và digest; tránh `latest` trên prod.
+- Generate/keep SBOM when releasing serious products; know what you ship.
+- Tạo/giữ SBOM khi release sản phẩm nghiêm túc; biết mình đang ship gì.
+
+## Secrets in the chain / Secret trong chuỗi
+- No credentials in package feeds committed to git. Use private feed auth via CI secrets.
+- Không để credential feed trong git. Auth feed riêng qua CI secret.
+- Disable unnecessary scripts/lifecycle hooks where the ecosystem allows.
+- Tắt script/lifecycle hook không cần khi ecosystem cho phép.

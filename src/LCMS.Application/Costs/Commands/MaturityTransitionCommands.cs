@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public sealed class ConfirmCostCommandValidator : AbstractValidator<ConfirmCostC
 
 /// <summary>
 /// Expected → Confirmed. Preserves ExpectedAmount (C-009); writes ConfirmedAmount + audit.
+/// Optional approval threshold gate (Pass 2 Sprint 4 FULL).
 /// </summary>
 public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostCommand>
 {
@@ -29,17 +31,23 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly ICostFxStub _fx;
+    private readonly ICostApprovalGate _approvalGate;
 
     public ConfirmCostCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        ICostFxStub fx,
+        ICostApprovalGate approvalGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _fx = fx;
+        _approvalGate = approvalGate;
     }
 
     public async Task Handle(ConfirmCostCommand request, CancellationToken cancellationToken)
@@ -62,6 +70,19 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
             throw new ConflictAppException("Chỉ chuyển Expected → Confirmed; không ghi đè mức độ trước.");
         }
 
+        EnforceAttributionInvariants(cost);
+
+        try
+        {
+            _approvalGate.EnsureConfirmAllowed(cost);
+        }
+        catch (ConflictAppException)
+        {
+            // Persist pending flag so UI/queue can see the gate.
+            await _db.SaveChangesAsync(cancellationToken);
+            throw;
+        }
+
         var confirmed = decimal.Round(
             request.ConfirmedAmount ?? cost.ExpectedAmount,
             4,
@@ -76,15 +97,31 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         cost.FinancialMaturity = CostMaturities.Confirmed;
         cost.ConfirmedAt = DateTimeOffset.UtcNow;
         cost.ConfirmedBy = _user.UserId;
+        _fx.ApplyToCost(cost, confirmed);
 
         _audit.Append(
             AuditActions.CostConfirm,
             AuditObjectTypes.Cost,
             cost.Id,
             beforeJson: beforeJson,
-            afterJson: $"{{\"maturity\":\"{CostMaturities.Confirmed}\",\"confirmed\":{confirmed},\"amount\":{confirmed}}}");
+            afterJson: $"{{\"maturity\":\"{CostMaturities.Confirmed}\",\"confirmed\":{confirmed},\"amount\":{confirmed},\"baseAmount\":{cost.BaseAmount}}}");
 
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void EnforceAttributionInvariants(Cost cost)
+    {
+        if (string.Equals(cost.AttributionType, CostAttributionTypes.Direct, StringComparison.OrdinalIgnoreCase)
+            && cost.BillId is null)
+        {
+            throw new ConflictAppException("Chi phí trực tiếp bắt buộc gắn Bill.");
+        }
+
+        if (string.Equals(cost.AttributionType, CostAttributionTypes.Shared, StringComparison.OrdinalIgnoreCase)
+            && cost.BillId is not null)
+        {
+            throw new ConflictAppException("Chi phí chung (shared) không gắn Bill trực tiếp; dùng phân bổ.");
+        }
     }
 }
 
@@ -109,12 +146,18 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly ICostFxStub _fx;
 
-    public ActualizeCostCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, ICurrentUserContext user)
+    public ActualizeCostCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext user,
+        ICostFxStub fx)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _fx = fx;
     }
 
     public async Task Handle(ActualizeCostCommand request, CancellationToken cancellationToken)
@@ -147,6 +190,7 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
         cost.FinancialMaturity = CostMaturities.Actual;
         cost.ActualizedAt = DateTimeOffset.UtcNow;
         cost.ActualizedBy = _user.UserId;
+        _fx.ApplyToCost(cost, actual);
 
         await _db.SaveChangesAsync(cancellationToken);
     }

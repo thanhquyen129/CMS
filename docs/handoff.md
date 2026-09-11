@@ -1,5 +1,36 @@
 # Handoff
 
+## 2026-09-11 — Sprint 4 FULL Cost (Pass 2)
+
+### User
+Pass 2 Sprint 4 FULL: allocation bases equal/quantity/manual_ratio; C-005/C-006; reallocation supersedes history; Shared vs Direct rules; FX stub base_amount; optional approval threshold before confirm; tests + SPRINT-4-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Allocation bases locked: `equal` | `quantity` | `manual_ratio` (C-006); conservation on finalize (C-005); reallocation marks prior finalized as `superseded` + `supersedes_allocation_id`.
+- Shared vs Direct harden: Direct requires Bill; Shared Bill null; allocate Shared only.
+- FX stub: `Cost:BaseCurrency` + `StubFxRatesToBase` fills `base_amount` on create/confirm/actualize/adjust/seed (ADR-0004); `fx_rate_id` null until real FX table.
+- Optional confirm gate: `Cost:ConfirmApprovalThresholdBase` → pending + VI 409 until Sprint 9 approve.
+- GET cost exposes `baseAmount`, `fxRateId`, allocation `supersedesAllocationId`.
+- VI terms: ALLOCATION_BASIS_*, BASE_AMOUNT, FX_STUB_RATE, COST_CONFIRM_APPROVAL_THRESHOLD.
+- Tests: `Sprint4FullCostTests` (3); suite **63 passed**.
+- DoD: `docs/sprint/SPRINT-4-FULL-DOD.md`; prompt: `PROMPT-SPRINT-4-FULL.md`.
+
+### Files / API / Config
+- APIs: `/api/costs`, `/api/costs/{id}/confirm`, `/api/costs/{id}/allocations`, `/api/cost-allocations/{id}/finalize`
+- Application: `Costs/CostOptions`, `CostFxStub`, `CostApprovalGate`; allocation/maturity/create/adjust/seed commands
+- Config: `Cost` section in `appsettings.json`
+- ADR: `docs/adr/ADR-0004-cost-fx-stub-approval-threshold.md`
+- No new EF migration (schema already had base_amount / fx_rate_id / supersedes)
+
+### Verify
+- `dotnet test Cms.sln -c Release` → **63 passed**
+
+### Deferred / Next
+- Pass 2 Sprint 3 FULL (Rate) if not yet merged; Sprint 5 FULL Revenue
+- Real fx_rates table; per-tenant threshold; Next.js Cost UI
+
+---
+
 ## 2026-09-11 — Sprint 2 FULL Operational Reference (Pass 2)
 
 ### User

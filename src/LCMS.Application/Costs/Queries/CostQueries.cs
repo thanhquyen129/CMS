@@ -38,6 +38,7 @@ public sealed record CostAllocationDto(
     decimal AllocatableAmount,
     decimal AllocatedAmount,
     DateTimeOffset? FinalizedAt,
+    Guid? SupersedesAllocationId,
     IReadOnlyList<CostAllocationDetailDto> Details);
 
 public sealed record CostDto(
@@ -50,6 +51,8 @@ public sealed record CostDto(
     decimal? ActualAmount,
     decimal Amount,
     string CurrencyCode,
+    decimal? BaseAmount,
+    Guid? FxRateId,
     string? CostTypeCode,
     Guid? VendorPartyId,
     string? SourceType,
@@ -178,6 +181,7 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                 a.AllocatableAmount,
                 a.AllocatedAmount,
                 a.FinalizedAt,
+                a.SupersedesAllocationId,
                 lines.Select(d => new CostAllocationDetailDto(
                     d.Id,
                     d.BillId,
@@ -199,6 +203,8 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             cost.ActualAmount,
             cost.Amount,
             cost.CurrencyCode,
+            cost.BaseAmount,
+            cost.FxRateId,
             cost.CostTypeCode,
             cost.VendorPartyId,
             cost.SourceType,

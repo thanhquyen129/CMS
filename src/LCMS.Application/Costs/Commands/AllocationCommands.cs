@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Costs.Commands;
 
-public sealed record AllocationDetailInput(Guid BillId, decimal BasisValue, decimal? ManualOverrideAmount, string? OverrideReason);
+public sealed record AllocationDetailInput(Guid BillId, decimal? BasisValue, decimal? ManualOverrideAmount, string? OverrideReason);
 
 public sealed record CreateCostAllocationCommand(
     Guid CostId,
@@ -21,23 +21,48 @@ public sealed class CreateCostAllocationCommandValidator : AbstractValidator<Cre
         RuleFor(x => x.CostId).NotEmpty().WithMessage("Chi phí không hợp lệ.");
         RuleFor(x => x.AllocationBasis)
             .NotEmpty().WithMessage("Cơ sở phân bổ không được để trống.")
-            .MaximumLength(64).WithMessage("Cơ sở phân bổ không được vượt quá 64 ký tự.");
+            .Must(b => CostAllocationBases.IsSupported(b.Trim().ToLowerInvariant()))
+            .WithMessage("Cơ sở phân bổ phải là equal, quantity hoặc manual_ratio.");
         RuleFor(x => x.Details)
             .NotEmpty().WithMessage("Phải có ít nhất một dòng phân bổ theo Bill.");
         RuleForEach(x => x.Details).ChildRules(d =>
         {
             d.RuleFor(x => x.BillId).NotEmpty().WithMessage("Bill phân bổ không hợp lệ.");
-            d.RuleFor(x => x.BasisValue)
-                .GreaterThan(0).WithMessage("Giá trị cơ sở phân bổ phải lớn hơn 0.");
             d.RuleFor(x => x.OverrideReason)
                 .NotEmpty().WithMessage("Phải nêu lý do khi ghi đè số phân bổ.")
                 .When(x => x.ManualOverrideAmount.HasValue);
         });
+        // C-006: quantity / manual_ratio require basis > 0; equal may omit (normalized to 1).
+        RuleForEach(x => x.Details)
+            .Must(d => d.BasisValue is null || d.BasisValue > 0)
+            .WithMessage("Giá trị cơ sở phân bổ phải lớn hơn 0.")
+            .When(x =>
+            {
+                var b = x.AllocationBasis.Trim().ToLowerInvariant();
+                return b is CostAllocationBases.Quantity or CostAllocationBases.ManualRatio;
+            });
+        RuleForEach(x => x.Details)
+            .Must(d => d.BasisValue is > 0 || d.BasisValue is null)
+            .WithMessage("Giá trị cơ sở phân bổ phải lớn hơn 0 khi khai báo.")
+            .When(x => x.AllocationBasis.Trim().ToLowerInvariant() == CostAllocationBases.Equal);
+        RuleFor(x => x)
+            .Must(x =>
+            {
+                var b = x.AllocationBasis.Trim().ToLowerInvariant();
+                if (b is not (CostAllocationBases.Quantity or CostAllocationBases.ManualRatio))
+                {
+                    return true;
+                }
+
+                return x.Details.All(d => d.BasisValue is > 0);
+            })
+            .WithMessage("Cơ sở quantity/manual_ratio bắt buộc giá trị cơ sở > 0 trên mọi dòng.");
     }
 }
 
 /// <summary>
 /// Draft allocation on a shared Cost. Does not create new Costs (C-003).
+/// Bases: equal | quantity | manual_ratio (C-006).
 /// </summary>
 public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateCostAllocationCommand, Guid>
 {
@@ -66,9 +91,20 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
             throw new ConflictAppException("Chỉ phân bổ chi phí chung (shared); chi phí trực tiếp đã gắn Bill.");
         }
 
+        if (cost.BillId.HasValue)
+        {
+            throw new ConflictAppException("Chi phí chung không được gắn Bill trực tiếp; dùng phân bổ.");
+        }
+
         if (cost.RecordStatus != "active")
         {
             throw new ConflictAppException("Chỉ phân bổ chi phí đang hiệu lực.");
+        }
+
+        var basis = request.AllocationBasis.Trim().ToLowerInvariant();
+        if (!CostAllocationBases.IsSupported(basis))
+        {
+            throw new ConflictAppException("Cơ sở phân bổ phải là equal, quantity hoặc manual_ratio.");
         }
 
         var billIds = request.Details.Select(d => d.BillId).Distinct().ToList();
@@ -96,7 +132,7 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
             TenantId = tenantId,
             CostId = cost.Id,
             VersionNo = maxVersion + 1,
-            AllocationBasis = request.AllocationBasis.Trim().ToLowerInvariant(),
+            AllocationBasis = basis,
             ApplicabilityMode = "explicit",
             AllocatableAmount = cost.Amount,
             AllocatedAmount = 0m,
@@ -106,24 +142,50 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
         _db.CostAllocations.Add(allocation);
         await _db.SaveChangesAsync(cancellationToken);
 
-        var details = request.Details.Select(d => new CostAllocationDetail
+        var details = request.Details.Select(d =>
         {
-            TenantId = tenantId,
-            AllocationId = allocation.Id,
-            BillId = d.BillId,
-            BasisValue = decimal.Round(d.BasisValue, 6, MidpointRounding.AwayFromZero),
-            BasisRatio = 0m,
-            AllocatedAmount = 0m,
-            RoundingAdjustment = 0m,
-            ManualOverrideAmount = d.ManualOverrideAmount.HasValue
-                ? decimal.Round(d.ManualOverrideAmount.Value, 4, MidpointRounding.AwayFromZero)
-                : null,
-            OverrideReason = string.IsNullOrWhiteSpace(d.OverrideReason) ? null : d.OverrideReason.Trim()
+            var basisValue = ResolveBasisValue(basis, d.BasisValue);
+            return new CostAllocationDetail
+            {
+                TenantId = tenantId,
+                AllocationId = allocation.Id,
+                BillId = d.BillId,
+                BasisValue = basisValue,
+                BasisRatio = 0m,
+                AllocatedAmount = 0m,
+                RoundingAdjustment = 0m,
+                ManualOverrideAmount = d.ManualOverrideAmount.HasValue
+                    ? decimal.Round(d.ManualOverrideAmount.Value, 4, MidpointRounding.AwayFromZero)
+                    : null,
+                OverrideReason = string.IsNullOrWhiteSpace(d.OverrideReason) ? null : d.OverrideReason.Trim()
+            };
         }).ToList();
+
+        // C-006 gate early: total basis must be > 0
+        if (details.Sum(d => d.BasisValue) <= 0)
+        {
+            throw new ConflictAppException("Không thể tạo phân bổ: tổng cơ sở phân bổ bằng 0.");
+        }
 
         _db.CostAllocationDetails.AddRange(details);
         await _db.SaveChangesAsync(cancellationToken);
         return allocation.Id;
+    }
+
+    internal static decimal ResolveBasisValue(string basis, decimal? input)
+    {
+        if (basis == CostAllocationBases.Equal)
+        {
+            // Equal share: force weight 1 per Bill (ignore client weights).
+            return 1m;
+        }
+
+        if (input is null or <= 0)
+        {
+            throw new ConflictAppException("Giá trị cơ sở phân bổ phải lớn hơn 0.");
+        }
+
+        return decimal.Round(input.Value, 6, MidpointRounding.AwayFromZero);
     }
 }
 
@@ -139,7 +201,7 @@ public sealed class FinalizeCostAllocationCommandValidator : AbstractValidator<F
 
 /// <summary>
 /// Finalize draft allocation: C-006 basis check + C-005 conservation after rounding.
-/// Does not create new Cost rows (C-003 / Single Economic Cost).
+/// Reallocation supersedes prior finalized (history preserved). Does not create Cost rows (C-003).
 /// </summary>
 public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<FinalizeCostAllocationCommand>
 {
@@ -173,8 +235,19 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             throw new ConflictAppException("Chỉ được chốt phiên phân bổ ở trạng thái nháp.");
         }
 
+        if (!CostAllocationBases.IsSupported(allocation.AllocationBasis))
+        {
+            throw new ConflictAppException("Cơ sở phân bổ phải là equal, quantity hoặc manual_ratio.");
+        }
+
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == allocation.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
+
+        if (!string.Equals(cost.AttributionType, CostAttributionTypes.Shared, StringComparison.OrdinalIgnoreCase)
+            || cost.BillId.HasValue)
+        {
+            throw new ConflictAppException("Chỉ chốt phân bổ cho chi phí chung (shared) không gắn Bill.");
+        }
 
         // Refresh allocatable from current Cost amount (Single Economic Cost).
         allocation.AllocatableAmount = cost.Amount;
@@ -187,6 +260,14 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
         if (details.Count == 0)
         {
             throw new ConflictAppException("Không thể chốt phân bổ khi chưa có dòng chi tiết.");
+        }
+
+        if (string.Equals(allocation.AllocationBasis, CostAllocationBases.Equal, StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var d in details)
+            {
+                d.BasisValue = 1m;
+            }
         }
 
         // C-006: every basis must be present and > 0; total basis ≠ 0.
@@ -237,7 +318,6 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
         // If manual overrides break conservation, reject (C-005).
         if (allocatedSum != allocatable)
         {
-            // Recompute last non-override residual when possible
             var overrideSum = details.Where(d => d.ManualOverrideAmount.HasValue).Sum(d => d.AllocatedAmount);
             var free = details.Where(d => !d.ManualOverrideAmount.HasValue).ToList();
             if (free.Count == 0 || overrideSum > allocatable)
@@ -277,7 +357,7 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             }
         }
 
-        // Supersede any prior finalized allocation for this cost (history preserved).
+        // Reallocation: supersede any prior finalized allocation (history preserved, no silent edit).
         var priorFinal = await _db.CostAllocations
             .Where(a => a.CostId == cost.Id
                         && a.Id != allocation.Id
@@ -297,7 +377,6 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             allocation.SupersedesAllocationId = priorFinal.OrderByDescending(a => a.VersionNo).First().Id;
         }
 
-        // Assert Single Economic Cost: cost row count for this id stays 1 (no new Cost created).
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

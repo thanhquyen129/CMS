@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -50,17 +51,23 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _userContext;
     private readonly IAuditWriter _audit;
+    private readonly ICostFxStub _fx;
+    private readonly ICostApprovalGate _approvalGate;
 
     public CreateCostCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext userContext,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        ICostFxStub fx,
+        ICostApprovalGate approvalGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _userContext = userContext;
         _audit = audit;
+        _fx = fx;
+        _approvalGate = approvalGate;
     }
 
     public async Task<Guid> Handle(CreateCostCommand request, CancellationToken cancellationToken)
@@ -151,6 +158,20 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
             OrganizationId = organizationId
         };
+
+        // Shared vs Direct invariant (defense in depth).
+        if (attribution == CostAttributionTypes.Direct && cost.BillId is null)
+        {
+            throw new ConflictAppException("Chi phí trực tiếp bắt buộc gắn Bill.");
+        }
+
+        if (attribution == CostAttributionTypes.Shared && cost.BillId is not null)
+        {
+            throw new ConflictAppException("Chi phí chung (shared) không gắn Bill trực tiếp; dùng phân bổ.");
+        }
+
+        _fx.ApplyToCost(cost, amount);
+        _approvalGate.RefreshPendingFlag(cost);
 
         _db.Costs.Add(cost);
         _audit.Append(

@@ -138,7 +138,7 @@ public sealed record AdjustCostRequest(
 
 public sealed record AllocationDetailRequest(
     Guid BillId,
-    decimal BasisValue,
+    decimal? BasisValue,
     decimal? ManualOverrideAmount,
     string? OverrideReason);
 

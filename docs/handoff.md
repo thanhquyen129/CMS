@@ -1,5 +1,23 @@
 # Handoff
 
+## 2026-09-12 — Wire CMS_DEPLOY_SSH_KEY + green deploy
+
+### User
+Làm luôn: gắn secret `CMS_DEPLOY_SSH_KEY` từ private key operator.
+
+### Done
+- GitHub Actions secret `CMS_DEPLOY_SSH_KEY` = operator `~/.ssh/id_ed25519_a1` (không commit key).
+- Re-run failed `deploy` trên run `34632386398` → **success**.
+
+### Verify
+- Actions: https://github.com/thanhquyen129/CMS/actions/runs/34632386398 (`test` + `deploy` green)
+- http://194.233.89.26/health · `/ready` OK
+
+### Next
+- Cost Expected on Bill (Phase 2); JWT/OIDC thay header bootstrap
+
+---
+
 ## 2026-09-12 — Sprint 2 Operational Reference (E03/E14)
 
 ### User

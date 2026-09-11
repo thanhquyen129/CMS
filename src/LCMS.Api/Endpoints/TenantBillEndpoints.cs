@@ -35,9 +35,9 @@ public static class TenantBillEndpoints
                 ct);
             return Results.Created($"/api/bills/{id}", new { id });
         });
-        bills.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        bills.MapGet("/", async (string? q, ISender sender, CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListBillsQuery(), ct);
+            var list = await sender.Send(new ListBillsQuery(q), ct);
             return Results.Ok(list);
         });
         bills.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

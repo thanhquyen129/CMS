@@ -143,7 +143,20 @@ public static class VietnameseUiTerms
         ["IDEMPOTENCY"] = "Tính bất biến khi gửi lại",
         ["CORRELATION_ID"] = "Mã tương quan",
         ["RATE_LIMIT"] = "Giới hạn tốc độ",
-        ["SECURITY_HEADER"] = "Tiêu đề bảo mật"
+        ["SECURITY_HEADER"] = "Tiêu đề bảo mật",
+
+        // Operational reference (D03 / E03) — Bill-centric graph
+        ["ORDER"] = "Đơn hàng",
+        ["SHIPMENT"] = "Lô hàng",
+        ["TRANSPORT_LEG"] = "Chặng vận chuyển",
+        ["TRANSPORT_MOVEMENT"] = "Chuyến vận chuyển",
+        ["BILL_GRAPH"] = "Đồ thị Bill",
+        ["OPERATIONAL_SEARCH"] = "Tìm kiếm vận hành",
+        ["ORDER_BILL_LINK"] = "Liên kết đơn hàng–Bill",
+        ["BILL_SHIPMENT_LINK"] = "Liên kết Bill–lô hàng",
+        ["BILL_LEG_LINK"] = "Liên kết Bill–chặng",
+        ["LEG_MOVEMENT_LINK"] = "Liên kết chặng–chuyến",
+        ["BILL_MOVEMENT_LINK"] = "Liên kết Bill–chuyến"
     };
 
     public static string Get(string codeKey)

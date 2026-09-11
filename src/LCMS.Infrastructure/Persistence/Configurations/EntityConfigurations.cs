@@ -478,6 +478,146 @@ internal sealed class BillShipmentLinkConfiguration : IEntityTypeConfiguration<B
     }
 }
 
+internal sealed class TransportLegConfiguration : IEntityTypeConfiguration<TransportLeg>
+{
+    public void Configure(EntityTypeBuilder<TransportLeg> builder)
+    {
+        builder.ToTable("transport_legs");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.LegNo).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ShipmentId).IsRequired();
+        builder.Property(e => e.SourceSystem).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ExternalId).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.ExternalVersion).HasMaxLength(64);
+        builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired();
+
+        // C-002
+        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.ShipmentId });
+        builder.HasIndex(e => new { e.TenantId, e.LegNo });
+
+        builder.HasOne(e => e.Tenant)
+            .WithMany()
+            .HasForeignKey(e => e.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Shipment)
+            .WithMany()
+            .HasForeignKey(e => e.ShipmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class TransportMovementConfiguration : IEntityTypeConfiguration<TransportMovement>
+{
+    public void Configure(EntityTypeBuilder<TransportMovement> builder)
+    {
+        builder.ToTable("transport_movements");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.MovementNo).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.SourceSystem).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ExternalId).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.ExternalVersion).HasMaxLength(64);
+        builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired();
+
+        // C-002
+        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.MovementNo });
+
+        builder.HasOne(e => e.Tenant)
+            .WithMany()
+            .HasForeignKey(e => e.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class BillLegLinkConfiguration : IEntityTypeConfiguration<BillLegLink>
+{
+    public void Configure(EntityTypeBuilder<BillLegLink> builder)
+    {
+        builder.ToTable("bill_leg_links");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.BillId).IsRequired();
+        builder.Property(e => e.TransportLegId).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.BillId, e.TransportLegId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+        builder.HasIndex(e => new { e.TenantId, e.TransportLegId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.TransportLeg)
+            .WithMany()
+            .HasForeignKey(e => e.TransportLegId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class LegMovementLinkConfiguration : IEntityTypeConfiguration<LegMovementLink>
+{
+    public void Configure(EntityTypeBuilder<LegMovementLink> builder)
+    {
+        builder.ToTable("leg_movement_links");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.TransportLegId).IsRequired();
+        builder.Property(e => e.TransportMovementId).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.TransportLegId, e.TransportMovementId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.TransportLegId });
+        builder.HasIndex(e => new { e.TenantId, e.TransportMovementId });
+
+        builder.HasOne(e => e.TransportLeg)
+            .WithMany()
+            .HasForeignKey(e => e.TransportLegId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.TransportMovement)
+            .WithMany()
+            .HasForeignKey(e => e.TransportMovementId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class BillMovementLinkConfiguration : IEntityTypeConfiguration<BillMovementLink>
+{
+    public void Configure(EntityTypeBuilder<BillMovementLink> builder)
+    {
+        builder.ToTable("bill_movement_links");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.BillId).IsRequired();
+        builder.Property(e => e.TransportMovementId).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.BillId, e.TransportMovementId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
+        builder.HasIndex(e => new { e.TenantId, e.TransportMovementId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.TransportMovement)
+            .WithMany()
+            .HasForeignKey(e => e.TransportMovementId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal sealed class RateCardConfiguration : IEntityTypeConfiguration<RateCard>
 {
     public void Configure(EntityTypeBuilder<RateCard> builder)

@@ -26,6 +26,11 @@ public interface ILcmsDbContext
     DbSet<Shipment> Shipments { get; }
     DbSet<OrderBillLink> OrderBillLinks { get; }
     DbSet<BillShipmentLink> BillShipmentLinks { get; }
+    DbSet<TransportLeg> TransportLegs { get; }
+    DbSet<TransportMovement> TransportMovements { get; }
+    DbSet<BillLegLink> BillLegLinks { get; }
+    DbSet<LegMovementLink> LegMovementLinks { get; }
+    DbSet<BillMovementLink> BillMovementLinks { get; }
     DbSet<RateCard> RateCards { get; }
     DbSet<RateVersion> RateVersions { get; }
     DbSet<PricingRule> PricingRules { get; }

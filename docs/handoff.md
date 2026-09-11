@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-11 — Sprint 2 FULL Operational Reference (Pass 2)
+
+### User
+Pass 2 Sprint 2 FULL: transport_legs / transport_movements + bill_leg_links / leg_movement_links / bill_movement_links + migration; upsert APIs; expand bill graph; operational search within tenant; C-002 idempotency; JWT/data scope on lists; tests + SPRINT-2-FULL-DOD + handoff + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Domain D03 depth: `TransportLeg` (Shipment 1:N), `TransportMovement`, bridges `BillLegLink`, `LegMovementLink`, `BillMovementLink`.
+- Migration `Sprint2Full_TransportLegsMovements` (C-002 unique on leg/movement external identity).
+- CQRS/API: upsert leg/movement; link bill↔leg, leg↔movement, bill↔movement (idempotent).
+- `GET /api/bills/{id}/graph` now returns Legs + Movements (direct bridges ∪ shipment legs ∪ movements via legs).
+- Search: `GET /api/search/operational?q=` + `GET /api/bills?q=` (bill_no / bill external_id / order external_id); respects `bill.read` Data Scope.
+- VI validation/errors; terminology keys for operational graph.
+- Tests: `Sprint2FullOperationalReferenceTests` (idempotency+graph; search isolation; JWT data-scope; cross-tenant 404).
+- DoD: `docs/sprint/SPRINT-2-FULL-DOD.md`.
+
+### Files / API
+- APIs: `/api/transport-legs`, `/api/transport-movements`, `/api/search/operational`, expanded `/api/bills/{id}/graph`, `/api/bills?q=`
+- Endpoints: `OperationalReferenceEndpoints`, `TenantBillEndpoints`
+- Migration: `20260911203703_Sprint2Full_TransportLegsMovements`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → see PR / CI
+
+### Deferred / Next
+- Pass 2 Sprint 3 FULL (Rate & Pricing depth)
+- Full-text search index; Order/Shipment list Data Scope; Next.js UI
+
+---
+
 ## 2026-09-11 — Sprint 1 FULL Identity + Master Data (Pass 2)
 
 ### User

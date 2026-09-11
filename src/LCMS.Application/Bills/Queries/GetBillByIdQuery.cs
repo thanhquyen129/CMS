@@ -114,7 +114,7 @@ public sealed class GetBillByIdQueryHandler : IRequestHandler<GetBillByIdQuery, 
         bill.CreatedAt);
 }
 
-public sealed record ListBillsQuery : IRequest<IReadOnlyList<BillListItemDto>>;
+public sealed record ListBillsQuery(string? Q = null) : IRequest<IReadOnlyList<BillListItemDto>>;
 
 public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IReadOnlyList<BillListItemDto>>
 {
@@ -179,6 +179,29 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
             }
 
             query = query.Where(b => b.OrganizationId != null && orgSubtree.Contains(b.OrganizationId.Value));
+        }
+
+        var q = request.Q?.Trim();
+        if (!string.IsNullOrEmpty(q))
+        {
+            var pattern = q.ToLowerInvariant();
+            var orderBillIds = await _db.OrderBillLinks.AsNoTracking()
+                .Join(
+                    _db.Orders.AsNoTracking(),
+                    l => l.OrderId,
+                    o => o.Id,
+                    (l, o) => new { l.BillId, o.ExternalId, o.OrderNo })
+                .Where(x =>
+                    x.ExternalId.ToLower().Contains(pattern)
+                    || x.OrderNo.ToLower().Contains(pattern))
+                .Select(x => x.BillId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            query = query.Where(b =>
+                b.BillNo.ToLower().Contains(pattern)
+                || (b.ExternalId != null && b.ExternalId.ToLower().Contains(pattern))
+                || orderBillIds.Contains(b.Id));
         }
 
         return await query

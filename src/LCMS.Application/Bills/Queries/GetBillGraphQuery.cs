@@ -19,14 +19,31 @@ public sealed record BillGraphShipmentRef(
     string ExternalId,
     string OperationalStatus);
 
-/// <summary>Thin drill-down: Bill → linked orders/shipments (E03/E14).</summary>
+public sealed record BillGraphLegRef(
+    Guid Id,
+    string LegNo,
+    Guid ShipmentId,
+    string SourceSystem,
+    string ExternalId,
+    string OperationalStatus);
+
+public sealed record BillGraphMovementRef(
+    Guid Id,
+    string MovementNo,
+    string SourceSystem,
+    string ExternalId,
+    string OperationalStatus);
+
+/// <summary>Bill-centric operational graph: orders/shipments/legs/movements (E03).</summary>
 public sealed record BillGraphDto(
     Guid BillId,
     string BillNo,
     string BillType,
     string OperationalStatus,
     IReadOnlyList<BillGraphOrderRef> Orders,
-    IReadOnlyList<BillGraphShipmentRef> Shipments);
+    IReadOnlyList<BillGraphShipmentRef> Shipments,
+    IReadOnlyList<BillGraphLegRef> Legs,
+    IReadOnlyList<BillGraphMovementRef> Movements);
 
 public sealed record GetBillGraphQuery(Guid BillId) : IRequest<BillGraphDto>;
 
@@ -93,12 +110,67 @@ public sealed class GetBillGraphQueryHandler : IRequestHandler<GetBillGraphQuery
                 s.OperationalStatus))
             .ToListAsync(cancellationToken);
 
+        var linkedLegIds = await _db.BillLegLinks
+            .AsNoTracking()
+            .Where(l => l.BillId == request.BillId)
+            .Select(l => l.TransportLegId)
+            .ToListAsync(cancellationToken);
+
+        var shipmentLegIds = await _db.TransportLegs
+            .AsNoTracking()
+            .Where(l => shipmentIds.Contains(l.ShipmentId))
+            .Select(l => l.Id)
+            .ToListAsync(cancellationToken);
+
+        var legIdSet = linkedLegIds.Concat(shipmentLegIds).Distinct().ToList();
+
+        var legs = await _db.TransportLegs
+            .AsNoTracking()
+            .Where(l => legIdSet.Contains(l.Id))
+            .OrderBy(l => l.LegNo)
+            .Select(l => new BillGraphLegRef(
+                l.Id,
+                l.LegNo,
+                l.ShipmentId,
+                l.SourceSystem,
+                l.ExternalId,
+                l.OperationalStatus))
+            .ToListAsync(cancellationToken);
+
+        var linkedMovementIds = await _db.BillMovementLinks
+            .AsNoTracking()
+            .Where(l => l.BillId == request.BillId)
+            .Select(l => l.TransportMovementId)
+            .ToListAsync(cancellationToken);
+
+        var viaLegMovementIds = await _db.LegMovementLinks
+            .AsNoTracking()
+            .Where(l => legIdSet.Contains(l.TransportLegId))
+            .Select(l => l.TransportMovementId)
+            .ToListAsync(cancellationToken);
+
+        var movementIdSet = linkedMovementIds.Concat(viaLegMovementIds).Distinct().ToList();
+
+        var movements = await _db.TransportMovements
+            .AsNoTracking()
+            .Where(m => movementIdSet.Contains(m.Id))
+            .OrderBy(m => m.MovementNo)
+            .Select(m => new BillGraphMovementRef(
+                m.Id,
+                m.MovementNo,
+                m.SourceSystem,
+                m.ExternalId,
+                m.OperationalStatus))
+            .ToListAsync(cancellationToken);
+
         return new BillGraphDto(
             bill.Id,
             bill.BillNo,
             bill.BillType,
             bill.OperationalStatus,
             orders,
-            shipments);
+            shipments,
+            legs,
+            movements);
     }
 }

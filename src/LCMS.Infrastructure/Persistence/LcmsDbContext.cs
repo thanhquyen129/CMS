@@ -41,6 +41,11 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<Shipment> Shipments => Set<Shipment>();
     public DbSet<OrderBillLink> OrderBillLinks => Set<OrderBillLink>();
     public DbSet<BillShipmentLink> BillShipmentLinks => Set<BillShipmentLink>();
+    public DbSet<TransportLeg> TransportLegs => Set<TransportLeg>();
+    public DbSet<TransportMovement> TransportMovements => Set<TransportMovement>();
+    public DbSet<BillLegLink> BillLegLinks => Set<BillLegLink>();
+    public DbSet<LegMovementLink> LegMovementLinks => Set<LegMovementLink>();
+    public DbSet<BillMovementLink> BillMovementLinks => Set<BillMovementLink>();
     public DbSet<RateCard> RateCards => Set<RateCard>();
     public DbSet<RateVersion> RateVersions => Set<RateVersion>();
     public DbSet<PricingRule> PricingRules => Set<PricingRule>();

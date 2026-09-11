@@ -12,7 +12,7 @@ Implement Sprint 5 only: full revenues TD1; revenue_adjustments; maturity no-ove
 - C-004/C-009: Single Economic Revenue; no silent maturity overwrite; document/AR source rejected.
 - Financial profile: Best Available (Actual→Confirmed→Expected); profit = rev − cost per currency; no SoT totals on Bill (TD1-DB-003/004).
 - VI validation/errors; tenant filter + `X-Tenant-Id`.
-- Tests: suite green (3 new — maturity+adjust, profile/currency, isolation+idempotent source).
+- Tests: 25 passed (3 new — maturity+adjust, profile/currency, isolation+idempotent source).
 - DoD: `docs/sprint/SPRINT-5-DOD.md`.
 
 ### Files / API
@@ -21,7 +21,7 @@ Implement Sprint 5 only: full revenues TD1; revenue_adjustments; maturity no-ove
 - Migration: `20260911185027_Sprint5_Revenue`
 
 ### Verify
-- `dotnet test Cms.sln -c Release`
+- `dotnet test Cms.sln -c Release` → 25 passed
 
 ### Deferred / Next
 - Documents / AP / AR (Sprint 6–7)

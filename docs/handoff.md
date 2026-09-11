@@ -21,7 +21,7 @@ Pass 2 Sprint 2 FULL: transport_legs / transport_movements + bill_leg_links / le
 - Migration: `20260911203703_Sprint2Full_TransportLegsMovements`
 
 ### Verify
-- `dotnet test Cms.sln -c Release` → see PR / CI
+- `dotnet test Cms.sln -c Release` → **60 passed** (4 new Sprint 2 FULL; Sprint 1 FULL was 56)
 
 ### Deferred / Next
 - Pass 2 Sprint 3 FULL (Rate & Pricing depth)

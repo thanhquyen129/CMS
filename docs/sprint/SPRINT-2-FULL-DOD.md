@@ -18,7 +18,7 @@ Pass 2 closes TD6 E03 depth: transport legs/movements bridges, sync idempotency,
 | JWT + Data Scope on search/list | Done | `bill.read` + own/organization/all |
 | Vietnamese errors + UI terms | Done | VI FluentValidation / AppException; TRANSPORT_* terms |
 | Migration | Done | `Sprint2Full_TransportLegsMovements` |
-| Tests | Done | `Sprint2FullOperationalReferenceTests` |
+| Tests | Done | `Sprint2FullOperationalReferenceTests` (4); suite **60 passed** |
 | DoD + handoff | Done | This file |
 
 ## APIs (delta)

@@ -20,6 +20,7 @@ public interface ILcmsDbContext
     DbSet<CostAllocation> CostAllocations { get; }
     DbSet<CostAllocationDetail> CostAllocationDetails { get; }
     DbSet<Revenue> Revenues { get; }
+    DbSet<RevenueAdjustment> RevenueAdjustments { get; }
     DbSet<Order> Orders { get; }
     DbSet<Shipment> Shipments { get; }
     DbSet<OrderBillLink> OrderBillLinks { get; }

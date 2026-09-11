@@ -20,7 +20,7 @@ jobs:
         run: dotnet build Cms.sln -c Release --no-restore
       - name: Health smoke (local)
         run: |
-          dotnet run --project src/Cms.Api/Cms.Api.csproj -c Release --urls http://127.0.0.1:5088 &
+          dotnet run --project src/LCMS.Api/LCMS.Api.csproj -c Release --urls http://127.0.0.1:5088 &
           sleep 5
           curl -fsS http://127.0.0.1:5088/health
           curl -fsS http://127.0.0.1:5088/ready

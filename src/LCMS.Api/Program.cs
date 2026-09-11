@@ -1,9 +1,18 @@
+using LCMS.Api.Middleware;
+using LCMS.Application;
+using LCMS.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<TenantResolutionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -29,7 +38,7 @@ app.MapGet("/", () => Results.Ok(new
 {
     product = "Cost Management System",
     shortName = "CMS",
-    message = "CMS API bootstrap"
+    message = "LCMS API — Clean Architecture (TD1)"
 }));
 
 app.Run();

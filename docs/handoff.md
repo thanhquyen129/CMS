@@ -1,5 +1,36 @@
 # Handoff
 
+## 2026-09-12 — TD1 Clean Architecture scaffold (Tenant + Bill)
+
+### User
+Khởi tạo Solution .NET Clean Architecture 4 project theo TD1; mẫu Entity Tenant/Bill + DbContext PostgreSQL; CQRS/MediatR; FluentValidation tiếng Việt; EF global tenant filter; exception middleware + Correlation ID.
+
+### Done
+- Solution `Cms.sln`: `LCMS.Domain`, `LCMS.Application`, `LCMS.Infrastructure`, `LCMS.Api` (.NET 8). Removed bootstrap `Cms.Api`.
+- Domain: `Tenant`, `Bill` (TD1 baseline fields), stubs `Organization`/`User`/`BusinessParty`/`Cost`/`Revenue`; `UuidV7`, `row_version`, soft-delete (C-013), no hard delete.
+- Infrastructure: `LcmsDbContext` + Fluent configs + snake_case + PostgreSQL; global query filter C-001 + soft-delete.
+- Application: MediatR + FluentValidation (VI messages) + sample `CreateBillCommand`.
+- API: DI, `ExceptionHandlingMiddleware` (JSON VI + correlationId), `TenantResolutionMiddleware` (`X-Tenant-Id`), `/health` `/ready`.
+- ADR: `docs/adr/ADR-0001-td1-identity-tenancy-postgres.md`
+- Docker/CI updated to `LCMS.Api`.
+
+### Files / schema
+- Tables mapped: `tenants`, `bills`, `organizations`, `users`, `business_parties`, `costs`, `revenues`
+- Conn string: `ConnectionStrings:LcmsDb`
+- Migration chưa tạo — follow-up: `dotnet ef migrations add InitialTd1`
+
+### Verify
+- `dotnet build Cms.sln -c Release` (local OK)
+- After deploy: http://194.233.89.26/health , `/ready`
+- Actions: https://github.com/thanhquyen129/CMS/actions
+
+### Next
+- EF migration + Postgres on host
+- Wire CreateBill handler to DbContext
+- Identity/JWT claims → replace header tenant bootstrap
+
+---
+
 ## 2026-09-12 — Wipe VPS + deploy CMS bootstrap
 
 ### User

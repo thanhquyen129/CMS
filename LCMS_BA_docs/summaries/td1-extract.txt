@@ -1,0 +1,754 @@
+
+===== SHEET: Summary rows=6 =====
+Mục	Nội dung
+Tên	LCMS TD1 — ERD & Physical Database Design v1.0
+Status	100% — COMPLETED / PACKAGED
+Nguồn	Business Architecture CP1–CP7 + CP6.5
+Nguyên tắc	Bill-centric; no duplicate financial totals; N:N bridge; immutable history; tenant isolation
+Next	TD2 — API & Integration Specification
+
+===== SHEET: Domains rows=13 =====
+ID	Domain	Bảng chính	Nguyên tắc
+D01	Nền tảng & Tenant	tenants, organizations, users, roles, permissions	Tenant isolation; identity/action/data scope
+D02	Danh mục & Cấu hình	business_parties, currencies, fx_rates, service_types, cost_types, revenue_types, pricing_components, policies	Effective dating/versioning
+D03	Tham chiếu vận hành	orders, bills, shipments, transport_legs, transport_movements + bridge tables	Operational System là SoT; Bill là Financial Anchor
+D04	Bảng giá & Tính giá	rate_cards, rate_versions, pricing_rules, pricing_rule_components, ratings, rating_details	Immutable version/snapshot
+D05	Chi phí & Phân bổ	costs, cost_allocations, cost_allocation_details, cost_adjustments	Single Economic Cost; allocation conservation
+D06	Doanh thu	revenues, revenue_adjustments	Bill-attributable; no shared revenue allocation Core V1
+D07	Chứng từ tài chính	financial_documents, financial_document_lines, document_matches, document_match_details	N:N detail matching
+D08	Exposure & AP/AR	payable_exposures, receivable_exposures, accounts_payable, accounts_receivable	Exposure tách Recognition
+D09	Thanh toán & Thu tiền	payments, collections, payment_allocations, collection_allocations	Partial settlement; unapplied amount
+D10	Kiểm soát tài chính	reconciliations, reconciliation_details, variances, exceptions, approvals	Variance ≠ Exception; Approval separate
+D11	Chốt tài chính	financial_closes, financial_close_snapshots, snapshot_details	Immutable as-closed history
+D12	Tích hợp & Audit	integration_records, integration_errors, audit_events	Idempotency, retry, traceability
+
+===== SHEET: Tables rows=52 =====
+Table	Mục đích	Domain	PK	Ghi chú
+tenants	Tenant/công ty sử dụng LCMS	D01	id	Không xóa vật lý khi đã có dữ liệu
+organizations	Đơn vị tổ chức	D01	id	tenant_id; parent_id self-reference
+business_parties	Đối tác nghiệp vụ canonical	D02	id	Customer/Vendor/Payer/Payee qua role/profile
+party_roles	Vai trò của Business Party	D02	id	UNIQUE tenant_id, party_id, role_code
+currencies	Tiền tệ	D02	code	ISO currency
+fx_rates	Tỷ giá	D02	id	source/date/from/to/version
+orders	Đơn hàng tham chiếu	D03	id	External identity; operational reference
+bills	Bill - Financial Anchor	D03	id	Business number ≠ PK
+order_bill_links	Bridge Order↔Bill	D03	id	N:N
+shipments	Shipment	D03	id	Optional operational depth
+bill_shipment_links	Bridge Bill↔Shipment	D03	id	N:N
+transport_legs	Chặng vận chuyển	D03	id	Shipment 1:N Leg
+bill_leg_links	Bridge Bill↔Leg	D03	id	N:N
+transport_movements	Chuyến vận chuyển	D03	id	Actual movement
+leg_movement_links	Bridge Leg↔Movement	D03	id	N:N
+bill_movement_links	Bridge Bill↔Movement	D03	id	N:N
+rate_cards	Bảng giá	D04	id	Customer/Vendor type
+rate_versions	Phiên bản bảng giá	D04	id	Published version immutable
+pricing_rules	Quy tắc tính giá	D04	id	Applicability + formula/config
+pricing_rule_components	Thành phần giá	D04	id	Map Cost Type/Revenue Type
+ratings	Lần tính giá	D04	id	Context + version snapshot
+rating_details	Chi tiết kết quả tính giá	D04	id	Expected financial result
+costs	Chi phí kinh tế	D05	id	Single Economic Cost
+cost_allocations	Phiên phân bổ chi phí	D05	id	Versioned/finalized/superseded
+cost_allocation_details	Chi tiết phân bổ theo Bill	D05	id	Allocation conservation
+cost_adjustments	Điều chỉnh/đảo chi phí	D05	id	No silent overwrite
+revenues	Doanh thu kinh tế	D06	id	Bill attributable
+revenue_adjustments	Điều chỉnh/đảo doanh thu	D06	id	No silent overwrite
+financial_documents	Chứng từ tài chính	D07	id	DN/Invoice/other configured type
+financial_document_lines	Dòng chứng từ	D07	id	Matching at detail level
+document_matches	Header lần khớp chứng từ	D07	id	Match method/status/version
+document_match_details	Chi tiết N:N matching	D07	id	source_line/target_line/matched_amount
+payable_exposures	Nghĩa vụ phải trả	D08	id	Before recognized AP
+receivable_exposures	Quyền thu dự kiến	D08	id	Before recognized AR
+accounts_payable	Khoản phải trả được ghi nhận	D08	id	Recognition record
+accounts_receivable	Khoản phải thu được ghi nhận	D08	id	Recognition record
+payments	Thanh toán	D09	id	Cash out transaction
+collections	Thu tiền	D09	id	Cash in transaction
+payment_allocations	Phân bổ Payment↔AP	D09	id	N:N; finalized affects outstanding
+collection_allocations	Phân bổ Collection↔AR	D09	id	N:N; finalized affects outstanding
+reconciliations	Phiên đối soát	D10	id	Type/rule/version/status
+reconciliation_details	Chi tiết đối soát	D10	id	Source/target/matched/variance
+variances	Chênh lệch	D10	id	Derived/control fact
+exceptions	Ngoại lệ	D10	id	Rule/severity/owner/SLA
+approvals	Phê duyệt	D10	id	Independent workflow
+financial_closes	Lần chốt tài chính	D11	id	Open/reopen/reclose version
+financial_close_snapshots	Bản chốt bất biến	D11	id	As-closed snapshot
+financial_close_snapshot_details	Chi tiết bản chốt	D11	id	Metrics/components/source references
+integration_records	Theo dõi bản ghi tích hợp	D12	id	Source + external identity + status
+integration_errors	Lỗi tích hợp	D12	id	Retry/reprocess trace
+audit_events	Lịch sử thay đổi	D12	id	Actor/action/object/before-after/reason
+
+===== SHEET: Relationships rows=18 =====
+A	B	Cardinality	Cách triển khai	Nguồn
+orders	bills	N:N	order_bill_links	CONFIRMED
+bills	shipments	N:N	bill_shipment_links	CONFIRMED
+shipments	transport_legs	1:N	transport_legs.shipment_id	CONFIRMED
+bills	transport_legs	N:N	bill_leg_links	CONFIRMED
+transport_legs	transport_movements	N:N	leg_movement_links	ARCHITECTURE AGREED
+bills	transport_movements	N:N	bill_movement_links	ARCHITECTURE AGREED
+rate_cards	rate_versions	1:N	rate_versions.rate_card_id	Versioning
+rate_versions	pricing_rules	1:N	pricing_rules.rate_version_id	Versioning
+ratings	rating_details	1:N	rating_details.rating_id	Snapshot result
+costs	cost_allocations	1:N	cost_allocations.cost_id	Reallocation history
+cost_allocations	cost_allocation_details	1:N	detail.allocation_id	Eligible Bill attribution
+bills	revenues	1:N	revenues.bill_id	Core V1
+financial_documents	financial_document_lines	1:N	line.document_id	Detail-level matching
+financial_document_lines	financial_document_lines	N:N	document_match_details	DN↔Invoice / other
+payments	accounts_payable	N:N	payment_allocations	Settlement
+collections	accounts_receivable	N:N	collection_allocations	Settlement
+financial_closes	financial_close_snapshots	1:N	snapshot.financial_close_id	Immutable close history
+
+===== SHEET: Constraints rows=16 =====
+ID	Nhóm	Quy tắc
+C-001	Tenant isolation	Mọi business/financial table phải có tenant_id hoặc suy ra an toàn qua parent; query/constraint không được cross-tenant.
+C-002	External identity	UNIQUE theo tenant_id + source_system + external_object_type + external_id (+ external_version/event khi policy yêu cầu).
+C-003	Economic cost uniqueness	Không tạo Cost mới chỉ vì allocation/document/AP/payment.
+C-004	Economic revenue uniqueness	Không tạo Revenue mới chỉ vì invoice/AR/collection/API duplicate.
+C-005	Allocation conservation	SUM(final allocation details)=allocatable_amount sau rounding rule.
+C-006	Allocation basis	Không finalize nếu basis thiếu/0 hoặc candidate/applicability không hợp lệ.
+C-007	Document matching	Tổng matched_amount của line không vượt open amount trừ explicit tolerance/policy.
+C-008	Settlement allocation	Tổng finalized allocation không vượt transaction amount/open obligation trừ over-settlement policy.
+C-009	Financial maturity	Expected/Confirmed/Actual không silent overwrite; transition/audit theo rule.
+C-010	Close immutability	Snapshot đã chốt không UPDATE/DELETE nghiệp vụ; reopen/reclose tạo version/snapshot mới.
+C-011	Config reproducibility	Published config/rate version ảnh hưởng lịch sử phải immutable/effective-dated.
+C-012	Optimistic concurrency	Mutable aggregate quan trọng có row_version; reject stale update.
+C-013	No hard delete	Financial transaction/history không hard delete sau khi phát sinh; cancel/reversal/adjustment.
+C-014	Currency integrity	Không cộng trực tiếp khác currency; lưu transaction currency + base equivalent + FX trace.
+C-015	Outstanding derived	Outstanding AP/AR không là user-entered source of truth; derive từ recognition ± finalized settlement.
+
+===== SHEET: Indexes rows=14 =====
+ID	Table	Columns	Mục tiêu
+IDX-001	bills	tenant_id, bill_no	Tra cứu Bill; unique tùy numbering policy
+IDX-002	bills	tenant_id, source_system, external_id	Sync/idempotency
+IDX-003	costs	tenant_id, bill_id, financial_maturity, effective_date	Bill financial profile
+IDX-004	costs	tenant_id, vendor_party_id, effective_date	Vendor cost/AP analysis
+IDX-005	revenues	tenant_id, bill_id, financial_maturity, effective_date	Bill profitability
+IDX-006	financial_documents	tenant_id, document_type, document_no, counterparty_id	Document lookup/duplicate control
+IDX-007	accounts_payable	tenant_id, counterparty_id, due_date, settlement_status	AP aging
+IDX-008	accounts_receivable	tenant_id, counterparty_id, due_date, settlement_status	AR aging
+IDX-009	payments	tenant_id, value_date, counterparty_id	Cash/reconciliation
+IDX-010	collections	tenant_id, value_date, counterparty_id	Cash/reconciliation
+IDX-011	exceptions	tenant_id, status, severity, owner_id, due_at	Exception inbox
+IDX-012	integration_records	tenant_id, source_system, external_object_type, external_id	Integration idempotency
+IDX-013	audit_events	tenant_id, object_type, object_id, occurred_at	Audit drill-down
+
+===== SHEET: Field Standards rows=11 =====
+Hạng mục	Chuẩn
+Primary key	Surrogate `id`; business number/reference không dùng làm PK.
+ID type	Giữ abstract ở TD1; UUIDv7/ULID/bigint sẽ khóa khi chọn DB engine/implementation.
+Tên bảng/cột	snake_case, English code-friendly; mô tả/tài liệu/UI bằng tiếng Việt.
+Timestamp	created_at/updated_at; UTC ở storage, timezone ở presentation/business context.
+Actor	created_by/updated_by/finalized_by/approved_by... tham chiếu principal/user phù hợp.
+Concurrency	row_version cho mutable aggregates quan trọng.
+Versioning	version_no, effective_from/effective_to, supersedes_id khi cần reproducibility.
+Money	amount + currency_code; base_amount + fx_rate_id/source/date khi quy đổi.
+Audit	Business event/audit riêng; không chỉ dựa created_at/updated_at.
+Soft delete	Chỉ master/config phù hợp; transaction tài chính dùng cancel/reversal/adjustment.
+
+===== TD1 ERD DOCX =====
+LCMS — TECHNICAL DESIGN 1
+ERD & PHYSICAL DATABASE DESIGN — V1.0
+Thiết kế dữ liệu kỹ thuật dựa trên Business Architecture CP1–CP7 & CP6.5
+1. Mục tiêu và nguyên tắc
+TD1 chuyển Business Object Model thành logical/physical database baseline cho Dev. Tài liệu này khóa cấu trúc dữ liệu, quan hệ, integrity rules, versioning, audit và indexing ở mức thiết kế; DB engine và DDL triển khai cụ thể được khóa ở bước implementation.
+Bill là Financial Anchor nhưng không trở thành God Table.
+Không lưu trùng các financial totals có thể derive đáng tin cậy; Financial Close Snapshot là ngoại lệ có chủ đích.
+Các trạng thái lifecycle, maturity, approval, allocation, matching, reconciliation, settlement và close độc lập.
+Quan hệ N:N luôn có bridge/relationship table first-class.
+Không silent overwrite/reallocation/history edit đối với dữ liệu tài chính.
+2. Phân vùng dữ liệu
+ID
+Domain
+Bảng chính
+Nguyên tắc
+D01
+Nền tảng & Tenant
+tenants, organizations, users, roles, permissions
+Tenant isolation; identity/action/data scope
+D02
+Danh mục & Cấu hình
+business_parties, currencies, fx_rates, service_types, cost_types, revenue_types, pricing_components, policies
+Effective dating/versioning
+D03
+Tham chiếu vận hành
+orders, bills, shipments, transport_legs, transport_movements + bridge tables
+Operational System là SoT; Bill là Financial Anchor
+D04
+Bảng giá & Tính giá
+rate_cards, rate_versions, pricing_rules, pricing_rule_components, ratings, rating_details
+Immutable version/snapshot
+D05
+Chi phí & Phân bổ
+costs, cost_allocations, cost_allocation_details, cost_adjustments
+Single Economic Cost; allocation conservation
+D06
+Doanh thu
+revenues, revenue_adjustments
+Bill-attributable; no shared revenue allocation Core V1
+D07
+Chứng từ tài chính
+financial_documents, financial_document_lines, document_matches, document_match_details
+N:N detail matching
+D08
+Exposure & AP/AR
+payable_exposures, receivable_exposures, accounts_payable, accounts_receivable
+Exposure tách Recognition
+D09
+Thanh toán & Thu tiền
+payments, collections, payment_allocations, collection_allocations
+Partial settlement; unapplied amount
+D10
+Kiểm soát tài chính
+reconciliations, reconciliation_details, variances, exceptions, approvals
+Variance ≠ Exception; Approval separate
+D11
+Chốt tài chính
+financial_closes, financial_close_snapshots, snapshot_details
+Immutable as-closed history
+D12
+Tích hợp & Audit
+integration_records, integration_errors, audit_events
+Idempotency, retry, traceability
+3. Danh mục bảng vật lý V1.0
+Table
+Mục đích
+Domain
+PK
+Ghi chú
+tenants
+Tenant/công ty sử dụng LCMS
+D01
+id
+Không xóa vật lý khi đã có dữ liệu
+organizations
+Đơn vị tổ chức
+D01
+id
+tenant_id; parent_id self-reference
+business_parties
+Đối tác nghiệp vụ canonical
+D02
+id
+Customer/Vendor/Payer/Payee qua role/profile
+party_roles
+Vai trò của Business Party
+D02
+id
+UNIQUE tenant_id, party_id, role_code
+currencies
+Tiền tệ
+D02
+code
+ISO currency
+fx_rates
+Tỷ giá
+D02
+id
+source/date/from/to/version
+orders
+Đơn hàng tham chiếu
+D03
+id
+External identity; operational reference
+bills
+Bill - Financial Anchor
+D03
+id
+Business number ≠ PK
+order_bill_links
+Bridge Order↔Bill
+D03
+id
+N:N
+shipments
+Shipment
+D03
+id
+Optional operational depth
+bill_shipment_links
+Bridge Bill↔Shipment
+D03
+id
+N:N
+transport_legs
+Chặng vận chuyển
+D03
+id
+Shipment 1:N Leg
+bill_leg_links
+Bridge Bill↔Leg
+D03
+id
+N:N
+transport_movements
+Chuyến vận chuyển
+D03
+id
+Actual movement
+leg_movement_links
+Bridge Leg↔Movement
+D03
+id
+N:N
+bill_movement_links
+Bridge Bill↔Movement
+D03
+id
+N:N
+rate_cards
+Bảng giá
+D04
+id
+Customer/Vendor type
+rate_versions
+Phiên bản bảng giá
+D04
+id
+Published version immutable
+pricing_rules
+Quy tắc tính giá
+D04
+id
+Applicability + formula/config
+pricing_rule_components
+Thành phần giá
+D04
+id
+Map Cost Type/Revenue Type
+ratings
+Lần tính giá
+D04
+id
+Context + version snapshot
+rating_details
+Chi tiết kết quả tính giá
+D04
+id
+Expected financial result
+costs
+Chi phí kinh tế
+D05
+id
+Single Economic Cost
+cost_allocations
+Phiên phân bổ chi phí
+D05
+id
+Versioned/finalized/superseded
+cost_allocation_details
+Chi tiết phân bổ theo Bill
+D05
+id
+Allocation conservation
+cost_adjustments
+Điều chỉnh/đảo chi phí
+D05
+id
+No silent overwrite
+revenues
+Doanh thu kinh tế
+D06
+id
+Bill attributable
+revenue_adjustments
+Điều chỉnh/đảo doanh thu
+D06
+id
+No silent overwrite
+financial_documents
+Chứng từ tài chính
+D07
+id
+DN/Invoice/other configured type
+financial_document_lines
+Dòng chứng từ
+D07
+id
+Matching at detail level
+document_matches
+Header lần khớp chứng từ
+D07
+id
+Match method/status/version
+document_match_details
+Chi tiết N:N matching
+D07
+id
+source_line/target_line/matched_amount
+payable_exposures
+Nghĩa vụ phải trả
+D08
+id
+Before recognized AP
+receivable_exposures
+Quyền thu dự kiến
+D08
+id
+Before recognized AR
+accounts_payable
+Khoản phải trả được ghi nhận
+D08
+id
+Recognition record
+accounts_receivable
+Khoản phải thu được ghi nhận
+D08
+id
+Recognition record
+payments
+Thanh toán
+D09
+id
+Cash out transaction
+collections
+Thu tiền
+D09
+id
+Cash in transaction
+payment_allocations
+Phân bổ Payment↔AP
+D09
+id
+N:N; finalized affects outstanding
+collection_allocations
+Phân bổ Collection↔AR
+D09
+id
+N:N; finalized affects outstanding
+reconciliations
+Phiên đối soát
+D10
+id
+Type/rule/version/status
+reconciliation_details
+Chi tiết đối soát
+D10
+id
+Source/target/matched/variance
+variances
+Chênh lệch
+D10
+id
+Derived/control fact
+exceptions
+Ngoại lệ
+D10
+id
+Rule/severity/owner/SLA
+approvals
+Phê duyệt
+D10
+id
+Independent workflow
+financial_closes
+Lần chốt tài chính
+D11
+id
+Open/reopen/reclose version
+financial_close_snapshots
+Bản chốt bất biến
+D11
+id
+As-closed snapshot
+financial_close_snapshot_details
+Chi tiết bản chốt
+D11
+id
+Metrics/components/source references
+integration_records
+Theo dõi bản ghi tích hợp
+D12
+id
+Source + external identity + status
+integration_errors
+Lỗi tích hợp
+D12
+id
+Retry/reprocess trace
+audit_events
+Lịch sử thay đổi
+D12
+id
+Actor/action/object/before-after/reason
+4. Relationship Matrix vật lý
+A
+B
+Cardinality
+Cách triển khai
+Nguồn
+orders
+bills
+N:N
+order_bill_links
+CONFIRMED
+bills
+shipments
+N:N
+bill_shipment_links
+CONFIRMED
+shipments
+transport_legs
+1:N
+transport_legs.shipment_id
+CONFIRMED
+bills
+transport_legs
+N:N
+bill_leg_links
+CONFIRMED
+transport_legs
+transport_movements
+N:N
+leg_movement_links
+ARCHITECTURE AGREED
+bills
+transport_movements
+N:N
+bill_movement_links
+ARCHITECTURE AGREED
+rate_cards
+rate_versions
+1:N
+rate_versions.rate_card_id
+Versioning
+rate_versions
+pricing_rules
+1:N
+pricing_rules.rate_version_id
+Versioning
+ratings
+rating_details
+1:N
+rating_details.rating_id
+Snapshot result
+costs
+cost_allocations
+1:N
+cost_allocations.cost_id
+Reallocation history
+cost_allocations
+cost_allocation_details
+1:N
+detail.allocation_id
+Eligible Bill attribution
+bills
+revenues
+1:N
+revenues.bill_id
+Core V1
+financial_documents
+financial_document_lines
+1:N
+line.document_id
+Detail-level matching
+financial_document_lines
+financial_document_lines
+N:N
+document_match_details
+DN↔Invoice / other
+payments
+accounts_payable
+N:N
+payment_allocations
+Settlement
+collections
+accounts_receivable
+N:N
+collection_allocations
+Settlement
+financial_closes
+financial_close_snapshots
+1:N
+snapshot.financial_close_id
+Immutable close history
+5. Integrity & Constraint Rules
+ID
+Nhóm
+Quy tắc
+C-001
+Tenant isolation
+Mọi business/financial table phải có tenant_id hoặc suy ra an toàn qua parent; query/constraint không được cross-tenant.
+C-002
+External identity
+UNIQUE theo tenant_id + source_system + external_object_type + external_id (+ external_version/event khi policy yêu cầu).
+C-003
+Economic cost uniqueness
+Không tạo Cost mới chỉ vì allocation/document/AP/payment.
+C-004
+Economic revenue uniqueness
+Không tạo Revenue mới chỉ vì invoice/AR/collection/API duplicate.
+C-005
+Allocation conservation
+SUM(final allocation details)=allocatable_amount sau rounding rule.
+C-006
+Allocation basis
+Không finalize nếu basis thiếu/0 hoặc candidate/applicability không hợp lệ.
+C-007
+Document matching
+Tổng matched_amount của line không vượt open amount trừ explicit tolerance/policy.
+C-008
+Settlement allocation
+Tổng finalized allocation không vượt transaction amount/open obligation trừ over-settlement policy.
+C-009
+Financial maturity
+Expected/Confirmed/Actual không silent overwrite; transition/audit theo rule.
+C-010
+Close immutability
+Snapshot đã chốt không UPDATE/DELETE nghiệp vụ; reopen/reclose tạo version/snapshot mới.
+C-011
+Config reproducibility
+Published config/rate version ảnh hưởng lịch sử phải immutable/effective-dated.
+C-012
+Optimistic concurrency
+Mutable aggregate quan trọng có row_version; reject stale update.
+C-013
+No hard delete
+Financial transaction/history không hard delete sau khi phát sinh; cancel/reversal/adjustment.
+C-014
+Currency integrity
+Không cộng trực tiếp khác currency; lưu transaction currency + base equivalent + FX trace.
+C-015
+Outstanding derived
+Outstanding AP/AR không là user-entered source of truth; derive từ recognition ± finalized settlement.
+6. Indexing Baseline
+ID
+Table
+Columns
+Mục tiêu
+IDX-001
+bills
+tenant_id, bill_no
+Tra cứu Bill; unique tùy numbering policy
+IDX-002
+bills
+tenant_id, source_system, external_id
+Sync/idempotency
+IDX-003
+costs
+tenant_id, bill_id, financial_maturity, effective_date
+Bill financial profile
+IDX-004
+costs
+tenant_id, vendor_party_id, effective_date
+Vendor cost/AP analysis
+IDX-005
+revenues
+tenant_id, bill_id, financial_maturity, effective_date
+Bill profitability
+IDX-006
+financial_documents
+tenant_id, document_type, document_no, counterparty_id
+Document lookup/duplicate control
+IDX-007
+accounts_payable
+tenant_id, counterparty_id, due_date, settlement_status
+AP aging
+IDX-008
+accounts_receivable
+tenant_id, counterparty_id, due_date, settlement_status
+AR aging
+IDX-009
+payments
+tenant_id, value_date, counterparty_id
+Cash/reconciliation
+IDX-010
+collections
+tenant_id, value_date, counterparty_id
+Cash/reconciliation
+IDX-011
+exceptions
+tenant_id, status, severity, owner_id, due_at
+Exception inbox
+IDX-012
+integration_records
+tenant_id, source_system, external_object_type, external_id
+Integration idempotency
+IDX-013
+audit_events
+tenant_id, object_type, object_id, occurred_at
+Audit drill-down
+7. Chuẩn field kỹ thuật
+Hạng mục
+Chuẩn
+Primary key
+Surrogate `id`; business number/reference không dùng làm PK.
+ID type
+Giữ abstract ở TD1; UUIDv7/ULID/bigint sẽ khóa khi chọn DB engine/implementation.
+Tên bảng/cột
+snake_case, English code-friendly; mô tả/tài liệu/UI bằng tiếng Việt.
+Timestamp
+created_at/updated_at; UTC ở storage, timezone ở presentation/business context.
+Actor
+created_by/updated_by/finalized_by/approved_by... tham chiếu principal/user phù hợp.
+Concurrency
+row_version cho mutable aggregates quan trọng.
+Versioning
+version_no, effective_from/effective_to, supersedes_id khi cần reproducibility.
+Money
+amount + currency_code; base_amount + fx_rate_id/source/date khi quy đổi.
+Audit
+Business event/audit riêng; không chỉ dựa created_at/updated_at.
+Soft delete
+Chỉ master/config phù hợp; transaction tài chính dùng cancel/reversal/adjustment.
+8. Mẫu cấu trúc các aggregate quan trọng
+Table
+Field baseline
+bills
+id, tenant_id, bill_no, bill_type, source_system, external_id, external_version, operational_status, is_active, created_at, created_by, updated_at, updated_by, row_version
+costs
+id, tenant_id, bill_id(nullable với shared cost), cost_type_id, cost_category_id, vendor_party_id, financial_maturity, attribution_type, amount, currency_code, base_amount, fx_rate_id, source_type, source_id, record_status, approval_status, effective_date, row_version
+cost_allocations
+id, tenant_id, cost_id, version_no, allocation_basis, applicability_mode, allocatable_amount, allocated_amount, allocation_status, rule_id, rule_version, finalized_at, finalized_by, supersedes_allocation_id
+cost_allocation_details
+id, tenant_id, allocation_id, bill_id, basis_value, basis_ratio, allocated_amount, rounding_adjustment, manual_override_amount, override_reason
+revenues
+id, tenant_id, bill_id, revenue_type_id, customer_party_id, financial_maturity, amount, currency_code, base_amount, fx_rate_id, source_type, source_id, recognition_policy_version, record_status, approval_status, effective_date, row_version
+financial_documents
+id, tenant_id, document_type_id, document_no, counterparty_id, document_date, currency_code, total_amount, lifecycle_status, acceptance_status, source_system, external_id, row_version
+financial_document_lines
+id, tenant_id, document_id, line_no, pricing_component_id, cost_type_id, revenue_type_id, amount, currency_code, open_match_amount
+payment_allocations
+id, tenant_id, payment_id, accounts_payable_id, allocated_amount, currency_code, fx_rate_id, allocation_status, finalized_at, finalized_by
+collection_allocations
+id, tenant_id, collection_id, accounts_receivable_id, allocated_amount, currency_code, fx_rate_id, allocation_status, finalized_at, finalized_by
+financial_close_snapshots
+id, tenant_id, financial_close_id, scope_type, scope_id, snapshot_version, closed_at, closed_by, policy_version, base_currency, immutable_hash/reference
+9. Quy tắc tính dẫn xuất
+Total Bill Cost = Direct Cost + Allocated Cost theo maturity/view tương ứng.
+Outstanding Recognized AP = Recognized AP ± adjustment − finalized Payment Allocation.
+Outstanding Recognized AR = Recognized AR ± adjustment − finalized Collection Allocation.
+Actual Profit = Net Actual Revenue − Net Actual Cost.
+Current Profit dùng Best Available Financial Value: Actual → Confirmed → Adjusted Expected → Expected.
+Không cộng raw amount khác currency; reporting/base amount phải có FX traceability.
+10. Quy tắc lịch sử, versioning và concurrency
+Rate Version, published policy/config và Financial Close Snapshot phải tái lập được lịch sử.
+Reallocation/re-match/reopen/reclose tạo version hoặc superseding relationship; không sửa mất lịch sử.
+row_version dùng để phát hiện stale update trên aggregate mutable quan trọng.
+Audit Event giữ actor/action/object/reason/before-after/reference; transaction history và audit history là hai lớp khác nhau.
+11. Decision Log TD1
+Decision ID
+Status
+Decision
+TD1-DB-001
+[ARCHITECTURE AGREED]
+Không có một financial status duy nhất; các state dimensions độc lập.
+TD1-DB-002
+[ARCHITECTURE AGREED]
+N:N dùng bridge/relationship table first-class.
+TD1-DB-003
+[ARCHITECTURE AGREED]
+Bill là Financial Anchor nhưng không lưu duplicate derived totals như source of truth.
+TD1-DB-004
+[ARCHITECTURE AGREED]
+Financial Derivation Principle: totals derive từ transaction/subledger; snapshot là ngoại lệ lịch sử.
+TD1-DB-005
+[ARCHITECTURE AGREED]
+Transaction tài chính không hard-delete; adjustment/reversal/audit.
+TD1-DB-006
+[ARCHITECTURE AGREED]
+Published rate/config/close snapshot cần immutable/versioned để tái lập lịch sử.
+TD1-DB-007
+[ARCHITECTURE AGREED]
+Tenant isolation và external identity/idempotency là constraint xuyên domain.
+12. Nội dung chuyển tiếp
+TD1 không khóa DB engine, DDL vendor-specific, partitioning vật lý, exact data type length, trigger/stored procedure hay migration framework. Các nội dung này được hoàn thiện khi Technical Architecture/Implementation xác định stack. TD2 sẽ sử dụng data model này để thiết kế API & Integration Specification.
+13. Completion
+TD1 — ERD & Physical Database Design: 100% — COMPLETED / PACKAGED. Không còn [DECISION REQUIRED] ở mức TD1.

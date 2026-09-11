@@ -1,14 +1,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY Cms.sln ./
-COPY src/Cms.Api/Cms.Api.csproj src/Cms.Api/
-RUN dotnet restore src/Cms.Api/Cms.Api.csproj
-COPY src/Cms.Api/ src/Cms.Api/
-RUN dotnet publish src/Cms.Api/Cms.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+COPY src/LCMS.Domain/LCMS.Domain.csproj src/LCMS.Domain/
+COPY src/LCMS.Application/LCMS.Application.csproj src/LCMS.Application/
+COPY src/LCMS.Infrastructure/LCMS.Infrastructure.csproj src/LCMS.Infrastructure/
+COPY src/LCMS.Api/LCMS.Api.csproj src/LCMS.Api/
+RUN dotnet restore src/LCMS.Api/LCMS.Api.csproj
+COPY src/ src/
+RUN dotnet publish src/LCMS.Api/LCMS.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "Cms.Api.dll"]
+ENTRYPOINT ["dotnet", "LCMS.Api.dll"]

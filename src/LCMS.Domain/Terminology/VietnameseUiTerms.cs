@@ -77,6 +77,17 @@ public static class VietnameseUiTerms
         ["CLOSE_REOPENED"] = "Đã mở lại chốt",
         ["FINANCIAL_CONTROL"] = "Kiểm soát tài chính",
 
+        // Reporting / dashboard / control queues (E13)
+        ["DASHBOARD"] = "Bảng điều khiển",
+        ["DASHBOARD_SUMMARY"] = "Tóm tắt bảng điều khiển",
+        ["CONTROL_QUEUE"] = "Hàng đợi kiểm soát",
+        ["EXCEPTION_QUEUE"] = "Hàng đợi ngoại lệ",
+        ["APPROVAL_QUEUE"] = "Hàng đợi phê duyệt",
+        ["MATURITY_BREAKDOWN"] = "Phân tách độ chín",
+        ["SETTLEMENT_OUTSTANDING"] = "Số dư tất toán còn lại",
+        ["AS_OF"] = "Tại thời điểm",
+        ["REPORTING_PROJECTION"] = "Projection báo cáo",
+
         // Financial documents (D07 / E08) — Received ≠ Accepted ≠ Matched
         ["FINANCIAL_DOCUMENT"] = "Chứng từ tài chính",
         ["FINANCIAL_DOCUMENT_LINE"] = "Dòng chứng từ",

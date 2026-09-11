@@ -82,9 +82,13 @@ public static class RevenueEndpoints
         });
 
         var bills = app.MapGroup("/api/bills").WithTags("Bills");
-        bills.MapGet("/{id:guid}/financial-profile", async (Guid id, ISender sender, CancellationToken ct) =>
+        bills.MapGet("/{id:guid}/financial-profile", async (
+            Guid id,
+            DateOnly? asOf,
+            ISender sender,
+            CancellationToken ct) =>
         {
-            var profile = await sender.Send(new GetBillFinancialProfileQuery(id), ct);
+            var profile = await sender.Send(new GetBillFinancialProfileQuery(id, asOf), ct);
             return Results.Ok(profile);
         });
 

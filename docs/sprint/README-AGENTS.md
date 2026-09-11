@@ -24,7 +24,8 @@ Pass 1 đang chạy. Pass 2 bắt đầu khi Pass 1 hoàn tất Sprint 12.
 | 8 Settlement | Done (see `SPRINT-8-DOD.md`) |
 | 9 Financial Control | Done (see `SPRINT-9-DOD.md`) |
 | 10 Financial Close | Done (see `SPRINT-10-DOD.md`) |
-| 11–12 | Queued |
+| 11 Financial Profile & Reporting | Done (see `SPRINT-11-DOD.md`) |
+| 12 | Queued |
 
 ## How to run
 1. Cursor: **New Agent Chat** (hoặc Cloud Agent).

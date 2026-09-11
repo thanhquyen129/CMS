@@ -1,6 +1,36 @@
 # Handoff
 
+## 2026-09-12 — Sprint 5 Revenue & Profitability (E07)
+
+### User
+Implement Sprint 5 only: full revenues TD1; revenue_adjustments; maturity no-overwrite (C-009); Single Economic Revenue (C-004); APIs create/list/get/confirm/actualize/adjust; `GET /api/bills/{id}/financial-profile` derived read model; tests; DoD + PR to main. Non-goals: Documents/AP/AR, settlement, JWT, Next.js.
+
+### Done
+- Domain: expanded `Revenue` (layer amounts + customer/source/audit); `RevenueAdjustment`.
+- Migration `Sprint5_Revenue` (alters `revenues`; creates `revenue_adjustments`).
+- CQRS + API: create/list/get revenue; confirm/actualize; adjust; Bill financial profile.
+- C-004/C-009: Single Economic Revenue; no silent maturity overwrite; document/AR source rejected.
+- Financial profile: Best Available (Actual→Confirmed→Expected); profit = rev − cost per currency; no SoT totals on Bill (TD1-DB-003/004).
+- VI validation/errors; tenant filter + `X-Tenant-Id`.
+- Tests: suite green (3 new — maturity+adjust, profile/currency, isolation+idempotent source).
+- DoD: `docs/sprint/SPRINT-5-DOD.md`.
+
+### Files / API
+- APIs: `/api/revenues`, `/api/bills/{id}/financial-profile`
+- Endpoints: `RevenueEndpoints`
+- Migration: `20260911185027_Sprint5_Revenue`
+
+### Verify
+- `dotnet test Cms.sln -c Release`
+
+### Deferred / Next
+- Documents / AP / AR (Sprint 6–7)
+- Settlement; full approval; JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-12 — Sprint 4 Cost (E05/E06)
+
 
 ### User
 Implement Sprint 4 only: full costs TD1 fields; cost_adjustments; allocations+finalize conservation; maturity no-overwrite; seed Expected from ratings; tenant APIs; tests; DoD + PR to main.

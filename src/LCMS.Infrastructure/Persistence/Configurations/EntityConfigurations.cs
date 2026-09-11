@@ -233,11 +233,55 @@ internal sealed class RevenueConfiguration : IEntityTypeConfiguration<Revenue>
         EntityBaseConfiguration.ConfigureEntityBase(builder);
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.BillId).IsRequired();
+        builder.Property(e => e.RevenueTypeCode).HasMaxLength(64);
+        builder.Property(e => e.FinancialMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ExpectedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.ConfirmedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.ActualAmount).HasPrecision(18, 4);
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
-        builder.Property(e => e.FinancialMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
+        builder.Property(e => e.SourceType).HasMaxLength(64);
+        builder.Property(e => e.RecognitionPolicyVersion).HasMaxLength(64);
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
-        builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity });
+        builder.Property(e => e.ApprovalStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.EffectiveDate).IsRequired();
+
+        // IDX-005
+        builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity, e.EffectiveDate });
+        // Idempotent create by source (C-004 — no duplicate economic revenue from same source)
+        builder.HasIndex(e => new { e.TenantId, e.SourceType, e.SourceId }).IsUnique();
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class RevenueAdjustmentConfiguration : IEntityTypeConfiguration<RevenueAdjustment>
+{
+    public void Configure(EntityTypeBuilder<RevenueAdjustment> builder)
+    {
+        builder.ToTable("revenue_adjustments");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RevenueId).IsRequired();
+        builder.Property(e => e.AdjustmentType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.DeltaAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Reason).HasMaxLength(1024).IsRequired();
+        builder.Property(e => e.EffectiveDate).IsRequired();
+        builder.Property(e => e.AppliedToMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.AmountBefore).HasPrecision(18, 4);
+        builder.Property(e => e.AmountAfter).HasPrecision(18, 4);
+
+        builder.HasIndex(e => new { e.TenantId, e.RevenueId, e.CreatedAt });
+
+        builder.HasOne(e => e.Revenue)
+            .WithMany()
+            .HasForeignKey(e => e.RevenueId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

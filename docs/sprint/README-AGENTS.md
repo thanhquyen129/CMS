@@ -10,7 +10,8 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | 2 Operational Reference | Done (merged) |
 | 3 Rate & Pricing | Done (see `SPRINT-3-DOD.md`) |
 | 4 Cost | Done (see `SPRINT-4-DOD.md`) |
-| 5–12 | Queued |
+| 5 Revenue & Profitability | In PR (see `SPRINT-5-DOD.md`) |
+| 6–12 | Queued |
 
 ## How to run
 1. Cursor: **New Agent Chat** (hoặc Cloud Agent).

@@ -31,6 +31,12 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<Shipment> Shipments => Set<Shipment>();
     public DbSet<OrderBillLink> OrderBillLinks => Set<OrderBillLink>();
     public DbSet<BillShipmentLink> BillShipmentLinks => Set<BillShipmentLink>();
+    public DbSet<RateCard> RateCards => Set<RateCard>();
+    public DbSet<RateVersion> RateVersions => Set<RateVersion>();
+    public DbSet<PricingRule> PricingRules => Set<PricingRule>();
+    public DbSet<PricingRuleComponent> PricingRuleComponents => Set<PricingRuleComponent>();
+    public DbSet<Rating> Ratings => Set<Rating>();
+    public DbSet<RatingDetail> RatingDetails => Set<RatingDetail>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

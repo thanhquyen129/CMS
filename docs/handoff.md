@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — Sprint 3 Rate & Pricing (E04)
+
+### User
+Implement Sprint 3 only: D04 rate cards/versions/rules/components + ratings snapshot; published version immutable (C-011); tenant APIs; tests; DoD + PR to main.
+
+### Done
+- Domain: `RateCard`, `RateVersion`, `PricingRule`, `PricingRuleComponent`, `Rating`, `RatingDetail` (UUIDv7, tenant_id, soft-delete, row_version).
+- Migration `Sprint3_RatePricing` (does not alter Sprint 0–2).
+- CQRS + API: rate card CRUD; draft→publish versions; rules/components on draft only; `POST /api/ratings` Expected seed snapshot (`fixed` / `unit_rate × qty`).
+- C-011: published version rejects rule/component mutations; new version instead of overwrite; re-rating appends history.
+- VI validation/errors; tenant filter + `X-Tenant-Id`.
+- Tests: 19 passed (3 new — immutable publish, tenant isolation, rating snapshot).
+- DoD: `docs/sprint/SPRINT-3-DOD.md`.
+
+### Files / API
+- APIs: `/api/rate-cards`, `/api/rate-versions`, `/api/pricing-rules/{id}/components`, `/api/ratings`
+- Endpoints: `RatePricingEndpoints`
+- Migration: `20260911183223_Sprint3_RatePricing`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 19 passed
+
+### Deferred / Next
+- Cost Expected lifecycle from rating (Sprint 4)
+- Full formula engine (deferred)
+- JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-12 — Wire CMS_DEPLOY_SSH_KEY + green deploy
 
 ### User
@@ -14,7 +43,7 @@ Làm luôn: gắn secret `CMS_DEPLOY_SSH_KEY` từ private key operator.
 - http://194.233.89.26/health · `/ready` OK
 
 ### Next
-- Cost Expected on Bill (Phase 2); JWT/OIDC thay header bootstrap
+- Cost Expected on Bill (Sprint 4); JWT/OIDC thay header bootstrap
 
 ---
 

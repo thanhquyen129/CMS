@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-11 — Sprint 11 Financial Profile & Reporting (E13)
+
+### User
+Implement Sprint 11 Pass 1 only: enhance bill financial-profile read model (derived); GET /api/dashboard/summary + control queues exceptions/approvals; tenant isolation tests; SPRINT-11-DOD + handoff + PR to main. All tests green. No SoT derived totals on Bill. Non-goals: Next.js UI, Sprint 12 NFR, JWT. Never secrets/alogex.
+
+### Done
+- Enhanced `GET /api/bills/{id}/financial-profile`: maturity breakdown (Expected/Confirmed/Actual), allocated cost, AP/AR settlement outstanding by currency, `asOfTimestamp`, optional `?asOf=` filter with limitation note.
+- `GET /api/dashboard/summary`: bill / open-exception / pending-approval / open-close counts + Best Available cost/revenue/profit by currency.
+- Control queues: `GET /api/queues/exceptions` (open), `GET /api/queues/approvals` (pending).
+- Derived read-only — Bill entity unchanged (no SoT totals).
+- VI terminology keys for dashboard/queues; notes use `VietnameseUiTerms`.
+- Tests: 43 passed (3 new Sprint 11 — profile maturity/allocated/settlement/asOf; dashboard isolation+counts; queues status filter).
+- DoD: `docs/sprint/SPRINT-11-DOD.md`.
+
+### Files / API
+- APIs: `/api/bills/{id}/financial-profile`, `/api/dashboard/summary`, `/api/queues/exceptions`, `/api/queues/approvals`
+- Endpoints: `DashboardReportingEndpoints`; profile query enhanced in `GetBillFinancialProfileQuery`
+- Application: `Dashboard/Queries`, `Queues/Queries`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 43 passed
+
+### Deferred / Next
+- Full asOf maturity-history reconstruction (Pass 2)
+- Sprint 12 hardening / NFR
+- FX base roll-up; Next.js UI; JWT/OIDC; snapshot-based P&L
+
+---
+
 ## 2026-09-11 — Sprint 10 Financial Close (E12)
 
 ### User

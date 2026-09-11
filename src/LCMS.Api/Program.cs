@@ -125,6 +125,7 @@ try
     app.MapSettlementEndpoints();
     app.MapFinancialControlEndpoints();
     app.MapFinancialCloseEndpoints();
+    app.MapDashboardReportingEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

@@ -15,7 +15,7 @@ TD6: *Revenue lifecycle; actual recognition; profitability read model* — Epic 
 | Bill financial profile (derived) | Done | `GET /api/bills/{id}/financial-profile`; Best Available; profit = rev − cost per currency; no SoT totals on Bill |
 | Currency safety | Done | totals split by `currency_code`; mixed flagged; no raw cross-currency sum |
 | Migration `Sprint5_Revenue` | Done | Alters `revenues`; adds `revenue_adjustments`; does not alter Sprint 0–4 migrations |
-| Tests | Done | 3 new; suite green |
+| Tests | Done | 3 new; suite green (25) |
 | Sprint 5 DoD doc | Done | This file |
 
 ## Deferred (later sprints)

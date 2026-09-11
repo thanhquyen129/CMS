@@ -16,7 +16,7 @@ TD6: *Document intake/acceptance; line detail; N:N matching* — Epic **E08**.
 | Tenant APIs + VI errors | Done | FluentValidation VI + AppException |
 | Tenant isolation | Done | Global filter + `X-Tenant-Id` |
 | Migration `Sprint6_FinancialDocuments` | Done | Adds four tables; does not alter Sprint 0–5 migrations |
-| Tests | Done | 3 new; suite green |
+| Tests | Done | 3 new; suite green (28) |
 | Sprint 6 DoD doc | Done | This file |
 
 ## Deferred (later sprints)

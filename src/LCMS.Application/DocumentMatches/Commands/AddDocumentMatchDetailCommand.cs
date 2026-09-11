@@ -155,10 +155,11 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
         decimal tolerance,
         CancellationToken cancellationToken)
     {
-        // Recompute from details for correctness under concurrent matches.
-        var alreadyMatched = await _db.DocumentMatchDetails.AsNoTracking()
+        var amounts = await _db.DocumentMatchDetails.AsNoTracking()
             .Where(d => d.SourceLineId == line.Id || d.TargetLineId == line.Id)
-            .SumAsync(d => (decimal?)d.MatchedAmount, cancellationToken) ?? 0m;
+            .Select(d => d.MatchedAmount)
+            .ToListAsync(cancellationToken);
+        var alreadyMatched = amounts.Sum();
 
         var openAmount = line.Amount - alreadyMatched;
         if (additional > openAmount + tolerance)

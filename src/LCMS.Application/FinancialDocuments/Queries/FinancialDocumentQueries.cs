@@ -166,7 +166,7 @@ public sealed class ListFinancialDocumentsQueryHandler
         }
 
         return await query
-            .OrderByDescending(d => d.CreatedAt)
+            .OrderByDescending(d => d.Id)
             .Select(d => new FinancialDocumentListItemDto(
                 d.Id,
                 d.DocumentType,

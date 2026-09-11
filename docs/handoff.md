@@ -12,7 +12,7 @@ Implement Sprint 6 Pass 1 only: D07 financial_documents / lines / document_match
 - AC-005: ReceiptStatus / AcceptanceStatus / MatchingStatus never collapsed to one enum.
 - C-007: over-match rejected (tolerance stub = 0). C-003/C-004: receive/match do not invent Cost/Revenue.
 - VI validation/errors; tenant filter + `X-Tenant-Id`.
-- Tests: 3 new Sprint 6 (state separation + no invent; over-match; cross-tenant).
+- Tests: 28 passed (3 new Sprint 6 — state separation+no invent, over-match C-007, cross-tenant).
 - DoD: `docs/sprint/SPRINT-6-DOD.md`.
 
 ### Files / API
@@ -21,7 +21,7 @@ Implement Sprint 6 Pass 1 only: D07 financial_documents / lines / document_match
 - Migration: `20260911185745_Sprint6_FinancialDocuments`
 
 ### Verify
-- `dotnet test Cms.sln -c Release`
+- `dotnet test Cms.sln -c Release` → 28 passed
 
 ### Deferred / Next
 - AP/AR recognition (Sprint 7)

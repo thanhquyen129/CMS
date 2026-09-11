@@ -50,7 +50,7 @@ public sealed class GetDocumentMatchByIdQueryHandler : IRequestHandler<GetDocume
 
         var details = await _db.DocumentMatchDetails.AsNoTracking()
             .Where(d => d.MatchId == match.Id)
-            .OrderBy(d => d.CreatedAt)
+            .OrderBy(d => d.Id)
             .Select(d => new DocumentMatchDetailDto(
                 d.Id,
                 d.SourceLineId,

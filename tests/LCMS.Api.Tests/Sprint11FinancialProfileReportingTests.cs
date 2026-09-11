@@ -319,7 +319,7 @@ public sealed class Sprint11FinancialProfileReportingTests : IAsyncLifetime
         {
             Content = JsonContent.Create(new
             {
-                allocationBasis = "weight",
+                allocationBasis = "quantity",
                 details = new[]
                 {
                     new { billId = billA, basisValue = basisA },

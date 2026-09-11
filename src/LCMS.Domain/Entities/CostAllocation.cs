@@ -11,8 +11,8 @@ public sealed class CostAllocation : TenantEntityBase
     public Guid CostId { get; set; }
     public int VersionNo { get; set; } = 1;
 
-    /// <summary>e.g. weight, equal, revenue, manual</summary>
-    public string AllocationBasis { get; set; } = "manual";
+    /// <summary>equal | quantity | manual_ratio</summary>
+    public string AllocationBasis { get; set; } = CostAllocationBases.Equal;
 
     public string ApplicabilityMode { get; set; } = "explicit";
     public decimal AllocatableAmount { get; set; }
@@ -28,6 +28,17 @@ public sealed class CostAllocation : TenantEntityBase
     public Guid? SupersedesAllocationId { get; set; }
 
     public Cost? Cost { get; set; }
+}
+
+/// <summary>Supported allocation bases (C-006) — Pass 2 Sprint 4 FULL.</summary>
+public static class CostAllocationBases
+{
+    public const string Equal = "equal";
+    public const string Quantity = "quantity";
+    public const string ManualRatio = "manual_ratio";
+
+    public static bool IsSupported(string? basis) =>
+        basis is Equal or Quantity or ManualRatio;
 }
 
 public static class CostAllocationStatuses

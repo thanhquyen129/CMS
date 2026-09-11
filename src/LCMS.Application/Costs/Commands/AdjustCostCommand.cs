@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -38,11 +39,19 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICostFxStub _fx;
+    private readonly ICostApprovalGate _approvalGate;
 
-    public AdjustCostCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public AdjustCostCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICostFxStub fx,
+        ICostApprovalGate approvalGate)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
+        _approvalGate = approvalGate;
     }
 
     public async Task<Guid> Handle(AdjustCostCommand request, CancellationToken cancellationToken)
@@ -92,6 +101,8 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
         }
 
         cost.Amount = after;
+        _fx.ApplyToCost(cost, after);
+        _approvalGate.RefreshPendingFlag(cost);
 
         var adj = new CostAdjustment
         {

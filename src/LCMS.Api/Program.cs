@@ -29,7 +29,7 @@ try
         .WriteTo.Console(new RenderedCompactJsonFormatter()),
         preserveStaticLogger: true);
 
-    builder.Services.AddApplication();
+    builder.Services.AddApplication(builder.Configuration);
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.Configure<RateLimitingOptions>(
         builder.Configuration.GetSection(RateLimitingOptions.SectionName));

@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -27,11 +28,19 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICostFxStub _fx;
+    private readonly ICostApprovalGate _approvalGate;
 
-    public SeedExpectedCostsFromRatingCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public SeedExpectedCostsFromRatingCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICostFxStub fx,
+        ICostApprovalGate approvalGate)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
+        _approvalGate = approvalGate;
     }
 
     public async Task<SeedExpectedCostsResult> Handle(
@@ -95,6 +104,8 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                 ApprovalStatus = "not_required",
                 EffectiveDate = effective
             };
+            _fx.ApplyToCost(cost, amount);
+            _approvalGate.RefreshPendingFlag(cost);
             _db.Costs.Add(cost);
             costIds.Add(cost.Id);
             created++;

@@ -138,7 +138,7 @@ public sealed class Sprint4CostTests : IAsyncLifetime
         {
             Content = JsonContent.Create(new
             {
-                allocationBasis = "weight",
+                allocationBasis = "equal",
                 details = new[]
                 {
                     new { billId = billA, basisValue = 1m },
@@ -159,7 +159,7 @@ public sealed class Sprint4CostTests : IAsyncLifetime
         {
             Content = JsonContent.Create(new
             {
-                allocationBasis = "weight",
+                allocationBasis = "quantity",
                 details = new[]
                 {
                     new { billId = billA, basisValue = 0m },
@@ -420,6 +420,7 @@ public sealed class Sprint4CostTests : IAsyncLifetime
         decimal AllocatableAmount,
         decimal AllocatedAmount,
         DateTimeOffset? FinalizedAt,
+        Guid? SupersedesAllocationId,
         List<AllocationDetailResponse> Details);
 
     private sealed record CostResponse(
@@ -432,6 +433,8 @@ public sealed class Sprint4CostTests : IAsyncLifetime
         decimal? ActualAmount,
         decimal Amount,
         string CurrencyCode,
+        decimal? BaseAmount,
+        Guid? FxRateId,
         string? CostTypeCode,
         Guid? VendorPartyId,
         string? SourceType,

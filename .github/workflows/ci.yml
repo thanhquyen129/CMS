@@ -38,9 +38,30 @@ jobs:
         env:
           ConnectionStrings__LcmsDb: "Host=localhost;Port=5432;Database=lcms;Username=lcms;Password=lcms"
           Database__MigrateOnStartup: "true"
+          ASPNETCORE_ENVIRONMENT: Production
         run: |
-          dotnet run --project src/LCMS.Api/LCMS.Api.csproj -c Release --urls http://127.0.0.1:5088 &
-          sleep 8
+          set -euo pipefail
+          # Fixed sleep races migrate+startup; poll until listen (curl exit 7 = not up yet).
+          dotnet run --project src/LCMS.Api/LCMS.Api.csproj -c Release --no-build --urls http://127.0.0.1:5088 > /tmp/lcms-smoke.log 2>&1 &
+          api_pid=$!
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5088/health >/dev/null 2>&1; then
+              ok=1
+              break
+            fi
+            if ! kill -0 "$api_pid" 2>/dev/null; then
+              echo "::error::API process exited before /health. Log:"
+              cat /tmp/lcms-smoke.log || true
+              exit 1
+            fi
+            sleep 1
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::/health not ready after 60s. Log:"
+            cat /tmp/lcms-smoke.log || true
+            exit 1
+          fi
           curl -fsS http://127.0.0.1:5088/health
           curl -fsS http://127.0.0.1:5088/ready
 

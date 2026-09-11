@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-09-12 — Fix CI Health smoke race (exit 7)
+
+### User
+Screenshot: Actions CI failed on `test` (exit 7); `deploy` skipped.
+
+### Cause
+`curl` hit `/health` ~1s before `dotnet run` finished migrate+listen (`curl: (7) Failed to connect`).
+
+### Done
+- CI Health smoke: poll `/health` up to 60s, `--no-build`, dump smoke log on failure; `ASPNETCORE_ENVIRONMENT=Production`.
+
+### Files
+- `.github/workflows/ci.yml`
+
+### Verify
+- Re-run after push: https://github.com/thanhquyen129/CMS/actions
+
+### Next
+- Confirm `CMS_DEPLOY_SSH_KEY` so `deploy` can run after green `test`
+
+---
+
 ## 2026-09-12 — Close Sprint 0 (TD6 Foundation)
 
 ### User

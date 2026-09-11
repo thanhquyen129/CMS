@@ -18,7 +18,7 @@ TD6: *Payment/collection; allocation; reversal; outstanding* — Epic **E10**.
 | Tenant APIs + VI errors | Done | FluentValidation VI + AppException |
 | Tenant isolation | Done | Global filter + `X-Tenant-Id` |
 | Migration `Sprint8_Settlement` | Done | Four tables; does not alter Sprint 0–7 migrations |
-| Tests | Done | 3 new; suite green |
+| Tests | Done | 3 new; suite green (34) |
 | Sprint 8 DoD doc | Done | This file |
 
 ## Deferred (later sprints / Pass 2)

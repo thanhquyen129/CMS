@@ -15,7 +15,7 @@ Implement Sprint 8 Pass 1 only: D09 payments/collections/payment_allocations/col
 - Reversal: status → `reversed`; restores outstanding; no hard delete / silent overwrite (C-013).
 - C-003/C-004: settlement never invents Cost/Revenue.
 - VI validation/errors; tenant filter + `X-Tenant-Id`.
-- Tests: suite green (3 new Sprint 8 — partial+finalize AC-007; over-allocate+reversal; collection+cross-tenant).
+- Tests: 34 passed (3 new Sprint 8 — partial+finalize AC-007; over-allocate+reversal; collection+cross-tenant).
 - DoD: `docs/sprint/SPRINT-8-DOD.md`.
 
 ### Files / API
@@ -24,7 +24,7 @@ Implement Sprint 8 Pass 1 only: D09 payments/collections/payment_allocations/col
 - Migration: `20260911191645_Sprint8_Settlement`
 
 ### Verify
-- `dotnet test Cms.sln -c Release`
+- `dotnet test Cms.sln -c Release` → 34 passed
 
 ### Deferred / Next
 - Reconciliation / exceptions (Sprint 9)

@@ -68,11 +68,13 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
             throw new ConflictAppException("Không phân bổ khác tiền tệ (C-014).");
         }
 
-        var collectionActive = await _db.CollectionAllocations.AsNoTracking()
+        var collectionActiveAmounts = await _db.CollectionAllocations.AsNoTracking()
             .Where(a => a.CollectionId == collection.Id
                 && (a.AllocationStatus == SettlementAllocationStatuses.Draft
                     || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
-            .SumAsync(a => a.Amount, cancellationToken);
+            .Select(a => a.Amount)
+            .ToListAsync(cancellationToken);
+        var collectionActive = collectionActiveAmounts.Sum();
 
         var collectionRemaining = collection.Amount - collectionActive + SettlementHelpers.OverSettlementTolerance;
         if (amount > collectionRemaining)
@@ -81,11 +83,13 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
                 $"Tổng phân bổ vượt số tiền thu (còn lại {collectionRemaining}) (C-008).");
         }
 
-        var arActive = await _db.CollectionAllocations.AsNoTracking()
+        var arActiveAmounts = await _db.CollectionAllocations.AsNoTracking()
             .Where(a => a.AccountsReceivableId == ar.Id
                 && (a.AllocationStatus == SettlementAllocationStatuses.Draft
                     || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
-            .SumAsync(a => a.Amount, cancellationToken);
+            .Select(a => a.Amount)
+            .ToListAsync(cancellationToken);
+        var arActive = arActiveAmounts.Sum();
 
         var arCeiling = ar.RecognizedAmount + ar.AdjustmentAmount + SettlementHelpers.OverSettlementTolerance;
         if (arActive + amount > arCeiling)

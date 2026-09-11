@@ -68,10 +68,12 @@ public sealed class FinalizeCollectionAllocationCommandHandler
             .FirstOrDefaultAsync(a => a.Id == allocation.AccountsReceivableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
 
-        var collectionFinalized = await _db.CollectionAllocations.AsNoTracking()
+        var collectionFinalizedAmounts = await _db.CollectionAllocations.AsNoTracking()
             .Where(a => a.CollectionId == collection.Id
                 && a.AllocationStatus == SettlementAllocationStatuses.Finalized)
-            .SumAsync(a => a.Amount, cancellationToken);
+            .Select(a => a.Amount)
+            .ToListAsync(cancellationToken);
+        var collectionFinalized = collectionFinalizedAmounts.Sum();
         if (collectionFinalized + allocation.Amount > collection.Amount + SettlementHelpers.OverSettlementTolerance)
         {
             throw new ConflictAppException(

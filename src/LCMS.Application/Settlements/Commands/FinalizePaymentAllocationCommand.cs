@@ -67,10 +67,12 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
 
         // C-008: finalized on payment + this amount ≤ payment.Amount
-        var paymentFinalized = await _db.PaymentAllocations.AsNoTracking()
+        var paymentFinalizedAmounts = await _db.PaymentAllocations.AsNoTracking()
             .Where(a => a.PaymentId == payment.Id
                 && a.AllocationStatus == SettlementAllocationStatuses.Finalized)
-            .SumAsync(a => a.Amount, cancellationToken);
+            .Select(a => a.Amount)
+            .ToListAsync(cancellationToken);
+        var paymentFinalized = paymentFinalizedAmounts.Sum();
         if (paymentFinalized + allocation.Amount > payment.Amount + SettlementHelpers.OverSettlementTolerance)
         {
             throw new ConflictAppException(

@@ -68,11 +68,13 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             throw new ConflictAppException("Không phân bổ khác tiền tệ (C-014).");
         }
 
-        var paymentActive = await _db.PaymentAllocations.AsNoTracking()
+        var paymentActiveAmounts = await _db.PaymentAllocations.AsNoTracking()
             .Where(a => a.PaymentId == payment.Id
                 && (a.AllocationStatus == SettlementAllocationStatuses.Draft
                     || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
-            .SumAsync(a => a.Amount, cancellationToken);
+            .Select(a => a.Amount)
+            .ToListAsync(cancellationToken);
+        var paymentActive = paymentActiveAmounts.Sum();
 
         var paymentRemaining = payment.Amount - paymentActive + SettlementHelpers.OverSettlementTolerance;
         if (amount > paymentRemaining)
@@ -81,11 +83,13 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
                 $"Tổng phân bổ vượt số tiền thanh toán (còn lại {paymentRemaining}) (C-008).");
         }
 
-        var apActive = await _db.PaymentAllocations.AsNoTracking()
+        var apActiveAmounts = await _db.PaymentAllocations.AsNoTracking()
             .Where(a => a.AccountsPayableId == ap.Id
                 && (a.AllocationStatus == SettlementAllocationStatuses.Draft
                     || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
-            .SumAsync(a => a.Amount, cancellationToken);
+            .Select(a => a.Amount)
+            .ToListAsync(cancellationToken);
+        var apActive = apActiveAmounts.Sum();
 
         var apCeiling = ap.RecognizedAmount + ap.AdjustmentAmount + SettlementHelpers.OverSettlementTolerance;
         if (apActive + amount > apCeiling)

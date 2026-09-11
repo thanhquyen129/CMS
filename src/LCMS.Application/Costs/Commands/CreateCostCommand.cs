@@ -46,11 +46,13 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public CreateCostCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreateCostCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(CreateCostCommand request, CancellationToken cancellationToken)
@@ -106,6 +108,12 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         };
 
         _db.Costs.Add(cost);
+        _audit.Append(
+            AuditActions.CostCreate,
+            AuditObjectTypes.Cost,
+            cost.Id,
+            afterJson: $"{{\"amount\":{amount},\"currency\":\"{currency}\",\"maturity\":\"{CostMaturities.Expected}\",\"attribution\":\"{attribution}\"}}");
+
         try
         {
             await _db.SaveChangesAsync(cancellationToken);

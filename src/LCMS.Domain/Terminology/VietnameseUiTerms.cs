@@ -125,7 +125,17 @@ public static class VietnameseUiTerms
         ["SETTLEMENT_REVERSAL"] = "Đảo tất toán",
         ["ALLOCATION_DRAFT"] = "Nháp phân bổ",
         ["ALLOCATION_FINALIZED"] = "Đã chốt phân bổ",
-        ["ALLOCATION_REVERSED"] = "Đã đảo phân bổ"
+        ["ALLOCATION_REVERSED"] = "Đã đảo phân bổ",
+
+        // Hardening / Audit / Integration (D12 / E14–E16)
+        ["AUDIT_EVENT"] = "Sự kiện kiểm toán",
+        ["AUDIT_TRAIL"] = "Nhật ký kiểm toán",
+        ["INTEGRATION_RECORD"] = "Bản ghi tích hợp",
+        ["INTEGRATION_ERROR"] = "Lỗi tích hợp",
+        ["IDEMPOTENCY"] = "Tính bất biến khi gửi lại",
+        ["CORRELATION_ID"] = "Mã tương quan",
+        ["RATE_LIMIT"] = "Giới hạn tốc độ",
+        ["SECURITY_HEADER"] = "Tiêu đề bảo mật"
     };
 
     public static string Get(string codeKey)

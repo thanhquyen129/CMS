@@ -28,12 +28,18 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
-    public ConfirmCostCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, ICurrentUserContext user)
+    public ConfirmCostCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task Handle(ConfirmCostCommand request, CancellationToken cancellationToken)
@@ -61,12 +67,22 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
             4,
             MidpointRounding.AwayFromZero);
 
+        var beforeJson =
+            $"{{\"maturity\":\"{cost.FinancialMaturity}\",\"expected\":{cost.ExpectedAmount},\"amount\":{cost.Amount}}}";
+
         // Keep ExpectedAmount intact (C-009).
         cost.ConfirmedAmount = confirmed;
         cost.Amount = confirmed;
         cost.FinancialMaturity = CostMaturities.Confirmed;
         cost.ConfirmedAt = DateTimeOffset.UtcNow;
         cost.ConfirmedBy = _user.UserId;
+
+        _audit.Append(
+            AuditActions.CostConfirm,
+            AuditObjectTypes.Cost,
+            cost.Id,
+            beforeJson: beforeJson,
+            afterJson: $"{{\"maturity\":\"{CostMaturities.Confirmed}\",\"confirmed\":{confirmed},\"amount\":{confirmed}}}");
 
         await _db.SaveChangesAsync(cancellationToken);
     }

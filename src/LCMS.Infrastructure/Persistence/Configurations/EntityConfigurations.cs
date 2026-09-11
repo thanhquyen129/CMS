@@ -1196,3 +1196,74 @@ internal sealed class FinancialCloseSnapshotDetailConfiguration : IEntityTypeCon
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEvent>
+{
+    public void Configure(EntityTypeBuilder<AuditEvent> builder)
+    {
+        builder.ToTable("audit_events");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Action).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ObjectId).IsRequired();
+        builder.Property(e => e.BeforeJson);
+        builder.Property(e => e.AfterJson);
+        builder.Property(e => e.Reason).HasMaxLength(2048);
+        builder.Property(e => e.CorrelationId).HasMaxLength(128);
+        builder.Property(e => e.OccurredAt).IsRequired();
+
+        // IDX-013
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.OccurredAt });
+        builder.HasIndex(e => new { e.TenantId, e.Action, e.OccurredAt });
+        builder.HasIndex(e => new { e.TenantId, e.CorrelationId });
+    }
+}
+
+internal sealed class IntegrationRecordConfiguration : IEntityTypeConfiguration<IntegrationRecord>
+{
+    public void Configure(EntityTypeBuilder<IntegrationRecord> builder)
+    {
+        builder.ToTable("integration_records");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.SourceSystem).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ExternalObjectType).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ExternalId).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.ExternalVersion).HasMaxLength(64);
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.LocalObjectType).HasMaxLength(64);
+        builder.Property(e => e.PayloadHash).HasMaxLength(128);
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.ReceivedAt).IsRequired();
+
+        // C-002 / IDX-012
+        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalObjectType, e.ExternalId })
+            .IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.ReceivedAt });
+    }
+}
+
+internal sealed class IntegrationErrorConfiguration : IEntityTypeConfiguration<IntegrationError>
+{
+    public void Configure(EntityTypeBuilder<IntegrationError> builder)
+    {
+        builder.ToTable("integration_errors");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.IntegrationRecordId).IsRequired();
+        builder.Property(e => e.ErrorCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Message).HasMaxLength(2048).IsRequired();
+        builder.Property(e => e.Detail).HasMaxLength(8192);
+        builder.Property(e => e.AttemptNo).IsRequired();
+        builder.Property(e => e.OccurredAt).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.IntegrationRecordId, e.AttemptNo });
+        builder.HasIndex(e => new { e.TenantId, e.OccurredAt });
+
+        builder.HasOne(e => e.IntegrationRecord)
+            .WithMany(r => r.Errors)
+            .HasForeignKey(e => e.IntegrationRecordId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

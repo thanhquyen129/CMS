@@ -1,5 +1,37 @@
 # Handoff
 
+## 2026-09-11 — Sprint 12 Hardening & UAT (E14/E15/E16) — **Pass 1 COMPLETE**
+
+### User
+Implement Sprint 12 Pass 1 final slice only: audit_events + writes on key money mutations + GET /api/audit-events; integration_records C-002 upsert stub; rate-limit + security headers smoke; Vietnamese terminology coverage + DoD declaring Pass 1 COMPLETE; tests green; handoff + PR to main. Non-goals: full outbox, load tests, JWT, Next.js UAT. Never secrets/alogex.
+
+### Done
+- Domain D12: `AuditEvent`, `IntegrationRecord`, `IntegrationError` (UUIDv7, soft-delete, tenant_id).
+- Migration `Sprint12_HardeningAudit` (IDX-012/013).
+- Audit writer on: cost create/confirm, revenue create, payment_allocation finalize, financial_close_snapshot create (actor/action/object/correlation).
+- APIs: `GET /api/audit-events`; `POST|GET /api/integration-records` (duplicate → 409 C-002).
+- Middleware: `SecurityHeadersMiddleware`, `RateLimitingMiddleware` (fixed window `/api/*`, config-driven); `/health` `/ready` + correlation still OK.
+- VI terms extended (AUDIT_EVENT, INTEGRATION_RECORD, CORRELATION_ID, RATE_LIMIT, …); coverage test vs Sprints 1–11 keys.
+- Tests: **46 passed** (3 new Sprint 12).
+- DoD: `docs/sprint/SPRINT-12-DOD.md` declares **Pass 1 COMPLETE** + Pass 2 backlog pointers.
+- Board: `docs/sprint/README-AGENTS.md` Sprint 0–12 all Done.
+
+### Files / API
+- APIs: `/api/audit-events`, `/api/integration-records`
+- Endpoints: `AuditIntegrationEndpoints`
+- Middleware: `SecurityHeadersMiddleware`, `RateLimitingMiddleware`
+- Migration: `Sprint12_HardeningAudit`
+- Config: `RateLimiting` in `appsettings.json`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 46 passed
+
+### Deferred / Next (Pass 2)
+- Full outbox/retry; load/soak; JWT/OIDC; Next.js UAT; AC-001… matrix hardening
+- See Pass 2 pointers in `SPRINT-12-DOD.md`
+
+---
+
 ## 2026-09-11 — Sprint 11 Financial Profile & Reporting (E13)
 
 ### User

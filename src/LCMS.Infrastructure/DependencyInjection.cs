@@ -1,4 +1,5 @@
 using LCMS.Application.Abstractions;
+using LCMS.Infrastructure.Audit;
 using LCMS.Infrastructure.Identity;
 using LCMS.Infrastructure.Persistence;
 using LCMS.Infrastructure.Tenancy;
@@ -16,6 +17,9 @@ public static class DependencyInjection
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<HttpTenantContext>());
         services.AddScoped<HttpCurrentUserContext>();
         services.AddScoped<ICurrentUserContext>(sp => sp.GetRequiredService<HttpCurrentUserContext>());
+        services.AddScoped<HttpCorrelationContext>();
+        services.AddScoped<ICorrelationContext>(sp => sp.GetRequiredService<HttpCorrelationContext>());
+        services.AddScoped<IAuditWriter, AuditWriter>();
         services.AddScoped<IPermissionService, PermissionService>();
 
         var connectionString = configuration.GetConnectionString("LcmsDb")

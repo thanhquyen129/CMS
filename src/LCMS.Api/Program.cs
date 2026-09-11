@@ -29,12 +29,16 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.Configure<RateLimitingOptions>(
+        builder.Configuration.GetSection(RateLimitingOptions.SectionName));
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
     var app = builder.Build();
 
+    app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseMiddleware<RateLimitingMiddleware>();
     app.UseMiddleware<RequestLoggingMiddleware>();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseMiddleware<TenantResolutionMiddleware>();
@@ -126,6 +130,7 @@ try
     app.MapFinancialControlEndpoints();
     app.MapFinancialCloseEndpoints();
     app.MapDashboardReportingEndpoints();
+    app.MapAuditIntegrationEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

@@ -26,15 +26,18 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public FinalizePaymentAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task Handle(FinalizePaymentAllocationCommand request, CancellationToken cancellationToken)
@@ -91,6 +94,8 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
 
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
+        var beforeJson =
+            $"{{\"status\":\"{allocation.AllocationStatus}\",\"apSettled\":{ap.FinalizedSettledAmount}}}";
 
         allocation.AllocationStatus = SettlementAllocationStatuses.Finalized;
         allocation.FinalizedAt = now;
@@ -101,6 +106,13 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
             ap.RecognizedAmount, ap.AdjustmentAmount, ap.FinalizedSettledAmount);
         ap.UpdatedAt = now;
         ap.UpdatedBy = _user.UserId;
+
+        _audit.Append(
+            AuditActions.PaymentAllocationFinalize,
+            AuditObjectTypes.PaymentAllocation,
+            allocation.Id,
+            beforeJson: beforeJson,
+            afterJson: $"{{\"status\":\"{SettlementAllocationStatuses.Finalized}\",\"amount\":{allocation.Amount},\"apSettled\":{nextSettled}}}");
 
         await _db.SaveChangesAsync(cancellationToken);
 

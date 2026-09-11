@@ -8,7 +8,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | **Pass 1 — Thin slice** | Mỗi sprint chỉ làm **DoD mỏng nhất vận hành được** (MVP). Deferred ghi rõ trong `SPRINT-N-DOD.md`. |
 | **Pass 2 — Full PO** | Sau khi Sprint 0–12 Pass 1 xong: **chạy lại từng sprint** (agent/chat riêng) để bổ sung đủ theo TD6 + CP1–CP7 + CP6.5 (acceptance gates AC-001…, không còn “thin stub”). |
 
-Pass 1 đang chạy. Pass 2 bắt đầu khi Pass 1 hoàn tất Sprint 12.
+Pass 1 **COMPLETE** (Sprint 0–12). Pass 2 bắt đầu khi có `PROMPT-SPRINT-N-FULL.md`.
 
 ## Status (Pass 1)
 | Sprint | Status |
@@ -25,7 +25,10 @@ Pass 1 đang chạy. Pass 2 bắt đầu khi Pass 1 hoàn tất Sprint 12.
 | 9 Financial Control | Done (see `SPRINT-9-DOD.md`) |
 | 10 Financial Close | Done (see `SPRINT-10-DOD.md`) |
 | 11 Financial Profile & Reporting | Done (see `SPRINT-11-DOD.md`) |
-| 12 Hardening & UAT | In progress (cloud) |
+| 12 Hardening & UAT | **Done — Pass 1 COMPLETE** (see `SPRINT-12-DOD.md`) |
+
+Pass 1 complete after Sprint 12 merge. **Pass 2** (full PO / AC depth) starts with separate agents using `PROMPT-SPRINT-N-FULL.md` (create when ready).
+
 ## How to run
 1. Cursor: **New Agent Chat** (hoặc Cloud Agent).
 2. Paste đúng một file `PROMPT-SPRINT-N.md` (Pass 1) hoặc `PROMPT-SPRINT-N-FULL.md` (Pass 2, tạo khi tới Pass 2).

@@ -45,11 +45,13 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public CreateRevenueCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreateRevenueCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(CreateRevenueCommand request, CancellationToken cancellationToken)
@@ -103,6 +105,12 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         };
 
         _db.Revenues.Add(revenue);
+        _audit.Append(
+            AuditActions.RevenueCreate,
+            AuditObjectTypes.Revenue,
+            revenue.Id,
+            afterJson: $"{{\"billId\":\"{request.BillId}\",\"amount\":{amount},\"currency\":\"{currency}\",\"maturity\":\"{RevenueMaturities.Expected}\"}}");
+
         try
         {
             await _db.SaveChangesAsync(cancellationToken);

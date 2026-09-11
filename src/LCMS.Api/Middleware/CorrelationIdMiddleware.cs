@@ -1,3 +1,4 @@
+using LCMS.Infrastructure.Tenancy;
 using Microsoft.Extensions.Primitives;
 
 namespace LCMS.Api.Middleware;
@@ -19,11 +20,12 @@ public sealed class CorrelationIdMiddleware
         _loggerFactory = loggerFactory;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, HttpCorrelationContext correlationContext)
     {
         var correlationId = ResolveCorrelationId(context);
         context.Items[ItemKey] = correlationId;
         context.TraceIdentifier = correlationId;
+        correlationContext.CorrelationId = correlationId;
         context.Response.OnStarting(() =>
         {
             context.Response.Headers[HeaderName] = correlationId;

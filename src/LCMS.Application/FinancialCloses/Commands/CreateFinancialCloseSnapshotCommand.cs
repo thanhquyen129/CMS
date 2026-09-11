@@ -29,15 +29,18 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public CreateFinancialCloseSnapshotCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(CreateFinancialCloseSnapshotCommand request, CancellationToken cancellationToken)
@@ -109,6 +112,12 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         close.Status = FinancialCloseStatuses.Locked;
         close.LockedAt = closedAt;
         close.LockedBy = _user.UserId;
+
+        _audit.Append(
+            AuditActions.FinancialCloseSnapshotCreate,
+            AuditObjectTypes.FinancialCloseSnapshot,
+            snapshot.Id,
+            afterJson: $"{{\"financialCloseId\":\"{close.Id}\",\"snapshotVersion\":{nextSnapshotVersion},\"immutableHash\":\"{hash}\"}}");
 
         await _db.SaveChangesAsync(cancellationToken);
         return snapshot.Id;

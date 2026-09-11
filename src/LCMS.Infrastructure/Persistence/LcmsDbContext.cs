@@ -41,6 +41,10 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<PricingRuleComponent> PricingRuleComponents => Set<PricingRuleComponent>();
     public DbSet<Rating> Ratings => Set<Rating>();
     public DbSet<RatingDetail> RatingDetails => Set<RatingDetail>();
+    public DbSet<FinancialDocument> FinancialDocuments => Set<FinancialDocument>();
+    public DbSet<FinancialDocumentLine> FinancialDocumentLines => Set<FinancialDocumentLine>();
+    public DbSet<DocumentMatch> DocumentMatches => Set<DocumentMatch>();
+    public DbSet<DocumentMatchDetail> DocumentMatchDetails => Set<DocumentMatchDetail>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

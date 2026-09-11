@@ -31,6 +31,10 @@ public interface ILcmsDbContext
     DbSet<PricingRuleComponent> PricingRuleComponents { get; }
     DbSet<Rating> Ratings { get; }
     DbSet<RatingDetail> RatingDetails { get; }
+    DbSet<FinancialDocument> FinancialDocuments { get; }
+    DbSet<FinancialDocumentLine> FinancialDocumentLines { get; }
+    DbSet<DocumentMatch> DocumentMatches { get; }
+    DbSet<DocumentMatchDetail> DocumentMatchDetails { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

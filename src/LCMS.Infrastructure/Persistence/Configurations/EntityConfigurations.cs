@@ -610,3 +610,124 @@ internal sealed class RatingDetailConfiguration : IEntityTypeConfiguration<Ratin
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class FinancialDocumentConfiguration : IEntityTypeConfiguration<FinancialDocument>
+{
+    public void Configure(EntityTypeBuilder<FinancialDocument> builder)
+    {
+        builder.ToTable("financial_documents");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.DocumentType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.DocumentNo).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.Direction).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.TotalAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.DocumentDate).IsRequired();
+        builder.Property(e => e.ReceiptStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.AcceptanceStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.MatchingStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.SourceSystem).HasMaxLength(64);
+        builder.Property(e => e.ExternalId).HasMaxLength(128);
+
+        // IDX-006
+        builder.HasIndex(e => new { e.TenantId, e.DocumentType, e.DocumentNo, e.CounterpartyId });
+        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class FinancialDocumentLineConfiguration : IEntityTypeConfiguration<FinancialDocumentLine>
+{
+    public void Configure(EntityTypeBuilder<FinancialDocumentLine> builder)
+    {
+        builder.ToTable("financial_document_lines");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.DocumentId).IsRequired();
+        builder.Property(e => e.LineNo).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(512);
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.MatchedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.CostTypeCode).HasMaxLength(64);
+        builder.Property(e => e.RevenueTypeCode).HasMaxLength(64);
+
+        builder.HasIndex(e => new { e.TenantId, e.DocumentId, e.LineNo }).IsUnique();
+
+        builder.HasOne(e => e.Document)
+            .WithMany()
+            .HasForeignKey(e => e.DocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class DocumentMatchConfiguration : IEntityTypeConfiguration<DocumentMatch>
+{
+    public void Configure(EntityTypeBuilder<DocumentMatch> builder)
+    {
+        builder.ToTable("document_matches");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.MatchMethod).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.MatchStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.VersionNo).IsRequired();
+        builder.Property(e => e.ToleranceAmount).HasPrecision(18, 4);
+        builder.Property(e => e.Notes).HasMaxLength(1024);
+
+        builder.HasIndex(e => new { e.TenantId, e.PrimaryDocumentId, e.VersionNo });
+
+        builder.HasOne(e => e.PrimaryDocument)
+            .WithMany()
+            .HasForeignKey(e => e.PrimaryDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class DocumentMatchDetailConfiguration : IEntityTypeConfiguration<DocumentMatchDetail>
+{
+    public void Configure(EntityTypeBuilder<DocumentMatchDetail> builder)
+    {
+        builder.ToTable("document_match_details");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.MatchId).IsRequired();
+        builder.Property(e => e.SourceLineId).IsRequired();
+        builder.Property(e => e.MatchedAmount).HasPrecision(18, 4);
+
+        builder.HasIndex(e => new { e.TenantId, e.MatchId });
+        builder.HasIndex(e => new { e.TenantId, e.SourceLineId });
+        builder.HasIndex(e => new { e.TenantId, e.TargetLineId });
+
+        builder.HasOne(e => e.Match)
+            .WithMany()
+            .HasForeignKey(e => e.MatchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.SourceLine)
+            .WithMany()
+            .HasForeignKey(e => e.SourceLineId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.TargetLine)
+            .WithMany()
+            .HasForeignKey(e => e.TargetLineId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.TargetCost)
+            .WithMany()
+            .HasForeignKey(e => e.TargetCostId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.TargetRevenue)
+            .WithMany()
+            .HasForeignKey(e => e.TargetRevenueId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

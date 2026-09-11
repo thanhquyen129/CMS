@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-11 — Sprint 6 Financial Documents (E08)
+
+### User
+Implement Sprint 6 Pass 1 only: D07 financial_documents / lines / document_matches / match_details; Received ≠ Accepted ≠ Matched; tenant APIs receive/accept/lines/match; C-007 no over-match; C-003/C-004 no Cost/Revenue from documents; tests; DoD + PR to main. Non-goals: AP/AR, settlement, JWT, Next.js.
+
+### Done
+- Domain: `FinancialDocument` (three independent status dims), `FinancialDocumentLine`, `DocumentMatch`, `DocumentMatchDetail`.
+- Migration `Sprint6_FinancialDocuments` (four tables; IDX-006).
+- CQRS + API: receive, list/get, accept, add lines, start match, add match details (line↔line or line↔cost/revenue stub).
+- AC-005: ReceiptStatus / AcceptanceStatus / MatchingStatus never collapsed to one enum.
+- C-007: over-match rejected (tolerance stub = 0). C-003/C-004: receive/match do not invent Cost/Revenue.
+- VI validation/errors; tenant filter + `X-Tenant-Id`.
+- Tests: 3 new Sprint 6 (state separation + no invent; over-match; cross-tenant).
+- DoD: `docs/sprint/SPRINT-6-DOD.md`.
+
+### Files / API
+- APIs: `/api/financial-documents`, `/api/document-matches`
+- Endpoints: `FinancialDocumentEndpoints`
+- Migration: `20260911185745_Sprint6_FinancialDocuments`
+
+### Verify
+- `dotnet test Cms.sln -c Release`
+
+### Deferred / Next
+- AP/AR recognition (Sprint 7)
+- Settlement; auto-match; JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-12 — Sprint 5 Revenue & Profitability (E07)
 
 ### User

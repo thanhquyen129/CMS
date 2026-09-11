@@ -61,7 +61,21 @@ public static class VietnameseUiTerms
         ["VARIANCE"] = "Chênh lệch",
         ["EXCEPTION"] = "Ngoại lệ",
         ["FINANCIAL_CLOSE"] = "Chốt tài chính",
-        ["REOPEN_FINANCIAL_CLOSE"] = "Mở lại chốt tài chính"
+        ["REOPEN_FINANCIAL_CLOSE"] = "Mở lại chốt tài chính",
+
+        // Financial documents (D07 / E08) — Received ≠ Accepted ≠ Matched
+        ["FINANCIAL_DOCUMENT"] = "Chứng từ tài chính",
+        ["FINANCIAL_DOCUMENT_LINE"] = "Dòng chứng từ",
+        ["DOCUMENT_MATCH"] = "Khớp chứng từ",
+        ["DOCUMENT_MATCH_DETAIL"] = "Chi tiết khớp chứng từ",
+        ["RECEIVED"] = "Đã nhận",
+        ["NOT_RECEIVED"] = "Chưa nhận",
+        ["ACCEPTED"] = "Đã chấp nhận",
+        ["NOT_ACCEPTED"] = "Chưa chấp nhận",
+        ["REJECTED"] = "Từ chối",
+        ["MATCHED"] = "Đã khớp",
+        ["PARTIALLY_MATCHED"] = "Khớp một phần",
+        ["UNMATCHED"] = "Chưa khớp"
     };
 
     public static string Get(string codeKey)

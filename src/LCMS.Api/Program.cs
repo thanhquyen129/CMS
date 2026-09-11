@@ -120,6 +120,7 @@ try
     app.MapRatePricingEndpoints();
     app.MapCostEndpoints();
     app.MapRevenueEndpoints();
+    app.MapFinancialDocumentEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

@@ -20,11 +20,11 @@ Close Sprint 0: observability skeleton (E14), terminology contract (E16), real A
 
 ### Verify
 - `dotnet test Cms.sln -c Release` → 6 passed
-- After deploy: http://194.233.89.26/health , `/ready`, `/api/terminology`
-- Actions: https://github.com/thanhquyen129/CMS/actions
+- Operator fallback deploy (tar/scp + compose) OK: `/health`, `/ready`, `/api/terminology`, `/metrics`, correlation header
+- Actions: https://github.com/thanhquyen129/CMS/actions — require secret `CMS_DEPLOY_SSH_KEY` for automated deploy job
 
 ### Next
-- Ensure GitHub secret `CMS_DEPLOY_SSH_KEY` is set (deploy fails without it)
+- Confirm GitHub secret `CMS_DEPLOY_SSH_KEY` so Actions `deploy` succeeds without operator fallback
 - Sprint 1: User/Permission/JWT (replace `X-Tenant-Id`)
 - Cost Expected on Bill
 

@@ -22,7 +22,8 @@ public static class CostEndpoints
                     body.CostTypeCode,
                     body.VendorPartyId,
                     body.SourceType,
-                    body.SourceId),
+                    body.SourceId,
+                    body.OrganizationId),
                 ct);
             return Results.Created($"/api/costs/{id}", new { id });
         });
@@ -122,7 +123,8 @@ public sealed record CreateCostRequest(
     string? CostTypeCode,
     Guid? VendorPartyId,
     string? SourceType,
-    Guid? SourceId);
+    Guid? SourceId,
+    Guid? OrganizationId = null);
 
 public sealed record ConfirmCostRequest(decimal? ConfirmedAmount);
 

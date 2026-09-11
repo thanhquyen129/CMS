@@ -13,7 +13,8 @@ public sealed record CreateBillCommand(
     string BillNo,
     string BillType,
     string? SourceSystem,
-    string? ExternalId) : IRequest<Guid>;
+    string? ExternalId,
+    Guid? OrganizationId) : IRequest<Guid>;
 
 public sealed class CreateBillCommandValidator : AbstractValidator<CreateBillCommand>
 {
@@ -45,15 +46,18 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
     private readonly IPermissionService _permissions;
 
     public CreateBillCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
+        ICurrentUserContext userContext,
         IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
         _permissions = permissions;
     }
 
@@ -77,6 +81,22 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
             throw new NotFoundAppException("Không tìm thấy thuê bao hoặc thuê bao không còn hiệu lực.");
         }
 
+        Guid? organizationId = request.OrganizationId;
+        if (organizationId is Guid orgId)
+        {
+            var orgExists = await _db.Organizations.AnyAsync(o => o.Id == orgId, cancellationToken);
+            if (!orgExists)
+            {
+                throw new NotFoundAppException("Không tìm thấy tổ chức.");
+            }
+        }
+        else if (_userContext.HasUser)
+        {
+            var actor = await _db.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == _userContext.UserId, cancellationToken);
+            organizationId = actor?.OrganizationId;
+        }
+
         var billNo = request.BillNo.Trim();
         var duplicate = await _db.Bills.AnyAsync(
             b => b.TenantId == tenantId && b.BillNo == billNo,
@@ -94,7 +114,8 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
             SourceSystem = string.IsNullOrWhiteSpace(request.SourceSystem) ? null : request.SourceSystem.Trim(),
             ExternalId = string.IsNullOrWhiteSpace(request.ExternalId) ? null : request.ExternalId.Trim(),
             OperationalStatus = "active",
-            IsActive = true
+            IsActive = true,
+            OrganizationId = organizationId
         };
 
         _db.Bills.Add(bill);

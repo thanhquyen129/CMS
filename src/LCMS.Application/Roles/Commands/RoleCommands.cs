@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Identity;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -122,5 +123,76 @@ public sealed class AssignUserRoleCommandHandler : IRequestHandler<AssignUserRol
             RoleId = request.RoleId
         });
         await _db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed record AssignRolePermissionCommand(Guid RoleId, string ActionCode, string DataScope) : IRequest<Guid>;
+
+public sealed class AssignRolePermissionCommandValidator : AbstractValidator<AssignRolePermissionCommand>
+{
+    public AssignRolePermissionCommandValidator()
+    {
+        RuleFor(x => x.RoleId).NotEmpty().WithMessage("Vai trò không hợp lệ.");
+        RuleFor(x => x.ActionCode)
+            .NotEmpty().WithMessage("Mã quyền không được để trống.")
+            .MaximumLength(128).WithMessage("Mã quyền không được vượt quá 128 ký tự.");
+        RuleFor(x => x.DataScope)
+            .NotEmpty().WithMessage("Phạm vi dữ liệu không được để trống.")
+            .Must(DataScopes.IsValid)
+            .WithMessage("Phạm vi dữ liệu phải là all, organization hoặc own.");
+    }
+}
+
+public sealed class AssignRolePermissionCommandHandler : IRequestHandler<AssignRolePermissionCommand, Guid>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public AssignRolePermissionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<Guid> Handle(AssignRolePermissionCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var tenantId = _tenantContext.TenantId!.Value;
+        var actionCode = request.ActionCode.Trim();
+        var dataScope = request.DataScope.Trim().ToLowerInvariant();
+
+        var role = await _db.Roles.FirstOrDefaultAsync(r => r.Id == request.RoleId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy vai trò.");
+
+        await TenantAccessSeeder.EnsurePermissionCatalogAsync(_db, cancellationToken);
+
+        var permission = await _db.Permissions.FirstOrDefaultAsync(p => p.ActionCode == actionCode, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy quyền hành động.");
+
+        var existing = await _db.RolePermissions.FirstOrDefaultAsync(
+            rp => rp.TenantId == tenantId && rp.RoleId == role.Id && rp.PermissionId == permission.Id,
+            cancellationToken);
+
+        if (existing is not null)
+        {
+            existing.DataScope = dataScope;
+            await _db.SaveChangesAsync(cancellationToken);
+            return existing.Id;
+        }
+
+        var row = new RolePermission
+        {
+            TenantId = tenantId,
+            RoleId = role.Id,
+            PermissionId = permission.Id,
+            DataScope = dataScope
+        };
+        _db.RolePermissions.Add(row);
+        await _db.SaveChangesAsync(cancellationToken);
+        return row.Id;
     }
 }

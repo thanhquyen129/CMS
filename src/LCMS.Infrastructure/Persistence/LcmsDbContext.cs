@@ -8,11 +8,16 @@ namespace LCMS.Infrastructure.Persistence;
 public sealed class LcmsDbContext : DbContext, ILcmsDbContext
 {
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
 
-    public LcmsDbContext(DbContextOptions<LcmsDbContext> options, ITenantContext tenantContext)
+    public LcmsDbContext(
+        DbContextOptions<LcmsDbContext> options,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext)
         : base(options)
     {
         _tenantContext = tenantContext;
+        _userContext = userContext;
     }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -20,6 +25,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<User> Users => Set<User>();
     public DbSet<BusinessParty> BusinessParties => Set<BusinessParty>();
+    public DbSet<PartyRole> PartyRoles => Set<PartyRole>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
@@ -146,6 +152,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     private void StampAuditAndConcurrency()
     {
         var utc = DateTimeOffset.UtcNow;
+        var actorId = _userContext.HasUser ? _userContext.UserId : null;
         foreach (var entry in ChangeTracker.Entries<EntityBase>())
         {
             if (entry.State is EntityState.Added or EntityState.Modified)
@@ -154,10 +161,18 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
                 if (entry.State == EntityState.Added)
                 {
                     entry.Entity.CreatedAt = utc;
+                    if (actorId.HasValue && entry.Entity.CreatedBy is null)
+                    {
+                        entry.Entity.CreatedBy = actorId;
+                    }
                 }
                 else
                 {
                     entry.Entity.UpdatedAt = utc;
+                    if (actorId.HasValue)
+                    {
+                        entry.Entity.UpdatedBy = actorId;
+                    }
                 }
             }
         }

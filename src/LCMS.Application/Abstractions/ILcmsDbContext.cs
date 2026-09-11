@@ -10,6 +10,7 @@ public interface ILcmsDbContext
     DbSet<Organization> Organizations { get; }
     DbSet<User> Users { get; }
     DbSet<BusinessParty> BusinessParties { get; }
+    DbSet<PartyRole> PartyRoles { get; }
     DbSet<Role> Roles { get; }
     DbSet<Permission> Permissions { get; }
     DbSet<RolePermission> RolePermissions { get; }

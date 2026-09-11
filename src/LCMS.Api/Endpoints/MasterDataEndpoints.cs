@@ -4,6 +4,8 @@ using LCMS.Application.Currencies.Commands;
 using LCMS.Application.Currencies.Queries;
 using LCMS.Application.Organizations.Commands;
 using LCMS.Application.Organizations.Queries;
+using LCMS.Application.PartyRoles.Commands;
+using LCMS.Application.PartyRoles.Queries;
 using MediatR;
 
 namespace LCMS.Api.Endpoints;
@@ -24,6 +26,16 @@ public static class MasterDataEndpoints
         {
             var list = await sender.Send(new ListOrganizationsQuery(), ct);
             return Results.Ok(list);
+        });
+        orgs.MapGet("/tree", async (ISender sender, CancellationToken ct) =>
+        {
+            var tree = await sender.Send(new GetOrganizationTreeQuery(), ct);
+            return Results.Ok(tree);
+        });
+        orgs.MapGet("/{id:guid}/children", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var children = await sender.Send(new ListOrganizationChildrenQuery(id), ct);
+            return Results.Ok(children);
         });
         orgs.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
@@ -77,12 +89,40 @@ public static class MasterDataEndpoints
             await sender.Send(new SoftDeleteBusinessPartyCommand(id), ct);
             return Results.NoContent();
         });
+        parties.MapPost("/{id:guid}/roles", async (
+            Guid id,
+            AssignPartyRoleRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var roleId = await sender.Send(new AssignPartyRoleCommand(id, body.RoleCode), ct);
+            return Results.Created($"/api/business-parties/{id}/roles/{body.RoleCode}", new { id = roleId });
+        });
+        parties.MapGet("/{id:guid}/roles", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListPartyRolesQuery(id), ct);
+            return Results.Ok(list);
+        });
+        parties.MapDelete("/{id:guid}/roles/{roleCode}", async (
+            Guid id,
+            string roleCode,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new RevokePartyRoleCommand(id, roleCode), ct);
+            return Results.NoContent();
+        });
 
         var currencies = app.MapGroup("/api/currencies").WithTags("Currencies");
-        currencies.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        currencies.MapGet("/", async (bool? activeOnly, ISender sender, CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListCurrenciesQuery(), ct);
+            var list = await sender.Send(new ListCurrenciesQuery(activeOnly), ct);
             return Results.Ok(list);
+        });
+        currencies.MapGet("/{code}", async (string code, ISender sender, CancellationToken ct) =>
+        {
+            var currency = await sender.Send(new GetCurrencyByCodeQuery(code), ct);
+            return Results.Ok(currency);
         });
         currencies.MapPut("/", async (UpsertCurrencyRequest body, ISender sender, CancellationToken ct) =>
         {
@@ -100,4 +140,5 @@ public sealed record CreateOrganizationRequest(string Code, string Name, Guid? P
 public sealed record UpdateOrganizationRequest(string Name, Guid? ParentId, bool IsActive);
 public sealed record CreateBusinessPartyRequest(string Code, string Name);
 public sealed record UpdateBusinessPartyRequest(string Name, bool IsActive);
+public sealed record AssignPartyRoleRequest(string RoleCode);
 public sealed record UpsertCurrencyRequest(string Code, string Name, int DecimalPlaces, bool IsActive);

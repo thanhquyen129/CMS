@@ -1,7 +1,7 @@
 namespace LCMS.Application.Abstractions;
 
 /// <summary>
-/// Current actor from X-User-Id until JWT claims (Sprint 1 bootstrap).
+/// Current actor from JWT <c>sub</c> (or Dev <c>X-User-Id</c> when header bootstrap is enabled).
 /// </summary>
 public interface ICurrentUserContext
 {

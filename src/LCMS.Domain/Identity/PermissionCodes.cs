@@ -5,6 +5,8 @@ public static class PermissionCodes
 {
     public const string BillCreate = "bill.create";
     public const string BillRead = "bill.read";
+    public const string CostCreate = "cost.create";
+    public const string CostRead = "cost.read";
     public const string MasterOrgManage = "master.org.manage";
     public const string MasterPartyManage = "master.party.manage";
     public const string MasterCurrencyManage = "master.currency.manage";
@@ -15,6 +17,8 @@ public static class PermissionCodes
     [
         (BillCreate, "Tạo Bill"),
         (BillRead, "Xem Bill"),
+        (CostCreate, "Tạo chi phí"),
+        (CostRead, "Xem chi phí"),
         (MasterOrgManage, "Quản lý tổ chức"),
         (MasterPartyManage, "Quản lý đối tác"),
         (MasterCurrencyManage, "Quản lý tiền tệ"),
@@ -26,6 +30,8 @@ public static class PermissionCodes
     [
         BillCreate,
         BillRead,
+        CostCreate,
+        CostRead,
         MasterOrgManage,
         MasterPartyManage,
         MasterCurrencyManage,

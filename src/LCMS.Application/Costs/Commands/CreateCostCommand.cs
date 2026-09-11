@@ -16,7 +16,8 @@ public sealed record CreateCostCommand(
     string? CostTypeCode,
     Guid? VendorPartyId,
     string? SourceType,
-    Guid? SourceId) : IRequest<Guid>;
+    Guid? SourceId,
+    Guid? OrganizationId) : IRequest<Guid>;
 
 public sealed class CreateCostCommandValidator : AbstractValidator<CreateCostCommand>
 {
@@ -30,7 +31,8 @@ public sealed class CreateCostCommandValidator : AbstractValidator<CreateCostCom
             .GreaterThanOrEqualTo(0).WithMessage("Số tiền chi phí không được âm.");
         RuleFor(x => x.CurrencyCode)
             .NotEmpty().WithMessage("Mã tiền tệ không được để trống.")
-            .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.");
+            .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.")
+            .Matches(@"^[A-Za-z]{3}$").WithMessage("Mã tiền tệ phải là 3 chữ cái ISO 4217.");
         RuleFor(x => x.BillId)
             .NotEmpty().WithMessage("Chi phí trực tiếp bắt buộc gắn Bill.")
             .When(x => string.Equals(x.AttributionType, CostAttributionTypes.Direct, StringComparison.OrdinalIgnoreCase));
@@ -46,12 +48,18 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
     private readonly IAuditWriter _audit;
 
-    public CreateCostCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
+    public CreateCostCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
         _audit = audit;
     }
 
@@ -67,6 +75,25 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         var currency = request.CurrencyCode.Trim().ToUpperInvariant();
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
 
+        var currencyRow = await _db.Currencies.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Code == currency, cancellationToken);
+        if (currencyRow is null)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["CurrencyCode"] = ["Mã tiền tệ chưa có trong danh mục. Vui lòng khai báo trước."]
+            });
+        }
+
+        if (!currencyRow.IsActive)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["CurrencyCode"] = ["Mã tiền tệ đã ngừng hiệu lực."]
+            });
+        }
+
+        Guid? organizationId = request.OrganizationId;
         if (attribution == CostAttributionTypes.Direct)
         {
             var bill = await _db.Bills.AsNoTracking()
@@ -75,6 +102,23 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             {
                 throw new NotFoundAppException("Không tìm thấy Bill.");
             }
+
+            organizationId ??= bill.OrganizationId;
+        }
+
+        if (organizationId is Guid orgId)
+        {
+            var orgExists = await _db.Organizations.AnyAsync(o => o.Id == orgId, cancellationToken);
+            if (!orgExists)
+            {
+                throw new NotFoundAppException("Không tìm thấy tổ chức.");
+            }
+        }
+        else if (_userContext.HasUser)
+        {
+            var actor = await _db.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == _userContext.UserId, cancellationToken);
+            organizationId = actor?.OrganizationId;
         }
 
         if (request.SourceId.HasValue && !string.IsNullOrWhiteSpace(request.SourceType))
@@ -104,7 +148,8 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             SourceId = request.SourceId,
             RecordStatus = "active",
             ApprovalStatus = "not_required",
-            EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
+            EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
+            OrganizationId = organizationId
         };
 
         _db.Costs.Add(cost);

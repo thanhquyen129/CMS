@@ -14,7 +14,11 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | Sprint | Status |
 |--------|--------|
 | 0 Foundation FULL | Done (see `SPRINT-0-FULL-DOD.md`) |
+<<<<<<< HEAD
 | 1 Identity + Master FULL | In progress (cloud) |
+=======
+| 1 Identity + Master FULL | In progress — see `SPRINT-1-FULL-DOD.md` |
+>>>>>>> 9c6e508 (Ship Sprint 1 FULL Identity + Master Data (Pass 2).)
 | 2–12 FULL | Queued |
 
 ## How to run Pass 2

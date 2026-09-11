@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-09-11 — Sprint 1 FULL Identity + Master Data (Pass 2)
+
+### User
+Pass 2 Sprint 1 FULL: Permission × Data Scope independent (`all`/`organization`/`own`) on Bill+Cost list/get; JWT `sub` actor; inactive users denied; party_roles + APIs; org tree/children; currency harden; tests + SPRINT-1-FULL-DOD + handoff + PR. Base after Sprint 0 FULL JWT. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Data Scope matrix on `role_permissions` (`all` > `organization` > `own`); enforced on Bill/Cost list+get (`bill.read` / `cost.read`).
+- `organization_id` on users/bills/costs; org subtree for organization scope; `CreatedBy` stamped from JWT `sub` / Dev header.
+- Inactive registered users → VI 403 «Tài khoản không còn hiệu lực.»
+- `party_roles` + assign/list/revoke APIs; org `tree` + `children`; currency seed VND/USD/EUR + get-by-code + inactive reject + baseline decimals.
+- `POST /api/roles/{id}/permissions` with dataScope; `PUT /api/users/{id}`.
+- Migration `Sprint1Full_IdentityMasterData`; ADR-0003; `PROMPT-SPRINT-1-FULL.md` + `SPRINT-1-FULL-DOD.md`.
+- Tests: `Sprint1FullIdentityMasterTests` (6) — suite **56 passed**.
+
+### Files / API
+- APIs: `GET /api/bills`; role permissions; user update; org tree/children; party roles; `GET /api/currencies/{code}`
+- Identity: `PermissionService`, `OrganizationHierarchyService`, `DataScopeAccess`
+- Migration: `20260911202508_Sprint1Full_IdentityMasterData`
+- ADR: `docs/adr/ADR-0003-permission-data-scope.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → **56 passed**
+
+### Deferred / Next
+- Data Scope on Revenue/Documents/AP-AR; OIDC; multi-org membership; Pass 2 Sprint 2 FULL
+
+---
+
 ## 2026-09-11 — Sprint 0 FULL Foundation (Pass 2)
 
 ### User
@@ -37,6 +65,7 @@ Pass 2 Sprint 0 FULL: JWT Bearer (`tenant_id` + `sub`); Production disables head
 
 ### User
 Implement Sprint 12 Pass 1 final slice only: audit_events + writes on key money mutations + GET /api/audit-events; integration_records C-002 upsert stub; rate-limit + security headers smoke; Vietnamese terminology coverage + DoD declaring Pass 1 COMPLETE; tests green; handoff + PR to main. Non-goals: full outbox, load tests, JWT, Next.js UAT. Never secrets/alogex.
+
 
 ### Done
 - Domain D12: `AuditEvent`, `IntegrationRecord`, `IntegrationError` (UUIDv7, soft-delete, tenant_id).

@@ -1,4 +1,5 @@
 using LCMS.Application.Abstractions;
+using LCMS.Application.Currencies;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -41,6 +42,7 @@ public class LcmsApiFactory : WebApplicationFactory<Program>
         var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
         await db.Database.EnsureDeletedAsync();
         await db.Database.EnsureCreatedAsync();
+        await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
     }
 
     protected override void Dispose(bool disposing)

@@ -26,9 +26,19 @@ public static class TenantBillEndpoints
         bills.MapPost("/", async (CreateBillRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
-                new CreateBillCommand(body.BillNo, body.BillType, body.SourceSystem, body.ExternalId),
+                new CreateBillCommand(
+                    body.BillNo,
+                    body.BillType,
+                    body.SourceSystem,
+                    body.ExternalId,
+                    body.OrganizationId),
                 ct);
             return Results.Created($"/api/bills/{id}", new { id });
+        });
+        bills.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListBillsQuery(), ct);
+            return Results.Ok(list);
         });
         bills.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
@@ -46,4 +56,5 @@ public sealed record CreateBillRequest(
     string BillNo,
     string BillType,
     string? SourceSystem,
-    string? ExternalId);
+    string? ExternalId,
+    Guid? OrganizationId = null);

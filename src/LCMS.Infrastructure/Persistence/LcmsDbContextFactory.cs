@@ -15,11 +15,16 @@ public sealed class LcmsDbContextFactory : IDesignTimeDbContextFactory<LcmsDbCon
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new LcmsDbContext(options, new DesignTimeTenantContext());
+        return new LcmsDbContext(options, new DesignTimeTenantContext(), new DesignTimeUserContext());
     }
 
     private sealed class DesignTimeTenantContext : ITenantContext
     {
         public Guid? TenantId => null;
+    }
+
+    private sealed class DesignTimeUserContext : ICurrentUserContext
+    {
+        public Guid? UserId => null;
     }
 }

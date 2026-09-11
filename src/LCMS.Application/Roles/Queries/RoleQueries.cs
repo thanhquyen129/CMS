@@ -67,3 +67,49 @@ public sealed class ListRolesQueryHandler : IRequestHandler<ListRolesQuery, IRea
             .ToListAsync(cancellationToken);
     }
 }
+
+public sealed record RolePermissionDto(
+    Guid Id,
+    Guid RoleId,
+    string ActionCode,
+    string PermissionName,
+    string DataScope);
+
+public sealed record ListRolePermissionsQuery(Guid RoleId) : IRequest<IReadOnlyList<RolePermissionDto>>;
+
+public sealed class ListRolePermissionsQueryHandler
+    : IRequestHandler<ListRolePermissionsQuery, IReadOnlyList<RolePermissionDto>>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public ListRolePermissionsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<IReadOnlyList<RolePermissionDto>> Handle(
+        ListRolePermissionsQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var roleExists = await _db.Roles.AnyAsync(r => r.Id == request.RoleId, cancellationToken);
+        if (!roleExists)
+        {
+            throw new NotFoundAppException("Không tìm thấy vai trò.");
+        }
+
+        return await (
+            from rp in _db.RolePermissions.AsNoTracking()
+            join p in _db.Permissions.AsNoTracking() on rp.PermissionId equals p.Id
+            where rp.RoleId == request.RoleId
+            orderby p.ActionCode
+            select new RolePermissionDto(rp.Id, rp.RoleId, p.ActionCode, p.Name, rp.DataScope)
+        ).ToListAsync(cancellationToken);
+    }
+}

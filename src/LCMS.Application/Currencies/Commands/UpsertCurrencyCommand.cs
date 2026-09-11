@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,15 +32,35 @@ public sealed class UpsertCurrencyCommandValidator : AbstractValidator<UpsertCur
 public sealed class UpsertCurrencyCommandHandler : IRequestHandler<UpsertCurrencyCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public UpsertCurrencyCommandHandler(ILcmsDbContext db)
+    public UpsertCurrencyCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions)
     {
         _db = db;
+        _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(UpsertCurrencyCommand request, CancellationToken cancellationToken)
     {
+        // Global catalog: permission only when tenant context is present (actor path).
+        if (_tenantContext.HasTenant)
+        {
+            await _permissions.EnsureAsync(
+                PermissionCodes.MasterCurrencyManage,
+                "Bạn không có quyền quản lý tiền tệ.",
+                cancellationToken);
+        }
+
         var code = request.Code.Trim().ToUpperInvariant();
+
+        // Harden: baseline currencies keep fixed decimal places.
+        var baseline = CurrencyCatalogSeeder.Baseline.FirstOrDefault(b => b.Code == code);
+        var decimalPlaces = baseline.Code is not null ? baseline.DecimalPlaces : request.DecimalPlaces;
 
         var existing = await _db.Currencies
             .FirstOrDefaultAsync(c => c.Code == code, cancellationToken);
@@ -50,7 +71,7 @@ public sealed class UpsertCurrencyCommandHandler : IRequestHandler<UpsertCurrenc
             {
                 Code = code,
                 Name = request.Name.Trim(),
-                DecimalPlaces = request.DecimalPlaces,
+                DecimalPlaces = decimalPlaces,
                 IsActive = request.IsActive
             };
             _db.Currencies.Add(currency);
@@ -58,8 +79,19 @@ public sealed class UpsertCurrencyCommandHandler : IRequestHandler<UpsertCurrenc
             return currency.Id;
         }
 
+        if (baseline.Code is not null && request.DecimalPlaces != baseline.DecimalPlaces)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["DecimalPlaces"] =
+                [
+                    $"Số chữ số thập phân của {code} phải là {baseline.DecimalPlaces} (không được đổi)."
+                ]
+            });
+        }
+
         existing.Name = request.Name.Trim();
-        existing.DecimalPlaces = request.DecimalPlaces;
+        existing.DecimalPlaces = decimalPlaces;
         existing.IsActive = request.IsActive;
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;

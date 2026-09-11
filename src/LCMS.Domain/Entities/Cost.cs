@@ -53,6 +53,9 @@ public sealed class Cost : TenantEntityBase
     public DateTimeOffset? ActualizedAt { get; set; }
     public Guid? ActualizedBy { get; set; }
 
+    /// <summary>Owning organization for Data Scope = organization (usually from Bill).</summary>
+    public Guid? OrganizationId { get; set; }
+
     public Bill? Bill { get; set; }
 }
 

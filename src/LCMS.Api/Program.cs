@@ -2,6 +2,7 @@ using LCMS.Api.Auth;
 using LCMS.Api.Endpoints;
 using LCMS.Api.Middleware;
 using LCMS.Application;
+using LCMS.Application.Currencies;
 using LCMS.Infrastructure;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -153,6 +154,7 @@ static async Task MigrateDatabaseAsync(WebApplication app)
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
     await db.Database.MigrateAsync();
+    await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
 }
 
 public partial class Program;

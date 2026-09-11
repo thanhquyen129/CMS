@@ -20,5 +20,8 @@ public sealed class Bill : TenantEntityBase
     public string OperationalStatus { get; set; } = "active";
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Owning organization for Data Scope = organization.</summary>
+    public Guid? OrganizationId { get; set; }
+
     public Tenant? Tenant { get; set; }
 }

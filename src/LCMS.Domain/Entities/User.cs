@@ -2,10 +2,13 @@ using LCMS.Domain.Common;
 
 namespace LCMS.Domain.Entities;
 
-/// <summary>Table: users (D01) — tenant-bound identity (JWT deferred; X-User-Id bootstrap).</summary>
+/// <summary>Table: users (D01) — tenant-bound identity; JWT <c>sub</c> is actor (Dev may use X-User-Id).</summary>
 public sealed class User : TenantEntityBase
 {
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+
+    /// <summary>Home organization for Data Scope = organization.</summary>
+    public Guid? OrganizationId { get; set; }
 }

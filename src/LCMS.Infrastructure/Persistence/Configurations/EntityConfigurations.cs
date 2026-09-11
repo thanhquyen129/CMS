@@ -57,6 +57,8 @@ internal sealed class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.Property(e => e.ExternalVersion).HasMaxLength(64);
         builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.OrganizationId).HasColumnType("uuid");
+        builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
 
         // IDX-001
         builder.HasIndex(e => new { e.TenantId, e.BillNo }).IsUnique();
@@ -92,7 +94,9 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.Email).HasMaxLength(320).IsRequired();
         builder.Property(e => e.DisplayName).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.OrganizationId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
     }
 }
 
@@ -106,6 +110,21 @@ internal sealed class BusinessPartyConfiguration : IEntityTypeConfiguration<Busi
         builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
         builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+    }
+}
+
+internal sealed class PartyRoleConfiguration : IEntityTypeConfiguration<PartyRole>
+{
+    public void Configure(EntityTypeBuilder<PartyRole> builder)
+    {
+        builder.ToTable("party_roles");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PartyId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RoleCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.IsActive).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.PartyId, e.RoleCode }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.RoleCode });
     }
 }
 
@@ -129,6 +148,8 @@ internal sealed class CostConfiguration : IEntityTypeConfiguration<Cost>
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.ApprovalStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.EffectiveDate).IsRequired();
+        builder.Property(e => e.OrganizationId).HasColumnType("uuid");
+        builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
 
         // IDX-003
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity, e.EffectiveDate });

@@ -1,5 +1,8 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Identity;
+using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -54,6 +57,8 @@ public sealed record CostDto(
     string RecordStatus,
     string ApprovalStatus,
     DateOnly EffectiveDate,
+    Guid? OrganizationId,
+    Guid? CreatedBy,
     DateTimeOffset? ConfirmedAt,
     DateTimeOffset? ActualizedAt,
     IReadOnlyList<CostAdjustmentDto> Adjustments,
@@ -68,6 +73,8 @@ public sealed record CostListItemDto(
     string CurrencyCode,
     string? CostTypeCode,
     string RecordStatus,
+    Guid? OrganizationId,
+    Guid? CreatedBy,
     DateOnly EffectiveDate);
 
 public sealed record GetCostByIdQuery(Guid Id) : IRequest<CostDto>;
@@ -76,11 +83,22 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public GetCostByIdQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetCostByIdQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<CostDto> Handle(GetCostByIdQuery request, CancellationToken cancellationToken)
@@ -90,9 +108,35 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             throw new TenantRequiredAppException();
         }
 
+        var scope = await _permissions.EnsureAndResolveDataScopeAsync(
+            PermissionCodes.CostRead,
+            "Bạn không có quyền xem chi phí.",
+            cancellationToken);
+
         var cost = await _db.Costs.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
+
+        Guid? actorOrgId = null;
+        IReadOnlySet<Guid> orgSubtree = new HashSet<Guid>();
+        if (scope == DataScopes.Organization && _userContext.HasUser)
+        {
+            var actor = await _db.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == _userContext.UserId, cancellationToken);
+            actorOrgId = actor?.OrganizationId;
+            orgSubtree = await _orgHierarchy.GetSubtreeIdsAsync(actorOrgId, cancellationToken);
+        }
+
+        if (!DataScopeAccess.Allows(
+                scope,
+                _userContext.UserId,
+                actorOrgId,
+                orgSubtree,
+                cost.CreatedBy,
+                cost.OrganizationId))
+        {
+            throw new NotFoundAppException("Không tìm thấy chi phí.");
+        }
 
         var adjustments = await _db.CostAdjustments.AsNoTracking()
             .Where(a => a.CostId == cost.Id)
@@ -162,6 +206,8 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             cost.RecordStatus,
             cost.ApprovalStatus,
             cost.EffectiveDate,
+            cost.OrganizationId,
+            cost.CreatedBy,
             cost.ConfirmedAt,
             cost.ActualizedAt,
             adjustments,
@@ -175,11 +221,22 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public ListCostsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public ListCostsQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<IReadOnlyList<CostListItemDto>> Handle(ListCostsQuery request, CancellationToken cancellationToken)
@@ -188,6 +245,11 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
         {
             throw new TenantRequiredAppException();
         }
+
+        var scope = await _permissions.EnsureAndResolveDataScopeAsync(
+            PermissionCodes.CostRead,
+            "Bạn không có quyền xem chi phí.",
+            cancellationToken);
 
         var query = _db.Costs.AsNoTracking().AsQueryable();
         if (request.BillId.HasValue)
@@ -199,6 +261,33 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
         {
             var maturity = request.FinancialMaturity.Trim().ToLowerInvariant();
             query = query.Where(c => c.FinancialMaturity == maturity);
+        }
+
+        if (scope == DataScopes.Own)
+        {
+            if (!_userContext.HasUser)
+            {
+                return [];
+            }
+
+            query = query.Where(c => c.CreatedBy == _userContext.UserId);
+        }
+        else if (scope == DataScopes.Organization)
+        {
+            if (!_userContext.HasUser)
+            {
+                return [];
+            }
+
+            var actor = await _db.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == _userContext.UserId, cancellationToken);
+            var orgSubtree = await _orgHierarchy.GetSubtreeIdsAsync(actor?.OrganizationId, cancellationToken);
+            if (orgSubtree.Count == 0)
+            {
+                return [];
+            }
+
+            query = query.Where(c => c.OrganizationId != null && orgSubtree.Contains(c.OrganizationId.Value));
         }
 
         return await query
@@ -213,6 +302,8 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
                 c.CurrencyCode,
                 c.CostTypeCode,
                 c.RecordStatus,
+                c.OrganizationId,
+                c.CreatedBy,
                 c.EffectiveDate))
             .ToListAsync(cancellationToken);
     }

@@ -48,6 +48,9 @@ public interface ILcmsDbContext
     DbSet<Variance> Variances { get; }
     DbSet<FinancialException> Exceptions { get; }
     DbSet<Approval> Approvals { get; }
+    DbSet<FinancialClose> FinancialCloses { get; }
+    DbSet<FinancialCloseSnapshot> FinancialCloseSnapshots { get; }
+    DbSet<FinancialCloseSnapshotDetail> FinancialCloseSnapshotDetails { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

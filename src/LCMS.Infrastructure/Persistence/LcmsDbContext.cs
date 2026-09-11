@@ -58,6 +58,9 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<Variance> Variances => Set<Variance>();
     public DbSet<FinancialException> Exceptions => Set<FinancialException>();
     public DbSet<Approval> Approvals => Set<Approval>();
+    public DbSet<FinancialClose> FinancialCloses => Set<FinancialClose>();
+    public DbSet<FinancialCloseSnapshot> FinancialCloseSnapshots => Set<FinancialCloseSnapshot>();
+    public DbSet<FinancialCloseSnapshotDetail> FinancialCloseSnapshotDetails => Set<FinancialCloseSnapshotDetail>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +73,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     {
         StampAuditAndConcurrency();
         RejectHardDeletes();
+        RejectImmutableCloseSnapshotMutations();
         return base.SaveChangesAsync(cancellationToken);
     }
 
@@ -77,6 +81,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     {
         StampAuditAndConcurrency();
         RejectHardDeletes();
+        RejectImmutableCloseSnapshotMutations();
         return base.SaveChanges();
     }
 
@@ -169,5 +174,23 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
 
         throw new InvalidOperationException(
             "Cấm xóa vật lý (hard delete). Dùng SoftDelete() hoặc cancel/reversal/adjustment theo TD1 C-013.");
+    }
+
+    /// <summary>C-010 / AC-008: closed snapshots and details are insert-only.</summary>
+    private void RejectImmutableCloseSnapshotMutations()
+    {
+        var illegal = ChangeTracker.Entries()
+            .Where(e =>
+                e.Entity is FinancialCloseSnapshot or FinancialCloseSnapshotDetail
+                && e.State is EntityState.Modified or EntityState.Deleted)
+            .ToList();
+
+        if (illegal.Count == 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "Cấm sửa hoặc xóa bản chốt tài chính (C-010). Mở lại / chốt lại để tạo phiên bản snapshot mới.");
     }
 }

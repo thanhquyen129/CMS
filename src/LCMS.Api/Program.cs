@@ -124,6 +124,7 @@ try
     app.MapExposureApArEndpoints();
     app.MapSettlementEndpoints();
     app.MapFinancialControlEndpoints();
+    app.MapFinancialCloseEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

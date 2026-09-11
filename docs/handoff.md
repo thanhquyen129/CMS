@@ -1,5 +1,35 @@
 # Handoff
 
+## 2026-09-11 — Sprint 10 Financial Close (E12)
+
+### User
+Implement Sprint 10 Pass 1 only: D11 financial_closes / financial_close_snapshots / financial_close_snapshot_details; C-010/AC-008 immutable snapshots; reopen/reclose new versions; tenant APIs start/snapshot/reopen/list + VI; isolation + immutability tests; DoD + PR to main. Non-goals: reporting UI (Sprint 11), hardening (Sprint 12), JWT, Next.js.
+
+### Done
+- Domain: `FinancialClose`, `FinancialCloseSnapshot`, `FinancialCloseSnapshotDetail`.
+- Migration `Sprint10_FinancialClose` (three tables).
+- CQRS + API: start close; snapshot+lock (metrics hash); reopen; list/get snapshots; optional supersede reclose.
+- C-010/AC-008: snapshots insert-only (DbContext rejects Modified/Deleted); reopen keeps history; re-snapshot creates new `SnapshotVersion`; reclose creates new `VersionNo`.
+- Eligibility stub: block snapshot when open/in_progress critical exception in scope.
+- VI validation/errors; tenant filter + `X-Tenant-Id` / `X-User-Id`.
+- Tests: 40 passed (3 new Sprint 10 — immutable+reopen history; eligibility; cross-tenant+reclose).
+- DoD: `docs/sprint/SPRINT-10-DOD.md`.
+
+### Files / API
+- APIs: `/api/financial-closes`, `/api/financial-close-snapshots`
+- Endpoints: `FinancialCloseEndpoints`
+- Migration: `20260911193741_Sprint10_FinancialClose`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 40 passed
+
+### Deferred / Next
+- Reporting dashboard (Sprint 11)
+- Hardening / UAT (Sprint 12)
+- Full eligibility matrix; period lock on live ledger; JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-11 — Sprint 9 Financial Control (E11)
 
 ### User

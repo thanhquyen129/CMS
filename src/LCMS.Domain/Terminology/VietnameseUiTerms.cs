@@ -69,7 +69,12 @@ public static class VietnameseUiTerms
         ["EXCEPTION_RESOLVED"] = "Ngoại lệ đã xử lý",
         ["EXCEPTION_CLOSED"] = "Ngoại lệ đã đóng",
         ["FINANCIAL_CLOSE"] = "Chốt tài chính",
+        ["FINANCIAL_CLOSE_SNAPSHOT"] = "Bản chốt tài chính",
+        ["FINANCIAL_CLOSE_SNAPSHOT_DETAIL"] = "Chi tiết bản chốt tài chính",
         ["REOPEN_FINANCIAL_CLOSE"] = "Mở lại chốt tài chính",
+        ["RECLOSE_FINANCIAL_CLOSE"] = "Chốt lại tài chính",
+        ["CLOSE_LOCKED"] = "Đã khóa chốt",
+        ["CLOSE_REOPENED"] = "Đã mở lại chốt",
         ["FINANCIAL_CONTROL"] = "Kiểm soát tài chính",
 
         // Financial documents (D07 / E08) — Received ≠ Accepted ≠ Matched

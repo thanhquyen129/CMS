@@ -1119,3 +1119,80 @@ internal sealed class ApprovalConfiguration : IEntityTypeConfiguration<Approval>
         builder.HasIndex(e => new { e.TenantId, e.Status, e.RequestedAt });
     }
 }
+
+internal sealed class FinancialCloseConfiguration : IEntityTypeConfiguration<FinancialClose>
+{
+    public void Configure(EntityTypeBuilder<FinancialClose> builder)
+    {
+        builder.ToTable("financial_closes");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ScopeType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.VersionNo).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.PolicyVersion).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.BaseCurrency).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.ReopenReason).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.ScopeType, e.ScopeId, e.VersionNo });
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.PeriodFrom, e.PeriodTo });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.ScopeId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+    }
+}
+
+internal sealed class FinancialCloseSnapshotConfiguration : IEntityTypeConfiguration<FinancialCloseSnapshot>
+{
+    public void Configure(EntityTypeBuilder<FinancialCloseSnapshot> builder)
+    {
+        builder.ToTable("financial_close_snapshots");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.FinancialCloseId).IsRequired();
+        builder.Property(e => e.ScopeType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.SnapshotVersion).IsRequired();
+        builder.Property(e => e.ClosedAt).IsRequired();
+        builder.Property(e => e.PolicyVersion).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.BaseCurrency).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.ImmutableHash).HasMaxLength(128).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.FinancialCloseId, e.SnapshotVersion }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.ScopeType, e.ScopeId, e.ClosedAt });
+        builder.HasIndex(e => new { e.TenantId, e.ImmutableHash });
+
+        builder.HasOne(e => e.FinancialClose)
+            .WithMany()
+            .HasForeignKey(e => e.FinancialCloseId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class FinancialCloseSnapshotDetailConfiguration : IEntityTypeConfiguration<FinancialCloseSnapshotDetail>
+{
+    public void Configure(EntityTypeBuilder<FinancialCloseSnapshotDetail> builder)
+    {
+        builder.ToTable("financial_close_snapshot_details");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.SnapshotId).IsRequired();
+        builder.Property(e => e.LineNo).IsRequired();
+        builder.Property(e => e.MetricKey).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.MetricValue).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3);
+        builder.Property(e => e.SourceType).HasMaxLength(64);
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.SnapshotId, e.LineNo }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.SnapshotId, e.MetricKey });
+
+        builder.HasOne(e => e.Snapshot)
+            .WithMany()
+            .HasForeignKey(e => e.SnapshotId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}

@@ -14,7 +14,7 @@ Pass 2 closes TD6 E07 (+ E13 profile depth): FX stub parity with Cost FULL, opti
 | `GET /api/bills/{id}/profitability?view=` | Done | `expected` \| `confirmed` \| `actual` \| `best` |
 | C-004 Single Economic Revenue hardened | Done | Reject document/AR + aliases; VI message; defense in depth |
 | Vietnamese errors + UI terms | Done | REVENUE_CONFIRM_APPROVAL_THRESHOLD, BILL_PROFITABILITY, … |
-| Tests | Done | `Sprint5FullRevenueProfitabilityTests` (3); suite must stay green |
+| Tests | Done | `Sprint5FullRevenueProfitabilityTests` (3); suite **71 passed** |
 | DoD + handoff + ADR-0004 update | Done | This file |
 
 ## APIs (delta vs Pass 1)

@@ -13,7 +13,7 @@ Pass 2 Sprint 5 FULL: Revenue FX stub + optional confirm approval threshold (par
 - C-004 harden: reject `document` / `accounts_receivable` / aliases (`ar`, `doc`, `financial_document`); defense in depth in handler.
 - GET revenue exposes `baseAmount`, `fxRateId`.
 - VI terms: REVENUE_CONFIRM_APPROVAL_THRESHOLD, BILL_PROFITABILITY, PROFITABILITY_VIEW, VARIANCE_EXPECTED_VS_ACTUAL.
-- Tests: `Sprint5FullRevenueProfitabilityTests` (3).
+- Tests: `Sprint5FullRevenueProfitabilityTests` (3); suite **71 passed**.
 - DoD: `docs/sprint/SPRINT-5-FULL-DOD.md`; prompt: `PROMPT-SPRINT-5-FULL.md`.
 
 ### Files / API / Config
@@ -24,8 +24,7 @@ Pass 2 Sprint 5 FULL: Revenue FX stub + optional confirm approval threshold (par
 - No new EF migration (schema already had base_amount / fx_rate_id)
 
 ### Verify
-- `dotnet test Cms.sln -c Release` → see PR / commit notes for passed count
-
+- `dotnet test Cms.sln -c Release` → **71 passed**
 ### Deferred / Next
 - Pass 2 Sprint 6 FULL Documents
 - Real fx_rates table; per-tenant threshold; Next.js Revenue UI

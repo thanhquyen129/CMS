@@ -18,7 +18,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | 2 Operational Reference FULL | Done (see `SPRINT-2-FULL-DOD.md`) |
 | 3 Rate & Pricing FULL | Done (see `SPRINT-3-FULL-DOD.md`) |
 | 4 Cost FULL | Done (see `SPRINT-4-FULL-DOD.md`) |
-| 5 Revenue & Profitability FULL | In progress (cloud) |
+| 5 Revenue & Profitability FULL | In PR |
 | 6–12 FULL | Queued |
 
 ## How to run Pass 2

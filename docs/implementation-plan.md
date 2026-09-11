@@ -20,7 +20,7 @@ Ship **Cost Management System (CMS)** as a Bill-centric financial control layer 
 - Rules retargeted A1LogEx → CMS
 - Private GitHub repo `thanhquyen129/CMS`
 - Repo scaffold, CI stub, `/health` + `/ready`
-- VPS target: `194.233.89.26` → `/opt/cms` (**clear old stack only after PO confirm**)
+- VPS target: `194.233.89.26` → `/opt/cms` (sanlogistics wiped 2026-09-12)
 - Sync BA package index into `LCMS_BA_docs/`
 
 ### Phase 1 — Identity, tenant, master, Bill anchor
@@ -66,9 +66,8 @@ Ship **Cost Management System (CMS)** as a Bill-centric financial control layer 
 - Tenant isolation verified by tests
 
 ## Immediate blockers needing PO answer
-1. **VPS clear:** `194.233.89.26` currently runs live **A1 board** (`/opt/sanlogistics`, containers `a1-api` + `a1-postgres`). Confirm wipe to host CMS?
-2. **Ops SoT for pilot:** which operational system API feeds Bill/Shipment for first tenant?
-3. **First tenant vertical:** pure Logistics pilot only, or also a non-logistics tenant in V1 config?
+1. **Ops SoT for pilot:** which operational system API feeds Bill/Shipment for first tenant?
+2. **First tenant vertical:** pure Logistics pilot only, or also a non-logistics tenant in V1 config?
 
 ## Follow-ups
 - Download full Drive binaries into `LCMS_BA_docs/originals/` for offline use

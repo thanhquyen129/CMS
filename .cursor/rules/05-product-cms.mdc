@@ -26,10 +26,10 @@ alwaysApply: true
 - SSH bằng user `deploy`, chỉ key, cổng 22. Alias SSH có thể vẫn là `a1-sg-01` đến khi đổi tên.
 - App directory on the host: `/opt/cms`. Run via Docker Compose (`infra/docker-compose.host.yml`).
 - Thư mục app trên host: `/opt/cms`. Chạy Docker Compose host.
-- **Never** deploy CMS onto `a1logex-sg-01` (`217.216.36.192`) / `/opt/alogex` (A1LogEx product).
-- **Không** deploy CMS lên `a1logex-sg-01` / `/opt/alogex` (sản phẩm A1LogEx).
-- Clearing `/opt/sanlogistics` or other live stacks on this VPS requires explicit PO confirmation (destructive).
-- Xóa `/opt/sanlogistics` hoặc stack sống khác trên VPS này cần PO xác nhận rõ (phá hủy).
+- **Never** deploy CMS onto `a1logex-sg-01` / `/opt/alogex` (A1LogEx product — different host).
+- **Không** deploy CMS lên `a1logex-sg-01` / `/opt/alogex` (sản phẩm A1LogEx — máy khác).
+- Clearing leftover stacks on this VPS requires explicit PO confirmation (destructive).
+- Xóa stack cũ còn sót trên VPS này cần PO xác nhận rõ (phá hủy).
 
 ## Secrets / Bí mật
 - Never put passwords, VNC, GitHub, or private keys in rules, ADRs, or tracked docs.

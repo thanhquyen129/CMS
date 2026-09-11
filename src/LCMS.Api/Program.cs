@@ -1,83 +1,131 @@
+using System.Diagnostics;
 using LCMS.Api.Endpoints;
 using LCMS.Api.Middleware;
 using LCMS.Application;
 using LCMS.Infrastructure;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Formatting.Compact;
 
-var builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "cms-api")
+    .WriteTo.Console(new RenderedCompactJsonFormatter())
+    .CreateBootstrapLogger();
 
-builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var app = builder.Build();
-
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseMiddleware<TenantResolutionMiddleware>();
-
-if (app.Environment.IsDevelopment())
+try
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    var builder = WebApplication.CreateBuilder(args);
 
-await MigrateDatabaseAsync(app);
+    builder.Host.UseSerilog((context, services, configuration) => configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Service", "cms-api")
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
+        .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
-app.MapGet("/health", () => Results.Ok(new
-{
-    status = "ok",
-    service = "cms-api",
-    utc = DateTime.UtcNow
-}));
+    builder.Services.AddApplication();
+    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
 
-app.MapGet("/ready", async (LcmsDbContext db, CancellationToken ct) =>
-{
-    try
+    var app = builder.Build();
+
+    app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseMiddleware<RequestLoggingMiddleware>();
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
+    app.UseMiddleware<TenantResolutionMiddleware>();
+
+    if (app.Environment.IsDevelopment())
     {
-        var canConnect = await db.Database.CanConnectAsync(ct);
-        if (!canConnect)
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    await MigrateDatabaseAsync(app);
+
+    app.MapGet("/health", () => Results.Ok(new
+    {
+        status = "ok",
+        service = "cms-api",
+        utc = DateTime.UtcNow
+    }));
+
+    app.MapGet("/ready", async (LcmsDbContext db, CancellationToken ct) =>
+    {
+        try
+        {
+            var canConnect = await db.Database.CanConnectAsync(ct);
+            if (!canConnect)
+            {
+                return Results.Json(new
+                {
+                    status = "not_ready",
+                    service = "cms-api",
+                    database = "unreachable",
+                    utc = DateTime.UtcNow
+                }, statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+
+            return Results.Ok(new
+            {
+                status = "ready",
+                service = "cms-api",
+                database = "ok",
+                utc = DateTime.UtcNow
+            });
+        }
+        catch (Exception)
         {
             return Results.Json(new
             {
                 status = "not_ready",
                 service = "cms-api",
-                database = "unreachable",
+                database = "error",
                 utc = DateTime.UtcNow
             }, statusCode: StatusCodes.Status503ServiceUnavailable);
         }
+    });
 
+    // Sprint 0 placeholder — process basics only (not full Prometheus).
+    app.MapGet("/metrics", () =>
+    {
+        using var proc = Process.GetCurrentProcess();
         return Results.Ok(new
         {
-            status = "ready",
             service = "cms-api",
-            database = "ok",
-            utc = DateTime.UtcNow
+            utc = DateTime.UtcNow,
+            processId = proc.Id,
+            workingSetBytes = proc.WorkingSet64,
+            privateMemoryBytes = proc.PrivateMemorySize64,
+            threadCount = proc.Threads.Count,
+            gcHeapBytes = GC.GetTotalMemory(forceFullCollection: false)
         });
-    }
-    catch (Exception)
+    });
+
+    app.MapGet("/", () => Results.Ok(new
     {
-        return Results.Json(new
-        {
-            status = "not_ready",
-            service = "cms-api",
-            database = "error",
-            utc = DateTime.UtcNow
-        }, statusCode: StatusCodes.Status503ServiceUnavailable);
-    }
-});
+        product = "Cost Management System",
+        shortName = "CMS",
+        message = "LCMS API — Clean Architecture (TD1)"
+    }));
 
-app.MapGet("/", () => Results.Ok(new
+    app.MapTenantBillEndpoints();
+    app.MapTerminologyEndpoints();
+
+    app.Run();
+}
+catch (Exception ex)
 {
-    product = "Cost Management System",
-    shortName = "CMS",
-    message = "LCMS API — Clean Architecture (TD1)"
-}));
-
-app.MapTenantBillEndpoints();
-
-app.Run();
+    Log.Fatal(ex, "Host terminated unexpectedly");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 static async Task MigrateDatabaseAsync(WebApplication app)
 {

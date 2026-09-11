@@ -116,6 +116,32 @@ public sealed class TenantBillApiTests : IClassFixture<LcmsApiFactory>, IAsyncLi
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
     }
 
+    [Fact]
+    public async Task GetTerminology_ReturnsVietnameseTerms()
+    {
+        var response = await _client.GetAsync("/api/terminology");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var map = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(JsonOptions);
+        Assert.NotNull(map);
+        Assert.Equal("Thuê bao", map!["TENANT"]);
+        Assert.Equal("Chi phí dự kiến", map["EXPECTED_COST"]);
+        Assert.Equal("Thực tế", map["ACTUAL"]);
+    }
+
+    [Fact]
+    public async Task Health_PropagatesCorrelationId()
+    {
+        const string cid = "sprint0-corr-test-001";
+        using var req = new HttpRequestMessage(HttpMethod.Get, "/health");
+        req.Headers.Add("X-Correlation-Id", cid);
+
+        var response = await _client.SendAsync(req);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.TryGetValues("X-Correlation-Id", out var values));
+        Assert.Equal(cid, Assert.Single(values));
+    }
+
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code, name });

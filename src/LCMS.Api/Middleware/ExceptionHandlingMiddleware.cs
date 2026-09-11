@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text.Json;
 using LCMS.Application.Common.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -40,14 +39,9 @@ public sealed class ExceptionHandlingMiddleware
 
     private async Task WriteErrorAsync(HttpContext context, Exception exception)
     {
-        var correlationId = context.TraceIdentifier;
-        if (Activity.Current?.Id is { } activityId)
-        {
-            correlationId = activityId;
-        }
-
+        var correlationId = CorrelationIdMiddleware.GetCorrelationId(context);
         context.Response.ContentType = "application/json; charset=utf-8";
-        context.Response.Headers["X-Correlation-Id"] = correlationId;
+        context.Response.Headers[CorrelationIdMiddleware.HeaderName] = correlationId;
 
         int statusCode;
         string code;

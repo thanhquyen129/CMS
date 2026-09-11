@@ -2,10 +2,24 @@
 
 Repo: https://github.com/thanhquyen129/CMS/actions
 
-## Current state
-`CI` workflow builds/tests on GitHub-hosted runners. Deploy job is a placeholder until:
-1. VPS is cleared for CMS
-2. Self-hosted runner or SSH deploy secrets are configured for `/opt/cms`
+## Pipeline
+Workflow `CI` (`.github/workflows/ci.yml`):
+1. **test** — restore, build, `dotnet test`, local health/ready smoke against Postgres service.
+2. **deploy** (push to `main` only) — SSH sync to `deploy@194.233.89.26:/opt/cms`, then `docker compose -f infra/docker-compose.host.yml up -d --build`.
+
+## Required secrets
+| Secret | Required | Purpose |
+|--------|----------|---------|
+| `CMS_DEPLOY_SSH_KEY` | **Yes** | Private SSH key for user `deploy` on cms-sg-01 |
+| `CMS_DEPLOY_HOST` | No | Defaults to `194.233.89.26` if unset |
+
+Add secrets: GitHub → Settings → Secrets and variables → Actions.
+
+## Deploy safety
+- Target is **only** `/opt/cms` on cms-sg-01 — **never** `a1logex-sg-01` / `/opt/alogex`.
+- `rsync` **excludes** `infra/.env` so host secrets are never overwritten.
+- Host should keep `infra/.env` (from `infra/.env.example`) with `LCMS_DB_PASSWORD`.
+- Compose uses `--env-file infra/.env` when that file exists.
 
 ## Fallback
-If Actions deploy is down, follow `docs/ops/vps-bootstrap.md` (tar/scp as last resort). Never `git pull` on the host as the primary path.
+If Actions deploy fails or the runner cannot reach the host, use operator SSH per `docs/ops/vps-bootstrap.md` (rsync/scp; never `git pull` on the VPS as the primary path).

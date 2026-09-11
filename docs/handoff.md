@@ -1,6 +1,36 @@
 # Handoff
 
-## 2026-09-12 — Bill sống trên DB (migration + API Tenant/Bill)
+## 2026-09-12 — Close Sprint 0 (TD6 Foundation)
+
+### User
+Close Sprint 0: observability skeleton (E14), terminology contract (E16), real Actions deploy (E15), env example, DoD checklist; ship.
+
+### Done
+- Serilog JSON console + `CorrelationIdMiddleware` + `RequestLoggingMiddleware`; `/metrics` process placeholder.
+- `VietnameseUiTerms` (CP6.5) + `GET /api/terminology`.
+- CI `deploy` job: SSH rsync → `/opt/cms`, compose up (excludes `infra/.env`); docs for `CMS_DEPLOY_SSH_KEY`.
+- `infra/.env.example`, `docs/sprint/SPRINT-0-DOD.md`.
+- Tests: 6 passed (terminology + correlation ID coverage).
+
+### Files / API
+- Middleware: `CorrelationIdMiddleware`, `RequestLoggingMiddleware`
+- Domain: `src/LCMS.Domain/Terminology/VietnameseUiTerms.cs`
+- Endpoints: `/api/terminology`, `/metrics`
+- Ops: `.github/workflows/ci.yml`, `docs/ops/github-actions.md`, `docs/ops/vps-bootstrap.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 6 passed
+- After deploy: http://194.233.89.26/health , `/ready`, `/api/terminology`
+- Actions: https://github.com/thanhquyen129/CMS/actions
+
+### Next
+- Ensure GitHub secret `CMS_DEPLOY_SSH_KEY` is set (deploy fails without it)
+- Sprint 1: User/Permission/JWT (replace `X-Tenant-Id`)
+- Cost Expected on Bill
+
+---
+
+## 2026-09-12 — Bill thật trên DB (migration + API Tenant/Bill)
 
 ### User
 Làm bước 1–2: EF migration InitialTd1 + API Tenant/Bill thật + test cô lập tenant.

@@ -30,6 +30,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Database__MigrateOnStartup: "true"
+      # Password interpolated from host env / infra/.env (never committed)
       ConnectionStrings__LcmsDb: "Host=db;Port=5432;Database=lcms;Username=lcms;Password=${LCMS_DB_PASSWORD:-lcms}"
     restart: unless-stopped
 

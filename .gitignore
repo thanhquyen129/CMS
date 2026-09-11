@@ -4,6 +4,7 @@ docs/hailybato.txt
 .secrets/
 **/.env
 **/.env.*
+!**/.env.example
 !.env.example
 
 # Build

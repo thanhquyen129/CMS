@@ -19,7 +19,7 @@ Pass 2 Sprint 3 FULL: rule applicability filters; formula types `percent_of_base
 - Migration: `20260911204607_Sprint3Full_RatePricing`
 
 ### Verify
-- `dotnet test Cms.sln -c Release` → (run after commit)
+- `dotnet test Cms.sln -c Release` → **65 passed** (5 new Sprint 3 FULL; Sprint 2 FULL was 60)
 
 ### Deferred / Next
 - Full DSL formula language; route master; Next.js rate UI; Pass 2 Sprint 4 FULL

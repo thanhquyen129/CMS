@@ -141,11 +141,9 @@ public sealed class ListRatingsByBillQueryHandler
             throw new NotFoundAppException("Không tìm thấy Bill.");
         }
 
-        return await _db.Ratings
+        var items = await _db.Ratings
             .AsNoTracking()
             .Where(r => r.BillId == request.BillId)
-            .OrderByDescending(r => r.RatedAt)
-            .ThenByDescending(r => r.CreatedAt)
             .Select(r => new RatingHistoryItemDto(
                 r.Id,
                 r.BillId,
@@ -158,5 +156,11 @@ public sealed class ListRatingsByBillQueryHandler
                 r.Status,
                 r.SupersedesRatingId))
             .ToListAsync(cancellationToken);
+
+        // Client-side order: SQLite cannot ORDER BY DateTimeOffset (tests); Postgres OK either way.
+        return items
+            .OrderByDescending(r => r.RatedAt)
+            .ThenByDescending(r => r.Id)
+            .ToList();
     }
 }

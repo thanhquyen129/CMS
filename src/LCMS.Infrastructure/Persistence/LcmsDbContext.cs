@@ -53,6 +53,11 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
     public DbSet<CollectionAllocation> CollectionAllocations => Set<CollectionAllocation>();
+    public DbSet<Reconciliation> Reconciliations => Set<Reconciliation>();
+    public DbSet<ReconciliationDetail> ReconciliationDetails => Set<ReconciliationDetail>();
+    public DbSet<Variance> Variances => Set<Variance>();
+    public DbSet<FinancialException> Exceptions => Set<FinancialException>();
+    public DbSet<Approval> Approvals => Set<Approval>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

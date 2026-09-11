@@ -1,5 +1,35 @@
 # Handoff
 
+## 2026-09-11 — Sprint 9 Financial Control (E11)
+
+### User
+Implement Sprint 9 Pass 1 only: D10 reconciliations/reconciliation_details/variances/exceptions/approvals; Variance ≠ Exception; Approval independent of Permission; tenant APIs reconcile/exception/approval + VI; isolation tests; DoD + PR to main. Non-goals: financial close (Sprint 10), JWT, Next.js.
+
+### Done
+- Domain: `Reconciliation`, `ReconciliationDetail`, `Variance`, `FinancialException` (table `exceptions`), `Approval`.
+- Migration `Sprint9_FinancialControl` (five tables; IDX-011 on exceptions).
+- CQRS + API: start reconciliation; add details (auto Variance when delta ≠ 0, never auto Exception); open/resolve/close exception; request/approve/reject approval on financial object ref.
+- Variance ≠ Exception: control fact vs severity/owner/SLA work item; optional link only when escalated.
+- Permission ≠ Approval: approval never calls `IPermissionService`; does not mutate permissions; works with role that has zero RolePermissions.
+- Cost/Revenue `ApprovalStatus` updated by approval workflow (pending/approved/rejected) without RBAC.
+- VI validation/errors; tenant filter + `X-Tenant-Id` / `X-User-Id`.
+- Tests: 37 passed (3 new Sprint 9 — variance≠exception; approval≠permission; cross-tenant).
+- DoD: `docs/sprint/SPRINT-9-DOD.md`.
+
+### Files / API
+- APIs: `/api/reconciliations`, `/api/variances`, `/api/exceptions`, `/api/approvals`
+- Endpoints: `FinancialControlEndpoints`
+- Migration: `20260911192820_Sprint9_FinancialControl`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → 37 passed
+
+### Deferred / Next
+- Financial close snapshots (Sprint 10)
+- Auto-escalate variance→exception; multi-step approval; bank feed; JWT/OIDC; Next.js UI
+
+---
+
 ## 2026-09-11 — Sprint 8 Settlement (E10)
 
 ### User

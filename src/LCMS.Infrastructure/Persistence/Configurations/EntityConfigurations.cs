@@ -975,3 +975,147 @@ internal sealed class CollectionAllocationConfiguration : IEntityTypeConfigurati
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class ReconciliationConfiguration : IEntityTypeConfiguration<Reconciliation>
+{
+    public void Configure(EntityTypeBuilder<Reconciliation> builder)
+    {
+        builder.ToTable("reconciliations");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ReconciliationType).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.RuleCode).HasMaxLength(128);
+        builder.Property(e => e.VersionNo).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.ReconciliationType });
+        builder.HasIndex(e => new { e.TenantId, e.BillId, e.VersionNo });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class ReconciliationDetailConfiguration : IEntityTypeConfiguration<ReconciliationDetail>
+{
+    public void Configure(EntityTypeBuilder<ReconciliationDetail> builder)
+    {
+        builder.ToTable("reconciliation_details");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ReconciliationId).IsRequired();
+        builder.Property(e => e.SourceType).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.SourceId).IsRequired();
+        builder.Property(e => e.TargetType).HasMaxLength(64);
+        builder.Property(e => e.SourceAmount).HasPrecision(18, 4);
+        builder.Property(e => e.TargetAmount).HasPrecision(18, 4);
+        builder.Property(e => e.MatchedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.VarianceAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.LineStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.ReconciliationId });
+        builder.HasIndex(e => new { e.TenantId, e.SourceType, e.SourceId });
+        builder.HasIndex(e => new { e.TenantId, e.VarianceId });
+
+        builder.HasOne(e => e.Reconciliation)
+            .WithMany()
+            .HasForeignKey(e => e.ReconciliationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // VarianceId is a soft link stamped after variance insert; no required FK cycle.
+        builder.Ignore(e => e.Variance);
+    }
+}
+
+internal sealed class VarianceConfiguration : IEntityTypeConfiguration<Variance>
+{
+    public void Configure(EntityTypeBuilder<Variance> builder)
+    {
+        builder.ToTable("variances");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.VarianceType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.SourceType).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.TargetType).HasMaxLength(64);
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Explanation).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.VarianceType });
+        builder.HasIndex(e => new { e.TenantId, e.ReconciliationId });
+        builder.HasIndex(e => new { e.TenantId, e.ExceptionId });
+
+        builder.HasOne(e => e.Reconciliation)
+            .WithMany()
+            .HasForeignKey(e => e.ReconciliationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.ReconciliationDetail)
+            .WithMany()
+            .HasForeignKey(e => e.ReconciliationDetailId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // ExceptionId soft link — avoid FK cycle with exceptions.variance_id.
+        builder.Ignore(e => e.Exception);
+    }
+}
+
+internal sealed class FinancialExceptionConfiguration : IEntityTypeConfiguration<FinancialException>
+{
+    public void Configure(EntityTypeBuilder<FinancialException> builder)
+    {
+        builder.ToTable("exceptions");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RuleCode).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.Severity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Title).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(4096);
+        builder.Property(e => e.ResolutionNotes).HasMaxLength(2048);
+
+        // IDX-011
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.Severity, e.OwnerId, e.DueAt });
+        builder.HasIndex(e => new { e.TenantId, e.VarianceId });
+        builder.HasIndex(e => new { e.TenantId, e.ReconciliationId });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Reconciliation)
+            .WithMany()
+            .HasForeignKey(e => e.ReconciliationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // VarianceId soft link — avoid FK cycle with variances.exception_id.
+        builder.Ignore(e => e.Variance);
+    }
+}
+
+internal sealed class ApprovalConfiguration : IEntityTypeConfiguration<Approval>
+{
+    public void Configure(EntityTypeBuilder<Approval> builder)
+    {
+        builder.ToTable("approvals");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ObjectId).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RequestReason).HasMaxLength(2048);
+        builder.Property(e => e.DecisionReason).HasMaxLength(2048);
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.RequestedAt).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.Status });
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.RequestedAt });
+    }
+}

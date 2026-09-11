@@ -123,6 +123,7 @@ try
     app.MapFinancialDocumentEndpoints();
     app.MapExposureApArEndpoints();
     app.MapSettlementEndpoints();
+    app.MapFinancialControlEndpoints();
     app.MapTerminologyEndpoints();
 
     app.Run();

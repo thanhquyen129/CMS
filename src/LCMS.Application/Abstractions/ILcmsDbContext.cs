@@ -43,6 +43,11 @@ public interface ILcmsDbContext
     DbSet<Collection> Collections { get; }
     DbSet<PaymentAllocation> PaymentAllocations { get; }
     DbSet<CollectionAllocation> CollectionAllocations { get; }
+    DbSet<Reconciliation> Reconciliations { get; }
+    DbSet<ReconciliationDetail> ReconciliationDetails { get; }
+    DbSet<Variance> Variances { get; }
+    DbSet<FinancialException> Exceptions { get; }
+    DbSet<Approval> Approvals { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

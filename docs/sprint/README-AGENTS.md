@@ -21,7 +21,8 @@ Pass 1 đang chạy. Pass 2 bắt đầu khi Pass 1 hoàn tất Sprint 12.
 | 5 Revenue & Profitability | Done (see `SPRINT-5-DOD.md`) |
 | 6 Financial Documents | Done (see `SPRINT-6-DOD.md`) |
 | 7 Exposure + AP/AR | Done (see `SPRINT-7-DOD.md`) |
-| 8–12 | Queued |
+| 8 Settlement | In progress (cloud) |
+| 9–12 | Queued |
 
 ## How to run
 1. Cursor: **New Agent Chat** (hoặc Cloud Agent).

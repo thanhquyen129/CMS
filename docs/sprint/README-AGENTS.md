@@ -7,7 +7,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 |--------|--------|
 | 0 Foundation | Done |
 | 1 Identity + Master | Done (see `SPRINT-1-DOD.md`) |
-| 2 Operational Reference | Next |
+| 2 Operational Reference | Done (merged) |
 | 3–12 | Queued |
 
 ## How to run

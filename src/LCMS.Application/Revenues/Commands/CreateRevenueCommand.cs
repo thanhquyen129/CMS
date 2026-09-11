@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -28,16 +29,31 @@ public sealed class CreateRevenueCommandValidator : AbstractValidator<CreateReve
             .GreaterThanOrEqualTo(0).WithMessage("Số tiền doanh thu không được âm.");
         RuleFor(x => x.CurrencyCode)
             .NotEmpty().WithMessage("Mã tiền tệ không được để trống.")
-            .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.");
+            .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.")
+            .Matches(@"^[A-Za-z]{3}$").WithMessage("Mã tiền tệ phải là 3 chữ cái ISO 4217.");
         RuleFor(x => x.RevenueTypeCode).MaximumLength(64).When(x => x.RevenueTypeCode is not null);
         RuleFor(x => x.SourceType).MaximumLength(64).When(x => x.SourceType is not null);
         RuleFor(x => x.RecognitionPolicyVersion).MaximumLength(64).When(x => x.RecognitionPolicyVersion is not null);
         // C-004: document/AR must not invent a second economic revenue row.
         RuleFor(x => x.SourceType)
-            .Must(s => s is null
-                       || (!string.Equals(s, RevenueSourceTypes.Document, StringComparison.OrdinalIgnoreCase)
-                           && !string.Equals(s, RevenueSourceTypes.AccountsReceivable, StringComparison.OrdinalIgnoreCase)))
+            .Must(s => !IsForbiddenEconomicSource(s))
             .WithMessage("Không tạo doanh thu kinh tế mới chỉ từ chứng từ/AR (C-004).");
+    }
+
+    internal static bool IsForbiddenEconomicSource(string? sourceType)
+    {
+        if (string.IsNullOrWhiteSpace(sourceType))
+        {
+            return false;
+        }
+
+        var normalized = sourceType.Trim().ToLowerInvariant();
+        return normalized is RevenueSourceTypes.Document
+            or RevenueSourceTypes.AccountsReceivable
+            or "ar"
+            or "accounts-receivable"
+            or "doc"
+            or "financial_document";
     }
 }
 
@@ -46,12 +62,21 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IAuditWriter _audit;
+    private readonly IRevenueFxStub _fx;
+    private readonly IRevenueApprovalGate _approvalGate;
 
-    public CreateRevenueCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
+    public CreateRevenueCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IAuditWriter audit,
+        IRevenueFxStub fx,
+        IRevenueApprovalGate approvalGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _audit = audit;
+        _fx = fx;
+        _approvalGate = approvalGate;
     }
 
     public async Task<Guid> Handle(CreateRevenueCommand request, CancellationToken cancellationToken)
@@ -64,6 +89,33 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         var tenantId = _tenantContext.TenantId!.Value;
         var currency = request.CurrencyCode.Trim().ToUpperInvariant();
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
+
+        // Defense in depth for C-004 (validator already rejects).
+        if (CreateRevenueCommandValidator.IsForbiddenEconomicSource(request.SourceType))
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["SourceType"] = ["Không tạo doanh thu kinh tế mới chỉ từ chứng từ/AR (C-004)."]
+            });
+        }
+
+        var currencyRow = await _db.Currencies.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Code == currency, cancellationToken);
+        if (currencyRow is null)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["CurrencyCode"] = ["Mã tiền tệ chưa có trong danh mục. Vui lòng khai báo trước."]
+            });
+        }
+
+        if (!currencyRow.IsActive)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["CurrencyCode"] = ["Mã tiền tệ đã ngừng hiệu lực."]
+            });
+        }
 
         var bill = await _db.Bills.AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == request.BillId, cancellationToken);
@@ -104,12 +156,15 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
             EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
         };
 
+        _fx.ApplyToRevenue(revenue, amount);
+        _approvalGate.RefreshPendingFlag(revenue);
+
         _db.Revenues.Add(revenue);
         _audit.Append(
             AuditActions.RevenueCreate,
             AuditObjectTypes.Revenue,
             revenue.Id,
-            afterJson: $"{{\"billId\":\"{request.BillId}\",\"amount\":{amount},\"currency\":\"{currency}\",\"maturity\":\"{RevenueMaturities.Expected}\"}}");
+            afterJson: $"{{\"billId\":\"{request.BillId}\",\"amount\":{amount},\"currency\":\"{currency}\",\"maturity\":\"{RevenueMaturities.Expected}\",\"baseAmount\":{revenue.BaseAmount}}}");
 
         try
         {

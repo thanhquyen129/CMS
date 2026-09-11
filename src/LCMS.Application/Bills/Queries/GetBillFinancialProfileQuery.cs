@@ -11,6 +11,7 @@ namespace LCMS.Application.Bills.Queries;
 /// Derived Bill financial profile (TD1-DB-003/004) — never stored as SoT on Bill.
 /// Best Available per line: Actual → Confirmed → Expected. Totals split by currency_code.
 /// Sprint 11: maturity breakdown, allocated cost, settlement outstanding, optional asOf filter.
+/// Sprint 5 FULL: Expected vs Actual variance; allocated cost always included in CostBestAvailable.
 /// </summary>
 public sealed record GetBillFinancialProfileQuery(Guid BillId, DateOnly? AsOf = null)
     : IRequest<BillFinancialProfileDto>;
@@ -46,6 +47,9 @@ public sealed record CurrencyFinancialBucketDto(
     decimal AllocatedCostAmount,
     MaturityBreakdownDto RevenueMaturity,
     MaturityBreakdownDto DirectCostMaturity,
+    decimal RevenueVarianceExpectedVsActual,
+    decimal DirectCostVarianceExpectedVsActual,
+    decimal ProfitVarianceExpectedVsActual,
     int RevenueLineCount,
     int DirectCostLineCount,
     int AllocatedCostLineCount);
@@ -167,6 +171,14 @@ public sealed class GetBillFinancialProfileQueryHandler
             var costTotal = decimal.Round(directTotal + allocatedTotal, 4, MidpointRounding.AwayFromZero);
             var profit = decimal.Round(revenueTotal - costTotal, 4, MidpointRounding.AwayFromZero);
 
+            var revExpected = revLines.Sum(r => r.ExpectedAmount);
+            var revActual = revLines.Sum(r => r.ActualAmount ?? 0m);
+            var costExpected = costLines.Sum(c => c.ExpectedAmount);
+            var costActual = costLines.Sum(c => c.ActualAmount ?? 0m);
+            // Allocated is frozen actual share — included in both expected/actual cost views for variance fairness.
+            var profitExpected = revExpected - (costExpected + allocatedTotal);
+            var profitActual = revActual - (costActual + allocatedTotal);
+
             buckets.Add(new CurrencyFinancialBucketDto(
                 code.ToUpperInvariant(),
                 decimal.Round(revenueTotal, 4, MidpointRounding.AwayFromZero),
@@ -175,13 +187,16 @@ public sealed class GetBillFinancialProfileQueryHandler
                 decimal.Round(directTotal, 4, MidpointRounding.AwayFromZero),
                 decimal.Round(allocatedTotal, 4, MidpointRounding.AwayFromZero),
                 new MaturityBreakdownDto(
-                    decimal.Round(revLines.Sum(r => r.ExpectedAmount), 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(revExpected, 4, MidpointRounding.AwayFromZero),
                     decimal.Round(revLines.Sum(r => r.ConfirmedAmount ?? 0m), 4, MidpointRounding.AwayFromZero),
-                    decimal.Round(revLines.Sum(r => r.ActualAmount ?? 0m), 4, MidpointRounding.AwayFromZero)),
+                    decimal.Round(revActual, 4, MidpointRounding.AwayFromZero)),
                 new MaturityBreakdownDto(
-                    decimal.Round(costLines.Sum(c => c.ExpectedAmount), 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(costExpected, 4, MidpointRounding.AwayFromZero),
                     decimal.Round(costLines.Sum(c => c.ConfirmedAmount ?? 0m), 4, MidpointRounding.AwayFromZero),
-                    decimal.Round(costLines.Sum(c => c.ActualAmount ?? 0m), 4, MidpointRounding.AwayFromZero)),
+                    decimal.Round(costActual, 4, MidpointRounding.AwayFromZero)),
+                decimal.Round(revExpected - revActual, 4, MidpointRounding.AwayFromZero),
+                decimal.Round(costExpected - costActual, 4, MidpointRounding.AwayFromZero),
+                decimal.Round(profitExpected - profitActual, 4, MidpointRounding.AwayFromZero),
                 revLines.Count,
                 costLines.Count,
                 allocLines.Count));
@@ -207,17 +222,20 @@ public sealed class GetBillFinancialProfileQueryHandler
         var mixed = buckets.Count > 1;
         var profileLabel = VietnameseUiTerms.Get("BILL_FINANCIAL_PROFILE");
         var bestAvailableLabel = VietnameseUiTerms.Get("BEST_AVAILABLE");
+        var varianceLabel = VietnameseUiTerms.Get("VARIANCE_EXPECTED_VS_ACTUAL");
         string note;
         if (mixed)
         {
             note =
                 $"{profileLabel}: Không cộng gộp số tiền khác loại tiền tệ; xem từng currency_code. " +
-                $"{bestAvailableLabel} là read model, không phải SoT trên Bill.";
+                $"{bestAvailableLabel} là read model, không phải SoT trên Bill. " +
+                $"{varianceLabel} = Expected − Actual (Actual thiếu = 0); allocated cost luôn cộng vào Cost.";
         }
         else
         {
             note =
                 $"{profileLabel}: {bestAvailableLabel} = Actual → Confirmed → Expected. " +
+                $"{varianceLabel} = Expected − Actual (Actual thiếu = 0). " +
                 "Totals derive từ Cost/Revenue/Allocation/AP-AR; không lưu SoT trên Bill.";
         }
 

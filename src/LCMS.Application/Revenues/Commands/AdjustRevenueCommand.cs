@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -38,11 +39,19 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IRevenueFxStub _fx;
+    private readonly IRevenueApprovalGate _approvalGate;
 
-    public AdjustRevenueCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public AdjustRevenueCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IRevenueFxStub fx,
+        IRevenueApprovalGate approvalGate)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
+        _approvalGate = approvalGate;
     }
 
     public async Task<Guid> Handle(AdjustRevenueCommand request, CancellationToken cancellationToken)
@@ -92,6 +101,8 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
         }
 
         revenue.Amount = after;
+        _fx.ApplyToRevenue(revenue, after);
+        _approvalGate.RefreshPendingFlag(revenue);
 
         var adj = new RevenueAdjustment
         {

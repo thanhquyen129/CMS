@@ -1,5 +1,37 @@
 # Handoff
 
+## 2026-09-11 — Sprint 5 FULL Revenue & Profitability (Pass 2)
+
+### User
+Pass 2 Sprint 5 FULL: Revenue FX stub + optional confirm approval threshold (parity Cost FULL); profitability view API + profile enhancements; C-004 hardened; tests green; SPRINT-5-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- FX stub: `Revenue:BaseCurrency` + `StubFxRatesToBase` fills `base_amount` on create/confirm/actualize/adjust (ADR-0004); `fx_rate_id` null until real FX table; missing rate → VI validation.
+- Optional confirm gate: `Revenue:ConfirmApprovalThresholdBase` → pending + VI 409 until Sprint 9 `/api/approvals` approve (`objectType=revenue`).
+- Profile: Expected vs Actual variance fields; allocated cost included in CostBestAvailable; multi-currency never summed raw.
+- `GET /api/bills/{id}/profitability?view=expected|confirmed|actual|best` (default best); confirmed/actual layers missing → 0 for honesty.
+- C-004 harden: reject `document` / `accounts_receivable` / aliases (`ar`, `doc`, `financial_document`); defense in depth in handler.
+- GET revenue exposes `baseAmount`, `fxRateId`.
+- VI terms: REVENUE_CONFIRM_APPROVAL_THRESHOLD, BILL_PROFITABILITY, PROFITABILITY_VIEW, VARIANCE_EXPECTED_VS_ACTUAL.
+- Tests: `Sprint5FullRevenueProfitabilityTests` (3).
+- DoD: `docs/sprint/SPRINT-5-FULL-DOD.md`; prompt: `PROMPT-SPRINT-5-FULL.md`.
+
+### Files / API / Config
+- APIs: `/api/revenues`, `/api/revenues/{id}/confirm`, `/api/bills/{id}/financial-profile`, `/api/bills/{id}/profitability`
+- Application: `Revenues/RevenueOptions`, `RevenueFxStub`, `RevenueApprovalGate`; maturity/create/adjust; `GetBillProfitabilityQuery`
+- Config: `Revenue` section in `appsettings.json`
+- ADR: `docs/adr/ADR-0004-cost-fx-stub-approval-threshold.md` (Cost+Revenue)
+- No new EF migration (schema already had base_amount / fx_rate_id)
+
+### Verify
+- `dotnet test Cms.sln -c Release` → see PR / commit notes for passed count
+
+### Deferred / Next
+- Pass 2 Sprint 6 FULL Documents
+- Real fx_rates table; per-tenant threshold; Next.js Revenue UI
+
+---
+
 ## 2026-09-11 — Sprint 4 FULL Cost (Pass 2)
 
 ### User

@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
 using LCMS.Application.Identity;
+using LCMS.Application.Revenues;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,14 +22,18 @@ public static class DependencyInjection
         if (configuration is not null)
         {
             services.Configure<CostOptions>(configuration.GetSection(CostOptions.SectionName));
+            services.Configure<RevenueOptions>(configuration.GetSection(RevenueOptions.SectionName));
         }
         else
         {
             services.AddOptions<CostOptions>();
+            services.AddOptions<RevenueOptions>();
         }
 
         services.AddSingleton<ICostFxStub, CostFxStub>();
         services.AddSingleton<ICostApprovalGate, CostApprovalGate>();
+        services.AddSingleton<IRevenueFxStub, RevenueFxStub>();
+        services.AddSingleton<IRevenueApprovalGate, RevenueApprovalGate>();
         return services;
     }
 }

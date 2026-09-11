@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -22,18 +23,28 @@ public sealed class ConfirmRevenueCommandValidator : AbstractValidator<ConfirmRe
 
 /// <summary>
 /// Expected → Confirmed. Preserves ExpectedAmount (C-009); writes ConfirmedAmount + audit.
+/// Optional approval threshold gate (Pass 2 Sprint 5 FULL / ADR-0004).
 /// </summary>
 public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenueCommand>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRevenueFxStub _fx;
+    private readonly IRevenueApprovalGate _approvalGate;
 
-    public ConfirmRevenueCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, ICurrentUserContext user)
+    public ConfirmRevenueCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext user,
+        IRevenueFxStub fx,
+        IRevenueApprovalGate approvalGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _fx = fx;
+        _approvalGate = approvalGate;
     }
 
     public async Task Handle(ConfirmRevenueCommand request, CancellationToken cancellationToken)
@@ -56,6 +67,16 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
             throw new ConflictAppException("Chỉ chuyển Expected → Confirmed; không ghi đè mức độ trước.");
         }
 
+        try
+        {
+            _approvalGate.EnsureConfirmAllowed(revenue);
+        }
+        catch (ConflictAppException)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            throw;
+        }
+
         var confirmed = decimal.Round(
             request.ConfirmedAmount ?? revenue.ExpectedAmount,
             4,
@@ -66,6 +87,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         revenue.FinancialMaturity = RevenueMaturities.Confirmed;
         revenue.ConfirmedAt = DateTimeOffset.UtcNow;
         revenue.ConfirmedBy = _user.UserId;
+        _fx.ApplyToRevenue(revenue, confirmed);
 
         await _db.SaveChangesAsync(cancellationToken);
     }
@@ -92,12 +114,18 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRevenueFxStub _fx;
 
-    public ActualizeRevenueCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, ICurrentUserContext user)
+    public ActualizeRevenueCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext user,
+        IRevenueFxStub fx)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _fx = fx;
     }
 
     public async Task Handle(ActualizeRevenueCommand request, CancellationToken cancellationToken)
@@ -130,6 +158,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         revenue.FinancialMaturity = RevenueMaturities.Actual;
         revenue.ActualizedAt = DateTimeOffset.UtcNow;
         revenue.ActualizedBy = _user.UserId;
+        _fx.ApplyToRevenue(revenue, actual);
 
         await _db.SaveChangesAsync(cancellationToken);
     }

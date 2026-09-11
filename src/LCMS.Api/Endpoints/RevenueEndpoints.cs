@@ -92,6 +92,18 @@ public static class RevenueEndpoints
             return Results.Ok(profile);
         });
 
+        bills.MapGet("/{id:guid}/profitability", async (
+            Guid id,
+            string? view,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var profitability = await sender.Send(
+                new GetBillProfitabilityQuery(id, string.IsNullOrWhiteSpace(view) ? "best" : view),
+                ct);
+            return Results.Ok(profitability);
+        });
+
         return app;
     }
 }

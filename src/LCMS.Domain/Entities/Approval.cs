@@ -16,6 +16,15 @@ public sealed class Approval : TenantEntityBase
     /// <summary>pending | approved | rejected | cancelled</summary>
     public string Status { get; set; } = ApprovalStatuses.Pending;
 
+    /// <summary>
+    /// Multi-step stub: how many sequential approve steps required (1 or 2).
+    /// Permission ≠ Approval — levels are workflow only, not RBAC.
+    /// </summary>
+    public int RequiredLevel { get; set; } = 1;
+
+    /// <summary>How many approve steps completed so far (0 until first approve).</summary>
+    public int CurrentLevel { get; set; }
+
     public Guid? RequestedBy { get; set; }
     public DateTimeOffset RequestedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? RequestReason { get; set; }

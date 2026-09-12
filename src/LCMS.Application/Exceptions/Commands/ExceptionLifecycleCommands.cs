@@ -122,3 +122,76 @@ public sealed class CloseExceptionCommandHandler : IRequestHandler<CloseExceptio
         await _db.SaveChangesAsync(cancellationToken);
     }
 }
+
+public sealed record EscalateExceptionCommand(Guid ExceptionId, string? EscalationReason) : IRequest;
+
+public sealed class EscalateExceptionCommandValidator : AbstractValidator<EscalateExceptionCommand>
+{
+    public EscalateExceptionCommandValidator()
+    {
+        RuleFor(x => x.ExceptionId).NotEmpty().WithMessage("Ngoại lệ không hợp lệ.");
+        RuleFor(x => x.EscalationReason)
+            .NotEmpty().WithMessage("Lý do leo thang ngoại lệ không được để trống.")
+            .MaximumLength(2048).WithMessage("Lý do leo thang tối đa 2048 ký tự.");
+    }
+}
+
+/// <summary>
+/// Escalate stub — marks exception escalated (SLA inbox); does not invent Variance or change permissions.
+/// </summary>
+public sealed class EscalateExceptionCommandHandler : IRequestHandler<EscalateExceptionCommand>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _user;
+
+    public EscalateExceptionCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext user)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+        _user = user;
+    }
+
+    public async Task Handle(EscalateExceptionCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var entity = await _db.Exceptions
+            .FirstOrDefaultAsync(e => e.Id == request.ExceptionId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy ngoại lệ.");
+
+        if (string.Equals(entity.Status, ExceptionStatuses.Closed, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entity.Status, ExceptionStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entity.Status, ExceptionStatuses.Resolved, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Không thể leo thang ngoại lệ đã xử lý, đã đóng hoặc đã hủy.");
+        }
+
+        if (string.Equals(entity.Status, ExceptionStatuses.Escalated, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        entity.Status = ExceptionStatuses.Escalated;
+        entity.EscalatedAt = DateTimeOffset.UtcNow;
+        entity.EscalatedBy = _user.UserId;
+        entity.EscalationReason = request.EscalationReason!.Trim();
+
+        // Stub: bump severity one step when escalating (cap at critical).
+        entity.Severity = entity.Severity switch
+        {
+            ExceptionSeverities.Low => ExceptionSeverities.Medium,
+            ExceptionSeverities.Medium => ExceptionSeverities.High,
+            ExceptionSeverities.High => ExceptionSeverities.Critical,
+            _ => ExceptionSeverities.Critical
+        };
+
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+}

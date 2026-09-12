@@ -17,7 +17,7 @@ public sealed class FinancialException : TenantEntityBase
 
     public Guid? OwnerId { get; set; }
 
-    /// <summary>open | in_progress | resolved | closed | cancelled</summary>
+    /// <summary>open | in_progress | escalated | resolved | closed | cancelled</summary>
     public string Status { get; set; } = ExceptionStatuses.Open;
 
     /// <summary>SLA due (IDX-011).</summary>
@@ -31,6 +31,18 @@ public sealed class FinancialException : TenantEntityBase
 
     /// <summary>Optional link to a Variance control fact — independent lifecycle.</summary>
     public Guid? VarianceId { get; set; }
+
+    /// <summary>
+    /// Linked financial object (cost | revenue | document | payment | …).
+    /// Used by confirm block-on-critical and inbox filters.
+    /// </summary>
+    public string? ObjectType { get; set; }
+
+    public Guid? ObjectId { get; set; }
+
+    public DateTimeOffset? EscalatedAt { get; set; }
+    public Guid? EscalatedBy { get; set; }
+    public string? EscalationReason { get; set; }
 
     public DateTimeOffset? ResolvedAt { get; set; }
     public Guid? ResolvedBy { get; set; }
@@ -56,6 +68,7 @@ public static class ExceptionStatuses
 {
     public const string Open = "open";
     public const string InProgress = "in_progress";
+    public const string Escalated = "escalated";
     public const string Resolved = "resolved";
     public const string Closed = "closed";
     public const string Cancelled = "cancelled";

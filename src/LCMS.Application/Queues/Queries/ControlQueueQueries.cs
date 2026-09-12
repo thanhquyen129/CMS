@@ -42,7 +42,10 @@ public sealed class ListOpenExceptionQueueQueryHandler
         }
 
         var query = _db.Exceptions.AsNoTracking()
-            .Where(e => e.Status == ExceptionStatuses.Open);
+            .Where(e =>
+                e.Status == ExceptionStatuses.Open
+                || e.Status == ExceptionStatuses.InProgress
+                || e.Status == ExceptionStatuses.Escalated);
 
         if (!string.IsNullOrWhiteSpace(request.Severity))
         {

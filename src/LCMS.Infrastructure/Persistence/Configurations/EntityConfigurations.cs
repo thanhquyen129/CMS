@@ -1236,9 +1236,11 @@ internal sealed class VarianceConfiguration : IEntityTypeConfiguration<Variance>
         builder.Property(e => e.SourceType).HasMaxLength(64).IsRequired();
         builder.Property(e => e.TargetType).HasMaxLength(64);
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Severity).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Explanation).HasMaxLength(2048);
 
         builder.HasIndex(e => new { e.TenantId, e.Status, e.VarianceType });
+        builder.HasIndex(e => new { e.TenantId, e.Severity, e.Status });
         builder.HasIndex(e => new { e.TenantId, e.ReconciliationId });
         builder.HasIndex(e => new { e.TenantId, e.ExceptionId });
 
@@ -1270,11 +1272,14 @@ internal sealed class FinancialExceptionConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.Title).HasMaxLength(256).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(4096);
         builder.Property(e => e.ResolutionNotes).HasMaxLength(2048);
+        builder.Property(e => e.ObjectType).HasMaxLength(64);
+        builder.Property(e => e.EscalationReason).HasMaxLength(2048);
 
         // IDX-011
         builder.HasIndex(e => new { e.TenantId, e.Status, e.Severity, e.OwnerId, e.DueAt });
         builder.HasIndex(e => new { e.TenantId, e.VarianceId });
         builder.HasIndex(e => new { e.TenantId, e.ReconciliationId });
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.Status });
 
         builder.HasOne(e => e.Bill)
             .WithMany()
@@ -1301,6 +1306,8 @@ internal sealed class ApprovalConfiguration : IEntityTypeConfiguration<Approval>
         builder.Property(e => e.ObjectType).HasMaxLength(64).IsRequired();
         builder.Property(e => e.ObjectId).IsRequired();
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RequiredLevel).IsRequired();
+        builder.Property(e => e.CurrentLevel).IsRequired();
         builder.Property(e => e.RequestReason).HasMaxLength(2048);
         builder.Property(e => e.DecisionReason).HasMaxLength(2048);
         builder.Property(e => e.Notes).HasMaxLength(2048);
@@ -1308,6 +1315,7 @@ internal sealed class ApprovalConfiguration : IEntityTypeConfiguration<Approval>
 
         builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.Status });
         builder.HasIndex(e => new { e.TenantId, e.Status, e.RequestedAt });
+        builder.HasIndex(e => new { e.TenantId, e.RequiredLevel, e.CurrentLevel, e.Status });
     }
 }
 

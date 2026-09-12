@@ -1,5 +1,51 @@
 # Handoff
 
+## 2026-09-12 — Coordinator: S9 FULL merged → S10 FULL kickoff
+
+### User
+Follow-up after Pass2 Sprint9 Control Full cloud agent completed.
+
+### Done
+- Merged Sprint 9 FULL (`cursor/sprint-9-full-financial-control-6616`); suite target **83**.
+- README: S9 Done; S10 In progress.
+- Added `docs/sprint/PROMPT-SPRINT-10-FULL.md`.
+- Launched cloud agent Pass2 Sprint10 Close Full.
+
+### Next
+- Merge Sprint 10 FULL PR → kickoff Sprint 11 Profile/Reporting FULL.
+
+---
+
+## 2026-09-12 — Sprint 9 FULL Financial Control (Pass 2)
+
+### User
+Pass 2 Sprint 9 FULL: reconciliation batch + auto variance severity thresholds; exception SLA/inbox + multi-step approval stub (approval ≠ permission); optional block Cost/Revenue confirm on critical open exception; tests + SPRINT-9-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Batch recon: `POST /api/reconciliations/{id}/details/batch`; shared writer auto-creates Variance (not Exception) with severity from thresholds.
+- Exception: object link, default SLA hours, escalate stub, inbox filters (`status`/`severity`/`objectType`/`overdueOnly`).
+- Approval: `requiredLevel` 1|2 multi-step; reject requires reason; never touches Permission.
+- Confirm block: `FinancialControl:BlockConfirmOnCriticalException` default true for Cost/Revenue.
+- Migration `Sprint9Full_FinancialControl`; ADR-0009; VI terms.
+- Tests: `Sprint9FullFinancialControlTests` (3); suite **83 passed**.
+
+### Files / API / Config
+- APIs: details/batch; exceptions escalate + filters; approvals requiredLevel
+- Application: FinancialControlOptions, VarianceSeverityCalculator, CriticalExceptionConfirmGate, ReconciliationDetailWriter
+- Config: FinancialControl section in appsettings.json
+- Migration: 20260912023712_Sprint9Full_FinancialControl
+- ADR: docs/adr/ADR-0009-financial-control-severity-sla-approval.md
+- DoD: docs/sprint/SPRINT-9-FULL-DOD.md
+
+### Verify
+- `dotnet test Cms.sln -c Release` → **83 passed**
+
+### Deferred / Next
+- Pass 2 Sprint 10 FULL Financial Close
+- Auto variance→exception; per-tenant SLA tables; Next.js inbox UI
+
+---
+
 ## 2026-09-12 — Coordinator: S8 FULL merged → S9 FULL kickoff
 
 ### User

@@ -17,6 +17,7 @@ public sealed record VarianceDto(
     string? TargetType,
     Guid? TargetId,
     string Status,
+    string Severity,
     string? Explanation,
     Guid? ExceptionId);
 
@@ -65,6 +66,7 @@ public sealed class ListVariancesQueryHandler : IRequestHandler<ListVariancesQue
             v.TargetType,
             v.TargetId,
             v.Status,
+            v.Severity,
             v.Explanation,
             v.ExceptionId);
 }

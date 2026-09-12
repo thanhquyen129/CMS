@@ -55,11 +55,13 @@ Ship U2: trên Bill detail xác nhận Chi phí / Doanh thu (CTA rõ; maturity k
 - API unchanged (confirm/actualize đã có trên main)
 
 ### Verify
-- `npm run build` (apps/web) xanh; `dotnet test` **93 passed**
-- VPS after deploy: Bill detail confirm cost/revenue (or empty honest); `/health` OK
+- `npm run build` (apps/web) xanh; `dotnet test` **93 passed** (pre-S12 push; S12 later → 97)
+- VPS: login BFF 200 → `/bills` → Bill detail shows `maturity-actions` / Xác nhận / Ghi nhận; `POST /bff/costs/{id}/confirm` → **204**; `/health` OK
+- Actions: U2 on `main` (`c6210b7`); run #72 cancelled by S12 concurrency — later deploy (post-S12 / UI-3 kickoff) rebuilt `cms-web` with U2
 
 ### Next
-- U3 Control desk; optional amount override trong dialog
+- U3 Control desk (already kicked off on Actions)
+- Optional amount override trong dialog
 
 ### Follow-ups
 - Permission codes riêng cho confirm (hiện 403 runtime)

@@ -29,8 +29,8 @@ export async function forwardApiMutation(
       cache: "no-store",
     });
 
-    if (res.status === 204 || res.status === 201) {
-      return new NextResponse(null, { status: res.status });
+    if (res.status === 204) {
+      return new NextResponse(null, { status: 204 });
     }
 
     const payload = await res.json().catch(() => ({}));

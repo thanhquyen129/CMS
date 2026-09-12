@@ -43,3 +43,4 @@ Auto-match engine UI, bank feed, e-invoice provider screens, settlement/payment 
 ## Verify
 - `npm run build` trong `apps/web` xanh
 - VPS (sau merge/deploy): `/documents`, `/ap-ar`, Bill detail AP/AR block, `/health`
+- BFF `POST /bff/financial-documents` returns **201** + `{ id }` (not empty body)

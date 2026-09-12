@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-09-12 — U4 local takeover: BFF 201 fix + VPS verify
+
+### User
+Implement U4 alone; prior cloud id unreachable. Finish existing branch if present; ship; verify VPS.
+
+### Done
+- Confirmed U4 already on `main` (`0953cce` / PR #27): `/documents`, `/ap-ar`, Bill AP/AR panel, receive/accept BFF.
+- Fixed BFF `forwardApiMutation`: **201** now forwards JSON body (`{ id }`) so nhận chứng từ redirects to detail (was empty body).
+- Docs already mark **Pass UI COMPLETE (U0–U4)**; follow-ups stay match UI + settlement UI.
+
+### Files
+- `apps/web/lib/bff-api.ts`
+
+### Verify
+- `npm run build` apps/web; VPS `/documents` `/ap-ar` + `/health` (fallback redeploy if Actions race)
+
+### Residual
+- List documents still no `billId` filter on API list DTO.
+- Match / settlement UI deferred.
+
+---
+
 ## 2026-09-12 — Coordinator: U4 merged — **Pass UI COMPLETE**
 
 ### User

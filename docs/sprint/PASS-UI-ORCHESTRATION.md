@@ -14,7 +14,7 @@
 | U1 | [UI-1](4138d876-5722-42f6-a69a-bc23f8656ab9) | Done | Bill hub — `4aeab7a`; VPS `/bills` + maturity verified |
 | U2 | [UI-2](bc-5377dafd-4e8b-4761-801f-ae76de6079b7) | Done | Cost & Revenue — [Review](bc-5377dafd-4e8b-4761-801f-ae76de6079b7#changes); on `main` (`01d8a50`+) |
 | U3 | [UI-3](bc-e514db5a-484e-4333-a372-f8d08e0cdb32) | Done | Control desk — PR #26 → `657be51`; VPS verified (fallback redeploy after Actions race) |
-| U4 | [UI-4](bc-9c035d0b-b5a7-44ca-9511-2927f0d3c03d) | Done | Documents & AP/AR — [Review](bc-9c035d0b-b5a7-44ca-9511-2927f0d3c03d#changes); **Pass UI COMPLETE** |
+| U4 | [UI-4](e1fa18ab-050c-4edd-8f07-b2d80b6fb6c3) / [cloud](bc-9c035d0b-b5a7-44ca-9511-2927f0d3c03d) | Done | Documents & AP/AR — PR #27 → `0953cce`; BFF 201 body fix; **Pass UI COMPLETE** |
 
 ## Stop conditions (serious)
 - Money/auth tests đỏ không sửa được trong sprint

@@ -103,6 +103,14 @@ public static class VietnameseUiTerms
         ["CLOSE_LOCKED"] = "Đã khóa chốt",
         ["CLOSE_REOPENED"] = "Đã mở lại chốt",
         ["FINANCIAL_CONTROL"] = "Kiểm soát tài chính",
+        ["CLOSE_ELIGIBILITY"] = "Điều kiện đủ để chốt",
+        ["CLOSE_ELIGIBILITY_CRITICAL_EXCEPTION"] = "Chặn chốt khi còn ngoại lệ critical đang mở",
+        ["CLOSE_ELIGIBILITY_UNMATCHED_DOCUMENT"] = "Chặn chốt khi còn chứng từ đã chấp nhận chưa khớp",
+        ["CLOSE_ELIGIBILITY_UNSETTLED_AP_AR"] = "Chặn chốt khi còn AP/AR số dư mở vượt ngưỡng",
+        ["PERIOD_LOCK"] = "Khóa kỳ chốt",
+        ["CLOSE_POLICY_CONTROLLED"] = "Chính sách chốt Controlled",
+        ["CLOSE_POLICY_STRICT"] = "Chính sách chốt Strict",
+        ["ENFORCE_PERIOD_LOCK"] = "Bắt buộc khóa kỳ khi đã chốt",
 
         // Reporting / dashboard / control queues (E13)
         ["DASHBOARD"] = "Bảng điều khiển",

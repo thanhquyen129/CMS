@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
+using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -26,6 +27,7 @@ public sealed class ConfirmCostCommandValidator : AbstractValidator<ConfirmCostC
 /// Expected → Confirmed. Preserves ExpectedAmount (C-009); writes ConfirmedAmount + audit.
 /// Optional approval threshold gate (Pass 2 Sprint 4 FULL).
 /// Optional critical-exception block (Pass 2 Sprint 9 FULL).
+/// Period lock when financial close is Locked (Pass 2 Sprint 10 FULL).
 /// </summary>
 public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostCommand>
 {
@@ -36,6 +38,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     private readonly ICostFxStub _fx;
     private readonly ICostApprovalGate _approvalGate;
     private readonly ICriticalExceptionConfirmGate _criticalExceptionGate;
+    private readonly IPeriodLockGate _periodLockGate;
 
     public ConfirmCostCommandHandler(
         ILcmsDbContext db,
@@ -44,7 +47,8 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         IAuditWriter audit,
         ICostFxStub fx,
         ICostApprovalGate approvalGate,
-        ICriticalExceptionConfirmGate criticalExceptionGate)
+        ICriticalExceptionConfirmGate criticalExceptionGate,
+        IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -53,6 +57,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         _fx = fx;
         _approvalGate = approvalGate;
         _criticalExceptionGate = criticalExceptionGate;
+        _periodLockGate = periodLockGate;
     }
 
     public async Task Handle(ConfirmCostCommand request, CancellationToken cancellationToken)
@@ -76,6 +81,12 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         }
 
         EnforceAttributionInvariants(cost);
+
+        await _periodLockGate.EnsureMutationAllowedAsync(
+            cost.BillId,
+            cost.EffectiveDate,
+            "xác nhận chi phí",
+            cancellationToken);
 
         await _criticalExceptionGate.EnsureConfirmAllowedAsync(
             ApprovalObjectTypes.Cost,

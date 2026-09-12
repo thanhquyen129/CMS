@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
@@ -26,6 +27,7 @@ public sealed class ConfirmRevenueCommandValidator : AbstractValidator<ConfirmRe
 /// Expected → Confirmed. Preserves ExpectedAmount (C-009); writes ConfirmedAmount + audit.
 /// Optional approval threshold gate (Pass 2 Sprint 5 FULL / ADR-0004).
 /// Optional critical-exception block (Pass 2 Sprint 9 FULL).
+/// Period lock when financial close is Locked (Pass 2 Sprint 10 FULL).
 /// </summary>
 public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenueCommand>
 {
@@ -35,6 +37,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
     private readonly IRevenueFxStub _fx;
     private readonly IRevenueApprovalGate _approvalGate;
     private readonly ICriticalExceptionConfirmGate _criticalExceptionGate;
+    private readonly IPeriodLockGate _periodLockGate;
 
     public ConfirmRevenueCommandHandler(
         ILcmsDbContext db,
@@ -42,7 +45,8 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         ICurrentUserContext user,
         IRevenueFxStub fx,
         IRevenueApprovalGate approvalGate,
-        ICriticalExceptionConfirmGate criticalExceptionGate)
+        ICriticalExceptionConfirmGate criticalExceptionGate,
+        IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -50,6 +54,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         _fx = fx;
         _approvalGate = approvalGate;
         _criticalExceptionGate = criticalExceptionGate;
+        _periodLockGate = periodLockGate;
     }
 
     public async Task Handle(ConfirmRevenueCommand request, CancellationToken cancellationToken)
@@ -71,6 +76,12 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         {
             throw new ConflictAppException("Chỉ chuyển Expected → Confirmed; không ghi đè mức độ trước.");
         }
+
+        await _periodLockGate.EnsureMutationAllowedAsync(
+            revenue.BillId,
+            revenue.EffectiveDate,
+            "xác nhận doanh thu",
+            cancellationToken);
 
         await _criticalExceptionGate.EnsureConfirmAllowedAsync(
             ApprovalObjectTypes.Revenue,

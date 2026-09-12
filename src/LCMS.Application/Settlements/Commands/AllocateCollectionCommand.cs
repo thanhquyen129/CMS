@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -29,21 +30,25 @@ public sealed class AllocateCollectionCommandValidator : AbstractValidator<Alloc
 /// Draft allocation Collection → AR. Does NOT change outstanding (AC-007).
 /// Enforces C-008 ceilings (over policy stub = 0).
 /// Supports multi-allocation until Unapplied/AvailableToAllocate is exhausted.
+/// Period lock when financial close is Locked (Pass 2 Sprint 10 FULL).
 /// </summary>
 public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateCollectionCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ISettlementFxStub _fx;
+    private readonly IPeriodLockGate _periodLockGate;
 
     public AllocateCollectionCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ISettlementFxStub fx)
+        ISettlementFxStub fx,
+        IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
+        _periodLockGate = periodLockGate;
     }
 
     public async Task<Guid> Handle(AllocateCollectionCommand request, CancellationToken cancellationToken)
@@ -68,6 +73,12 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
         var ar = await _db.AccountsReceivable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsReceivableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
+
+        await _periodLockGate.EnsureMutationAllowedAsync(
+            collection.BillId ?? ar.BillId,
+            collection.ValueDate,
+            "phân bổ thu tiền",
+            cancellationToken);
 
         if (!string.Equals(collection.CurrencyCode, ar.CurrencyCode, StringComparison.OrdinalIgnoreCase))
         {

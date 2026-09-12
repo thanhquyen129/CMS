@@ -20,8 +20,9 @@ public sealed class CreateFinancialCloseSnapshotCommandValidator : AbstractValid
 }
 
 /// <summary>
-/// Eligibility stub → create immutable snapshot + details + hash → lock close (C-010 / AC-008).
+/// Eligibility checklist → create immutable snapshot + details + hash → lock close (C-010 / AC-008).
 /// Never mutates prior snapshots; reopen/reclose appends SnapshotVersion.
+/// Strict policy forces all eligibility gates (no bypass via config).
 /// </summary>
 public sealed class CreateFinancialCloseSnapshotCommandHandler
     : IRequestHandler<CreateFinancialCloseSnapshotCommand, Guid>
@@ -30,17 +31,20 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly ICloseEligibilityChecker _eligibility;
 
     public CreateFinancialCloseSnapshotCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        ICloseEligibilityChecker eligibility)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _eligibility = eligibility;
     }
 
     public async Task<Guid> Handle(CreateFinancialCloseSnapshotCommand request, CancellationToken cancellationToken)
@@ -66,7 +70,7 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
             throw new ConflictAppException("Chỉ được tạo bản chốt khi lần chốt đang mở hoặc đã mở lại.");
         }
 
-        await EnsureEligibleAsync(close, cancellationToken);
+        await _eligibility.EnsureEligibleAsync(close, cancellationToken);
 
         var nextSnapshotVersion = (await _db.FinancialCloseSnapshots
             .Where(s => s.FinancialCloseId == close.Id)
@@ -117,32 +121,10 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
             AuditActions.FinancialCloseSnapshotCreate,
             AuditObjectTypes.FinancialCloseSnapshot,
             snapshot.Id,
-            afterJson: $"{{\"financialCloseId\":\"{close.Id}\",\"snapshotVersion\":{nextSnapshotVersion},\"immutableHash\":\"{hash}\"}}");
+            afterJson: $"{{\"financialCloseId\":\"{close.Id}\",\"snapshotVersion\":{nextSnapshotVersion},\"immutableHash\":\"{hash}\",\"policyVersion\":\"{close.PolicyVersion}\"}}");
 
         await _db.SaveChangesAsync(cancellationToken);
         return snapshot.Id;
-    }
-
-    private async Task EnsureEligibleAsync(FinancialClose close, CancellationToken cancellationToken)
-    {
-        // Thin eligibility: block when open/in_progress critical exceptions exist in scope.
-        var query = _db.Exceptions.AsNoTracking()
-            .Where(e =>
-                (e.Status == ExceptionStatuses.Open
-                 || e.Status == ExceptionStatuses.InProgress
-                 || e.Status == ExceptionStatuses.Escalated)
-                && e.Severity == ExceptionSeverities.Critical);
-
-        if (close.ScopeType == FinancialCloseScopeTypes.Bill && close.ScopeId.HasValue)
-        {
-            query = query.Where(e => e.BillId == null || e.BillId == close.ScopeId);
-        }
-
-        if (await query.AnyAsync(cancellationToken))
-        {
-            throw new ConflictAppException(
-                "Không đủ điều kiện chốt: còn ngoại lệ mức nghiêm trọng đang mở.");
-        }
     }
 
     private async Task<List<SnapshotMetric>> CaptureMetricsAsync(

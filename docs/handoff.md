@@ -13,7 +13,7 @@ Làm những gì tốt nhất cho agent Sprint và Agent U chạy song song.
 - Actions: run mới hủy run cũ cùng `main`; `/health` sau deploy.
 
 ### Next
-- Kickoff U2; S11 merge tuần tự khi PR sẵn (không đua push `main`).
+- U2 cloud in progress: [UI-2](bc-5377dafd-4e8b-4761-801f-ae76de6079b7). S11 merge tuần tự khi PR sẵn (không đua push `main`).
 
 ---
 

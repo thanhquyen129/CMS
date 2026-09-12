@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
+import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -14,6 +15,7 @@ import {
   type MaturityBreakdown,
 } from "@/lib/bills";
 import { listCostsByBill, listRevenuesByBill } from "@/lib/costs-revenues-server";
+import { listAccountsPayable, listAccountsReceivable } from "@/lib/ap-ar";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Params = Promise<{ id: string }>;
@@ -151,13 +153,15 @@ export default async function BillDetailPage({ params }: { params: Params }) {
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const best = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
 
-  const [billRes, profileRes, profitRes, costsRes, revenuesRes] =
+  const [billRes, profileRes, profitRes, costsRes, revenuesRes, apRes, arRes] =
     await Promise.all([
       getBill(id),
       getFinancialProfile(id),
       getProfitability(id, "best"),
       listCostsByBill(id),
       listRevenuesByBill(id),
+      listAccountsPayable(),
+      listAccountsReceivable(),
     ]);
 
   if (!billRes.ok && billRes.status === 404) {
@@ -292,6 +296,15 @@ export default async function BillDetailPage({ params }: { params: Params }) {
           costsError={costsRes.ok ? null : costsRes.message}
           revenues={revenuesRes.ok ? revenuesRes.data : null}
           revenuesError={revenuesRes.ok ? null : revenuesRes.message}
+        />
+
+        <BillDocumentsApArPanel
+          terms={terms}
+          billId={id}
+          payables={apRes.ok ? apRes.data : null}
+          payablesError={apRes.ok ? null : apRes.message}
+          receivables={arRes.ok ? arRes.data : null}
+          receivablesError={arRes.ok ? null : arRes.message}
         />
 
         <h2 className="section-title">{profitLabel}</h2>

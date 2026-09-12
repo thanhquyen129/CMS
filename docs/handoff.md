@@ -1,5 +1,39 @@
 # Handoff
 
+## 2026-09-12 — Pass UI / Sprint U4 Documents & AP/AR (thin)
+
+### User
+Ship U4: chứng từ Received ≠ Accepted ≠ Matched nhìn thấy; outstanding AP/AR đọc được (thin). Copy CP6.5; không gộp Cost = Payment. Chỉ `apps/web/**` + docs. PR vào main. Pass UI track complete nếu U4 là sprint cuối.
+
+### Done
+- `/documents` list + filters (chờ chấp nhận / đã chấp nhận chưa khớp); triad trạng thái VI.
+- `/documents/receive` — Nhận chứng từ (BFF → `POST /api/financial-documents`); chỉ đặt Received.
+- `/documents/[id]` — detail + Chấp nhận (BFF accept); lines open/matched; không match UI.
+- `/ap-ar` — AP / AR outstanding + tab Exposure (read); copy AP ≠ Cost, AR ≠ Revenue.
+- Bill detail: panel AP/AR outstanding theo `billId` + CTA nhận chứng từ gắn Bill.
+- Nav AppShell + middleware; approval queue deep-link chứng từ khi `objectType` document.
+- Docs: `UI-4-DOD.md`; README/orchestration **U4 Done** → **Pass UI COMPLETE**.
+- Rebased onto main (incl. U3 VPS verify); PR #27.
+
+### Files / API
+- UI: `apps/web/app/documents/**`, `apps/web/app/ap-ar/**`, `lib/documents.ts`, `lib/ap-ar.ts`, components Document*/BillDocuments*, BFF financial-documents
+- API (unchanged): financial-documents, accounts-payable/receivable, payable/receivable-exposures, terminology
+
+### Verify
+- `npm run build` trong `apps/web`
+- Sau merge/Actions: `/documents`, `/ap-ar`, Bill AP/AR block, `/health`
+
+### Next / Follow-ups
+- API: list financial-documents thiếu `billId` filter/DTO — không lọc chứng từ theo Bill trên UI.
+- Match UI + Settlement/Payment UI (non-goals U4).
+- Approve/reject từ queue.
+
+### Residual risks
+- List chứng từ trên Bill không filter được (thiếu field API) — CTA + danh sách chung trung thực.
+- Recognize/write-off/settlement chưa có UI — chỉ đọc outstanding.
+
+---
+
 ## 2026-09-12 — U3 VPS verify + fallback redeploy (local takeover)
 
 ### User

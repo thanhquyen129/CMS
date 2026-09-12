@@ -330,6 +330,79 @@ a.stat-card:hover {
   padding: 0.6rem 0.7rem; background: #fff;
 }
 .field input:focus { outline: 2px solid rgba(11, 95, 75, 0.35); border-color: var(--accent); }
+.field select {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 0.6rem 0.7rem; background: #fff;
+}
+.field select:focus { outline: 2px solid rgba(11, 95, 75, 0.35); border-color: var(--accent); }
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.35rem 1rem;
+}
+.field-span { grid-column: 1 / -1; }
+.receive-form { margin-top: 0.5rem; }
+.status-triad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.65rem;
+  margin: 0.35rem 0;
+}
+.status-triad.compact {
+  align-items: center;
+  gap: 0.35rem;
+}
+.status-dim {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.status-dim-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.status-neq {
+  color: var(--muted);
+  font-weight: 700;
+  align-self: center;
+  padding-bottom: 0.1rem;
+}
+.status-triad.compact .status-neq {
+  padding-bottom: 0;
+  font-size: 0.85rem;
+}
+.status-pill {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: #eef3f6;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.status-pill.receipt-received,
+.status-pill.acceptance-accepted,
+.status-pill.matching-matched {
+  background: #e3f0ea;
+  color: #0b5f4b;
+}
+.status-pill.receipt-not_received,
+.status-pill.acceptance-not_accepted,
+.status-pill.matching-unmatched {
+  background: #eef3f6;
+  color: #445566;
+}
+.status-pill.acceptance-rejected {
+  background: #fdecec;
+  color: var(--danger);
+}
+.status-pill.matching-partially_matched {
+  background: #fdf0e6;
+  color: #8a3b12;
+}
 .alert { border-radius: var(--radius); padding: 0.65rem 0.75rem; margin-bottom: 1rem; font-size: 0.9rem; }
 .alert-error { background: var(--danger-bg); color: var(--danger); border: 1px solid #f0c4c4; }
 .alert-info { background: #eef4f8; color: #345; border: 1px solid #d5e0ea; }

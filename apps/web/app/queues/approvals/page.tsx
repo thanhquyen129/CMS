@@ -6,8 +6,8 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
   approvalStatusLabel,
-  billHrefFromApproval,
   listApprovalQueue,
+  objectHrefFromApproval,
   objectTypeLabel,
 } from "@/lib/control-desk";
 import { formatDateTimeVi } from "@/lib/money";
@@ -23,6 +23,7 @@ export default async function ApprovalQueuePage() {
   const approvalLabel = term(terms, "APPROVAL", "Phê duyệt");
   const levelLabel = term(terms, "APPROVAL_LEVEL", "Cấp phê duyệt");
   const billLabel = term(terms, "BILL", "Bill");
+  const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
   const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
 
   const result = await listApprovalQueue();
@@ -37,8 +38,8 @@ export default async function ApprovalQueuePage() {
         </p>
         <h1>{queueLabel}</h1>
         <p className="lede">
-          {approvalLabel} đang chờ quyết định. U3 chỉ đọc hàng đợi — quyết định approve/reject
-          trên UI sẽ ở sprint sau. Mở {billLabel} khi đối tượng là Bill.
+          {approvalLabel} đang chờ quyết định. Quyết định approve/reject trên UI
+          vẫn follow-up. Mở {billLabel} / {docLabel} khi có màn chi tiết.
         </p>
 
         {!result.ok ? (
@@ -64,7 +65,14 @@ export default async function ApprovalQueuePage() {
               </thead>
               <tbody>
                 {result.data.map((item) => {
-                  const href = billHrefFromApproval(item);
+                  const href = objectHrefFromApproval(item);
+                  const linkLabel =
+                    item.objectType.toLowerCase() === "bill"
+                      ? `Mở ${billLabel}`
+                      : item.objectType.toLowerCase() === "financial_document" ||
+                          item.objectType.toLowerCase() === "document"
+                        ? `Mở ${docLabel}`
+                        : "Mở";
                   return (
                     <tr key={item.id}>
                       <td>
@@ -84,7 +92,7 @@ export default async function ApprovalQueuePage() {
                       <td>
                         {href ? (
                           <Link className="row-link" href={href}>
-                            Mở {billLabel}
+                            {linkLabel}
                           </Link>
                         ) : (
                           <span className="muted" title="Chưa có màn chi tiết cho loại này">

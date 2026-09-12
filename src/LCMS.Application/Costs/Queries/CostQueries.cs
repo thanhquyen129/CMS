@@ -221,7 +221,10 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
     }
 }
 
-public sealed record ListCostsQuery(Guid? BillId, string? FinancialMaturity) : IRequest<IReadOnlyList<CostListItemDto>>;
+public sealed record ListCostsQuery(
+    Guid? BillId,
+    string? FinancialMaturity,
+    string? AttributionType = null) : IRequest<IReadOnlyList<CostListItemDto>>;
 
 public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IReadOnlyList<CostListItemDto>>
 {
@@ -267,6 +270,12 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
         {
             var maturity = request.FinancialMaturity.Trim().ToLowerInvariant();
             query = query.Where(c => c.FinancialMaturity == maturity);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.AttributionType))
+        {
+            var attribution = request.AttributionType.Trim().ToLowerInvariant();
+            query = query.Where(c => c.AttributionType == attribution);
         }
 
         if (scope == DataScopes.Own)

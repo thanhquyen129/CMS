@@ -113,14 +113,32 @@ public sealed class Sprint4FullCostTests : IAsyncLifetime
             Assert.Equal(HttpStatusCode.BadRequest, (await _client.SendAsync(bad)).StatusCode);
         }
 
-        // Direct cannot allocate
+        // Shared allocation requires ≥2 bills (validator)
+        using (var oneBill = new HttpRequestMessage(HttpMethod.Post, $"/api/costs/{sharedId}/allocations")
+        {
+            Content = JsonContent.Create(new
+            {
+                allocationBasis = "equal",
+                details = new[] { new { billId = billA, basisValue = (decimal?)null } }
+            })
+        })
+        {
+            oneBill.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.BadRequest, (await _client.SendAsync(oneBill)).StatusCode);
+        }
+
+        // Direct cannot allocate (even with ≥2 bills)
         var directId = await CreateDirectCostAsync(tenantId, billA, 10m, "VND");
         using (var directAlloc = new HttpRequestMessage(HttpMethod.Post, $"/api/costs/{directId}/allocations")
         {
             Content = JsonContent.Create(new
             {
                 allocationBasis = "equal",
-                details = new[] { new { billId = billA, basisValue = 1m } }
+                details = new[]
+                {
+                    new { billId = billA, basisValue = (decimal?)null },
+                    new { billId = billB, basisValue = (decimal?)null }
+                }
             })
         })
         {

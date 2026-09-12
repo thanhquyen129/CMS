@@ -202,7 +202,17 @@ export function BillCostRevenuePanel({
         </Link>{" "}
         <Link className="btn btn-sm" href={`/bills/${billId}/revenues/new`}>
           Tạo {revenueLabel.toLowerCase()}
+        </Link>{" "}
+        <Link className="btn btn-sm btn-ghost" href="/costs/shared">
+          {costLabel} {term(terms, "ATTRIBUTION_SHARED", "Chung").toLowerCase()}
         </Link>
+      </p>
+      <p className="note">
+        {costLabel} trực tiếp gắn Bill này; {costLabel.toLowerCase()} chung phân bổ từ{" "}
+        <Link className="row-link" href="/costs/shared">
+          màn phân bổ
+        </Link>{" "}
+        (≥2 Bill → nháp → chốt). Phần phân bổ đã chốt hiện ở hồ sơ tài chính / lợi nhuận.
       </p>
 
       {error ? (

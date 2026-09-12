@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
 import type { ApiResult } from "./bills";
-import type { CostListItem, RevenueListItem } from "./costs-revenues";
+import type { CostDto, CostListItem, RevenueListItem } from "./costs-revenues";
 
 async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   const token = await getSessionToken();
@@ -52,6 +52,16 @@ export function listCostsByBill(
   return apiGet<CostListItem[]>(
     `/api/costs?billId=${encodeURIComponent(billId)}`
   );
+}
+
+export function listSharedCosts(): Promise<ApiResult<CostListItem[]>> {
+  return apiGet<CostListItem[]>(
+    `/api/costs?attributionType=${encodeURIComponent("shared")}`
+  );
+}
+
+export function getCost(id: string): Promise<ApiResult<CostDto>> {
+  return apiGet<CostDto>(`/api/costs/${encodeURIComponent(id)}`);
 }
 
 export function listRevenuesByBill(

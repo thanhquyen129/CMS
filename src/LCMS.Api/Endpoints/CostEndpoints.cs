@@ -31,10 +31,13 @@ public static class CostEndpoints
         costs.MapGet("/", async (
             Guid? billId,
             string? financialMaturity,
+            string? attributionType,
             ISender sender,
             CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListCostsQuery(billId, financialMaturity), ct);
+            var list = await sender.Send(
+                new ListCostsQuery(billId, financialMaturity, attributionType),
+                ct);
             return Results.Ok(list);
         });
 

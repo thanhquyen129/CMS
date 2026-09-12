@@ -1,5 +1,35 @@
 # Handoff
 
+## 2026-09-12 — P01 Shared allocation UI
+
+### User
+P01 Shared allocation UI
+
+### Done
+- UI phân bổ chi phí chung: list `/costs/shared`, tạo `/costs/shared/new`, chi tiết + draft/finalize `/costs/shared/[id]`.
+- Basis equal | quantity | manual_ratio; ≥2 Bill; chốt với dialog VI.
+- BFF: `POST /bff/costs/{id}/allocations`, `POST /bff/cost-allocations/{id}/finalize`.
+- API: `GET /api/costs?attributionType=shared`; create/finalize allocation reject nếu dưới 2 Bill.
+- Nav sidebar + dashboard shortcut + link từ Bill cost panel.
+
+### Files
+- `apps/web/app/costs/shared/**`, components `CreateSharedCostForm`, `AllocateSharedCostForm`, `FinalizeCostAllocationButton`
+- `apps/web/lib/costs-revenues.ts`, `costs-revenues-server.ts`, BFF routes
+- `src/LCMS.Application/Costs/Commands/AllocationCommands.cs`, `CostQueries.cs`, `CostEndpoints.cs`
+- `docs/sprint/P01-DOD.md`, checklist/README cập nhật
+
+### Verify
+- `dotnet test --filter Sprint4Full`
+- `npm run build` (apps/web)
+
+### Next
+- P02 Adjust Cost/Revenue + nhập số Confirm/Actual
+
+### End-user
+Finance mở **Chi phí chung** → tạo shared → chọn ≥2 Bill + cơ sở → tạo nháp → **Chốt phân bổ**. Số phân bổ đã chốt hiện trên hồ sơ Bill / lợi nhuận.
+
+---
+
 ## 2026-09-12 — PO gap checklist (post UAT G1–G6)
 
 ### User

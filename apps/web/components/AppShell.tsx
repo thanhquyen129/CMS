@@ -6,6 +6,7 @@ import { term, type TerminologyMap } from "@/lib/terminology";
 type NavKey =
   | "dashboard"
   | "bills"
+  | "costs"
   | "documents"
   | "ap-ar"
   | "settlements"
@@ -25,6 +26,8 @@ type AppShellProps = {
 
 export function AppShell({ terms, active, children, topbarRight }: AppShellProps) {
   const billLabel = term(terms, "BILL", "Bill");
+  const costLabel = term(terms, "COST", "Chi phí");
+  const sharedLabel = term(terms, "ATTRIBUTION_SHARED", "Chung");
   const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
@@ -59,6 +62,12 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
             </Link>
             <Link className={active === "bills" ? "active" : undefined} href="/bills">
               {billLabel}
+            </Link>
+            <Link
+              className={active === "costs" ? "active" : undefined}
+              href="/costs/shared"
+            >
+              {costLabel} {sharedLabel.toLowerCase()}
             </Link>
             <Link
               className={active === "documents" ? "active" : undefined}

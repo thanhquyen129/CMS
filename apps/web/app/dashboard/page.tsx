@@ -579,6 +579,11 @@ export default async function DashboardPage() {
                 <Link href="/bills/new">Tạo {billLabel} mới</Link>
               </li>
               <li>
+                <Link href="/costs/shared">
+                  {costLabel} {term(terms, "ATTRIBUTION_SHARED", "Chung").toLowerCase()}
+                </Link>
+              </li>
+              <li>
                 <Link href="/documents/receive">Nhận {docLabel.toLowerCase()}</Link>
               </li>
               <li>

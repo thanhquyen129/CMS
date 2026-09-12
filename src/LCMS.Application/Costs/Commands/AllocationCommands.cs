@@ -24,7 +24,8 @@ public sealed class CreateCostAllocationCommandValidator : AbstractValidator<Cre
             .Must(b => CostAllocationBases.IsSupported(b.Trim().ToLowerInvariant()))
             .WithMessage("Cơ sở phân bổ phải là equal, quantity hoặc manual_ratio.");
         RuleFor(x => x.Details)
-            .NotEmpty().WithMessage("Phải có ít nhất một dòng phân bổ theo Bill.");
+            .Must(d => d is { Count: >= 2 })
+            .WithMessage("Chi phí chung phải phân bổ cho ít nhất 2 Bill.");
         RuleForEach(x => x.Details).ChildRules(d =>
         {
             d.RuleFor(x => x.BillId).NotEmpty().WithMessage("Bill phân bổ không hợp lệ.");
@@ -105,6 +106,11 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
         if (!CostAllocationBases.IsSupported(basis))
         {
             throw new ConflictAppException("Cơ sở phân bổ phải là equal, quantity hoặc manual_ratio.");
+        }
+
+        if (request.Details.Count < 2)
+        {
+            throw new ConflictAppException("Chi phí chung phải phân bổ cho ít nhất 2 Bill.");
         }
 
         var billIds = request.Details.Select(d => d.BillId).Distinct().ToList();
@@ -257,9 +263,9 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             .OrderBy(d => d.BillId)
             .ToListAsync(cancellationToken);
 
-        if (details.Count == 0)
+        if (details.Count < 2)
         {
-            throw new ConflictAppException("Không thể chốt phân bổ khi chưa có dòng chi tiết.");
+            throw new ConflictAppException("Không thể chốt phân bổ: chi phí chung cần ít nhất 2 Bill.");
         }
 
         if (string.Equals(allocation.AllocationBasis, CostAllocationBases.Equal, StringComparison.OrdinalIgnoreCase))

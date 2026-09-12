@@ -6,6 +6,7 @@ import { DocumentAcceptButton } from "@/components/DocumentAcceptButton";
 import { DocumentStatusTriad } from "@/components/DocumentStatusTriad";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import { canStartMatch } from "@/lib/document-matches";
 import {
   canAcceptDocument,
   directionLabel,
@@ -71,6 +72,7 @@ export default async function DocumentDetailPage({
 
   const doc = result.data;
   const canAccept = canAcceptDocument(doc);
+  const canMatch = canStartMatch(doc);
 
   return (
     <AppShell
@@ -145,15 +147,23 @@ export default async function DocumentDetailPage({
               currencyCode={doc.currencyCode}
               canAccept
             />
-          ) : (
+          ) : null}
+          {canMatch ? (
+            <Link className="btn" href={`/documents/${doc.id}/match`}>
+              Khớp chứng từ
+            </Link>
+          ) : null}
+          {!canAccept && !canMatch ? (
             <p className="muted small">
               {doc.acceptanceStatus?.toLowerCase() === "accepted"
-                ? `Đã chấp nhận. Khớp chứng từ (${matchedLabel}) chưa có trên UI U4 — follow-up.`
+                ? doc.lines.every((l) => Number(l.openAmount) <= 0)
+                  ? `Đã ${matchedLabel.toLowerCase()} hết số mở — hoặc chưa có dòng mở.`
+                  : "Không mở khớp được ở trạng thái hiện tại."
                 : doc.receiptStatus?.toLowerCase() !== "received"
-                  ? "Chỉ chấp nhận được khi đã nhận."
-                  : "Không thể chấp nhận ở trạng thái hiện tại."}
+                  ? "Chỉ chấp nhận / khớp được khi đã nhận."
+                  : "Chấp nhận chứng từ trước khi khớp (Nhận ≠ Chấp nhận ≠ Khớp)."}
             </p>
-          )}
+          ) : null}
         </div>
 
         <h2 className="section-title">{lineLabel}</h2>

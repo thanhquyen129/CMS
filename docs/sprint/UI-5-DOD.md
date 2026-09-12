@@ -35,7 +35,7 @@ Bank feed, reverse allocation UI, write-off/recognize from UI, match UI, per-act
 ## Follow-ups
 - Reverse allocation UX (API sẵn).
 - Write-off / recognize thin UI.
-- Match UI (`/api/document-matches`).
+- ~~Match UI (`/api/document-matches`).~~ → Done (`UI-MATCH-DOD.md`)
 - List documents `billId` filter (API).
 
 ## Verify

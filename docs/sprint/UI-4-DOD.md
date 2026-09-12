@@ -36,7 +36,7 @@ Auto-match engine UI, bank feed, e-invoice provider screens, write-off/recognize
 
 ## Follow-ups
 - **API:** `GET /api/financial-documents` thiếu `billId` trên list DTO / query filter — Bill không lọc được chứng từ gắn Bill (UI ghi chú trung thực).
-- Match UI (`/api/document-matches`) — start/add detail/reverse.
+- ~~Match UI (`/api/document-matches`) — start/add detail/reverse.~~ → Done (`UI-MATCH-DOD.md`)
 - Reverse allocation / write-off / recognize UI.
 - Approve/reject từ hàng đợi; aging report screens đầy đủ.
 

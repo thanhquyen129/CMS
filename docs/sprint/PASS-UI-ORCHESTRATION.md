@@ -18,7 +18,7 @@
 | U5 | local | Done | Settlement + Close — `UI-5-DOD.md` |
 
 ## Follow-ups (not blocking)
-- Match UI, reverse allocation, write-off/recognize UI
+- Match UI, reverse allocation, write-off/recognize UI → **Match UI Done** (`UI-MATCH-DOD.md`); còn reverse allocation / write-off / recognize
 - `billId` filter on document list DTO
 - Actions race → prefer serialize deploy / `--no-cache web` when UI drifts
 

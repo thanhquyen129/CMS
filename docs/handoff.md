@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — Match UI (defer U4 / UAT G2)
+
+### User
+Match UI (còn defer từ U4).
+
+### Done
+- Document detail: CTA **Khớp chứng từ** khi đã nhận + đã chấp nhận + còn số mở.
+- `/documents/{id}/match` — mở phiên nháp (`line_to_cost` / `line_to_revenue` / `line_to_line`).
+- `/documents/{id}/matches/{matchId}` — thêm chi tiết, đảo chi tiết, hủy phiên (BFF → `/api/document-matches`).
+- Copy: khớp = liên kết; không tạo Cost/Revenue. Triad MatchingStatus cập nhật sau add/reverse.
+- DoD: `docs/sprint/UI-MATCH-DOD.md`; cập nhật follow-up U4/U5.
+
+### Files
+- `apps/web/app/documents/[id]/match/**`, `…/matches/[matchId]/**`
+- `apps/web/app/bff/document-matches/**`
+- `apps/web/lib/document-matches.ts`, `document-matches-server.ts`
+- Components Start/Add/Reverse/Cancel match; document detail CTA
+
+### Follow-ups
+- List matches by `primaryDocumentId` (API).
+- Add document line UI (UAT G3).
+- Confirm-match workflow nếu cần.
+
+### Verify
+- `npm run build` apps/web xanh
+- VPS (sau deploy): chứng từ accepted → khớp → matchingStatus đổi
+
+---
+
 ## 2026-09-12 — UAT VPS một vòng Bill → Close + gap thật
 
 ### User
@@ -12,7 +41,7 @@ UAT trên VPS — một vòng Bill → Cost/Revenue → chứng từ/AP-AR → S
 
 ### Gaps ưu tiên
 - **G1 blocker:** UI thiếu tạo Bill / Cost / Revenue / Exposure→Recognize → không go-live UI-only.
-- **G2/G3 major:** thiếu match chứng từ + add document line trên UI.
+- **G2 major:** ~~thiếu match chứng từ~~ → Done (`UI-MATCH-DOD.md`); **G3:** add document line trên UI.
 - **G4–G6 minor:** `billId` filter documents; AP/AR ẩn settled; settlement list thiếu `billNo`.
 
 ### Verify

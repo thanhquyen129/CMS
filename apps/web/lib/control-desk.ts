@@ -20,6 +20,33 @@ export type DashboardBaseCurrencyRollUp = {
   fxStubNote: string;
 };
 
+export type DashboardDocumentCluster = {
+  awaitingAcceptanceCount: number;
+  acceptedUnmatchedCount: number;
+  draftMatchCount: number;
+};
+
+export type DashboardApArCluster = {
+  openAccountsPayableCount: number;
+  openAccountsReceivableCount: number;
+  openPayableExposureCount: number;
+  openReceivableExposureCount: number;
+};
+
+export type DashboardSettlementCluster = {
+  openPaymentCount: number;
+  openCollectionCount: number;
+};
+
+export type DashboardMaturityPipeline = {
+  costExpectedOnlyCount: number;
+  costConfirmedOnlyCount: number;
+  costActualCount: number;
+  revenueExpectedOnlyCount: number;
+  revenueConfirmedOnlyCount: number;
+  revenueActualCount: number;
+};
+
 export type DashboardSummary = {
   asOfTimestamp: string;
   billCount: number;
@@ -32,6 +59,12 @@ export type DashboardSummary = {
   baseCurrencyRollUp: DashboardBaseCurrencyRollUp | null;
   hasMixedCurrencies: boolean;
   note: string;
+  openReconciliationCount: number;
+  unmatchedBankFeedCount: number;
+  documents: DashboardDocumentCluster | null;
+  apAr: DashboardApArCluster | null;
+  settlements: DashboardSettlementCluster | null;
+  maturityPipeline: DashboardMaturityPipeline | null;
 };
 
 export type ExceptionQueueItem = {

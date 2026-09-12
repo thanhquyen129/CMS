@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-12 — Dashboard clusters (control + finance ops)
+
+### User
+thiết kế Dashboard thêm các cụm thông tin, chức năng, báo cáo thống kê đầy đủ phù hợp với chức năng đặc trưng của hệ thống này
+
+### Done
+- Mở rộng `GET /api/dashboard/summary`: số phiên đối soát mở, bank-feed chưa khớp, cụm chứng từ (chờ chấp nhận / chấp nhận chưa khớp / match nháp), AP/AR mở + exposure, payment/collection mở, pipeline độ chín (số dòng Expected/Confirmed/Actual — không phải tiền).
+- UI `/dashboard` chia cụm: Việc cần xử lý → Best Available P&L → Độ chín → Chứng từ → AP/AR → Thanh toán/Thu tiền → Lối tắt chức năng (link thật).
+- Giữ honesty: Best Available = projection; Received ≠ Accepted ≠ Matched; không fake chart.
+
+### Files / API
+- `src/LCMS.Application/Dashboard/Queries/GetDashboardSummaryQuery.cs`
+- `apps/web/app/dashboard/page.tsx`, `loading.tsx`
+- `apps/web/lib/control-desk.ts`
+- `apps/web/app/globals.css` (`.dash-layout`, `.dash-cluster`, `.dash-shortcuts`)
+
+### Verify
+- `dotnet test` filter Sprint11: 7 passed
+- `npm run build` apps/web: OK
+
+### Follow-ups
+- Aging buckets on dashboard (reuse `/api/accounts-payable|receivable/aging`) khi có quyền View Cost/Revenue tách
+- Owner drill-down Company→Bill (implementation-plan)
+- Chart xu hướng chỉ khi có chuỗi thời gian thật (không stub)
+
+---
+
 ## 2026-09-12 — Full-width content panels
 
 ### User

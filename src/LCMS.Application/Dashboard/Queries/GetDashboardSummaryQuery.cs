@@ -29,6 +29,35 @@ public sealed record DashboardBaseCurrencyRollUpDto(
     decimal ProfitBestAvailableBase,
     string FxStubNote);
 
+/// <summary>Document intake pipeline — Received ≠ Accepted ≠ Matched.</summary>
+public sealed record DashboardDocumentClusterDto(
+    int AwaitingAcceptanceCount,
+    int AcceptedUnmatchedCount,
+    int DraftMatchCount);
+
+/// <summary>AP/AR open settlement + exposures not fully recognized.</summary>
+public sealed record DashboardApArClusterDto(
+    int OpenAccountsPayableCount,
+    int OpenAccountsReceivableCount,
+    int OpenPayableExposureCount,
+    int OpenReceivableExposureCount);
+
+/// <summary>Cash settlement transactions still open (not cancelled).</summary>
+public sealed record DashboardSettlementClusterDto(
+    int OpenPaymentCount,
+    int OpenCollectionCount);
+
+/// <summary>
+/// Line counts by maturity layer (Actual → Confirmed → Expected). Counts only — not money totals.
+/// </summary>
+public sealed record DashboardMaturityPipelineDto(
+    int CostExpectedOnlyCount,
+    int CostConfirmedOnlyCount,
+    int CostActualCount,
+    int RevenueExpectedOnlyCount,
+    int RevenueConfirmedOnlyCount,
+    int RevenueActualCount);
+
 public sealed record DashboardSummaryDto(
     DateTimeOffset AsOfTimestamp,
     int BillCount,
@@ -40,7 +69,13 @@ public sealed record DashboardSummaryDto(
     IReadOnlyList<DashboardCurrencyTotalsDto> TotalsByCurrency,
     DashboardBaseCurrencyRollUpDto? BaseCurrencyRollUp,
     bool HasMixedCurrencies,
-    string Note);
+    string Note,
+    int OpenReconciliationCount = 0,
+    int UnmatchedBankFeedCount = 0,
+    DashboardDocumentClusterDto? Documents = null,
+    DashboardApArClusterDto? ApAr = null,
+    DashboardSettlementClusterDto? Settlements = null,
+    DashboardMaturityPipelineDto? MaturityPipeline = null);
 
 public sealed class GetDashboardSummaryQueryHandler
     : IRequestHandler<GetDashboardSummaryQuery, DashboardSummaryDto>
@@ -98,6 +133,68 @@ public sealed class GetDashboardSummaryQueryHandler
                 c => c.Status == FinancialCloseStatuses.Open || c.Status == FinancialCloseStatuses.Reopened,
                 cancellationToken);
 
+        var openReconciliationCount = await _db.Reconciliations.AsNoTracking()
+            .CountAsync(
+                r => r.Status == ReconciliationStatuses.Draft
+                    || r.Status == ReconciliationStatuses.InProgress,
+                cancellationToken);
+
+        var unmatchedBankFeedCount = await _db.BankFeedLines.AsNoTracking()
+            .CountAsync(l => l.Status == BankFeedLineStatuses.Unmatched, cancellationToken);
+
+        var activeDocs = _db.FinancialDocuments.AsNoTracking()
+            .Where(d => d.RecordStatus == FinancialDocumentRecordStatuses.Active);
+
+        var awaitingAcceptanceCount = await activeDocs.CountAsync(
+            d => d.ReceiptStatus == FinancialDocumentReceiptStatuses.Received
+                && d.AcceptanceStatus == FinancialDocumentAcceptanceStatuses.NotAccepted,
+            cancellationToken);
+
+        var acceptedUnmatchedCount = await activeDocs.CountAsync(
+            d => d.AcceptanceStatus == FinancialDocumentAcceptanceStatuses.Accepted
+                && (d.MatchingStatus == FinancialDocumentMatchingStatuses.Unmatched
+                    || d.MatchingStatus == FinancialDocumentMatchingStatuses.PartiallyMatched),
+            cancellationToken);
+
+        var draftMatchCount = await _db.DocumentMatches.AsNoTracking()
+            .CountAsync(m => m.MatchStatus == DocumentMatchStatuses.Draft, cancellationToken);
+
+        var openApCount = await _db.AccountsPayable.AsNoTracking()
+            .CountAsync(
+                a => a.RecordStatus == "active"
+                    && a.SettlementStatus != ApArSettlementStatuses.Settled,
+                cancellationToken);
+
+        var openArCount = await _db.AccountsReceivable.AsNoTracking()
+            .CountAsync(
+                a => a.RecordStatus == "active"
+                    && a.SettlementStatus != ApArSettlementStatuses.Settled,
+                cancellationToken);
+
+        var openPayableExposureCount = await _db.PayableExposures.AsNoTracking()
+            .CountAsync(
+                e => e.RecordStatus == "active"
+                    && e.Status != ExposureStatuses.Cancelled
+                    && e.Status != ExposureStatuses.FullyRecognized,
+                cancellationToken);
+
+        var openReceivableExposureCount = await _db.ReceivableExposures.AsNoTracking()
+            .CountAsync(
+                e => e.RecordStatus == "active"
+                    && e.Status != ExposureStatuses.Cancelled
+                    && e.Status != ExposureStatuses.FullyRecognized,
+                cancellationToken);
+
+        var openPaymentCount = await _db.Payments.AsNoTracking()
+            .CountAsync(
+                p => p.RecordStatus == "active" && p.Status == PaymentStatuses.Open,
+                cancellationToken);
+
+        var openCollectionCount = await _db.Collections.AsNoTracking()
+            .CountAsync(
+                c => c.RecordStatus == "active" && c.Status == CollectionStatuses.Open,
+                cancellationToken);
+
         // Economic cost = all active costs (direct + shared). Do not add allocation details (would double-count).
         var costs = await _db.Costs.AsNoTracking()
             .Where(c => c.RecordStatus == "active")
@@ -108,6 +205,27 @@ public sealed class GetDashboardSummaryQueryHandler
             .Where(r => r.RecordStatus == "active")
             .Select(r => new { r.CurrencyCode, r.ExpectedAmount, r.ConfirmedAmount, r.ActualAmount })
             .ToListAsync(cancellationToken);
+
+        var maturity = new DashboardMaturityPipelineDto(
+            costs.Count(c => !c.ConfirmedAmount.HasValue && !c.ActualAmount.HasValue),
+            costs.Count(c => c.ConfirmedAmount.HasValue && !c.ActualAmount.HasValue),
+            costs.Count(c => c.ActualAmount.HasValue),
+            revenues.Count(r => !r.ConfirmedAmount.HasValue && !r.ActualAmount.HasValue),
+            revenues.Count(r => r.ConfirmedAmount.HasValue && !r.ActualAmount.HasValue),
+            revenues.Count(r => r.ActualAmount.HasValue));
+
+        var documents = new DashboardDocumentClusterDto(
+            awaitingAcceptanceCount,
+            acceptedUnmatchedCount,
+            draftMatchCount);
+
+        var apAr = new DashboardApArClusterDto(
+            openApCount,
+            openArCount,
+            openPayableExposureCount,
+            openReceivableExposureCount);
+
+        var settlements = new DashboardSettlementClusterDto(openPaymentCount, openCollectionCount);
 
         var currencyCodes = costs.Select(c => c.CurrencyCode)
             .Concat(revenues.Select(r => r.CurrencyCode))
@@ -169,7 +287,13 @@ public sealed class GetDashboardSummaryQueryHandler
             totals,
             rollUp,
             mixed,
-            note);
+            note,
+            openReconciliationCount,
+            unmatchedBankFeedCount,
+            documents,
+            apAr,
+            settlements,
+            maturity);
     }
 
     private static decimal BestAvailable(decimal? actual, decimal? confirmed, decimal expected)

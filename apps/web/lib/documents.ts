@@ -12,6 +12,7 @@ export type FinancialDocumentListItem = {
   direction: string;
   totalAmount: number;
   currencyCode: string;
+  billId: string | null;
   receiptStatus: string;
   acceptanceStatus: string;
   matchingStatus: string;
@@ -112,12 +113,14 @@ export function listFinancialDocuments(opts?: {
   receiptStatus?: string;
   acceptanceStatus?: string;
   matchingStatus?: string;
+  billId?: string;
 }): Promise<ApiResult<FinancialDocumentListItem[]>> {
   const params = new URLSearchParams();
   if (opts?.documentType) params.set("documentType", opts.documentType);
   if (opts?.receiptStatus) params.set("receiptStatus", opts.receiptStatus);
   if (opts?.acceptanceStatus) params.set("acceptanceStatus", opts.acceptanceStatus);
   if (opts?.matchingStatus) params.set("matchingStatus", opts.matchingStatus);
+  if (opts?.billId) params.set("billId", opts.billId);
   const qs = params.toString();
   return apiGet<FinancialDocumentListItem[]>(
     `/api/financial-documents${qs ? `?${qs}` : ""}`

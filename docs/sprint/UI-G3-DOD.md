@@ -19,7 +19,7 @@ Operator thêm/sửa/xóa dòng, chọn đối tác lúc nhận, và Accept ch�
 | 14 | Tests `DocumentLineIntegrityTests` + Sprint6/10 order | Done |
 
 ## Non-goals
-Party trên từng dòng · sửa header total từ UI · G4–G6
+Party trên từng dòng · sửa header total từ UI · G5–G6
 
 ## Verify
 - `dotnet test` DocumentLineIntegrity + Sprint6*

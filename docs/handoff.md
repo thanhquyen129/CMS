@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-12 — G4 FULL: lọc chứng từ theo Bill
+
+### User
+triển khai G4 full
+
+### Done
+- API: `GET /api/financial-documents?billId=` — khớp header **hoặc** dòng có BillId; list DTO thêm `billId`.
+- UI: `/documents?billId=` (chip Bill + giữ filter quick links); Bill panel bảng chứng từ + CTA «Danh sách theo Bill».
+- DoD `UI-G4-DOD.md`; UAT G4 → Done; còn G5–G6.
+
+### Files
+- `FinancialDocumentQueries.cs`, `FinancialDocumentEndpoints.cs`
+- `documents.ts`, `documents/page.tsx`, `BillDocumentsApArPanel.tsx`, `bills/[id]/page.tsx`
+- `DocumentBillIdFilterTests.cs`, `UI-G4-DOD.md`, UAT md/json
+
+### Verify
+- `dotnet test --filter DocumentBillIdFilter`
+- `npm run build` apps/web
+
+### Follow-ups
+- G5 AP/AR settled tab · G6 settlement `billNo`
+
+---
+
 ## 2026-09-12 — Fix CI #91–#96: Demo seed vs ThresholdApiFactory
 
 ### User

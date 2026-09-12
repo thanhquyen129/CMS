@@ -43,6 +43,7 @@ public sealed record FinancialDocumentListItemDto(
     string Direction,
     decimal TotalAmount,
     string CurrencyCode,
+    Guid? BillId,
     string ReceiptStatus,
     string AcceptanceStatus,
     string MatchingStatus,
@@ -116,7 +117,8 @@ public sealed record ListFinancialDocumentsQuery(
     string? DocumentType,
     string? ReceiptStatus,
     string? AcceptanceStatus,
-    string? MatchingStatus) : IRequest<IReadOnlyList<FinancialDocumentListItemDto>>;
+    string? MatchingStatus,
+    Guid? BillId = null) : IRequest<IReadOnlyList<FinancialDocumentListItemDto>>;
 
 public sealed class ListFinancialDocumentsQueryHandler
     : IRequestHandler<ListFinancialDocumentsQuery, IReadOnlyList<FinancialDocumentListItemDto>>
@@ -165,6 +167,15 @@ public sealed class ListFinancialDocumentsQueryHandler
             query = query.Where(d => d.MatchingStatus == s);
         }
 
+        // Header BillId OR any line BillId (line can override / attach when header null).
+        if (request.BillId.HasValue)
+        {
+            var billId = request.BillId.Value;
+            query = query.Where(d =>
+                d.BillId == billId
+                || _db.FinancialDocumentLines.Any(l => l.DocumentId == d.Id && l.BillId == billId));
+        }
+
         return await query
             .OrderByDescending(d => d.Id)
             .Select(d => new FinancialDocumentListItemDto(
@@ -174,6 +185,7 @@ public sealed class ListFinancialDocumentsQueryHandler
                 d.Direction,
                 d.TotalAmount,
                 d.CurrencyCode,
+                d.BillId,
                 d.ReceiptStatus,
                 d.AcceptanceStatus,
                 d.MatchingStatus,

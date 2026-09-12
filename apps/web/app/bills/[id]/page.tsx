@@ -16,6 +16,7 @@ import {
 } from "@/lib/bills";
 import { listCostsByBill, listRevenuesByBill } from "@/lib/costs-revenues-server";
 import { listAccountsPayable, listAccountsReceivable } from "@/lib/ap-ar";
+import { listFinancialDocuments } from "@/lib/documents";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Params = Promise<{ id: string }>;
@@ -153,7 +154,7 @@ export default async function BillDetailPage({ params }: { params: Params }) {
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const best = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
 
-  const [billRes, profileRes, profitRes, costsRes, revenuesRes, apRes, arRes] =
+  const [billRes, profileRes, profitRes, costsRes, revenuesRes, apRes, arRes, docsRes] =
     await Promise.all([
       getBill(id),
       getFinancialProfile(id),
@@ -162,6 +163,7 @@ export default async function BillDetailPage({ params }: { params: Params }) {
       listRevenuesByBill(id),
       listAccountsPayable(),
       listAccountsReceivable(),
+      listFinancialDocuments({ billId: id }),
     ]);
 
   if (!billRes.ok && billRes.status === 404) {
@@ -302,6 +304,8 @@ export default async function BillDetailPage({ params }: { params: Params }) {
         <BillDocumentsApArPanel
           terms={terms}
           billId={id}
+          documents={docsRes.ok ? docsRes.data : null}
+          documentsError={docsRes.ok ? null : docsRes.message}
           payables={apRes.ok ? apRes.data : null}
           payablesError={apRes.ok ? null : apRes.message}
           receivables={arRes.ok ? arRes.data : null}

@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { DocumentStatusTriad } from "@/components/DocumentStatusTriad";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import { getBill } from "@/lib/bills";
 import {
   directionLabel,
   documentTypeLabel,
@@ -16,7 +17,23 @@ type SearchParams = Promise<{
   receiptStatus?: string;
   acceptanceStatus?: string;
   matchingStatus?: string;
+  billId?: string;
 }>;
+
+function docsHref(opts: {
+  billId?: string;
+  receiptStatus?: string;
+  acceptanceStatus?: string;
+  matchingStatus?: string;
+}): string {
+  const p = new URLSearchParams();
+  if (opts.billId) p.set("billId", opts.billId);
+  if (opts.receiptStatus) p.set("receiptStatus", opts.receiptStatus);
+  if (opts.acceptanceStatus) p.set("acceptanceStatus", opts.acceptanceStatus);
+  if (opts.matchingStatus) p.set("matchingStatus", opts.matchingStatus);
+  const qs = p.toString();
+  return qs ? `/documents?${qs}` : "/documents";
+}
 
 export default async function DocumentsPage({
   searchParams,
@@ -29,19 +46,29 @@ export default async function DocumentsPage({
   }
 
   const sp = await searchParams;
+  const billId = sp.billId?.trim() || undefined;
   const terms = await fetchTerminology();
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
+  const billLabel = term(terms, "BILL", "Bill");
   const receivedLabel = term(terms, "RECEIVED", "Đã nhận");
   const acceptedLabel = term(terms, "ACCEPTED", "Đã chấp nhận");
   const matchedLabel = term(terms, "MATCHED", "Đã khớp");
 
-  const result = await listFinancialDocuments({
-    receiptStatus: sp.receiptStatus,
-    acceptanceStatus: sp.acceptanceStatus,
-    matchingStatus: sp.matchingStatus,
-  });
+  const [result, billRes] = await Promise.all([
+    listFinancialDocuments({
+      receiptStatus: sp.receiptStatus,
+      acceptanceStatus: sp.acceptanceStatus,
+      matchingStatus: sp.matchingStatus,
+      billId,
+    }),
+    billId ? getBill(billId) : Promise.resolve(null),
+  ]);
+
+  const billNo =
+    billRes && billRes.ok ? billRes.data.billNo : billId ? billId.slice(0, 8) + "…" : null;
 
   const filterActive =
+    Boolean(billId) ||
     Boolean(sp.receiptStatus) ||
     Boolean(sp.acceptanceStatus) ||
     Boolean(sp.matchingStatus);
@@ -55,8 +82,30 @@ export default async function DocumentsPage({
           Không gộp thành một trạng thái; không đồng nghĩa Chi phí hay Thanh toán.
         </p>
 
+        {billId ? (
+          <p className="note" role="status">
+            Đang lọc theo {billLabel}
+            {billNo ? (
+              <>
+                {" "}
+                <Link className="row-link" href={`/bills/${billId}`}>
+                  {billNo}
+                </Link>
+              </>
+            ) : null}
+            . Gồm chứng từ gắn header hoặc dòng có Bill này.
+          </p>
+        ) : null}
+
         <div className="search-bar" role="group" aria-label="Bộ lọc chứng từ">
-          <Link className="btn" href="/documents/receive">
+          <Link
+            className="btn"
+            href={
+              billId
+                ? `/documents/receive?billId=${encodeURIComponent(billId)}`
+                : "/documents/receive"
+            }
+          >
             Nhận {docLabel.toLowerCase()}
           </Link>
           {filterActive ? (
@@ -66,13 +115,21 @@ export default async function DocumentsPage({
           ) : null}
           <Link
             className="btn btn-ghost"
-            href="/documents?acceptanceStatus=not_accepted&receiptStatus=received"
+            href={docsHref({
+              billId,
+              acceptanceStatus: "not_accepted",
+              receiptStatus: "received",
+            })}
           >
             Chờ chấp nhận
           </Link>
           <Link
             className="btn btn-ghost"
-            href="/documents?matchingStatus=unmatched&acceptanceStatus=accepted"
+            href={docsHref({
+              billId,
+              matchingStatus: "unmatched",
+              acceptanceStatus: "accepted",
+            })}
           >
             Đã chấp nhận — chưa khớp
           </Link>

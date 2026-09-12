@@ -36,11 +36,17 @@ public static class FinancialDocumentEndpoints
             string? receiptStatus,
             string? acceptanceStatus,
             string? matchingStatus,
+            Guid? billId,
             ISender sender,
             CancellationToken ct) =>
         {
             var list = await sender.Send(
-                new ListFinancialDocumentsQuery(documentType, receiptStatus, acceptanceStatus, matchingStatus),
+                new ListFinancialDocumentsQuery(
+                    documentType,
+                    receiptStatus,
+                    acceptanceStatus,
+                    matchingStatus,
+                    billId),
                 ct);
             return Results.Ok(list);
         });

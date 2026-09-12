@@ -1,6 +1,5 @@
 import Link from "next/link";
-import type { TerminologyMap } from "@/lib/terminology";
-import { term } from "@/lib/terminology";
+import { DocumentStatusTriad } from "@/components/DocumentStatusTriad";
 import type {
   AccountsPayableItem,
   AccountsReceivableItem,
@@ -10,21 +9,32 @@ import {
   isOutstanding,
   settlementStatusLabel,
 } from "@/lib/ap-ar";
+import type { FinancialDocumentListItem } from "@/lib/documents";
+import {
+  directionLabel,
+  documentTypeLabel,
+} from "@/lib/documents";
 import { formatMoney } from "@/lib/money";
+import type { TerminologyMap } from "@/lib/terminology";
+import { term } from "@/lib/terminology";
 
 type Props = {
   terms: TerminologyMap;
   billId: string;
+  documents: FinancialDocumentListItem[] | null;
+  documentsError: string | null;
   payables: AccountsPayableItem[] | null;
   payablesError: string | null;
   receivables: AccountsReceivableItem[] | null;
   receivablesError: string | null;
 };
 
-/** Bill-scoped AP/AR outstanding (read) + document CTAs. Cost ≠ Payment. */
+/** Bill-scoped documents + AP/AR outstanding (read) + CTAs. Cost ≠ Payment. */
 export function BillDocumentsApArPanel({
   terms,
   billId,
+  documents,
+  documentsError,
   payables,
   payablesError,
   receivables,
@@ -38,6 +48,9 @@ export function BillDocumentsApArPanel({
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
   const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
   const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
+  const receivedLabel = term(terms, "RECEIVED", "Đã nhận");
+  const acceptedLabel = term(terms, "ACCEPTED", "Đã chấp nhận");
+  const matchedLabel = term(terms, "MATCHED", "Đã khớp");
 
   const apRows = (payables ?? []).filter(
     (r) => r.billId === billId && isOutstanding(r)
@@ -46,13 +59,14 @@ export function BillDocumentsApArPanel({
     (r) => r.billId === billId && isOutstanding(r)
   );
 
+  const docsHref = `/documents?billId=${encodeURIComponent(billId)}`;
+
   return (
     <>
       <h2 className="section-title">{docLabel}</h2>
       <p className="note">
         Nhận ≠ Chấp nhận ≠ Khớp. {docLabel} ≠ {costLabel} ≠ {paymentLabel}.
-        Danh sách API chưa lọc theo Bill — mở danh sách chung hoặc nhận mới gắn
-        Bill này.
+        Danh sách dưới đây lọc theo Bill này (header hoặc dòng).
       </p>
       <p className="cta-row" style={{ marginTop: 0 }}>
         <Link
@@ -61,10 +75,69 @@ export function BillDocumentsApArPanel({
         >
           Nhận {docLabel.toLowerCase()}
         </Link>{" "}
-        <Link className="btn btn-ghost btn-sm" href="/documents">
-          Danh sách {docLabel.toLowerCase()}
+        <Link className="btn btn-ghost btn-sm" href={docsHref}>
+          Danh sách theo Bill
         </Link>
       </p>
+
+      {documentsError ? (
+        <div className="alert alert-error" role="alert">
+          {documentsError}
+        </div>
+      ) : documents === null ? null : documents.length === 0 ? (
+        <div className="empty-state" role="status">
+          Chưa có {docLabel.toLowerCase()} gắn Bill này. Nhận chứng từ để bắt
+          đầu.
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Số</th>
+                <th scope="col">Loại</th>
+                <th scope="col">Chiều</th>
+                <th scope="col" className="num">
+                  Tổng tiền
+                </th>
+                <th scope="col">
+                  {receivedLabel} ≠ {acceptedLabel} ≠ {matchedLabel}
+                </th>
+                <th scope="col">Chi tiết</th>
+              </tr>
+            </thead>
+            <tbody>
+              {documents.map((doc) => (
+                <tr key={doc.id}>
+                  <td>
+                    <div className="queue-title">{doc.documentNo}</div>
+                    <span className="muted small block">{doc.documentDate}</span>
+                  </td>
+                  <td>{documentTypeLabel(doc.documentType)}</td>
+                  <td>{directionLabel(terms, doc.direction)}</td>
+                  <td className="num">
+                    {formatMoney(doc.totalAmount, doc.currencyCode)}
+                  </td>
+                  <td>
+                    <DocumentStatusTriad
+                      terms={terms}
+                      receiptStatus={doc.receiptStatus}
+                      acceptanceStatus={doc.acceptanceStatus}
+                      matchingStatus={doc.matchingStatus}
+                      compact
+                    />
+                  </td>
+                  <td>
+                    <Link className="row-link" href={`/documents/${doc.id}`}>
+                      Mở
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <h2 className="section-title">
         {apLabel} / {arLabel} — {outstandingLabel}

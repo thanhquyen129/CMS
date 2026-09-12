@@ -11,7 +11,7 @@ Pass 2 Sprint 9 FULL: reconciliation batch + auto variance severity thresholds; 
 - Approval: `requiredLevel` 1|2 multi-step; reject requires reason; never touches Permission.
 - Confirm block: `FinancialControl:BlockConfirmOnCriticalException` default true for Cost/Revenue.
 - Migration `Sprint9Full_FinancialControl`; ADR-0009; VI terms.
-- Tests: `Sprint9FullFinancialControlTests` (3); suite green (see verify).
+- Tests: `Sprint9FullFinancialControlTests` (3); suite **83 passed**.
 
 ### Files / API / Config
 - APIs: details/batch; exceptions escalate + filters; approvals requiredLevel
@@ -22,7 +22,7 @@ Pass 2 Sprint 9 FULL: reconciliation batch + auto variance severity thresholds; 
 - DoD: docs/sprint/SPRINT-9-FULL-DOD.md
 
 ### Verify
-- `dotnet test Cms.sln -c Release` → see PR / CI
+- `dotnet test Cms.sln -c Release` → **83 passed**
 
 ### Deferred / Next
 - Pass 2 Sprint 10 FULL Financial Close

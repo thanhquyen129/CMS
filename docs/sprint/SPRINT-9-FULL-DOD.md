@@ -18,7 +18,7 @@ Pass 2 closes TD6 E11 depth: batch recon, variance severity thresholds, exceptio
 | Permission ≠ Approval | Done | Handlers never mutate Permission/RolePermission |
 | Block Cost/Revenue confirm on critical open exception | Done | Config flag default **true** |
 | Vietnamese errors + UI terms | Done | Escalate/SLA/block/batch terms |
-| Tests | Done | `Sprint9FullFinancialControlTests` (3); suite green |
+| Tests | Done | `Sprint9FullFinancialControlTests` (3); suite **83 passed** |
 | DoD + handoff + ADR-0009 | Done | This file |
 | Migration `Sprint9Full_FinancialControl` | Done | severity / object link / approval levels / escalate fields |
 

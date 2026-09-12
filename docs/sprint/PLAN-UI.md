@@ -48,6 +48,7 @@ Merge độc lập. UI gọi API đã có trên `main`; thiếu field thì ghi f
 | **U2** Cost & Revenue | Trên Bill: xác nhận Cost / Revenue (1 CTA chính / màn) | `/api/costs/*`, `/api/revenues/*` | Documents |
 | **U3** Control desk | Dashboard + hàng đợi exception / approval | `/api/dashboard/summary`, `/api/queues/*` | Full reporting |
 | **U4** Documents & cash thin | Nhận/chấp nhận chứng từ + outstanding AP/AR đọc được | documents + exposure/AP/AR read | Auto-match, bank feed |
+| **U5** Settlement + Close | Thanh toán/Thu tiền allocate→finalize; chốt Bill/kỳ + P&L snapshot | payments/collections + financial-closes | Bank feed, write-off UI |
 
 Pass 1 DoD mỗi U: **shippable trên VPS**, empty/loading/error thật, copy VI CP6.5, không control giả.
 

@@ -36,6 +36,8 @@ export function BillDocumentsApArPanel({
   const outstandingLabel = term(terms, "OUTSTANDING", "Số dư còn lại");
   const costLabel = term(terms, "COST", "Chi phí");
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
+  const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
+  const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
 
   const apRows = (payables ?? []).filter(
     (r) => r.billId === billId && isOutstanding(r)
@@ -68,8 +70,28 @@ export function BillDocumentsApArPanel({
         {apLabel} / {arLabel} — {outstandingLabel}
       </h2>
       <p className="note">
-        Số dư đã ghi nhận trên Bill này. Không phải số {costLabel}; chưa gồm bước{" "}
-        {paymentLabel}.
+        Số dư đã ghi nhận trên Bill này. Không phải số {costLabel}. Tất toán qua{" "}
+        {paymentLabel} / {collectionLabel}.
+      </p>
+      <p className="cta-row" style={{ marginTop: 0 }}>
+        <Link
+          className="btn btn-sm"
+          href={`/settlements/payments/new?billId=${billId}`}
+        >
+          Tạo {paymentLabel.toLowerCase()}
+        </Link>{" "}
+        <Link
+          className="btn btn-sm"
+          href={`/settlements/collections/new?billId=${billId}`}
+        >
+          Tạo {collectionLabel.toLowerCase()}
+        </Link>{" "}
+        <Link
+          className="btn btn-ghost btn-sm"
+          href={`/financial-closes/new?billId=${billId}`}
+        >
+          {closeLabel} theo Bill
+        </Link>
       </p>
 
       <h3 className="section-title sm">{apLabel}</h3>

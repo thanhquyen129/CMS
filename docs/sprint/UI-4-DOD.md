@@ -32,12 +32,12 @@ Operator thấy **Nhận ≠ Chấp nhận ≠ Khớp** trên chứng từ; đ�
 - `AppShell` nav + middleware + Bill detail panel + approval deep-link document
 
 ## Non-goals (deferred)
-Auto-match engine UI, bank feed, e-invoice provider screens, settlement/payment UI, write-off/recognize from UI.
+Auto-match engine UI, bank feed, e-invoice provider screens, write-off/recognize from UI (settlement allocate/finalize + financial close → U5).
 
 ## Follow-ups
 - **API:** `GET /api/financial-documents` thiếu `billId` trên list DTO / query filter — Bill không lọc được chứng từ gắn Bill (UI ghi chú trung thực).
 - Match UI (`/api/document-matches`) — start/add detail/reverse.
-- Settlement UI (payment/collection allocate/finalize).
+- Reverse allocation / write-off / recognize UI.
 - Approve/reject từ hàng đợi; aging report screens đầy đủ.
 
 ## Verify

@@ -20,12 +20,12 @@ TD6: *Bill financial profile; dashboard; control queues; reporting projections* 
 
 | Item | Target | Reason |
 |------|--------|--------|
-| Full historical maturity reconstruction at `asOf` | Pass 2 | Thin filter by EffectiveDate/FinalizedAt/RecognizedAt only |
-| FX / base currency roll-up | Later | Totals stay per `currency_code` |
-| Next.js dashboard / queue UI | Later | API-only Pass 1 |
+| Full historical maturity reconstruction at `asOf` | **Done in Pass 2** | See `SPRINT-11-FULL-DOD.md` — ConfirmedAt/ActualizedAt |
+| FX / base currency roll-up | **Done in Pass 2** | Dashboard stub + ADR-0011 |
+| Next.js dashboard / queue UI | Later | API-only Pass 1/2 |
 | Hardening / NFR / load | Sprint 12 | Non-goal |
-| JWT / OIDC | Later | Keep header bootstrap |
-| P&L from financial-close snapshots | Later | Live Best Available projection only |
+| JWT / OIDC | Later / UI-0 | Header bootstrap + JWT path |
+| P&L from financial-close snapshots | **Done in Pass 2** | `GET /api/financial-closes/{id}/pnl` |
 
 ## Headers (bootstrap until JWT)
 

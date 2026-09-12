@@ -86,14 +86,17 @@ public sealed class Sprint11FinancialProfileReportingTests : IAsyncLifetime
         Assert.Equal(2000m, settlement.AccountsPayableOutstanding);
         Assert.Equal(5000m, settlement.AccountsReceivableOutstanding);
 
-        // asOf mid-period: drops Oct revenue; keeps Aug cost/revenue
+        // asOf mid-period: drops Oct revenue; reconstruct maturity (confirm "now" after asOf → Expected only)
         var asOfProfile = await GetFinancialProfileAsync(tenantId, billId, new DateOnly(2026, 9, 1));
         Assert.Equal(new DateOnly(2026, 9, 1), asOfProfile.AsOfFilter);
         Assert.NotNull(asOfProfile.AsOfLimitationNote);
         Assert.Contains("asOf", asOfProfile.AsOfLimitationNote, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ConfirmedAt", asOfProfile.AsOfLimitationNote, StringComparison.OrdinalIgnoreCase);
 
         var asOfVnd = Assert.Single(asOfProfile.ByCurrency);
-        Assert.Equal(11000m, asOfVnd.RevenueBestAvailable);
+        Assert.Equal(10000m, asOfVnd.RevenueBestAvailable);
+        Assert.Equal(10000m, asOfVnd.RevenueMaturity.ExpectedTotal);
+        Assert.Equal(0m, asOfVnd.RevenueMaturity.ConfirmedTotal);
         Assert.Equal(1, asOfVnd.RevenueLineCount);
         Assert.Equal(3000m, asOfVnd.DirectCostBestAvailable);
         // Allocation finalized "now" is after asOf → excluded by FinalizedAt filter
@@ -134,6 +137,10 @@ public sealed class Sprint11FinancialProfileReportingTests : IAsyncLifetime
         Assert.Equal(1, summaryA.OpenExceptionCount);
         Assert.Equal(1, summaryA.PendingApprovalCount);
         Assert.Equal(1, summaryA.OpenCloseCount);
+        Assert.Equal(0, summaryA.OpenVarianceCount);
+        Assert.Equal(0, summaryA.OverdueExceptionCount);
+        Assert.NotNull(summaryA.BaseCurrencyRollUp);
+        Assert.Equal("VND", summaryA.BaseCurrencyRollUp.BaseCurrency);
         Assert.False(summaryA.HasMixedCurrencies);
 
         var totals = Assert.Single(summaryA.TotalsByCurrency);
@@ -488,7 +495,10 @@ public sealed class Sprint11FinancialProfileReportingTests : IAsyncLifetime
         using var req = new HttpRequestMessage(HttpMethod.Get, "/api/dashboard/summary");
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var res = await _client.SendAsync(req);
-        res.EnsureSuccessStatusCode();
+        if (!res.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"{(int)res.StatusCode}: {await res.Content.ReadAsStringAsync()}");
+        }
         return (await res.Content.ReadFromJsonAsync<DashboardSummaryResponse>(JsonOptions))!;
     }
 
@@ -561,13 +571,23 @@ public sealed class Sprint11FinancialProfileReportingTests : IAsyncLifetime
         decimal RevenueBestAvailable,
         decimal ProfitBestAvailable);
 
+    private sealed record DashboardBaseCurrencyRollUp(
+        string BaseCurrency,
+        decimal CostBestAvailableBase,
+        decimal RevenueBestAvailableBase,
+        decimal ProfitBestAvailableBase,
+        string FxStubNote);
+
     private sealed record DashboardSummaryResponse(
         DateTimeOffset AsOfTimestamp,
         int BillCount,
         int OpenExceptionCount,
         int PendingApprovalCount,
         int OpenCloseCount,
+        int OpenVarianceCount,
+        int OverdueExceptionCount,
         List<DashboardCurrencyTotals> TotalsByCurrency,
+        DashboardBaseCurrencyRollUp? BaseCurrencyRollUp,
         bool HasMixedCurrencies,
         string Note);
 

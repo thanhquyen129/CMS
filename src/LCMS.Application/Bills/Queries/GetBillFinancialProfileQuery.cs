@@ -10,8 +10,8 @@ namespace LCMS.Application.Bills.Queries;
 /// <summary>
 /// Derived Bill financial profile (TD1-DB-003/004) — never stored as SoT on Bill.
 /// Best Available per line: Actual → Confirmed → Expected. Totals split by currency_code.
-/// Sprint 11: maturity breakdown, allocated cost, settlement outstanding, optional asOf filter.
-/// Sprint 5 FULL: Expected vs Actual variance; allocated cost always included in CostBestAvailable.
+/// Sprint 11 FULL: asOf reconstructs maturity via ConfirmedAt/ActualizedAt; settlement outstanding
+/// from finalized allocations at asOf where available.
 /// </summary>
 public sealed record GetBillFinancialProfileQuery(Guid BillId, DateOnly? AsOf = null)
     : IRequest<BillFinancialProfileDto>;
@@ -143,6 +143,20 @@ public sealed class GetBillFinancialProfileQueryHandler
                 .ToList();
         }
 
+        var apIds = apRows.Select(a => a.Id).ToList();
+        var arIds = arRows.Select(a => a.Id).ToList();
+
+        var paymentAllocs = apIds.Count == 0
+            ? []
+            : await _db.PaymentAllocations.AsNoTracking()
+                .Where(p => apIds.Contains(p.AccountsPayableId))
+                .ToListAsync(cancellationToken);
+        var collectionAllocs = arIds.Count == 0
+            ? []
+            : await _db.CollectionAllocations.AsNoTracking()
+                .Where(c => arIds.Contains(c.AccountsReceivableId))
+                .ToListAsync(cancellationToken);
+
         var currencyCodes = revenues.Select(r => r.CurrencyCode)
             .Concat(directCosts.Select(c => c.CurrencyCode))
             .Concat(allocatedList.Select(a => a.CurrencyCode))
@@ -165,16 +179,25 @@ public sealed class GetBillFinancialProfileQueryHandler
                 .Where(a => string.Equals(a.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var revenueTotal = revLines.Sum(r => BestAvailable(r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount));
-            var directTotal = costLines.Sum(c => BestAvailable(c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount));
+            var revProjected = revLines
+                .Select(r => ProjectMaturity(r.ExpectedAmount, r.ConfirmedAmount, r.ConfirmedAt, r.ActualAmount, r.ActualizedAt, asOf))
+                .ToList();
+            var costProjected = costLines
+                .Select(c => ProjectMaturity(c.ExpectedAmount, c.ConfirmedAmount, c.ConfirmedAt, c.ActualAmount, c.ActualizedAt, asOf))
+                .ToList();
+
+            var revenueTotal = revProjected.Sum(p => p.BestAvailable);
+            var directTotal = costProjected.Sum(p => p.BestAvailable);
             var allocatedTotal = allocLines.Sum(a => a.AllocatedAmount);
             var costTotal = decimal.Round(directTotal + allocatedTotal, 4, MidpointRounding.AwayFromZero);
             var profit = decimal.Round(revenueTotal - costTotal, 4, MidpointRounding.AwayFromZero);
 
-            var revExpected = revLines.Sum(r => r.ExpectedAmount);
-            var revActual = revLines.Sum(r => r.ActualAmount ?? 0m);
-            var costExpected = costLines.Sum(c => c.ExpectedAmount);
-            var costActual = costLines.Sum(c => c.ActualAmount ?? 0m);
+            var revExpected = revProjected.Sum(p => p.Expected);
+            var revConfirmed = revProjected.Sum(p => p.Confirmed ?? 0m);
+            var revActual = revProjected.Sum(p => p.Actual ?? 0m);
+            var costExpected = costProjected.Sum(p => p.Expected);
+            var costConfirmed = costProjected.Sum(p => p.Confirmed ?? 0m);
+            var costActual = costProjected.Sum(p => p.Actual ?? 0m);
             // Allocated is frozen actual share — included in both expected/actual cost views for variance fairness.
             var profitExpected = revExpected - (costExpected + allocatedTotal);
             var profitActual = revActual - (costActual + allocatedTotal);
@@ -188,11 +211,11 @@ public sealed class GetBillFinancialProfileQueryHandler
                 decimal.Round(allocatedTotal, 4, MidpointRounding.AwayFromZero),
                 new MaturityBreakdownDto(
                     decimal.Round(revExpected, 4, MidpointRounding.AwayFromZero),
-                    decimal.Round(revLines.Sum(r => r.ConfirmedAmount ?? 0m), 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(revConfirmed, 4, MidpointRounding.AwayFromZero),
                     decimal.Round(revActual, 4, MidpointRounding.AwayFromZero)),
                 new MaturityBreakdownDto(
                     decimal.Round(costExpected, 4, MidpointRounding.AwayFromZero),
-                    decimal.Round(costLines.Sum(c => c.ConfirmedAmount ?? 0m), 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(costConfirmed, 4, MidpointRounding.AwayFromZero),
                     decimal.Round(costActual, 4, MidpointRounding.AwayFromZero)),
                 decimal.Round(revExpected - revActual, 4, MidpointRounding.AwayFromZero),
                 decimal.Round(costExpected - costActual, 4, MidpointRounding.AwayFromZero),
@@ -207,10 +230,26 @@ public sealed class GetBillFinancialProfileQueryHandler
             {
                 var apOut = apRows
                     .Where(a => string.Equals(a.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
-                    .Sum(a => a.DeriveOutstanding());
+                    .Sum(a => asOf.HasValue
+                        ? OutstandingAtAsOf(
+                            a.RecognizedAmount,
+                            a.AdjustmentAmount,
+                            paymentAllocs.Where(p => p.AccountsPayableId == a.Id)
+                                .Select(p => new SettlementAllocSlice(
+                                    p.Amount, p.AllocationStatus, p.FinalizedAt, p.ReversedAt)),
+                            asOf.Value)
+                        : a.DeriveOutstanding());
                 var arOut = arRows
                     .Where(a => string.Equals(a.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
-                    .Sum(a => a.DeriveOutstanding());
+                    .Sum(a => asOf.HasValue
+                        ? OutstandingAtAsOf(
+                            a.RecognizedAmount,
+                            a.AdjustmentAmount,
+                            collectionAllocs.Where(c => c.AccountsReceivableId == a.Id)
+                                .Select(c => new SettlementAllocSlice(
+                                    c.Amount, c.AllocationStatus, c.FinalizedAt, c.ReversedAt)),
+                            asOf.Value)
+                        : a.DeriveOutstanding());
                 return new SettlementOutstandingBucketDto(
                     code.ToUpperInvariant(),
                     decimal.Round(apOut, 4, MidpointRounding.AwayFromZero),
@@ -243,8 +282,10 @@ public sealed class GetBillFinancialProfileQueryHandler
         if (asOf.HasValue)
         {
             asOfLimitation =
-                "asOf lọc theo EffectiveDate (Cost/Revenue), FinalizedAt (allocation), RecognizedAt (AP/AR). " +
-                "Không reconstruct lịch sử maturity layer tại thời điểm asOf (deferred Pass 2).";
+                "asOf: reconstruct maturity qua ConfirmedAt/ActualizedAt; allocation theo FinalizedAt; " +
+                "AP/AR outstanding theo RecognizedAt + phân bổ tất toán đã chốt tại asOf. " +
+                "Giới hạn còn lại: điều chỉnh (AdjustmentAmount) và layer thiếu timestamp dùng trạng thái hiện tại; " +
+                "không có sổ ledger dòng-thời-gian đầy đủ.";
         }
 
         return new BillFinancialProfileDto(
@@ -258,6 +299,86 @@ public sealed class GetBillFinancialProfileQueryHandler
             mixed,
             note,
             asOfLimitation);
+    }
+
+    /// <summary>
+    /// Projects maturity layers visible at asOf. Without asOf, uses live layers.
+    /// Missing ConfirmedAt/ActualizedAt with amount present → treat as present (residual limit).
+    /// </summary>
+    internal static ProjectedMaturity ProjectMaturity(
+        decimal expected,
+        decimal? confirmedAmount,
+        DateTimeOffset? confirmedAt,
+        decimal? actualAmount,
+        DateTimeOffset? actualizedAt,
+        DateOnly? asOf)
+    {
+        decimal? confirmed = confirmedAmount;
+        decimal? actual = actualAmount;
+
+        if (asOf.HasValue)
+        {
+            if (confirmedAmount.HasValue)
+            {
+                confirmed = IsLayerVisibleAt(confirmedAt, asOf.Value) ? confirmedAmount : null;
+            }
+
+            if (actualAmount.HasValue)
+            {
+                actual = IsLayerVisibleAt(actualizedAt, asOf.Value) ? actualAmount : null;
+            }
+        }
+
+        return new ProjectedMaturity(expected, confirmed, actual, BestAvailable(actual, confirmed, expected));
+    }
+
+    private static bool IsLayerVisibleAt(DateTimeOffset? layerAt, DateOnly asOf)
+    {
+        // No timestamp → cannot prove absence; include and document residual limit.
+        if (!layerAt.HasValue)
+        {
+            return true;
+        }
+
+        return DateOnly.FromDateTime(layerAt.Value.UtcDateTime) <= asOf;
+    }
+
+    private static decimal OutstandingAtAsOf(
+        decimal recognizedAmount,
+        decimal adjustmentAmount,
+        IEnumerable<SettlementAllocSlice> allocations,
+        DateOnly asOf)
+    {
+        var settled = allocations.Where(a => WasSettledAt(a, asOf)).Sum(a => a.Amount);
+        return recognizedAmount + adjustmentAmount - settled;
+    }
+
+    private static bool WasSettledAt(SettlementAllocSlice a, DateOnly asOf)
+    {
+        if (!a.FinalizedAt.HasValue)
+        {
+            return false;
+        }
+
+        if (DateOnly.FromDateTime(a.FinalizedAt.Value.UtcDateTime) > asOf)
+        {
+            return false;
+        }
+
+        // Finalized and never reversed, or reversed after asOf → counted as settled at asOf.
+        if (a.AllocationStatus == SettlementAllocationStatuses.Finalized)
+        {
+            return true;
+        }
+
+        if (a.AllocationStatus == SettlementAllocationStatuses.Reversed
+            && a.ReversedAt.HasValue
+            && DateOnly.FromDateTime(a.ReversedAt.Value.UtcDateTime) > asOf)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static decimal BestAvailable(decimal? actual, decimal? confirmed, decimal expected)
@@ -274,4 +395,16 @@ public sealed class GetBillFinancialProfileQueryHandler
 
         return expected;
     }
+
+    internal sealed record ProjectedMaturity(
+        decimal Expected,
+        decimal? Confirmed,
+        decimal? Actual,
+        decimal BestAvailable);
+
+    private sealed record SettlementAllocSlice(
+        decimal Amount,
+        string AllocationStatus,
+        DateTimeOffset? FinalizedAt,
+        DateTimeOffset? ReversedAt);
 }

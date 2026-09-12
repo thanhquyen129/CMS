@@ -122,6 +122,11 @@ public static class VietnameseUiTerms
         ["SETTLEMENT_OUTSTANDING"] = "Số dư tất toán còn lại",
         ["AS_OF"] = "Tại thời điểm",
         ["REPORTING_PROJECTION"] = "Projection báo cáo",
+        ["BASE_CURRENCY_ROLLUP"] = "Cộng gộp theo tiền tệ cơ sở",
+        ["CLOSE_PNL"] = "P&L từ bản chốt",
+        ["OPEN_VARIANCE_COUNT"] = "Số chênh lệch đang mở",
+        ["OVERDUE_EXCEPTION_COUNT"] = "Số ngoại lệ quá hạn",
+        ["RECONCILIATION_QUEUE"] = "Hàng đợi đối soát",
 
         // Financial documents (D07 / E08) — Received ≠ Accepted ≠ Matched
         ["FINANCIAL_DOCUMENT"] = "Chứng từ tài chính",

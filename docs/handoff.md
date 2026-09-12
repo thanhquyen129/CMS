@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-09-12 — U3 VPS verify + fallback redeploy (local takeover)
+
+### User
+Implement U3 Control desk alone; prior cloud id unreachable — pull latest `main`; verify VPS.
+
+### Done
+- Confirmed U3 already on `main` (PR #26 → `657be51` / `e5bb257`): `/dashboard`, `/queues/exceptions`, `/queues/approvals`, Dashboard nav live, `UI-3-DOD.md`.
+- VPS web was still U2 (dashboard/queues **404**) after Actions race with U4 kickoff.
+- Fallback operator redeploy (tar+scp → `compose up -d --build` web/api/proxy); **never** touched `infra/.env` / alogex.
+- Smoke: BFF login **200** → dashboard/exceptions/approvals **200** + VI markers; `/health` `/ready` OK.
+- `dotnet test Cms.sln -c Release` → **97 passed**.
+
+### Next
+- **U4 can start / continue** (cloud [UI-4](bc-9c035d0b-b5a7-44ca-9511-2927f0d3c03d) already kicked off).
+
+---
+
 ## 2026-09-12 — Coordinator: U3 merged → U4 kickoff
 
 ### User

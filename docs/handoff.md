@@ -11,7 +11,7 @@ Pass 2 Sprint 8 FULL: unapplied cash + multi-allocation; C-008 over-allocate rej
 - Write-off: `POST /api/accounts-payable|accounts-receivable/{id}/write-off` — negative AdjustmentAmount + `[xóa nợ]` note; capped by `MaxWriteOffAmount`; never silent wipe / never invents Cost/Revenue.
 - Idempotent finalize: re-finalize finalized allocation → 204 no-op; reversed → 409 VI.
 - Migration `Sprint8Full_Settlement`; ADR-0008; VI terms WRITE_OFF, SETTLEMENT_BASE_AMOUNT, IDEMPOTENT_FINALIZE.
-- Tests: `Sprint8FullSettlementTests` (3); suite green (count in verify below).
+- Tests: `Sprint8FullSettlementTests` (3); suite **80 passed**.
 
 ### Files / API / Config
 - APIs: write-off endpoints; GET payment/collection + baseAmount/fxRateId; finalize idempotent
@@ -21,7 +21,7 @@ Pass 2 Sprint 8 FULL: unapplied cash + multi-allocation; C-008 over-allocate rej
 - ADR: docs/adr/ADR-0008-settlement-fx-writeoff.md; ADR-0004 extended
 
 ### Verify
-- `dotnet test Cms.sln -c Release` → see commit notes / CI
+- `dotnet test Cms.sln -c Release` → **80 passed**
 
 ### Deferred / Next
 - Pass 2 Sprint 9 FULL Financial Control / reconciliation

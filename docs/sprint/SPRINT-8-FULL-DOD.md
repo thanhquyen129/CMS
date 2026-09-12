@@ -14,7 +14,7 @@ Pass 2 closes TD6 E10 depth: unapplied multi-allocation, FX stub, write-off stub
 | Write-off stub with reason | Done | Negative `AdjustmentAmount` + note; `MaxWriteOffAmount`; not silent wipe |
 | Idempotent finalize | Done | Re-finalize finalized → no-op 204; reversed → 409 VI |
 | Vietnamese errors + UI terms | Done | WRITE_OFF, SETTLEMENT_BASE_AMOUNT, IDEMPOTENT_FINALIZE, … |
-| Tests | Done | `Sprint8FullSettlementTests` (3); suite green |
+| Tests | Done | `Sprint8FullSettlementTests` (3); suite **80 passed** |
 | DoD + handoff + ADR-0008 | Done | This file |
 | Migration `Sprint8Full_Settlement` | Done | base_amount / fx_rate_id / allocation currency_code |
 

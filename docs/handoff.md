@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-12 — Coordinator: U3 merged → U4 kickoff
+
+### User
+Follow-up after [UI-3](bc-e514db5a-484e-4333-a372-f8d08e0cdb32) PR #26.
+
+### Done
+- CI #76 green; undraft + merge PR #26 → `657be51`.
+- Kicked off [UI-4](bc-9c035d0b-b5a7-44ca-9511-2927f0d3c03d) Documents & AP/AR thin.
+
+### Next
+- Merge U4 PR → Pass UI COMPLETE.
+
+---
+
 ## 2026-09-12 — Pass UI / Sprint U3 Control desk
 
 ### User

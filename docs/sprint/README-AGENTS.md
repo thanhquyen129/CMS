@@ -24,7 +24,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | U1 Bill hub | Done | `PROMPT-UI-1.md` |
 | U2 Cost & Revenue actions | Done | `PROMPT-UI-2.md` |
 | U3 Control desk | Done | `PROMPT-UI-3.md` |
-| U4 Documents & AP/AR thin | Queued | `PROMPT-UI-4.md` |
+| U4 Documents & AP/AR thin | In progress | `PROMPT-UI-4.md` |
 
 ## How to run Pass 2 / Pass UI
 1. Cloud / New Agent Chat riêng.

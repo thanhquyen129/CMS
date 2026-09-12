@@ -1,54 +1,27 @@
-# UAT G3 — UI thêm dòng chứng từ
+# UAT G3 — UI thêm dòng chứng từ (+ API integrity)
 
-**Status:** Done (FULL operable add-line path)  
+**Status:** Done (FULL + ADR-0012 integrity)  
 **Date:** 2026-09-12  
-**Source:** `docs/sprint/UAT-VPS-ONE-ROUND.md` gap G3
+**Source:** `docs/sprint/UAT-VPS-ONE-ROUND.md` gap G3 · `docs/adr/ADR-0012-document-line-integrity.md`
 
 ## Outcome
-Operator **thêm dòng chứng từ** từ UI trên `/documents/{id}` (không Postman), đủ để khớp parity vòng UAT. Dòng mở để khớp; không tạo Cost/Revenue.
+Operator thêm/sửa/xóa dòng, chọn đối tác lúc nhận, và Accept chỉ khi `Σ dòng = tổng chứng từ`.
 
 ## Checklist
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Form thêm dòng trên `/documents/[id]` khi đã nhận + còn hiệu lực | Done |
-| 2 | BFF `POST /bff/financial-documents/{id}/lines` → API Pass 2 | Done |
-| 3 | Prefill tiền tệ + `billId` + **số còn theo header** (UAT: dòng = total) | Done |
-| 4 | Empty state không còn “Thêm dòng qua API” | Done |
-| 5 | Copy CP6.5: dòng ≠ Cost; khớp bắt đầu matched=0 | Done |
-| 6 | Metric tổng chứng từ / tổng dòng / còn header / tổng mở | Done |
-| 7 | Bảng hiện loại (cost/revenue code) + link Bill | Done |
-| 8 | Cảnh báo mềm khi tổng dòng vượt header (API không ép) | Done |
-| 9 | CTA khi đã accept nhưng chưa có dòng mở → thêm dòng trước khớp | Done |
+| 1–9 | G3 FULL trước (add + coverage + match CTA) | Done |
+| 10 | `PUT/DELETE …/lines/{lineId}` + BFF + UI Sửa/Xóa | Done |
+| 11 | Accept gate `Σ = TotalAmount` (ADR-0012) | Done |
+| 12 | Draft: `Σ ≤ Total`; sau Accept khóa add/delete/đổi số | Done |
+| 13 | Party picker trên nhận chứng từ; validate party active | Done |
+| 14 | Tests `DocumentLineIntegrityTests` + Sprint6/10 order | Done |
 
-## Thin → Full (lượt này)
-
-| Trước (thin) | Full |
-|--------------|------|
-| Amount trống | Prefill `max(0, total − Σ lines)` |
-| Không đối chiếu header | Metric + note lệch tổng |
-| Bảng chỉ amount/matched/open | + loại + Bill |
-| Match empty “nhận thêm dòng” | CTA **Thêm dòng** về detail |
-| Không báo sau submit | Success + soft over-total |
-
-## APIs used (existing)
-- `POST /api/financial-documents/{id}/lines` (`AddFinancialDocumentLine`)
-
-## UI files
-- `apps/web/components/AddDocumentLineForm.tsx`
-- `apps/web/app/bff/financial-documents/[id]/lines/route.ts`
-- `apps/web/app/documents/[id]/page.tsx`
-- `apps/web/lib/documents.ts` (`canAddDocumentLine`, `documentLineCoverage`)
-- Match CTAs: `match/page.tsx`, `AddMatchDetailForm`
-
-## Non-goals (vẫn ngoài G3)
-Edit/delete line · party pickers · ép API sum=header · G4–G6
-
-## Operator path (UI-only — parity UAT chứng từ)
-1. Nhận chứng từ (gắn Bill, total = confirmed cost)
-2. **Thêm dòng** (prefill = total) → Accept → Khớp dòng↔cost
-3. Settle/close (U5)
+## Non-goals
+Party trên từng dòng · sửa header total từ UI · G4–G6
 
 ## Verify
+- `dotnet test` DocumentLineIntegrity + Sprint6*
 - `npm run build` apps/web
-- VPS: nhận → thêm dòng (số = header) → accept → khớp
+- VPS: nhận (+đối tác) → thêm dòng đủ tổng → sửa/xóa → Accept → khớp

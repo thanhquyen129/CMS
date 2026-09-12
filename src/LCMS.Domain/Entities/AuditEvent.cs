@@ -45,6 +45,9 @@ public static class AuditActions
     public const string AccountsPayableRecognize = "accounts_payable.recognize";
     public const string AccountsReceivableRecognize = "accounts_receivable.recognize";
     public const string FinancialDocumentAccept = "financial_document.accept";
+    public const string FinancialDocumentLineAdd = "financial_document_line.add";
+    public const string FinancialDocumentLineUpdate = "financial_document_line.update";
+    public const string FinancialDocumentLineDelete = "financial_document_line.delete";
     public const string DocumentMatchDetailAdd = "document_match.detail_add";
     public const string FinancialCloseSnapshotCreate = "financial_close_snapshot.create";
 }
@@ -58,6 +61,7 @@ public static class AuditObjectTypes
     public const string AccountsPayable = "accounts_payable";
     public const string AccountsReceivable = "accounts_receivable";
     public const string FinancialDocument = "financial_document";
+    public const string FinancialDocumentLine = "financial_document_line";
     public const string DocumentMatch = "document_match";
     public const string FinancialCloseSnapshot = "financial_close_snapshot";
 }

@@ -98,6 +98,36 @@ public static class FinancialDocumentEndpoints
             return Results.Created($"/api/financial-documents/{id}/lines/{lineId}", new { id = lineId });
         });
 
+        docs.MapPut("/{id:guid}/lines/{lineId:guid}", async (
+            Guid id,
+            Guid lineId,
+            UpdateFinancialDocumentLineRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new UpdateFinancialDocumentLineCommand(
+                    id,
+                    lineId,
+                    body.Amount,
+                    body.Description,
+                    body.BillId,
+                    body.CostTypeCode,
+                    body.RevenueTypeCode),
+                ct);
+            return Results.NoContent();
+        });
+
+        docs.MapDelete("/{id:guid}/lines/{lineId:guid}", async (
+            Guid id,
+            Guid lineId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new DeleteFinancialDocumentLineCommand(id, lineId), ct);
+            return Results.NoContent();
+        });
+
         var matches = app.MapGroup("/api/document-matches").WithTags("DocumentMatches");
 
         matches.MapPost("/", async (StartDocumentMatchRequest body, ISender sender, CancellationToken ct) =>
@@ -182,6 +212,13 @@ public sealed record AddFinancialDocumentLineRequest(
     string? CostTypeCode,
     string? RevenueTypeCode,
     string? CurrencyCode);
+
+public sealed record UpdateFinancialDocumentLineRequest(
+    decimal Amount,
+    string? Description,
+    Guid? BillId,
+    string? CostTypeCode,
+    string? RevenueTypeCode);
 
 public sealed record CancelFinancialDocumentRequest(string Reason, bool Void = false);
 

@@ -5,12 +5,14 @@ import { AddDocumentLineForm } from "@/components/AddDocumentLineForm";
 import { AppShell } from "@/components/AppShell";
 import { DocumentAcceptButton } from "@/components/DocumentAcceptButton";
 import { DocumentStatusTriad } from "@/components/DocumentStatusTriad";
+import { EditDocumentLineForm } from "@/components/EditDocumentLineForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { canStartMatch } from "@/lib/document-matches";
 import {
   canAcceptDocument,
   canAddDocumentLine,
+  canMutateDocumentLine,
   directionLabel,
   documentLineCoverage,
   documentTypeLabel,
@@ -18,6 +20,7 @@ import {
   recordStatusLabel,
 } from "@/lib/documents";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
+import { listBusinessParties, partyLabel } from "@/lib/parties";
 
 type Params = Promise<{ id: string }>;
 
@@ -43,6 +46,9 @@ export default async function DocumentDetailPage({
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
 
   const result = await getFinancialDocument(id);
+  const partiesResult = await listBusinessParties();
+  const parties = partiesResult.ok ? partiesResult.data : [];
+  const partyById = new Map(parties.map((p) => [p.id, p]));
 
   if (!result.ok && result.status === 404) {
     return (
@@ -80,12 +86,10 @@ export default async function DocumentDetailPage({
   const canAddLine = canAddDocumentLine(doc);
   const coverage = documentLineCoverage(doc);
   const remainingTowardTotal = Math.max(0, coverage.remainingTowardTotal);
-  const accepted =
-    doc.acceptanceStatus?.toLowerCase() === "accepted";
-  const needsLineForMatch =
-    accepted &&
-    canAddLine &&
-    !doc.lines.some((l) => Number(l.openAmount) > 0);
+  const acceptBlockedBySum = canAccept && !coverage.sumsEqual;
+  const counterparty = doc.counterpartyId
+    ? partyById.get(doc.counterpartyId)
+    : null;
 
   return (
     <AppShell
@@ -146,33 +150,46 @@ export default async function DocumentDetailPage({
               )}
             </dd>
           </div>
+          <div>
+            <dt>Đối tác</dt>
+            <dd>
+              {counterparty
+                ? partyLabel(counterparty)
+                : doc.counterpartyId
+                  ? doc.counterpartyId
+                  : "—"}
+            </dd>
+          </div>
         </dl>
 
         {doc.notes ? <p className="note">Ghi chú: {doc.notes}</p> : null}
 
         <div className="cta-row">
-          {canAccept ? (
+          {canAccept && !acceptBlockedBySum ? (
             <DocumentAcceptButton
               terms={terms}
               documentId={doc.id}
               documentNo={doc.documentNo}
               totalAmount={doc.totalAmount}
+              linesSum={coverage.linesSum}
               currencyCode={doc.currencyCode}
               canAccept
             />
+          ) : null}
+          {acceptBlockedBySum ? (
+            <p className="note" style={{ margin: 0 }}>
+              Chấp nhận yêu cầu tổng dòng = tổng chứng từ (ADR-0012). Hiện{" "}
+              {formatMoney(coverage.linesSum, doc.currencyCode)} ≠{" "}
+              {formatMoney(doc.totalAmount, doc.currencyCode)} — thêm/sửa dòng
+              bên dưới.
+            </p>
           ) : null}
           {canMatch ? (
             <Link className="btn" href={`/documents/${doc.id}/match`}>
               Khớp chứng từ
             </Link>
           ) : null}
-          {needsLineForMatch ? (
-            <p className="note" style={{ margin: 0 }}>
-              Đã chấp nhận nhưng chưa có dòng mở — thêm {lineLabel.toLowerCase()}{" "}
-              bên dưới rồi mới khớp được.
-            </p>
-          ) : null}
-          {!canAccept && !canMatch && !needsLineForMatch ? (
+          {!canAccept && !canMatch && !acceptBlockedBySum ? (
             <p className="muted small">
               {doc.acceptanceStatus?.toLowerCase() === "accepted"
                 ? doc.lines.every((l) => Number(l.openAmount) <= 0)
@@ -218,14 +235,17 @@ export default async function DocumentDetailPage({
         {Math.abs(coverage.remainingTowardTotal) > 0.0000001 ? (
           <p className="note">
             Tổng dòng {coverage.remainingTowardTotal > 0 ? "thấp hơn" : "cao hơn"}{" "}
-            tổng chứng từ — API không ép bằng nhau; đối chiếu trước khi khớp.
+            tổng chứng từ — Accept yêu cầu bằng nhau (ADR-0012). Draft: không
+            vượt tổng.
           </p>
-        ) : null}
+        ) : (
+          <p className="note">Tổng dòng khớp tổng chứng từ — có thể chấp nhận.</p>
+        )}
 
         {doc.lines.length === 0 ? (
           <div className="empty-state" role="status">
-            Chưa có {lineLabel.toLowerCase()}. Không bắt buộc để chấp nhận —
-            cần dòng mở để khớp.
+            Chưa có {lineLabel.toLowerCase()}. Cần đủ tổng dòng = tổng chứng từ
+            trước khi chấp nhận; cần dòng mở để khớp.
           </div>
         ) : (
           <div className="table-wrap">
@@ -245,40 +265,71 @@ export default async function DocumentDetailPage({
                   <th scope="col" className="num">
                     {outstandingLabel} (mở)
                   </th>
+                  <th scope="col">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
-                {doc.lines.map((line) => (
-                  <tr key={line.id}>
-                    <td>{line.lineNo}</td>
-                    <td>{line.description || "—"}</td>
-                    <td>
-                      {line.costTypeCode
-                        ? `${costLabel}: ${line.costTypeCode}`
-                        : line.revenueTypeCode
-                          ? `${revenueLabel}: ${line.revenueTypeCode}`
-                          : "—"}
-                    </td>
-                    <td>
-                      {line.billId ? (
-                        <Link className="row-link" href={`/bills/${line.billId}`}>
-                          Mở
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="num">
-                      {formatMoney(line.amount, line.currencyCode)}
-                    </td>
-                    <td className="num">
-                      {formatMoney(line.matchedAmount, line.currencyCode)}
-                    </td>
-                    <td className="num">
-                      {formatMoney(line.openAmount, line.currencyCode)}
-                    </td>
-                  </tr>
-                ))}
+                {doc.lines.map((line) => {
+                  const canMutate = canMutateDocumentLine(doc, line);
+                  return (
+                    <tr key={line.id}>
+                      <td>{line.lineNo}</td>
+                      <td>{line.description || "—"}</td>
+                      <td>
+                        {line.costTypeCode
+                          ? `${costLabel}: ${line.costTypeCode}`
+                          : line.revenueTypeCode
+                            ? `${revenueLabel}: ${line.revenueTypeCode}`
+                            : "—"}
+                      </td>
+                      <td>
+                        {line.billId ? (
+                          <Link
+                            className="row-link"
+                            href={`/bills/${line.billId}`}
+                          >
+                            Mở
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="num">
+                        {formatMoney(line.amount, line.currencyCode)}
+                      </td>
+                      <td className="num">
+                        {formatMoney(line.matchedAmount, line.currencyCode)}
+                      </td>
+                      <td className="num">
+                        {formatMoney(line.openAmount, line.currencyCode)}
+                      </td>
+                      <td>
+                        {canMutate ? (
+                          <EditDocumentLineForm
+                            terms={terms}
+                            documentId={doc.id}
+                            lineId={line.id}
+                            lineNo={line.lineNo}
+                            currencyCode={line.currencyCode}
+                            amount={line.amount}
+                            description={line.description}
+                            billId={line.billId}
+                            costTypeCode={line.costTypeCode}
+                            revenueTypeCode={line.revenueTypeCode}
+                            direction={doc.direction}
+                            documentTotal={doc.totalAmount}
+                            otherLinesSum={
+                              coverage.linesSum - Number(line.amount)
+                            }
+                            canDelete
+                          />
+                        ) : (
+                          <span className="muted small">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -303,7 +354,9 @@ export default async function DocumentDetailPage({
           <p className="muted small" style={{ marginTop: "1rem" }}>
             {doc.recordStatus?.toLowerCase() !== "active"
               ? "Chứng từ không còn hiệu lực — không thêm dòng."
-              : "Chỉ thêm dòng khi chứng từ đã nhận."}
+              : doc.acceptanceStatus?.toLowerCase() === "accepted"
+                ? "Đã chấp nhận — không thêm/xóa/đổi số dòng (ADR-0012)."
+                : "Chỉ thêm dòng khi chứng từ đã nhận."}
           </p>
         )}
       </section>

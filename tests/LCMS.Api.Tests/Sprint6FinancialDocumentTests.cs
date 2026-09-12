@@ -55,6 +55,9 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         Assert.Empty(await ListCostsAsync(tenantId));
         Assert.Empty(await ListRevenuesAsync(tenantId));
 
+        // ADR-0012: lines before Accept (sum must equal header)
+        var lineId = await AddLineAsync(tenantId, docId, 1000m, "Cước vận chuyển");
+
         // Accept changes only AcceptanceStatus
         using (var accept = new HttpRequestMessage(HttpMethod.Post, $"/api/financial-documents/{docId}/accept"))
         {
@@ -68,7 +71,6 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         Assert.Equal("unmatched", afterAccept.MatchingStatus);
         Assert.NotNull(afterAccept.AcceptedAt);
 
-        var lineId = await AddLineAsync(tenantId, docId, 1000m, "Cước vận chuyển");
         var costId = await CreateDirectCostAsync(tenantId, billId, 1000m, "FREIGHT");
 
         var matchId = await StartMatchAsync(tenantId, docId, "line_to_cost");
@@ -125,10 +127,10 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         var billId = await CreateBillAsync(tenantId, "BL-OM", "freight");
         var docA = await ReceiveDocumentAsync(tenantId, billId, "DN-A", 500m);
         var docB = await ReceiveDocumentAsync(tenantId, billId, "INV-B", 500m);
-        await AcceptDocumentAsync(tenantId, docA);
-        await AcceptDocumentAsync(tenantId, docB);
         var lineA = await AddLineAsync(tenantId, docA, 500m, "DN line");
         var lineB = await AddLineAsync(tenantId, docB, 500m, "INV line");
+        await AcceptDocumentAsync(tenantId, docA);
+        await AcceptDocumentAsync(tenantId, docB);
 
         var matchId = await StartMatchAsync(tenantId, docA, "line_to_line");
 
@@ -177,8 +179,8 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         var tenantB = await CreateTenantAsync("TN-DOC-B", "Doc B");
         var billId = await CreateBillAsync(tenantA, "BL-ISO-DOC", "freight");
         var docId = await ReceiveDocumentAsync(tenantA, billId, "INV-ISO", 100m);
-        await AcceptDocumentAsync(tenantA, docId);
         var lineId = await AddLineAsync(tenantA, docId, 100m, "line");
+        await AcceptDocumentAsync(tenantA, docId);
         var matchId = await StartMatchAsync(tenantA, docId, "line_to_cost");
 
         using var getDoc = new HttpRequestMessage(HttpMethod.Get, $"/api/financial-documents/{docId}");

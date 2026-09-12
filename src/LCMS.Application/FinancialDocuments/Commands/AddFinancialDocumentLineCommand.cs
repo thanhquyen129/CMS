@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -36,11 +37,16 @@ public sealed class AddFinancialDocumentLineCommandHandler : IRequestHandler<Add
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public AddFinancialDocumentLineCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public AddFinancialDocumentLineCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(AddFinancialDocumentLineCommand request, CancellationToken cancellationToken)
@@ -55,14 +61,11 @@ public sealed class AddFinancialDocumentLineCommandHandler : IRequestHandler<Add
             .FirstOrDefaultAsync(d => d.Id == request.DocumentId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chứng từ tài chính.");
 
-        if (!string.Equals(document.ReceiptStatus, FinancialDocumentReceiptStatuses.Received, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ConflictAppException("Chỉ thêm dòng trên chứng từ đã nhận.");
-        }
+        DocumentLineIntegrity.EnsureDocumentAllowsLineDraft(document);
 
-        if (document.RecordStatus != "active")
+        if (DocumentLineIntegrity.IsAccepted(document))
         {
-            throw new ConflictAppException("Chứng từ không còn hiệu lực.");
+            throw new ConflictAppException("Chứng từ đã chấp nhận — không thêm dòng (ADR-0012). Thêm dòng trước khi chấp nhận.");
         }
 
         if (request.BillId.HasValue)
@@ -89,13 +92,19 @@ public sealed class AddFinancialDocumentLineCommandHandler : IRequestHandler<Add
             throw new ConflictAppException("Tiền tệ dòng phải khớp tiền tệ chứng từ (C-014).");
         }
 
+        var amount = DocumentLineIntegrity.RoundMoney(request.Amount);
+        var existingSum = await DocumentLineIntegrity.SumLineAmountsAsync(
+            _db.FinancialDocumentLines, document.Id, cancellationToken);
+        DocumentLineIntegrity.EnsureSumDoesNotExceedHeader(
+            existingSum + amount, document.TotalAmount, document.CurrencyCode);
+
         var line = new FinancialDocumentLine
         {
             TenantId = tenantId,
             DocumentId = document.Id,
             LineNo = maxLine + 1,
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-            Amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero),
+            Amount = amount,
             MatchedAmount = 0m,
             CurrencyCode = currency,
             BillId = request.BillId ?? document.BillId,
@@ -104,6 +113,24 @@ public sealed class AddFinancialDocumentLineCommandHandler : IRequestHandler<Add
         };
 
         _db.FinancialDocumentLines.Add(line);
+
+        _audit.Append(
+            AuditActions.FinancialDocumentLineAdd,
+            AuditObjectTypes.FinancialDocumentLine,
+            line.Id,
+            afterJson: AuditJson.Serialize(new
+            {
+                id = line.Id,
+                documentId = document.Id,
+                lineNo = line.LineNo,
+                amount = line.Amount,
+                currency = line.CurrencyCode,
+                description = line.Description,
+                billId = line.BillId,
+                costTypeCode = line.CostTypeCode,
+                revenueTypeCode = line.RevenueTypeCode
+            }));
+
         await _db.SaveChangesAsync(cancellationToken);
         return line.Id;
     }

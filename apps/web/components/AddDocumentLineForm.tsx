@@ -152,11 +152,11 @@ export function AddDocumentLineForm({
         </div>
       ) : null}
       {overTotal ? (
-        <div className="alert alert-info" role="status">
+        <div className="alert alert-error" role="alert">
           Tổng dòng sau khi thêm (
-          {formatMoney(projectedSum, currencyCode)}) sẽ vượt tổng chứng từ (
-          {formatMoney(documentTotal, currencyCode)}). API vẫn cho phép — kiểm
-          tra lại nếu không chủ đích.
+          {formatMoney(projectedSum, currencyCode)}) vượt tổng chứng từ (
+          {formatMoney(documentTotal, currencyCode)}). Giảm số tiền hoặc sửa
+          dòng hiện có.
         </div>
       ) : null}
 
@@ -238,7 +238,7 @@ export function AddDocumentLineForm({
       </div>
 
       <div className="cta-row">
-        <button type="submit" className="btn" disabled={busy}>
+        <button type="submit" className="btn" disabled={busy || overTotal}>
           {busy ? "Đang thêm…" : `Thêm ${lineLabel.toLowerCase()}`}
         </button>
       </div>

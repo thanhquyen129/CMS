@@ -71,6 +71,14 @@ public sealed class AcceptFinancialDocumentCommandHandler : IRequestHandler<Acce
             throw new ConflictAppException("Không chấp nhận chứng từ đã hủy hoặc vô hiệu.");
         }
 
+        var lineRows = await _db.FinancialDocumentLines.AsNoTracking()
+            .Where(l => l.DocumentId == document.Id)
+            .Select(l => l.Amount)
+            .ToListAsync(cancellationToken);
+        var linesSum = lineRows.Sum();
+        DocumentLineIntegrity.EnsureSumEqualsHeaderForAccept(
+            linesSum, document.TotalAmount, document.CurrencyCode, lineRows.Count);
+
         var beforeJson = AuditJson.Serialize(new
         {
             id = document.Id,
@@ -80,7 +88,8 @@ public sealed class AcceptFinancialDocumentCommandHandler : IRequestHandler<Acce
             matchingStatus = document.MatchingStatus,
             documentNo = document.DocumentNo,
             currency = document.CurrencyCode,
-            totalAmount = document.TotalAmount
+            totalAmount = document.TotalAmount,
+            linesSum
         });
 
         document.AcceptanceStatus = FinancialDocumentAcceptanceStatuses.Accepted;

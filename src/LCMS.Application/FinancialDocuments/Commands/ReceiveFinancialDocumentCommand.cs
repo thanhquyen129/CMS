@@ -100,6 +100,21 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
             }
         }
 
+        if (request.CounterpartyId.HasValue)
+        {
+            var party = await _db.BusinessParties.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == request.CounterpartyId, cancellationToken);
+            if (party is null)
+            {
+                throw new NotFoundAppException("Không tìm thấy đối tác.");
+            }
+
+            if (!party.IsActive)
+            {
+                throw new ConflictAppException("Đối tác không còn hiệu lực.");
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(request.SourceSystem) && !string.IsNullOrWhiteSpace(request.ExternalId))
         {
             var existing = await _db.FinancialDocuments.AsNoTracking()

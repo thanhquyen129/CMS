@@ -10,6 +10,7 @@ type Props = {
   documentId: string;
   documentNo: string;
   totalAmount: number;
+  linesSum: number;
   currencyCode: string;
   canAccept: boolean;
 };
@@ -19,6 +20,7 @@ export function DocumentAcceptButton({
   documentId,
   documentNo,
   totalAmount,
+  linesSum,
   currencyCode,
   canAccept,
 }: Props) {
@@ -119,9 +121,12 @@ export function DocumentAcceptButton({
           >
             <h2 id={dialogTitleId}>Chấp nhận {docLabel.toLowerCase()}?</h2>
             <p>
-              Số {documentNo} · {formatMoney(totalAmount, currencyCode)}.
-              Thao tác chỉ đổi chiều <strong>{acceptLabel}</strong> — không đổi
-              Nhận / Khớp, không tạo Chi phí hay Thanh toán.
+              Số {documentNo} · tổng chứng từ{" "}
+              {formatMoney(totalAmount, currencyCode)} · tổng dòng{" "}
+              {formatMoney(linesSum, currencyCode)}. Thao tác chỉ đổi chiều{" "}
+              <strong>{acceptLabel}</strong> — không đổi Nhận / Khớp, không tạo
+              Chi phí hay Thanh toán. ADR-0012: tổng dòng phải bằng tổng chứng
+              từ.
             </p>
             {error ? (
               <div className="alert alert-error" role="alert">

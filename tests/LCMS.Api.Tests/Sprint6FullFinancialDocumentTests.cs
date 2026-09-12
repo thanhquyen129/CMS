@@ -96,8 +96,8 @@ public sealed class Sprint6FullFinancialDocumentTests : IAsyncLifetime
         Assert.Empty(await ListRevenuesAsync(tenantId));
 
         var docB = await ReceiveDocumentAsync(tenantId, billId, "DN-FULL-2", 600m);
-        await AcceptDocumentAsync(tenantId, docB);
         var lineB = await AddLineAsync(tenantId, docB, 600m, "DN");
+        await AcceptDocumentAsync(tenantId, docB);
         var lineMatchId = await StartMatchAsync(tenantId, docId, "line_to_line");
         await AddMatchDetailAsync(tenantId, lineMatchId, new
         {
@@ -108,8 +108,8 @@ public sealed class Sprint6FullFinancialDocumentTests : IAsyncLifetime
 
         var revenueId = await CreateRevenueAsync(tenantId, billId, 500m);
         var revDoc = await ReceiveDocumentAsync(tenantId, billId, "AR-INV-3", 500m, "receivable");
-        await AcceptDocumentAsync(tenantId, revDoc);
         var revLine = await AddLineAsync(tenantId, revDoc, 500m, "Doanh thu");
+        await AcceptDocumentAsync(tenantId, revDoc);
         var revMatchId = await StartMatchAsync(tenantId, revDoc, "line_to_revenue");
         await AddMatchDetailAsync(tenantId, revMatchId, new
         {
@@ -141,10 +141,10 @@ public sealed class Sprint6FullFinancialDocumentTests : IAsyncLifetime
         var billId = await CreateBillAsync(client, tenantId, "BL-TOL", "freight");
         var docA = await ReceiveDocumentAsync(client, tenantId, billId, "DN-TOL", 1000m);
         var docB = await ReceiveDocumentAsync(client, tenantId, billId, "INV-TOL", 1000m);
-        await AcceptDocumentAsync(client, tenantId, docA);
-        await AcceptDocumentAsync(client, tenantId, docB);
         var lineA = await AddLineAsync(client, tenantId, docA, 1000m, "A");
         var lineB = await AddLineAsync(client, tenantId, docB, 1000m, "B");
+        await AcceptDocumentAsync(client, tenantId, docA);
+        await AcceptDocumentAsync(client, tenantId, docB);
 
         var matchId = await StartMatchAsync(client, tenantId, docA, "line_to_line");
 
@@ -264,8 +264,8 @@ public sealed class Sprint6FullFinancialDocumentTests : IAsyncLifetime
             Assert.Contains("trùng", err!.Message, StringComparison.OrdinalIgnoreCase);
         }
 
-        await AcceptDocumentAsync(tenantId, docId);
         var lineId = await AddLineAsync(tenantId, docId, 100m, "line");
+        await AcceptDocumentAsync(tenantId, docId);
         var costId = await CreateDirectCostAsync(tenantId, billId, 100m, "FEE");
         var matchId = await StartMatchAsync(tenantId, docId, "line_to_cost");
         await AddMatchDetailAsync(tenantId, matchId, new
@@ -323,6 +323,7 @@ public sealed class Sprint6FullFinancialDocumentTests : IAsyncLifetime
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("Database:MigrateOnStartup", "false");
+            builder.UseSetting("Demo:SeedOnStartup", "false");
             builder.UseSetting("Auth:RequireJwt", "false");
             builder.UseSetting("Auth:AllowHeaderBootstrap", "true");
             builder.UseSetting("Auth:Jwt:SigningKey", LCMS.Api.Auth.AuthServiceCollectionExtensions.DevFallbackSigningKey);

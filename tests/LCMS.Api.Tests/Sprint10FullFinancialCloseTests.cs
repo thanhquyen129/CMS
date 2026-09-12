@@ -47,6 +47,7 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
         var billDoc = await CreateBillAsync(tenantId, "BL-E12F-DOC", "freight");
         var closeDoc = await StartCloseAsync(tenantId, "bill", billDoc, policy: "controlled");
         var docId = await ReceiveDocumentAsync(tenantId, billDoc, "INV-E12F-1", 500m);
+        await AddLineAsync(tenantId, docId, 500m, "gate line");
         await AcceptDocumentAsync(tenantId, docId);
         await AssertSnapshotBlockedAsync(tenantId, closeDoc, "chứng từ đã chấp nhận nhưng chưa khớp");
 
@@ -326,6 +327,18 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
                 currencyCode = "VND",
                 billId
             })
+        };
+        req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var response = await _client.SendAsync(req);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+    }
+
+    private async Task<Guid> AddLineAsync(Guid tenantId, Guid documentId, decimal amount, string description)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"/api/financial-documents/{documentId}/lines")
+        {
+            Content = JsonContent.Create(new { amount, description })
         };
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var response = await _client.SendAsync(req);

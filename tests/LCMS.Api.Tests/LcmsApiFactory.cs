@@ -17,6 +17,7 @@ public class LcmsApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("Database:MigrateOnStartup", "false");
+        builder.UseSetting("Demo:SeedOnStartup", "false");
         builder.UseSetting("Auth:RequireJwt", "false");
         builder.UseSetting("Auth:AllowHeaderBootstrap", "true");
         builder.UseSetting("Auth:Jwt:SigningKey", LCMS.Api.Auth.AuthServiceCollectionExtensions.DevFallbackSigningKey);

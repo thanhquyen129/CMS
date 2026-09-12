@@ -3,14 +3,22 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { partyLabel, type BusinessParty } from "@/lib/party";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
   terms: TerminologyMap;
   defaultBillId?: string;
+  parties: BusinessParty[];
+  partiesError?: string | null;
 };
 
-export function ReceiveDocumentForm({ terms, defaultBillId }: Props) {
+export function ReceiveDocumentForm({
+  terms,
+  defaultBillId,
+  parties,
+  partiesError,
+}: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -39,6 +47,7 @@ export function ReceiveDocumentForm({ terms, defaultBillId }: Props) {
     const billIdRaw = String(fd.get("billId") ?? "").trim();
     const notesRaw = String(fd.get("notes") ?? "").trim();
     const dateRaw = String(fd.get("documentDate") ?? "").trim();
+    const partyRaw = String(fd.get("counterpartyId") ?? "").trim();
 
     const body = {
       documentType: String(fd.get("documentType") ?? "").trim(),
@@ -50,6 +59,7 @@ export function ReceiveDocumentForm({ terms, defaultBillId }: Props) {
         .toUpperCase(),
       documentDate: dateRaw || null,
       billId: billIdRaw || null,
+      counterpartyId: partyRaw || null,
       notes: notesRaw || null,
     };
 
@@ -194,6 +204,25 @@ export function ReceiveDocumentForm({ terms, defaultBillId }: Props) {
             placeholder="Để trống nếu chưa gắn Bill"
             autoComplete="off"
           />
+        </div>
+
+        <div className="field">
+          <label htmlFor="counterpartyId">Đối tác (tuỳ chọn)</label>
+          {partiesError ? (
+            <p className="muted small" role="alert">
+              {partiesError} — vẫn nhận được không chọn đối tác.
+            </p>
+          ) : null}
+          <select id="counterpartyId" name="counterpartyId" disabled={busy}>
+            <option value="">— Không chọn —</option>
+            {parties
+              .filter((p) => p.isActive)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {partyLabel(p)}
+                </option>
+              ))}
+          </select>
         </div>
 
         <div className="field field-span">

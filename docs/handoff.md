@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-09-12 — G3 API+UI: sửa/xóa dòng, party picker, ép sum=header
+
+### User
+Cố ý ngoài G3 (API cũng chưa có thì làm luôn API): sửa/xóa dòng · party picker · ép sum = header
+
+### Done
+- **ADR-0012** document line integrity.
+- API: `PUT/DELETE /api/financial-documents/{id}/lines/{lineId}`; Accept yêu cầu Σ=Total; draft Σ≤Total; sau Accept khóa add/delete/amount; Receive validate CounterpartyId active; audit line add/update/delete.
+- UI: Sửa/Xóa dòng; party select lúc nhận; Accept blocked khi lệch tổng; copy ADR-0012.
+- Tests: `DocumentLineIntegrityTests`; reorder Accept-after-lines trong Sprint6/6Full/10.
+
+### Files
+- `DocumentLineIntegrity.cs`, Update/Delete commands, endpoints, ADR-0012
+- `EditDocumentLineForm`, BFF lines/[lineId], `parties.ts`, Receive/Detail/Accept UI
+- `UI-G3-DOD.md`
+
+### Verify
+- `dotnet test --filter DocumentLineIntegrity|Sprint6`
+- `npm run build` apps/web
+
+---
+
 ## 2026-09-12 — G3 FULL (prefill + coverage + match CTA)
 
 ### User

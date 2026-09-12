@@ -142,18 +142,34 @@ export function canAcceptDocument(doc: {
   );
 }
 
-/** API: chỉ thêm dòng khi đã nhận + còn hiệu lực. */
+/** API: chỉ thêm dòng khi đã nhận + còn hiệu lực + chưa chấp nhận (ADR-0012). */
 export function canAddDocumentLine(doc: {
   receiptStatus: string;
   recordStatus: string;
+  acceptanceStatus: string;
 }): boolean {
   return (
     doc.recordStatus?.toLowerCase() === "active" &&
-    doc.receiptStatus?.toLowerCase() === "received"
+    doc.receiptStatus?.toLowerCase() === "received" &&
+    doc.acceptanceStatus?.toLowerCase() !== "accepted"
   );
 }
 
-/** Đối chiếu header vs dòng (API không ép bằng nhau — UI chỉ cảnh báo). */
+/** Sửa/xóa dòng nháp: chưa chấp nhận + chưa khớp. */
+export function canMutateDocumentLine(
+  doc: {
+    receiptStatus: string;
+    recordStatus: string;
+    acceptanceStatus: string;
+  },
+  line: { matchedAmount: number }
+): boolean {
+  return (
+    canAddDocumentLine(doc) && Number(line.matchedAmount) <= 0.0000001
+  );
+}
+
+/** Đối chiếu header vs dòng (API ép bằng nhau lúc Accept — ADR-0012). */
 export function documentLineCoverage(doc: {
   totalAmount: number;
   lines: { amount: number; openAmount: number }[];
@@ -161,11 +177,13 @@ export function documentLineCoverage(doc: {
   linesSum: number;
   openSum: number;
   remainingTowardTotal: number;
+  sumsEqual: boolean;
 } {
   const linesSum = doc.lines.reduce((s, l) => s + Number(l.amount || 0), 0);
   const openSum = doc.lines.reduce((s, l) => s + Number(l.openAmount || 0), 0);
   const remainingTowardTotal = Number(doc.totalAmount) - linesSum;
-  return { linesSum, openSum, remainingTowardTotal };
+  const sumsEqual = Math.abs(remainingTowardTotal) <= 0.0001;
+  return { linesSum, openSum, remainingTowardTotal, sumsEqual };
 }
 
 export function receiptStatusLabel(

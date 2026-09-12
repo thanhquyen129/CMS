@@ -80,11 +80,12 @@ public sealed class ListExceptionsQueryHandler : IRequestHandler<ListExceptionsQ
                     || e.Status == ExceptionStatuses.Escalated));
         }
 
-        var list = await query
+        var list = await query.ToListAsync(cancellationToken);
+        return list
             .OrderBy(e => e.DueAt ?? DateTimeOffset.MaxValue)
             .ThenByDescending(e => e.Id)
-            .ToListAsync(cancellationToken);
-        return list.Select(Map).ToList();
+            .Select(Map)
+            .ToList();
     }
 
     internal static void EnsureTenant(ITenantContext tenantContext)

@@ -16,13 +16,6 @@ public interface ICriticalExceptionConfirmGate
 
 public sealed class CriticalExceptionConfirmGate : ICriticalExceptionConfirmGate
 {
-    private static readonly HashSet<string> BlockingStatuses = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ExceptionStatuses.Open,
-        ExceptionStatuses.InProgress,
-        ExceptionStatuses.Escalated
-    };
-
     private readonly ILcmsDbContext _db;
     private readonly FinancialControlOptions _options;
 
@@ -48,7 +41,9 @@ public sealed class CriticalExceptionConfirmGate : ICriticalExceptionConfirmGate
                 e => e.ObjectType == type
                      && e.ObjectId == objectId
                      && e.Severity == ExceptionSeverities.Critical
-                     && BlockingStatuses.Contains(e.Status),
+                     && (e.Status == ExceptionStatuses.Open
+                         || e.Status == ExceptionStatuses.InProgress
+                         || e.Status == ExceptionStatuses.Escalated),
                 cancellationToken);
 
         if (hasCritical)

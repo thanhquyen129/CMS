@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-12 — G5 FULL: AP/AR tab Đã tất toán
+
+### User
+làm full g5
+
+### Done
+- `/ap-ar?status=settled|all` — filter Còn dư / Đã tất toán / Tất cả (giữ theo tab AP|AR).
+- Empty còn dư → link sổ đã tất toán khi có data; cột `finalizedSettledAmount` khi settled/all.
+- Bill panel: hiện toàn bộ AP/AR Bill (không ẩn settled) + CTA sổ đã tất toán.
+- Fix label `partially_settled` → «Tất toán một phần».
+- DoD `UI-G5-DOD.md`; UAT G5 → Done; còn G6.
+
+### Files
+- `apps/web/lib/ap-ar.ts`, `apps/web/app/ap-ar/page.tsx`
+- `BillDocumentsApArPanel.tsx`
+- `UI-G5-DOD.md`, UAT md/json
+
+### Verify
+- `npm run build` apps/web
+
+### Follow-ups
+- G6 settlement `billNo`
+
+---
+
 ## 2026-09-12 — G4 FULL: lọc chứng từ theo Bill
 
 ### User

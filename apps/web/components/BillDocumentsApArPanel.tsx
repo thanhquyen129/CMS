@@ -29,7 +29,7 @@ type Props = {
   receivablesError: string | null;
 };
 
-/** Bill-scoped documents + AP/AR outstanding (read) + CTAs. Cost ≠ Payment. */
+/** Bill-scoped documents + AP/AR (outstanding + settled) + CTAs. Cost ≠ Payment. */
 export function BillDocumentsApArPanel({
   terms,
   billId,
@@ -44,6 +44,7 @@ export function BillDocumentsApArPanel({
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const outstandingLabel = term(terms, "OUTSTANDING", "Số dư còn lại");
+  const settledLabel = term(terms, "SETTLEMENT_SETTLED", "Đã tất toán");
   const costLabel = term(terms, "COST", "Chi phí");
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
   const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
@@ -52,14 +53,19 @@ export function BillDocumentsApArPanel({
   const acceptedLabel = term(terms, "ACCEPTED", "Đã chấp nhận");
   const matchedLabel = term(terms, "MATCHED", "Đã khớp");
 
-  const apRows = (payables ?? []).filter(
-    (r) => r.billId === billId && isOutstanding(r)
+  const apAll = (payables ?? []).filter((r) => r.billId === billId);
+  const arAll = (receivables ?? []).filter((r) => r.billId === billId);
+  const apOpen = apAll.filter(isOutstanding);
+  const arOpen = arAll.filter(isOutstanding);
+  const apSettled = apAll.filter(
+    (r) => r.settlementStatus?.toLowerCase() === "settled"
   );
-  const arRows = (receivables ?? []).filter(
-    (r) => r.billId === billId && isOutstanding(r)
+  const arSettled = arAll.filter(
+    (r) => r.settlementStatus?.toLowerCase() === "settled"
   );
 
   const docsHref = `/documents?billId=${encodeURIComponent(billId)}`;
+  const apArSettledHref = `/ap-ar?status=settled`;
 
   return (
     <>
@@ -140,11 +146,11 @@ export function BillDocumentsApArPanel({
       )}
 
       <h2 className="section-title">
-        {apLabel} / {arLabel} — {outstandingLabel}
+        {apLabel} / {arLabel}
       </h2>
       <p className="note">
-        Số dư đã ghi nhận trên Bill này. Không phải số {costLabel}. Tất toán qua{" "}
-        {paymentLabel} / {collectionLabel}.
+        Số dư đã ghi nhận trên Bill này (còn dư + đã tất toán). Không phải số{" "}
+        {costLabel}. Tất toán qua {paymentLabel} / {collectionLabel}.
       </p>
       <p className="cta-row" style={{ marginTop: 0 }}>
         <Link
@@ -171,6 +177,9 @@ export function BillDocumentsApArPanel({
         >
           Tạo {collectionLabel.toLowerCase()}
         </Link>{" "}
+        <Link className="btn btn-ghost btn-sm" href={apArSettledHref}>
+          Sổ {settledLabel.toLowerCase()}
+        </Link>{" "}
         <Link
           className="btn btn-ghost btn-sm"
           href={`/financial-closes/new?billId=${billId}`}
@@ -179,76 +188,140 @@ export function BillDocumentsApArPanel({
         </Link>
       </p>
 
-      <h3 className="section-title sm">{apLabel}</h3>
+      <h3 className="section-title sm">
+        {apLabel}
+        {apOpen.length > 0
+          ? ` — ${outstandingLabel}`
+          : apSettled.length > 0
+            ? ` — ${settledLabel}`
+            : ""}
+      </h3>
       {payablesError ? (
         <div className="alert alert-error" role="alert">
           {payablesError}
         </div>
-      ) : payables === null ? null : apRows.length === 0 ? (
+      ) : payables === null ? null : apAll.length === 0 ? (
         <div className="empty-state" role="status">
-          Không có {apLabel.toLowerCase()} còn dư trên Bill này.
+          Chưa có {apLabel.toLowerCase()} trên Bill này.
         </div>
       ) : (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col" className="num">
-                  {outstandingLabel}
-                </th>
-                <th scope="col">Tất toán</th>
-                <th scope="col">Tuổi nợ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {apRows.map((row) => (
-                <tr key={row.id}>
-                  <td className="num">
-                    {formatMoney(row.outstanding, row.currencyCode)}
-                  </td>
-                  <td>{settlementStatusLabel(terms, row.settlementStatus)}</td>
-                  <td>{agingBucketLabel(row.agingBucket)}</td>
+        <>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th scope="col" className="num">
+                    Đã ghi nhận
+                  </th>
+                  <th scope="col" className="num">
+                    Đã tất toán
+                  </th>
+                  <th scope="col" className="num">
+                    {outstandingLabel}
+                  </th>
+                  <th scope="col">Tất toán</th>
+                  <th scope="col">Tuổi nợ</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {apAll.map((row) => (
+                  <tr key={row.id}>
+                    <td className="num">
+                      {formatMoney(row.recognizedAmount, row.currencyCode)}
+                    </td>
+                    <td className="num">
+                      {formatMoney(row.finalizedSettledAmount, row.currencyCode)}
+                    </td>
+                    <td className="num">
+                      {formatMoney(row.outstanding, row.currencyCode)}
+                    </td>
+                    <td>
+                      {settlementStatusLabel(terms, row.settlementStatus)}
+                    </td>
+                    <td>{agingBucketLabel(row.agingBucket)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {apOpen.length === 0 && apSettled.length > 0 ? (
+            <p className="note">
+              Toàn bộ {apLabel.toLowerCase()} trên Bill đã tất toán.{" "}
+              <Link className="row-link" href={apArSettledHref}>
+                Xem sổ đã tất toán
+              </Link>
+              .
+            </p>
+          ) : null}
+        </>
       )}
 
-      <h3 className="section-title sm">{arLabel}</h3>
+      <h3 className="section-title sm">
+        {arLabel}
+        {arOpen.length > 0
+          ? ` — ${outstandingLabel}`
+          : arSettled.length > 0
+            ? ` — ${settledLabel}`
+            : ""}
+      </h3>
       {receivablesError ? (
         <div className="alert alert-error" role="alert">
           {receivablesError}
         </div>
-      ) : receivables === null ? null : arRows.length === 0 ? (
+      ) : receivables === null ? null : arAll.length === 0 ? (
         <div className="empty-state" role="status">
-          Không có {arLabel.toLowerCase()} còn dư trên Bill này.
+          Chưa có {arLabel.toLowerCase()} trên Bill này.
         </div>
       ) : (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col" className="num">
-                  {outstandingLabel}
-                </th>
-                <th scope="col">Tất toán</th>
-                <th scope="col">Tuổi nợ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {arRows.map((row) => (
-                <tr key={row.id}>
-                  <td className="num">
-                    {formatMoney(row.outstanding, row.currencyCode)}
-                  </td>
-                  <td>{settlementStatusLabel(terms, row.settlementStatus)}</td>
-                  <td>{agingBucketLabel(row.agingBucket)}</td>
+        <>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th scope="col" className="num">
+                    Đã ghi nhận
+                  </th>
+                  <th scope="col" className="num">
+                    Đã tất toán
+                  </th>
+                  <th scope="col" className="num">
+                    {outstandingLabel}
+                  </th>
+                  <th scope="col">Tất toán</th>
+                  <th scope="col">Tuổi nợ</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {arAll.map((row) => (
+                  <tr key={row.id}>
+                    <td className="num">
+                      {formatMoney(row.recognizedAmount, row.currencyCode)}
+                    </td>
+                    <td className="num">
+                      {formatMoney(row.finalizedSettledAmount, row.currencyCode)}
+                    </td>
+                    <td className="num">
+                      {formatMoney(row.outstanding, row.currencyCode)}
+                    </td>
+                    <td>
+                      {settlementStatusLabel(terms, row.settlementStatus)}
+                    </td>
+                    <td>{agingBucketLabel(row.agingBucket)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {arOpen.length === 0 && arSettled.length > 0 ? (
+            <p className="note">
+              Toàn bộ {arLabel.toLowerCase()} trên Bill đã tất toán.{" "}
+              <Link className="row-link" href={apArSettledHref}>
+                Xem sổ đã tất toán
+              </Link>
+              .
+            </p>
+          ) : null}
+        </>
       )}
     </>
   );

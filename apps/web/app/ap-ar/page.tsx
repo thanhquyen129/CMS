@@ -7,16 +7,121 @@ import { fetchTerminology, term } from "@/lib/api";
 import {
   agingBucketLabel,
   exposureStatusLabel,
-  isOutstanding,
+  filterByApArStatus,
   listAccountsPayable,
   listAccountsReceivable,
   listPayableExposures,
   listReceivableExposures,
+  parseApArStatusFilter,
   settlementStatusLabel,
+  type ApArStatusFilter,
+  type AccountsPayableItem,
+  type AccountsReceivableItem,
 } from "@/lib/ap-ar";
 import { formatMoney } from "@/lib/money";
+import type { TerminologyMap } from "@/lib/terminology";
 
-type SearchParams = Promise<{ tab?: string }>;
+type SearchParams = Promise<{ tab?: string; status?: string }>;
+
+function apArHref(opts: {
+  tab?: string;
+  status?: ApArStatusFilter;
+}): string {
+  const p = new URLSearchParams();
+  if (opts.tab && opts.tab !== "ap") p.set("tab", opts.tab);
+  if (opts.status && opts.status !== "outstanding") {
+    p.set("status", opts.status);
+  }
+  const qs = p.toString();
+  return qs ? `/ap-ar?${qs}` : "/ap-ar";
+}
+
+function statusFilterLabel(
+  terms: TerminologyMap,
+  filter: ApArStatusFilter
+): string {
+  if (filter === "settled") {
+    return term(terms, "SETTLEMENT_SETTLED", "Đã tất toán");
+  }
+  if (filter === "all") return "Tất cả";
+  return term(terms, "OUTSTANDING", "Còn dư");
+}
+
+function ApArTable({
+  terms,
+  items,
+  billLabel,
+  outstandingLabel,
+  agingLabel,
+  showSettledAmount,
+}: {
+  terms: TerminologyMap;
+  items: (AccountsPayableItem | AccountsReceivableItem)[];
+  billLabel: string;
+  outstandingLabel: string;
+  agingLabel: string;
+  showSettledAmount: boolean;
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th scope="col">{billLabel}</th>
+            <th scope="col" className="num">
+              Đã ghi nhận
+            </th>
+            {showSettledAmount ? (
+              <th scope="col" className="num">
+                Đã tất toán
+              </th>
+            ) : null}
+            <th scope="col" className="num">
+              {outstandingLabel}
+            </th>
+            <th scope="col">Trạng thái tất toán</th>
+            <th scope="col">Hạn</th>
+            <th scope="col">{agingLabel}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((row) => (
+            <tr key={row.id}>
+              <td>
+                {row.billId ? (
+                  <Link className="row-link" href={`/bills/${row.billId}`}>
+                    Mở {billLabel}
+                  </Link>
+                ) : (
+                  <span className="muted">—</span>
+                )}
+              </td>
+              <td className="num">
+                {formatMoney(row.recognizedAmount, row.currencyCode)}
+              </td>
+              {showSettledAmount ? (
+                <td className="num">
+                  {formatMoney(row.finalizedSettledAmount, row.currencyCode)}
+                </td>
+              ) : null}
+              <td className="num">
+                {formatMoney(row.outstanding, row.currencyCode)}
+              </td>
+              <td>{settlementStatusLabel(terms, row.settlementStatus)}</td>
+              <td>{row.dueDate ?? "—"}</td>
+              <td>
+                {agingBucketLabel(row.agingBucket)}
+                {row.daysPastDue != null && row.daysPastDue > 0
+                  ? ` · ${row.daysPastDue} ngày`
+                  : ""}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default async function ApArPage({
   searchParams,
@@ -28,14 +133,16 @@ export default async function ApArPage({
     redirect("/login");
   }
 
-  const { tab } = await searchParams;
+  const { tab, status: statusRaw } = await searchParams;
   const activeTab =
     tab === "ar" || tab === "exposure" ? tab : "ap";
+  const statusFilter = parseApArStatusFilter(statusRaw);
 
   const terms = await fetchTerminology();
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const outstandingLabel = term(terms, "OUTSTANDING", "Số dư còn lại");
+  const settledLabel = term(terms, "SETTLEMENT_SETTLED", "Đã tất toán");
   const agingLabel = term(terms, "AGING", "Tuổi nợ");
   const payableExposureLabel = term(
     terms,
@@ -59,14 +166,29 @@ export default async function ApArPage({
     listReceivableExposures(),
   ]);
 
-  const apItems = apRes.ok ? apRes.data.filter(isOutstanding) : [];
-  const arItems = arRes.ok ? arRes.data.filter(isOutstanding) : [];
+  const apItems = apRes.ok
+    ? filterByApArStatus(apRes.data, statusFilter)
+    : [];
+  const arItems = arRes.ok
+    ? filterByApArStatus(arRes.data, statusFilter)
+    : [];
+  const apSettledCount = apRes.ok
+    ? apRes.data.filter((r) => r.settlementStatus?.toLowerCase() === "settled")
+        .length
+    : 0;
+  const arSettledCount = arRes.ok
+    ? arRes.data.filter((r) => r.settlementStatus?.toLowerCase() === "settled")
+        .length
+    : 0;
   const peItems = peRes.ok
     ? peRes.data.filter((e) => e.openAmount > 0 || e.status !== "recognized")
     : [];
   const reItems = reRes.ok
     ? reRes.data.filter((e) => e.openAmount > 0 || e.status !== "recognized")
     : [];
+
+  const showSettledAmount =
+    statusFilter === "settled" || statusFilter === "all";
 
   return (
     <AppShell terms={terms} active="ap-ar">
@@ -75,8 +197,8 @@ export default async function ApArPage({
           {apLabel} / {arLabel}
         </h1>
         <p className="lede">
-          Đọc {outstandingLabel} đã ghi nhận. {apLabel} ≠ {costLabel}; {arLabel} ≠{" "}
-          {revenueLabel}. Tất toán qua{" "}
+          Đọc {outstandingLabel} đã ghi nhận và lịch sử {settledLabel.toLowerCase()}.{" "}
+          {apLabel} ≠ {costLabel}; {arLabel} ≠ {revenueLabel}. Tất toán qua{" "}
           <Link className="row-link" href="/settlements">
             {paymentLabel} / thu tiền
           </Link>
@@ -98,7 +220,7 @@ export default async function ApArPage({
         <div className="search-bar" role="tablist" aria-label="Chọn sổ">
           <Link
             className={activeTab === "ap" ? "btn" : "btn btn-ghost"}
-            href="/ap-ar"
+            href={apArHref({ tab: "ap", status: statusFilter })}
             role="tab"
             aria-selected={activeTab === "ap"}
           >
@@ -106,7 +228,7 @@ export default async function ApArPage({
           </Link>
           <Link
             className={activeTab === "ar" ? "btn" : "btn btn-ghost"}
-            href="/ap-ar?tab=ar"
+            href={apArHref({ tab: "ar", status: statusFilter })}
             role="tab"
             aria-selected={activeTab === "ar"}
           >
@@ -114,7 +236,7 @@ export default async function ApArPage({
           </Link>
           <Link
             className={activeTab === "exposure" ? "btn" : "btn btn-ghost"}
-            href="/ap-ar?tab=exposure"
+            href={apArHref({ tab: "exposure" })}
             role="tab"
             aria-selected={activeTab === "exposure"}
           >
@@ -122,10 +244,43 @@ export default async function ApArPage({
           </Link>
         </div>
 
+        {activeTab === "ap" || activeTab === "ar" ? (
+          <div
+            className="search-bar"
+            role="group"
+            aria-label="Lọc trạng thái tất toán"
+          >
+            <Link
+              className={
+                statusFilter === "outstanding" ? "btn btn-sm" : "btn btn-ghost btn-sm"
+              }
+              href={apArHref({ tab: activeTab, status: "outstanding" })}
+            >
+              Còn dư
+            </Link>
+            <Link
+              className={
+                statusFilter === "settled" ? "btn btn-sm" : "btn btn-ghost btn-sm"
+              }
+              href={apArHref({ tab: activeTab, status: "settled" })}
+            >
+              {settledLabel}
+            </Link>
+            <Link
+              className={
+                statusFilter === "all" ? "btn btn-sm" : "btn btn-ghost btn-sm"
+              }
+              href={apArHref({ tab: activeTab, status: "all" })}
+            >
+              Tất cả
+            </Link>
+          </div>
+        ) : null}
+
         {activeTab === "ap" ? (
           <>
             <h2 className="section-title sm">
-              {apLabel} — {outstandingLabel} &gt; 0
+              {apLabel} — {statusFilterLabel(terms, statusFilter)}
             </h2>
             {!apRes.ok ? (
               <div className="alert alert-error" role="alert">
@@ -133,59 +288,40 @@ export default async function ApArPage({
               </div>
             ) : apItems.length === 0 ? (
               <div className="empty-state" role="status">
-                Không có {apLabel.toLowerCase()} còn dư. (Đã tất toán hoặc chưa
-                ghi nhận từ exposure.)
+                {statusFilter === "outstanding" ? (
+                  <>
+                    Không có {apLabel.toLowerCase()} còn dư.
+                    {apSettledCount > 0 ? (
+                      <>
+                        {" "}
+                        Có {apSettledCount} khoản{" "}
+                        <Link
+                          className="row-link"
+                          href={apArHref({ tab: "ap", status: "settled" })}
+                        >
+                          {settledLabel.toLowerCase()}
+                        </Link>
+                        .
+                      </>
+                    ) : (
+                      <> Chưa ghi nhận từ exposure hoặc chưa tất toán.</>
+                    )}
+                  </>
+                ) : statusFilter === "settled" ? (
+                  <>Không có {apLabel.toLowerCase()} đã tất toán.</>
+                ) : (
+                  <>Chưa có {apLabel.toLowerCase()} nào.</>
+                )}
               </div>
             ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">{billLabel}</th>
-                      <th scope="col" className="num">
-                        Đã ghi nhận
-                      </th>
-                      <th scope="col" className="num">
-                        {outstandingLabel}
-                      </th>
-                      <th scope="col">Trạng thái tất toán</th>
-                      <th scope="col">Hạn</th>
-                      <th scope="col">{agingLabel}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {apItems.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          {row.billId ? (
-                            <Link className="row-link" href={`/bills/${row.billId}`}>
-                              Mở {billLabel}
-                            </Link>
-                          ) : (
-                            <span className="muted">—</span>
-                          )}
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.recognizedAmount, row.currencyCode)}
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.outstanding, row.currencyCode)}
-                        </td>
-                        <td>
-                          {settlementStatusLabel(terms, row.settlementStatus)}
-                        </td>
-                        <td>{row.dueDate ?? "—"}</td>
-                        <td>
-                          {agingBucketLabel(row.agingBucket)}
-                          {row.daysPastDue != null && row.daysPastDue > 0
-                            ? ` · ${row.daysPastDue} ngày`
-                            : ""}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ApArTable
+                terms={terms}
+                items={apItems}
+                billLabel={billLabel}
+                outstandingLabel={outstandingLabel}
+                agingLabel={agingLabel}
+                showSettledAmount={showSettledAmount}
+              />
             )}
           </>
         ) : null}
@@ -193,7 +329,7 @@ export default async function ApArPage({
         {activeTab === "ar" ? (
           <>
             <h2 className="section-title sm">
-              {arLabel} — {outstandingLabel} &gt; 0
+              {arLabel} — {statusFilterLabel(terms, statusFilter)}
             </h2>
             {!arRes.ok ? (
               <div className="alert alert-error" role="alert">
@@ -201,58 +337,38 @@ export default async function ApArPage({
               </div>
             ) : arItems.length === 0 ? (
               <div className="empty-state" role="status">
-                Không có {arLabel.toLowerCase()} còn dư.
+                {statusFilter === "outstanding" ? (
+                  <>
+                    Không có {arLabel.toLowerCase()} còn dư.
+                    {arSettledCount > 0 ? (
+                      <>
+                        {" "}
+                        Có {arSettledCount} khoản{" "}
+                        <Link
+                          className="row-link"
+                          href={apArHref({ tab: "ar", status: "settled" })}
+                        >
+                          {settledLabel.toLowerCase()}
+                        </Link>
+                        .
+                      </>
+                    ) : null}
+                  </>
+                ) : statusFilter === "settled" ? (
+                  <>Không có {arLabel.toLowerCase()} đã tất toán.</>
+                ) : (
+                  <>Chưa có {arLabel.toLowerCase()} nào.</>
+                )}
               </div>
             ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">{billLabel}</th>
-                      <th scope="col" className="num">
-                        Đã ghi nhận
-                      </th>
-                      <th scope="col" className="num">
-                        {outstandingLabel}
-                      </th>
-                      <th scope="col">Trạng thái tất toán</th>
-                      <th scope="col">Hạn</th>
-                      <th scope="col">{agingLabel}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {arItems.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          {row.billId ? (
-                            <Link className="row-link" href={`/bills/${row.billId}`}>
-                              Mở {billLabel}
-                            </Link>
-                          ) : (
-                            <span className="muted">—</span>
-                          )}
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.recognizedAmount, row.currencyCode)}
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.outstanding, row.currencyCode)}
-                        </td>
-                        <td>
-                          {settlementStatusLabel(terms, row.settlementStatus)}
-                        </td>
-                        <td>{row.dueDate ?? "—"}</td>
-                        <td>
-                          {agingBucketLabel(row.agingBucket)}
-                          {row.daysPastDue != null && row.daysPastDue > 0
-                            ? ` · ${row.daysPastDue} ngày`
-                            : ""}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ApArTable
+                terms={terms}
+                items={arItems}
+                billLabel={billLabel}
+                outstandingLabel={outstandingLabel}
+                agingLabel={agingLabel}
+                showSettledAmount={showSettledAmount}
+              />
             )}
           </>
         ) : null}

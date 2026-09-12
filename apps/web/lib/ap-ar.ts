@@ -179,12 +179,39 @@ export function settlementStatusLabel(
     case "open":
       return term(terms, "SETTLEMENT_OPEN", "Chưa tất toán");
     case "partial":
+    case "partially_settled":
       return term(terms, "SETTLEMENT_PARTIAL", "Tất toán một phần");
     case "settled":
       return term(terms, "SETTLEMENT_SETTLED", "Đã tất toán");
     default:
       return status || "—";
   }
+}
+
+/** Fully settled (outstanding = 0, status settled). */
+export function isSettled(item: {
+  outstanding: number;
+  settlementStatus: string;
+}): boolean {
+  return item.settlementStatus?.toLowerCase() === "settled";
+}
+
+/** AP/AR desk view filter: outstanding | settled | all. */
+export type ApArStatusFilter = "outstanding" | "settled" | "all";
+
+export function parseApArStatusFilter(
+  raw: string | undefined
+): ApArStatusFilter {
+  if (raw === "settled" || raw === "all") return raw;
+  return "outstanding";
+}
+
+export function filterByApArStatus<
+  T extends { outstanding: number; settlementStatus: string },
+>(items: T[], filter: ApArStatusFilter): T[] {
+  if (filter === "settled") return items.filter(isSettled);
+  if (filter === "all") return items;
+  return items.filter(isOutstanding);
 }
 
 export function agingBucketLabel(bucket: string): string {
@@ -227,5 +254,5 @@ export function isOutstanding(
 ): boolean {
   if (item.outstanding > 0) return true;
   const s = item.settlementStatus?.toLowerCase();
-  return s === "open" || s === "partial";
+  return s === "open" || s === "partial" || s === "partially_settled";
 }

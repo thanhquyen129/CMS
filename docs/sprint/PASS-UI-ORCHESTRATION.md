@@ -1,24 +1,25 @@
 # Pass UI — orchestration (coordinator)
 
-**Mode:** **Agent** (không Plan). Plan đã khóa ở `PLAN-UI.md`; giai đoạn đầu = làm theo DoD.
+**Mode:** **Agent** (không Plan). Plan đã khóa ở `PLAN-UI.md`.
 
-**Rule:** U0→U4 = **một agent/chat riêng từng sprint**. Coordinator chỉ kickoff tuần tự; vá lỗi sau này → resume đúng agent hoặc New Chat paste lại `PROMPT-UI-N.md`.
+**Rule:** U0→U4 = **một agent/chat riêng từng sprint**. Vá lỗi sau này → resume đúng agent hoặc New Chat paste `PROMPT-UI-N.md`.
 
-**vs Pass 2:** Dev song song OK. Merge/deploy **serialize** (xem `README-AGENTS.md` § Parallel). Prefer PR; không đua push `main` với S-FULL agent. `handoff.md` / README: append section riêng — không rewrite cả file.
+**Status: Pass UI U0–U4 COMPLETE.**
 
 ## Queue
 
 | Sprint | Agent | Status | Notes |
 |--------|-------|--------|-------|
-| U0 | [UI-0](cf1b501c-7007-42fa-a90f-5bf7076d3040) | Done | Scaffold + login + proxy — `52f5ca1`, 86 tests |
-| U1 | [UI-1](4138d876-5722-42f6-a69a-bc23f8656ab9) | Done | Bill hub — `4aeab7a`; VPS `/bills` + maturity verified |
-| U2 | [UI-2](bc-5377dafd-4e8b-4761-801f-ae76de6079b7) | Done | Cost & Revenue — [Review](bc-5377dafd-4e8b-4761-801f-ae76de6079b7#changes); on `main` (`01d8a50`+) |
-| U3 | [UI-3](bc-e514db5a-484e-4333-a372-f8d08e0cdb32) | Done | Control desk — PR #26 → `657be51`; VPS verified (fallback redeploy after Actions race) |
-| U4 | [UI-4](e1fa18ab-050c-4edd-8f07-b2d80b6fb6c3) / [cloud](bc-9c035d0b-b5a7-44ca-9511-2927f0d3c03d) | Done | Documents & AP/AR — PR #27 → `0953cce`; BFF 201 body fix; **Pass UI COMPLETE** |
+| U0 | [UI-0](cf1b501c-7007-42fa-a90f-5bf7076d3040) | Done | Scaffold + login + proxy |
+| U1 | [UI-1](4138d876-5722-42f6-a69a-bc23f8656ab9) | Done | Bill hub |
+| U2 | [UI-2](0aefe08a-9f6f-4b1b-9cbb-b6018f50323d) | Done | Cost & Revenue confirm |
+| U3 | [UI-3](6ea60a75-b200-4001-b690-33a9fcbd6d74) | Done | Control desk |
+| U4 | [UI-4](e1fa18ab-050c-4edd-8f07-b2d80b6fb6c3) | Done | Documents & AP/AR — PR #27; VPS verified |
 
-## Stop conditions (serious)
-- Money/auth tests đỏ không sửa được trong sprint
-- Production deploy hỏng `/health` sau ship
-- Merge conflict phá Pass 2 money path không resolve an toàn
+## Follow-ups (not blocking)
+- Match UI, settlement UI
+- `billId` filter on document list DTO
+- Actions race → prefer serialize deploy / `--no-cache web` when UI drifts
 
-Còn lại: agent tự sửa và ship tiếp.
+## Vá lỗi theo sprint
+Resume agent trong bảng trên, hoặc New Chat + `PROMPT-UI-N.md`.

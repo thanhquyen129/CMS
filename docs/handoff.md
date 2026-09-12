@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — Pass UI / Sprint U2 Cost & Revenue confirm
+
+### User
+Ship U2: trên Bill detail xác nhận Chi phí / Doanh thu (CTA rõ; maturity không silent overwrite). List + confirm/actualize dialog VI; refresh profile; 403/409 honest. Ship per 06. Chỉ `apps/web` + docs.
+
+### Done
+- Bill detail: list `GET /api/costs?billId=` + `GET /api/revenues?billId=`.
+- Actions: Xác nhận (Expected→Confirmed) primary; Ghi nhận Thực tế (Confirmed→Actual) secondary; dialog VI giải thích không ghi đè lớp trước.
+- BFF cookie→Bearer: `/bff/costs|revenues/[id]/confirm|actualize`; lỗi API VI; 403/409 khóa nút + refresh; `router.refresh` sau mutate.
+- Docs: `UI-2-DOD.md`; README/orchestration U2 Done.
+- Rebased onto main (after CI smoke redirect fix).
+
+### Files / API
+- UI: `BillCostRevenuePanel`, `bills/[id]/page.tsx`, `lib/costs-revenues*.ts`, `lib/bff-api.ts`, `lib/terminology.ts`, `app/bff/costs/**`, `app/bff/revenues/**`
+- API unchanged (confirm/actualize đã có trên main)
+
+### Verify
+- `npm run build` (apps/web) xanh; `dotnet test` **93 passed**
+- VPS after deploy: Bill detail confirm cost/revenue (or empty honest); `/health` OK
+
+### Next
+- U3 Control desk; optional amount override trong dialog
+
+### Follow-ups
+- Permission codes riêng cho confirm (hiện 403 runtime)
+- Shared allocation UI (non-goal U2)
+
+---
+
 ## 2026-09-12 — Fix CI deploy smoke: follow `/` → `/login` redirect
 
 ### User

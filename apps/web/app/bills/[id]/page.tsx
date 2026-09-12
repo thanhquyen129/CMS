@@ -2,8 +2,10 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { AUTH_COOKIE } from "@/lib/auth";
-import { fetchTerminology, term, type TerminologyMap } from "@/lib/api";
+import { fetchTerminology } from "@/lib/api";
+import { term, type TerminologyMap } from "@/lib/terminology";
 import {
   getBill,
   getFinancialProfile,
@@ -11,6 +13,7 @@ import {
   type CurrencyFinancialBucket,
   type MaturityBreakdown,
 } from "@/lib/bills";
+import { listCostsByBill, listRevenuesByBill } from "@/lib/costs-revenues-server";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Params = Promise<{ id: string }>;
@@ -148,11 +151,14 @@ export default async function BillDetailPage({ params }: { params: Params }) {
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const best = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
 
-  const [billRes, profileRes, profitRes] = await Promise.all([
-    getBill(id),
-    getFinancialProfile(id),
-    getProfitability(id, "best"),
-  ]);
+  const [billRes, profileRes, profitRes, costsRes, revenuesRes] =
+    await Promise.all([
+      getBill(id),
+      getFinancialProfile(id),
+      getProfitability(id, "best"),
+      listCostsByBill(id),
+      listRevenuesByBill(id),
+    ]);
 
   if (!billRes.ok && billRes.status === 404) {
     return (
@@ -279,6 +285,14 @@ export default async function BillDetailPage({ params }: { params: Params }) {
             ) : null}
           </>
         )}
+
+        <BillCostRevenuePanel
+          terms={terms}
+          costs={costsRes.ok ? costsRes.data : null}
+          costsError={costsRes.ok ? null : costsRes.message}
+          revenues={revenuesRes.ok ? revenuesRes.data : null}
+          revenuesError={revenuesRes.ok ? null : revenuesRes.message}
+        />
 
         <h2 className="section-title">{profitLabel}</h2>
         {!profitRes.ok ? (

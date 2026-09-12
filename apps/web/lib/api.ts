@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
 import { AUTH_COOKIE, getApiInternalUrl } from "./auth";
+import type { TerminologyMap } from "./terminology";
 
-export type TerminologyMap = Record<string, string>;
+export type { TerminologyMap } from "./terminology";
+export { term } from "./terminology";
 
 export async function fetchTerminology(): Promise<TerminologyMap> {
   const base = getApiInternalUrl();
@@ -14,10 +16,6 @@ export async function fetchTerminology(): Promise<TerminologyMap> {
   } catch {
     return {};
   }
-}
-
-export function term(map: TerminologyMap, key: string, fallback: string): string {
-  return map[key] ?? fallback;
 }
 
 export async function getSessionToken(): Promise<string | undefined> {

@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { LogoutButton } from "./LogoutButton";
-import type { TerminologyMap } from "@/lib/api";
-import { term } from "@/lib/api";
+import { term, type TerminologyMap } from "@/lib/terminology";
 
 type NavKey = "home" | "bills" | "dashboard";
 

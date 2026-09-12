@@ -210,6 +210,46 @@ button, input { font: inherit; }
 .btn:disabled { opacity: 0.65; cursor: wait; }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
 .btn-ghost:hover:not(:disabled) { background: #f0f3f6; }
+.muted.small.block { display: block; margin-top: 0.15rem; }
+.maturity-actions { margin-top: 0.25rem; }
+.maturity-pill {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: #eef3f6;
+  color: var(--ink);
+}
+.maturity-pill.maturity-expected { background: #e8f0f4; }
+.maturity-pill.maturity-confirmed { background: #e3f0ea; color: #0b5f4b; }
+.maturity-pill.maturity-actual { background: #e7ebe8; color: #2a3a32; }
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 35, 50, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 50;
+}
+.dialog {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(26, 35, 50, 0.16);
+  padding: 1.25rem 1.35rem;
+}
+.dialog h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.dialog p { margin: 0 0 1rem; color: var(--muted); font-size: 0.92rem; line-height: 1.45; }
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 .login-page { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; }
 .login-card {
   width: 100%; max-width: 400px; background: var(--surface);

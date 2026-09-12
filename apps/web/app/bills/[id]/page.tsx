@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
+import { BillRatingPanel } from "@/components/BillRatingPanel";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -300,6 +301,8 @@ export default async function BillDetailPage({ params }: { params: Params }) {
           revenues={revenuesRes.ok ? revenuesRes.data : null}
           revenuesError={revenuesRes.ok ? null : revenuesRes.message}
         />
+
+        <BillRatingPanel terms={terms} billId={id} />
 
         <BillDocumentsApArPanel
           terms={terms}

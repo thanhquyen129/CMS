@@ -584,6 +584,9 @@ export default async function DashboardPage() {
                 </Link>
               </li>
               <li>
+                <Link href="/rate-cards">Bảng giá / Rating</Link>
+              </li>
+              <li>
                 <Link href="/documents/receive">Nhận {docLabel.toLowerCase()}</Link>
               </li>
               <li>

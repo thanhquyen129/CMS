@@ -7,6 +7,7 @@ type NavKey =
   | "dashboard"
   | "bills"
   | "costs"
+  | "rate-cards"
   | "documents"
   | "ap-ar"
   | "settlements"
@@ -68,6 +69,12 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
               href="/costs/shared"
             >
               {costLabel} {sharedLabel.toLowerCase()}
+            </Link>
+            <Link
+              className={active === "rate-cards" ? "active" : undefined}
+              href="/rate-cards"
+            >
+              Bảng giá
             </Link>
             <Link
               className={active === "documents" ? "active" : undefined}

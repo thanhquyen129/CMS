@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — P05 Rate card / Rating / seed Expected (UI)
+
+### User
+Next: P05 Rate card / Rating / seed Expected (UI).
+
+### Done
+- UI `/rate-cards` list + create; `/rate-cards/[id]` versions → rules → publish.
+- Bill panel: rate (published version) + seed Expected; lịch sử + seed lại (idempotent).
+- BFF proxies rate-cards / versions / publish / rules / ratings / seed-expected-costs.
+- Nav **Bảng giá** + dashboard shortcut.
+- DoD `docs/sprint/P05-DOD.md`; checklist P05 Done; next P06.
+
+### Files
+- `apps/web/lib/rate-cards.ts`
+- `apps/web/app/rate-cards/**`, `app/bff/rate-cards|rate-versions|ratings/**`
+- Components: CreateRateCard/Version, AddPricingRule, Publish, RateBillForm, SeedExpected, BillRatingPanel
+- AppShell, dashboard, bills/[id]
+
+### Verify
+- `npm run build` apps/web
+
+### Next
+- P06 Bảng `fx_rates` theo ngày
+
+### End-user
+**Bảng giá** → tạo card → phiên bản nháp → quy tắc → phát hành → mở Bill → **Tính giá** (tick seed Dự kiến).
+
+---
+
 ## 2026-09-12 — P04 Strict close + period lock UAT (VPS PASS)
 
 ### User

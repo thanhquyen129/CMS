@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
@@ -164,7 +165,17 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
             AuditActions.RevenueCreate,
             AuditObjectTypes.Revenue,
             revenue.Id,
-            afterJson: $"{{\"billId\":\"{request.BillId}\",\"amount\":{amount},\"currency\":\"{currency}\",\"maturity\":\"{RevenueMaturities.Expected}\",\"baseAmount\":{revenue.BaseAmount}}}");
+            afterJson: AuditJson.Serialize(new
+            {
+                id = revenue.Id,
+                billId = request.BillId,
+                amount,
+                expectedAmount = amount,
+                currency,
+                maturity = RevenueMaturities.Expected,
+                revenueTypeCode = revenue.RevenueTypeCode,
+                baseAmount = revenue.BaseAmount
+            }));
 
         try
         {

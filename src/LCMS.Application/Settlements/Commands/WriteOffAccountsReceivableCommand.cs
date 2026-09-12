@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -91,8 +92,17 @@ public sealed class WriteOffAccountsReceivableCommandHandler
         }
 
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
-        var beforeJson =
-            $"{{\"outstanding\":{outstanding},\"adjustment\":{ar.AdjustmentAmount}}}";
+        var beforeJson = AuditJson.Serialize(new
+        {
+            id = ar.Id,
+            billId = ar.BillId,
+            recognized = ar.RecognizedAmount,
+            adjustment = ar.AdjustmentAmount,
+            settled = ar.FinalizedSettledAmount,
+            outstanding,
+            settlementStatus = ar.SettlementStatus,
+            currency = ar.CurrencyCode
+        });
 
         ar.AdjustmentAmount = decimal.Round(ar.AdjustmentAmount - amount, 4, MidpointRounding.AwayFromZero);
         ar.SettlementStatus = SettlementHelpers.DeriveApArSettlementStatus(
@@ -110,7 +120,18 @@ public sealed class WriteOffAccountsReceivableCommandHandler
             AuditObjectTypes.AccountsReceivable,
             ar.Id,
             beforeJson: beforeJson,
-            afterJson: $"{{\"writeOff\":{amount},\"outstanding\":{ar.DeriveOutstanding()},\"adjustment\":{ar.AdjustmentAmount}}}",
+            afterJson: AuditJson.Serialize(new
+            {
+                id = ar.Id,
+                billId = ar.BillId,
+                writeOff = amount,
+                recognized = ar.RecognizedAmount,
+                adjustment = ar.AdjustmentAmount,
+                settled = ar.FinalizedSettledAmount,
+                outstanding = ar.DeriveOutstanding(),
+                settlementStatus = ar.SettlementStatus,
+                currency = ar.CurrencyCode
+            }),
             reason: request.Reason.Trim());
 
         await _db.SaveChangesAsync(cancellationToken);

@@ -60,6 +60,7 @@ public interface ILcmsDbContext
     DbSet<AuditEvent> AuditEvents { get; }
     DbSet<IntegrationRecord> IntegrationRecords { get; }
     DbSet<IntegrationError> IntegrationErrors { get; }
+    DbSet<OutboxMessage> OutboxMessages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

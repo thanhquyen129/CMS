@@ -1,5 +1,31 @@
 # Handoff
 
+## 2026-09-12 — Pass 2 Sprint 12 FULL Hardening & UAT (**Pass 2 COMPLETE**)
+
+### User
+Pass 2 Sprint 12 FULL final: audit FULL + integration recovery/outbox stub + NFR + AC gate smoke + VI UX + DoD stating Pass 2 COMPLETE + PR.
+
+### Done
+- Audit richer before/after JSON; cover finalize, document accept/match, AP/AR recognize, write-off; `GET /api/audit-events` filters include date range (`from`/`to`).
+- Integration recovery: record errors, mark-retried, dead-letter; duplicate still 409 C-002; outbox stub enqueue + process-once (no broker).
+- Rate-limit: `MoneyPathPermitLimit` + prefixes; security headers unchanged; timed terminology smoke (&lt;5s / 20 GETs).
+- AC-007 / AC-008 / AC-009 focused smoke; VI terminology gaps filled; `SPRINT-12-FULL-DOD.md` + **Pass 2 COMPLETE**.
+- Migration `Sprint12Full_HardeningRecovery`. Tests: `Sprint12FullHardeningUatTests` (4).
+
+### Files / API
+- Domain: `OutboxMessage`, `IntegrationError.Recovery*`, `AuditActions` extensions
+- Application: audit JSON helper; integration recovery + outbox commands; date-range list audit
+- API: `/api/integration-errors*`, `/api/outbox*`, rate-limit options
+- DoD: `docs/sprint/SPRINT-12-FULL-DOD.md`, `PROMPT-SPRINT-12-FULL.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` (Sprint12Full 4 passed; full suite)
+
+### Next
+- Merge S12 FULL → Pass 2 board all Done. If S11 FULL still open, merge S11 first then rebase S12. Pass UI continues (U2+).
+
+---
+
 ## 2026-09-12 — CI concurrency + Pass2∥UI ship rules
 
 ### User

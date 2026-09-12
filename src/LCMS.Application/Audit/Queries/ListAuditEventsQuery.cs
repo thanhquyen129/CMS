@@ -22,6 +22,8 @@ public sealed record ListAuditEventsQuery(
     Guid? ObjectId = null,
     string? Action = null,
     string? CorrelationId = null,
+    DateTimeOffset? From = null,
+    DateTimeOffset? To = null,
     int Take = 100) : IRequest<IReadOnlyList<AuditEventDto>>;
 
 public sealed class ListAuditEventsQueryHandler
@@ -71,10 +73,15 @@ public sealed class ListAuditEventsQueryHandler
             query = query.Where(e => e.CorrelationId == correlationId);
         }
 
-        return await query
+        // SQLite cannot translate DateTimeOffset comparisons (same as ORDER BY limitation).
+        // Apply From/To in memory after materializing; Postgres path remains correct.
+        var hasDateFilter = request.From.HasValue || request.To.HasValue;
+        var fetchTake = hasDateFilter ? Math.Min(2000, Math.Max(take * 20, 200)) : take;
+
+        var rows = await query
             // Order by Id (UUIDv7 time-sortable) — SQLite rejects DateTimeOffset in ORDER BY.
             .OrderByDescending(e => e.Id)
-            .Take(take)
+            .Take(fetchTake)
             .Select(e => new AuditEventDto(
                 e.Id,
                 e.ActorId,
@@ -87,5 +94,20 @@ public sealed class ListAuditEventsQueryHandler
                 e.CorrelationId,
                 e.OccurredAt))
             .ToListAsync(cancellationToken);
+
+        IEnumerable<AuditEventDto> filtered = rows;
+        if (request.From.HasValue)
+        {
+            var from = request.From.Value;
+            filtered = filtered.Where(e => e.OccurredAt >= from);
+        }
+
+        if (request.To.HasValue)
+        {
+            var to = request.To.Value;
+            filtered = filtered.Where(e => e.OccurredAt <= to);
+        }
+
+        return filtered.Take(take).ToList();
     }
 }

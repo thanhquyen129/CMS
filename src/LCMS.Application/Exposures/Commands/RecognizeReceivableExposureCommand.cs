@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -35,15 +36,18 @@ public sealed class RecognizeReceivableExposureCommandHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public RecognizeReceivableExposureCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(RecognizeReceivableExposureCommand request, CancellationToken cancellationToken)
@@ -88,6 +92,17 @@ public sealed class RecognizeReceivableExposureCommandHandler
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
 
+        var beforeJson = AuditJson.Serialize(new
+        {
+            exposureId = exposure.Id,
+            billId = exposure.BillId,
+            exposureAmount = exposure.Amount,
+            recognizedAmount = alreadyRecognized,
+            openAmount = open,
+            exposureStatus = exposure.Status,
+            currency = exposure.CurrencyCode
+        });
+
         var now = DateTimeOffset.UtcNow;
         var ar = new AccountsReceivable
         {
@@ -117,6 +132,25 @@ public sealed class RecognizeReceivableExposureCommandHandler
         exposure.TouchRowVersion();
 
         _db.AccountsReceivable.Add(ar);
+        _audit.Append(
+            AuditActions.AccountsReceivableRecognize,
+            AuditObjectTypes.AccountsReceivable,
+            ar.Id,
+            beforeJson: beforeJson,
+            afterJson: AuditJson.Serialize(new
+            {
+                accountsReceivableId = ar.Id,
+                exposureId = exposure.Id,
+                billId = ar.BillId,
+                recognizedAmount = amount,
+                exposureRecognizedTotal = exposure.RecognizedAmount,
+                exposureStatus = exposure.Status,
+                settlementStatus = ar.SettlementStatus,
+                outstanding = ar.DeriveOutstanding(),
+                currency = ar.CurrencyCode,
+                dueDate = ar.DueDate
+            }));
+
         // Explicit: recognition must not invent Cost or Revenue (C-003 / C-004).
         await _db.SaveChangesAsync(cancellationToken);
 

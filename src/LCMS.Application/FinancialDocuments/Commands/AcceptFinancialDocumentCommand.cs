@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -25,15 +26,18 @@ public sealed class AcceptFinancialDocumentCommandHandler : IRequestHandler<Acce
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public AcceptFinancialDocumentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task Handle(AcceptFinancialDocumentCommand request, CancellationToken cancellationToken)
@@ -67,10 +71,40 @@ public sealed class AcceptFinancialDocumentCommandHandler : IRequestHandler<Acce
             throw new ConflictAppException("Không chấp nhận chứng từ đã hủy hoặc vô hiệu.");
         }
 
+        var beforeJson = AuditJson.Serialize(new
+        {
+            id = document.Id,
+            billId = document.BillId,
+            receiptStatus = document.ReceiptStatus,
+            acceptanceStatus = document.AcceptanceStatus,
+            matchingStatus = document.MatchingStatus,
+            documentNo = document.DocumentNo,
+            currency = document.CurrencyCode,
+            totalAmount = document.TotalAmount
+        });
+
         document.AcceptanceStatus = FinancialDocumentAcceptanceStatuses.Accepted;
         document.AcceptedAt = DateTimeOffset.UtcNow;
         document.AcceptedBy = _user.UserId;
         // MatchingStatus and ReceiptStatus remain unchanged (AC-005).
+
+        _audit.Append(
+            AuditActions.FinancialDocumentAccept,
+            AuditObjectTypes.FinancialDocument,
+            document.Id,
+            beforeJson: beforeJson,
+            afterJson: AuditJson.Serialize(new
+            {
+                id = document.Id,
+                billId = document.BillId,
+                receiptStatus = document.ReceiptStatus,
+                acceptanceStatus = FinancialDocumentAcceptanceStatuses.Accepted,
+                matchingStatus = document.MatchingStatus,
+                documentNo = document.DocumentNo,
+                currency = document.CurrencyCode,
+                totalAmount = document.TotalAmount,
+                acceptedAt = document.AcceptedAt
+            }));
 
         await _db.SaveChangesAsync(cancellationToken);
     }

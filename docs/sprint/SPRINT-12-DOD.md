@@ -36,18 +36,20 @@ This is the **final Pass 1 sprint**. After merge, Pass 1 board = all Done. Pass 
 | Audit / Integration / NFR labels | Yes (Sprint 12) |
 | Error messages on money paths | VI (existing + C-002 conflict) |
 
-## Deferred (Pass 2 backlog pointers)
+## Deferred (Pass 2 backlog pointers) — **closed by Sprint 12 FULL**
 
 | Item | Target | Reason |
 |------|--------|--------|
-| Full outbox + retry topology | Pass 2 | Non-goal; `integration_errors` is stub only |
-| Load / soak / perf benchmarks | Pass 2 | Smoke rate-limit only |
-| JWT / OIDC production auth | Pass 2 | Keep `X-Tenant-Id` / `X-User-Id` bootstrap |
-| Next.js UAT UI | Pass 2 | API-only Pass 1 |
-| Complete AC-001… matrix hardening | Pass 2 | Thin stubs remain where noted in Sprints 1–11 DoDs |
-| Audit before/after full entity JSON | Pass 2 | Thin JSON snippets on key mutations |
-| Payment finalize beyond allocation | Pass 2 | Audited `payment_allocation.finalize` (settlement finalize path) |
-| Distributed/redis rate-limit store | Later | In-process fixed window sufficient for single node |
+| Full outbox + retry topology | Pass 2 → Done (stub) | `integration_errors` recovery + outbox enqueue/process-once; no broker |
+| Load / soak / perf benchmarks | Later | Timed smoke only (S12 FULL) |
+| JWT / OIDC production auth | Pass 2 S0 Done | JWT Bearer shipped; bootstrap optional in tests |
+| Next.js UAT UI | Pass UI | Parallel track |
+| Complete AC-001… matrix hardening | Pass 2 → Done (gates) | AC-007/008/009 smoke in S12 FULL |
+| Audit before/after full entity JSON | Pass 2 → Done | Richer `AuditJson` snapshots |
+| Payment finalize beyond allocation | Pass 2 → Done | Audited finalize + write-off / recognize |
+| Distributed/redis rate-limit store | Later | In-process fixed window + money-path limit |
+
+See `SPRINT-12-FULL-DOD.md` for Pass 2 COMPLETE.
 
 ## Headers (bootstrap until JWT)
 

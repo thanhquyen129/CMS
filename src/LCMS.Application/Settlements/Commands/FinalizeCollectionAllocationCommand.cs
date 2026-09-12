@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
@@ -118,8 +119,19 @@ public sealed class FinalizeCollectionAllocationCommandHandler
 
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
-        var beforeJson =
-            $"{{\"status\":\"{allocation.AllocationStatus}\",\"arSettled\":{ar.FinalizedSettledAmount}}}";
+        var beforeJson = AuditJson.Serialize(new
+        {
+            allocationId = allocation.Id,
+            collectionId = allocation.CollectionId,
+            accountsReceivableId = ar.Id,
+            status = allocation.AllocationStatus,
+            amount = allocation.Amount,
+            arRecognized = ar.RecognizedAmount,
+            arAdjustment = ar.AdjustmentAmount,
+            arSettled = ar.FinalizedSettledAmount,
+            arOutstanding = ar.DeriveOutstanding(),
+            arSettlementStatus = ar.SettlementStatus
+        });
 
         allocation.AllocationStatus = SettlementAllocationStatuses.Finalized;
         allocation.FinalizedAt = now;
@@ -136,7 +148,20 @@ public sealed class FinalizeCollectionAllocationCommandHandler
             AuditObjectTypes.CollectionAllocation,
             allocation.Id,
             beforeJson: beforeJson,
-            afterJson: $"{{\"status\":\"{SettlementAllocationStatuses.Finalized}\",\"amount\":{allocation.Amount},\"arSettled\":{nextSettled}}}");
+            afterJson: AuditJson.Serialize(new
+            {
+                allocationId = allocation.Id,
+                collectionId = allocation.CollectionId,
+                accountsReceivableId = ar.Id,
+                status = SettlementAllocationStatuses.Finalized,
+                amount = allocation.Amount,
+                arRecognized = ar.RecognizedAmount,
+                arAdjustment = ar.AdjustmentAmount,
+                arSettled = nextSettled,
+                arOutstanding = ar.DeriveOutstanding(),
+                arSettlementStatus = ar.SettlementStatus,
+                finalizedAt = now
+            }));
 
         await _db.SaveChangesAsync(cancellationToken);
 

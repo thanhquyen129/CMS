@@ -9,15 +9,16 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | **Pass 2 — Full PO** | Chạy lại từng sprint cho đủ TD6 + CP + AC gates. |
 | **Pass UI** | Next.js trên VPS — song song Pass 2. Plan: `PLAN-UI.md`. |
 
-**Pass 1: COMPLETE.** **Pass 2: IN PROGRESS.** **Pass UI: IN PROGRESS (U0–U1 done / U2+).**
+**Pass 1: COMPLETE.** **Pass 2: COMPLETE (pending S12 FULL merge).** **Pass UI: IN PROGRESS (U0–U1 done / U2+).**
 
 ## Status Pass 2
 | Sprint | Status |
 |--------|--------|
-| 0–9 FULL | Done |
-| 10 Financial Close FULL | Done (see `SPRINT-10-FULL-DOD.md`) |
-| 11 Financial Profile & Reporting FULL | In progress (cloud) |
-| 12 Hardening FULL | Queued |
+| 0–10 FULL | Done |
+| 11 Financial Profile & Reporting FULL | In progress / merge pending (PR) |
+| 12 Hardening FULL | **COMPLETE (this PR)** — Pass 2 board Done after merge |
+
+**Pass 2: COMPLETE** once Sprint 12 FULL merges (and S11 if still open — merge S11 then rebase S12 if needed).
 
 ## Status Pass UI
 | Sprint | Status | Prompt |

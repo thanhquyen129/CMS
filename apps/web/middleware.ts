@@ -18,6 +18,10 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/documents/") ||
     pathname === "/ap-ar" ||
     pathname.startsWith("/ap-ar/") ||
+    pathname === "/settlements" ||
+    pathname.startsWith("/settlements/") ||
+    pathname === "/financial-closes" ||
+    pathname.startsWith("/financial-closes/") ||
     pathname.startsWith("/queues/");
 
   if (!token && needsAuth) {
@@ -41,6 +45,10 @@ export const config = {
     "/documents/:path*",
     "/ap-ar",
     "/ap-ar/:path*",
+    "/settlements",
+    "/settlements/:path*",
+    "/financial-closes",
+    "/financial-closes/:path*",
     "/queues/:path*",
   ],
 };

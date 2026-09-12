@@ -2,9 +2,9 @@
 
 **Mode:** **Agent** (không Plan). Plan đã khóa ở `PLAN-UI.md`.
 
-**Rule:** U0→U4 = **một agent/chat riêng từng sprint**. Vá lỗi sau này → resume đúng agent hoặc New Chat paste `PROMPT-UI-N.md`.
+**Rule:** U0→U5 = **một agent/chat riêng từng sprint**. Vá lỗi sau này → resume đúng agent hoặc New Chat paste `PROMPT-UI-N.md`.
 
-**Status: Pass UI U0–U4 COMPLETE.**
+**Status: Pass UI U0–U5 COMPLETE** (Settlement + Close = U5).
 
 ## Queue
 
@@ -15,9 +15,10 @@
 | U2 | [UI-2](0aefe08a-9f6f-4b1b-9cbb-b6018f50323d) | Done | Cost & Revenue confirm |
 | U3 | [UI-3](6ea60a75-b200-4001-b690-33a9fcbd6d74) | Done | Control desk |
 | U4 | [UI-4](e1fa18ab-050c-4edd-8f07-b2d80b6fb6c3) | Done | Documents & AP/AR — PR #27; VPS verified |
+| U5 | local | Done | Settlement + Close — `UI-5-DOD.md` |
 
 ## Follow-ups (not blocking)
-- Match UI, settlement UI
+- Match UI, reverse allocation, write-off/recognize UI
 - `billId` filter on document list DTO
 - Actions race → prefer serialize deploy / `--no-cache web` when UI drifts
 

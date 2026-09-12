@@ -76,7 +76,11 @@ export default async function ApArPage({
         </h1>
         <p className="lede">
           Đọc {outstandingLabel} đã ghi nhận. {apLabel} ≠ {costLabel}; {arLabel} ≠{" "}
-          {revenueLabel}; tất toán / {paymentLabel} là bước riêng (chưa UI U4).
+          {revenueLabel}. Tất toán qua{" "}
+          <Link className="row-link" href="/settlements">
+            {paymentLabel} / thu tiền
+          </Link>
+          .
         </p>
 
         <div className="search-bar" role="tablist" aria-label="Chọn sổ">

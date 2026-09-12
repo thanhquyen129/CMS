@@ -8,6 +8,8 @@ type NavKey =
   | "bills"
   | "documents"
   | "ap-ar"
+  | "settlements"
+  | "financial-closes"
   | "exceptions"
   | "approvals";
 
@@ -24,6 +26,9 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
+  const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
+  const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
+  const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
   const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
 
@@ -52,6 +57,18 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
           </Link>
           <Link className={active === "ap-ar" ? "active" : undefined} href="/ap-ar">
             {apLabel} / {arLabel}
+          </Link>
+          <Link
+            className={active === "settlements" ? "active" : undefined}
+            href="/settlements"
+          >
+            {paymentLabel} / {collectionLabel}
+          </Link>
+          <Link
+            className={active === "financial-closes" ? "active" : undefined}
+            href="/financial-closes"
+          >
+            {closeLabel}
           </Link>
           <Link
             className={active === "exceptions" ? "active" : undefined}

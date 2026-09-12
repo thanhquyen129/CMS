@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-12 — Pass UI / Sprint U5 Settlement + Close
+
+### User
+UI Settlement + Close (sau U4).
+
+### Done
+- `/settlements` — tab Thanh toán / Thu tiền; tạo; detail phân bổ nháp + **chốt phân bổ** (BFF → S8 APIs).
+- `/financial-closes` — list/filter; mở chốt (kỳ/Bill); **tạo snapshot** (primary); mở lại; P&L đọc từ snapshot.
+- Bill panel: CTA tạo payment/collection + chốt theo Bill; AP/AR copy trỏ `/settlements`.
+- Nav + middleware; docs `PROMPT-UI-5.md`, `UI-5-DOD.md`; README/PLAN/orchestration U5.
+
+### Files / API
+- UI: `apps/web/app/settlements/**`, `apps/web/app/financial-closes/**`, `lib/settlements.ts`, `lib/financial-closes.ts`, BFF payments/collections/financial-closes, settlement/close components
+- API (unchanged): `/api/payments`, `/api/collections`, `/api/financial-closes` (+ snapshot/reopen/pnl)
+
+### Verify
+- `npm run build` trong `apps/web`
+- Sau deploy: `/settlements`, `/financial-closes`, `/health`
+
+### Next / Follow-ups
+- Reverse allocation UI; write-off/recognize; match UI; documents `billId` filter API.
+
+### Residual
+- Không có reverse từ UI; list AP/AR trên allocate lọc currency (+ bill soft preference).
+
+---
+
 ## 2026-09-12 — U4 local takeover: BFF 201 fix + VPS verify
 
 ### User
@@ -20,7 +47,7 @@ Implement U4 alone; prior cloud id unreachable. Finish existing branch if presen
 
 ### Residual
 - List documents still no `billId` filter on API list DTO.
-- Match / settlement UI deferred.
+- Match UI deferred (settlement → U5).
 
 ---
 

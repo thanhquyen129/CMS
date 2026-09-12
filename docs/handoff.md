@@ -14,7 +14,9 @@ Implement U4 alone; prior cloud id unreachable. Finish existing branch if presen
 - `apps/web/lib/bff-api.ts`
 
 ### Verify
-- `npm run build` apps/web; VPS `/documents` `/ap-ar` + `/health` (fallback redeploy if Actions race)
+- `npm run build` apps/web xanh (local).
+- VPS stale web (404 `/documents`) after Actions race — fallback sync `apps/web` + `docker compose build --no-cache web` (never touched `infra/.env` / alogex).
+- Smoke: BFF login **200** → `/documents` `/ap-ar` `/documents/receive` **200** + VI markers (Chứng từ / phải trả / Số dư); `/health` `/ready` **200**.
 
 ### Residual
 - List documents still no `billId` filter on API list DTO.

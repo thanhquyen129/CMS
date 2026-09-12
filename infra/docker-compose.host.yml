@@ -22,23 +22,52 @@ services:
       context: ..
       dockerfile: infra/Dockerfile.api
     container_name: cms-api
-    ports:
-      - "80:8080"
+    expose:
+      - "8080"
     depends_on:
       db:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Database__MigrateOnStartup: "true"
-      # Password interpolated from host env / infra/.env (never committed)
       ConnectionStrings__LcmsDb: "Host=db;Port=5432;Database=lcms;Username=lcms;Password=${LCMS_DB_PASSWORD:-lcms}"
       Auth__RequireJwt: "true"
       Auth__AllowHeaderBootstrap: "false"
       Auth__Jwt__Issuer: "lcms-api"
       Auth__Jwt__Audience: "lcms-api"
-      # Set in infra/.env (never commit real value). Required when RequireJwt=true.
       Auth__Jwt__SigningKey: "${Auth__Jwt__SigningKey:?set Auth__Jwt__SigningKey in infra/.env}"
       Auth__Jwt__ExpiryMinutes: "60"
+      Auth__Bootstrap__Email: "${Auth__Bootstrap__Email:-}"
+      Auth__Bootstrap__Password: "${Auth__Bootstrap__Password:-}"
+      Auth__Bootstrap__DisplayName: "${Auth__Bootstrap__DisplayName:-Operator}"
+      Auth__Bootstrap__TenantCode: "${Auth__Bootstrap__TenantCode:-ops}"
+      Auth__Bootstrap__TenantName: "${Auth__Bootstrap__TenantName:-Vận hành}"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.web
+    container_name: cms-web
+    expose:
+      - "3000"
+    depends_on:
+      - api
+    environment:
+      API_INTERNAL_URL: http://api:8080
+      AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-false}"
+    restart: unless-stopped
+
+  proxy:
+    image: nginx:1.27-alpine
+    container_name: cms-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+      - api
     restart: unless-stopped
 
 volumes:

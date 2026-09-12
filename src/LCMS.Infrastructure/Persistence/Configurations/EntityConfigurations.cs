@@ -94,6 +94,7 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.Email).HasMaxLength(320).IsRequired();
         builder.Property(e => e.DisplayName).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.PasswordHash).HasMaxLength(500);
         builder.Property(e => e.OrganizationId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });

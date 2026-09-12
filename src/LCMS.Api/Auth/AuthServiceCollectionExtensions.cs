@@ -61,7 +61,8 @@ public static class AuthServiceCollectionExtensions
             opts.Jwt.SigningKey = signingKey;
         });
 
-        services.AddSingleton<DevTokenIssuer>();
+        services.AddSingleton<JwtTokenIssuer>();
+        services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
 
         var keyBytes = Encoding.UTF8.GetBytes(signingKey);
 

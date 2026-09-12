@@ -56,6 +56,7 @@ try
     }
 
     await MigrateDatabaseAsync(app);
+    await BootstrapUserSeeder.EnsureAsync(app.Services);
 
     app.MapGet("/health", () => Results.Ok(new
     {
@@ -115,6 +116,7 @@ try
         app.MapDevAuthEndpoints();
     }
 
+    app.MapAuthEndpoints();
     app.MapTenantBillEndpoints();
     app.MapIdentityEndpoints();
     app.MapMasterDataEndpoints();

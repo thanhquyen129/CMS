@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-09-12 — Pass UI / Sprint U0 Scaffold + login + proxy
+
+### User
+Ship Next.js to VPS: `/` = Vietnamese UI shell + login (not API JSON). Proxy `/api`→API. JWT per ADR-0002. BFF httpOnly cookie (ADR-0007).
+
+### Done
+- `apps/web` Next.js 15 App Router: `/login`, `/` shell; Bill/Dashboard “sắp có”; terminology VI labels.
+- API: `POST /api/auth/login`; `users.password_hash`; env bootstrap `Auth:Bootstrap:*`; `JwtTokenIssuer`.
+- Infra: `Dockerfile.web`, nginx proxy (`/`→web, `/api|/health|/ready|/metrics`→api); API no longer on host `:80`.
+- ADR-0007 BFF cookie; CI post-deploy smoke includes HTML `/` + terminology.
+- Tests: `Ui0AuthLoginTests` (3).
+
+### Files / API / Config
+- UI: `apps/web/**`; BFF `/bff/auth/*`
+- API: `/api/auth/login`; migration `UI0_UserPasswordHash`
+- Compose: `web` + `proxy` services; bootstrap env on host
+- ADR: `docs/adr/ADR-0007-bff-httponly-jwt-cookie.md`
+- DoD: `docs/sprint/UI-0-DOD.md`
+
+### Host note
+Set `Auth__Bootstrap__Email` / `Auth__Bootstrap__Password` in `infra/.env` on VPS so login works (never commit).
+
+### Next
+- U1 Bill hub (`PROMPT-UI-1.md`)
+- Operator: confirm bootstrap env on host after deploy
+
+---
+
 ## 2026-09-12 — Coordinator: S9 FULL merged → S10 FULL kickoff
 
 ### User

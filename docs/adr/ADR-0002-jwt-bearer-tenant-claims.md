@@ -13,7 +13,7 @@ Production cannot trust client-supplied tenant headers. Identity must carry `ten
 2. **Required claims:** `tenant_id` (Guid) + standard `sub` (user Guid).
 3. **Production defaults:** `Auth:RequireJwt=true`, `Auth:AllowHeaderBootstrap=false`.
 4. **Development defaults:** header bootstrap allowed; JWT optional; `POST /api/dev/token` issues short-lived tokens (Development only).
-5. **Public (anonymous):** `/`, `/health`, `/ready`, `/metrics`, `GET /api/terminology`, `POST /api/dev/token` (Dev only).
+5. **Public (anonymous):** `/`, `/health`, `/ready`, `/metrics`, `GET /api/terminology`, `POST /api/auth/login`, `POST /api/dev/token` (Dev only).
 6. **Signing key:** from config/env (`Auth:Jwt:SigningKey` / `Auth__Jwt__SigningKey`). Never commit production secrets.
 
 ## Consequences

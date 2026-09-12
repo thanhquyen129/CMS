@@ -9,7 +9,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | **Pass 2 — Full PO** | Chạy lại từng sprint cho đủ TD6 + CP + AC gates. |
 | **Pass UI** | Next.js trên VPS — song song Pass 2. Plan: `PLAN-UI.md`. |
 
-**Pass 1: COMPLETE.** **Pass 2: IN PROGRESS.** **Pass UI: READY (start U0).**
+**Pass 1: COMPLETE.** **Pass 2: IN PROGRESS.** **Pass UI: U0 Done → start U1.**
 
 ## Status Pass 2
 | Sprint | Status |
@@ -22,8 +22,8 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 ## Status Pass UI
 | Sprint | Status | Prompt |
 |--------|--------|--------|
-| U0 Scaffold + login + proxy | Ready | `PROMPT-UI-0.md` |
-| U1 Bill hub | Queued | `PROMPT-UI-1.md` |
+| U0 Scaffold + login + proxy | **Done** (`UI-0-DOD.md`) | `PROMPT-UI-0.md` |
+| U1 Bill hub | Ready | `PROMPT-UI-1.md` |
 | U2 Cost & Revenue actions | Queued | `PROMPT-UI-2.md` |
 | U3 Control desk | Queued | `PROMPT-UI-3.md` |
 | U4 Documents & AP/AR thin | Queued | `PROMPT-UI-4.md` |
@@ -35,5 +35,5 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 
 ---
 
-Repo: `c:\A1\git\cms` · `main` · .NET 8 LCMS.* + `apps/web` (from U0)  
+Repo: `c:\A1\git\cms` · `main` · .NET 8 LCMS.* + `apps/web`  
 Ship: handoff + commit/PR. No secrets. Never alogex.

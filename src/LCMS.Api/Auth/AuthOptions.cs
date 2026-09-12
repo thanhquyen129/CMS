@@ -11,6 +11,19 @@ public sealed class AuthOptions
     public bool AllowHeaderBootstrap { get; set; }
 
     public JwtOptions Jwt { get; set; } = new();
+
+    /// <summary>Optional operator bootstrap user (env on host — never commit secrets).</summary>
+    public BootstrapOptions Bootstrap { get; set; } = new();
+}
+
+public sealed class BootstrapOptions
+{
+    public string? Email { get; set; }
+    public string? Password { get; set; }
+    public string DisplayName { get; set; } = "Operator";
+    public Guid? TenantId { get; set; }
+    public string TenantCode { get; set; } = "ops";
+    public string TenantName { get; set; } = "Vận hành";
 }
 
 public sealed class JwtOptions

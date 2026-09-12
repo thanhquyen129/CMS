@@ -6,11 +6,12 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace LCMS.Api.Auth;
 
-public sealed class DevTokenIssuer
+/// <summary>Issues HMAC JWTs with <c>tenant_id</c> + <c>sub</c> (ADR-0002).</summary>
+public sealed class JwtTokenIssuer
 {
     private readonly AuthOptions _options;
 
-    public DevTokenIssuer(IOptions<AuthOptions> options)
+    public JwtTokenIssuer(IOptions<AuthOptions> options)
     {
         _options = options.Value;
     }

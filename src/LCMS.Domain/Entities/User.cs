@@ -9,6 +9,9 @@ public sealed class User : TenantEntityBase
     public string DisplayName { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
 
+    /// <summary>ASP.NET Identity password hash (nullable until set via bootstrap or admin).</summary>
+    public string? PasswordHash { get; set; }
+
     /// <summary>Home organization for Data Scope = organization.</summary>
     public Guid? OrganizationId { get; set; }
 }

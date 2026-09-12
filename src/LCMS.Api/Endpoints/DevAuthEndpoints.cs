@@ -11,7 +11,7 @@ public static class DevAuthEndpoints
 
         group.MapPost("/token", (
                 [FromBody] DevTokenRequest? body,
-                DevTokenIssuer issuer,
+                JwtTokenIssuer issuer,
                 IHostEnvironment env) =>
             {
                 if (!env.IsDevelopment())

@@ -3,9 +3,11 @@ using LCMS.Api.Endpoints;
 using LCMS.Api.Middleware;
 using LCMS.Application;
 using LCMS.Application.Currencies;
+using LCMS.Application.Demo;
 using LCMS.Infrastructure;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Prometheus;
 using Serilog;
 using Serilog.Formatting.Compact;
@@ -57,6 +59,7 @@ try
 
     await MigrateDatabaseAsync(app);
     await BootstrapUserSeeder.EnsureAsync(app.Services);
+    await SeedDemoIfEnabledAsync(app);
 
     app.MapGet("/health", () => Results.Ok(new
     {
@@ -111,10 +114,8 @@ try
         message = "LCMS API — Clean Architecture (TD1)"
     })).AllowAnonymous();
 
-    if (app.Environment.IsDevelopment())
-    {
-        app.MapDevAuthEndpoints();
-    }
+    // Dev token always Development-only inside handlers; seed-demo also when Demo:AllowEndpoint.
+    app.MapDevAuthEndpoints();
 
     app.MapAuthEndpoints();
     app.MapTenantBillEndpoints();
@@ -157,6 +158,19 @@ static async Task MigrateDatabaseAsync(WebApplication app)
     var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
     await db.Database.MigrateAsync();
     await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
+}
+
+static async Task SeedDemoIfEnabledAsync(WebApplication app)
+{
+    var demo = app.Services.GetRequiredService<IOptions<DemoOptions>>().Value;
+    if (!demo.SeedOnStartup)
+    {
+        return;
+    }
+
+    using var scope = app.Services.CreateScope();
+    var seeder = scope.ServiceProvider.GetRequiredService<DemoDataSeeder>();
+    await seeder.EnsureAsync();
 }
 
 public partial class Program;

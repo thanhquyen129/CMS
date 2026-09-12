@@ -1,5 +1,44 @@
 # Handoff
 
+## 2026-09-12 — Demo seed: đủ case bấm test UI
+
+### User
+Seed demo dữ liệu thật tất cả các trường hợp có thể xảy ra để bấm test.
+
+### Done
+- `DemoDataSeeder` idempotent (marker bill `DEMO-SEED-MARKER`) vào tenant `ops`.
+- Cover: Bill hub / empty; cost+revenue maturity; shared cost draft+finalized; chứng từ Received≠Accepted≠Matched (+ rejected/cancelled); exposure/AP/AR open→partial→settled + write-off; payment/collection draft/finalized/reversed/cancelled; close open/locked(+snapshot)/reopened + period; exceptions/approvals/recon/variance; parties + rate card draft/published.
+- Startup: `Demo:SeedOnStartup` (dev default true). Endpoint: `POST /api/dev/seed-demo` (Dev hoặc `Demo:AllowEndpoint=true`).
+- Compose/env: `Demo__SeedOnStartup`, `Demo__AllowEndpoint`, `Demo__TenantCode`.
+
+### Files
+- `src/LCMS.Application/Demo/DemoDataSeeder.cs`, `DemoOptions.cs`
+- `DependencyInjection.cs`, `Program.cs`, `DevAuthEndpoints.cs`
+- `appsettings.json`, `appsettings.Development.json`
+- `infra/docker-compose.host.yml`, `infra/.env.example`
+
+### How to seed VPS
+1. Trong `/opt/cms/infra/.env`: `Demo__SeedOnStartup=true` (hoặc `Demo__AllowEndpoint=true` rồi `POST /api/dev/seed-demo`).
+2. `docker compose … up -d api` (recreate). Re-run an toàn — đã có marker thì skip.
+
+### Click map (BillNo)
+| Bill | Mục đích |
+|------|----------|
+| DEMO-01-HUB | Cost/Revenue expected→confirmed→actual |
+| DEMO-02-SHARE-A/B | Shared cost + allocation |
+| DEMO-03-AP | AP + thanh toán nháp/chốt/đảo |
+| DEMO-04-AR | AR + thu tiền |
+| DEMO-05-DOCS | Chứng từ đủ triad |
+| DEMO-06/07/08-CLOSE-* | Chốt mở / khóa / mở lại |
+| DEMO-09-CONTROL | Queue ngoại lệ / phê duyệt |
+| DEMO-10-EMPTY | Empty state |
+
+### Verify
+- `dotnet build src/LCMS.Api` xanh
+- Local Dev: restart API → bills `DEMO-*`; hoặc `POST /api/dev/seed-demo`
+
+---
+
 ## 2026-09-12 — Pass UI / Sprint U5 Settlement + Close
 
 ### User

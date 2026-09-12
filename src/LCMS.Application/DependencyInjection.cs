@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
+using LCMS.Application.Demo;
 using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
 using LCMS.Application.FinancialDocuments;
@@ -32,6 +33,7 @@ public static class DependencyInjection
             services.Configure<SettlementOptions>(configuration.GetSection(SettlementOptions.SectionName));
             services.Configure<FinancialControlOptions>(configuration.GetSection(FinancialControlOptions.SectionName));
             services.Configure<FinancialCloseOptions>(configuration.GetSection(FinancialCloseOptions.SectionName));
+            services.Configure<DemoOptions>(configuration.GetSection(DemoOptions.SectionName));
         }
         else
         {
@@ -41,7 +43,10 @@ public static class DependencyInjection
             services.AddOptions<SettlementOptions>();
             services.AddOptions<FinancialControlOptions>();
             services.AddOptions<FinancialCloseOptions>();
+            services.AddOptions<DemoOptions>();
         }
+
+        services.AddScoped<DemoDataSeeder>();
 
         services.AddSingleton<ICostFxStub, CostFxStub>();
         services.AddSingleton<ICostApprovalGate, CostApprovalGate>();

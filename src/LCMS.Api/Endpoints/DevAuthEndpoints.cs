@@ -1,5 +1,7 @@
 using LCMS.Api.Auth;
+using LCMS.Application.Demo;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace LCMS.Api.Endpoints;
 
@@ -42,6 +44,33 @@ public static class DevAuthEndpoints
             })
             .AllowAnonymous()
             .WithSummary("Dev-only JWT helper (tenant_id + sub claims)");
+
+        group.MapPost("/seed-demo", async (
+                DemoDataSeeder seeder,
+                IOptions<DemoOptions> demoOptions,
+                IHostEnvironment env,
+                CancellationToken ct) =>
+            {
+                if (!env.IsDevelopment() && !demoOptions.Value.AllowEndpoint)
+                {
+                    return Results.Json(new
+                    {
+                        code = "not_found",
+                        message = "Không tìm thấy tài nguyên."
+                    }, statusCode: StatusCodes.Status404NotFound);
+                }
+
+                var result = await seeder.EnsureAsync(ct);
+                return Results.Ok(new
+                {
+                    tenantId = result.TenantId,
+                    skipped = result.Skipped,
+                    summary = result.Summary,
+                    markerBillNo = DemoDataSeeder.MarkerBillNo
+                });
+            })
+            .AllowAnonymous()
+            .WithSummary("Idempotent demo catalog seed for UI click-testing");
 
         return app;
     }

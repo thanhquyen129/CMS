@@ -42,6 +42,9 @@ services:
       Auth__Bootstrap__DisplayName: "${Auth__Bootstrap__DisplayName:-Operator}"
       Auth__Bootstrap__TenantCode: "${Auth__Bootstrap__TenantCode:-ops}"
       Auth__Bootstrap__TenantName: "${Auth__Bootstrap__TenantName:-Vận hành}"
+      Demo__SeedOnStartup: "${Demo__SeedOnStartup:-false}"
+      Demo__AllowEndpoint: "${Demo__AllowEndpoint:-false}"
+      Demo__TenantCode: "${Demo__TenantCode:-ops}"
     restart: unless-stopped
 
   web:

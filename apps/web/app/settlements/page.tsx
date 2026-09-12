@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import { listCollections, listPayments } from "@/lib/settlements";
+import {
+  listCollections,
+  listPayments,
+  settlementBillLinkLabel,
+} from "@/lib/settlements";
 import { formatMoney } from "@/lib/money";
 
 type SearchParams = Promise<{ tab?: string }>;
@@ -141,7 +145,11 @@ export default async function SettlementsPage({
                               className="row-link"
                               href={`/bills/${row.billId}`}
                             >
-                              Mở {billLabel}
+                              {settlementBillLinkLabel(
+                                row.billId,
+                                row.billNo,
+                                billLabel
+                              )}
                             </Link>
                           ) : (
                             "—"
@@ -214,7 +222,11 @@ export default async function SettlementsPage({
                               className="row-link"
                               href={`/bills/${row.billId}`}
                             >
-                              Mở {billLabel}
+                              {settlementBillLinkLabel(
+                                row.billId,
+                                row.billNo,
+                                billLabel
+                              )}
                             </Link>
                           ) : (
                             "—"

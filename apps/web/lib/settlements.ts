@@ -33,6 +33,7 @@ export type PaymentItem = {
   valueDate: string;
   counterpartyId: string | null;
   billId: string | null;
+  billNo: string | null;
   referenceNo: string | null;
   notes: string | null;
   status: string;
@@ -68,6 +69,7 @@ export type CollectionItem = {
   valueDate: string;
   counterpartyId: string | null;
   billId: string | null;
+  billNo: string | null;
   referenceNo: string | null;
   notes: string | null;
   status: string;
@@ -151,4 +153,15 @@ export function allocationStatusLabel(
 
 export function isDraftAllocation(status: string): boolean {
   return status?.toLowerCase() === "draft";
+}
+
+/** Link label for settlement ↔ Bill: prefer billNo (G6). */
+export function settlementBillLinkLabel(
+  billId: string | null | undefined,
+  billNo: string | null | undefined,
+  billLabel = "Bill"
+): string | null {
+  if (!billId) return null;
+  if (billNo?.trim()) return billNo.trim();
+  return `${billLabel} ${billId.slice(0, 8)}…`;
 }

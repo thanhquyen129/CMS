@@ -14,6 +14,7 @@ import {
   allocationStatusLabel,
   getCollection,
   isDraftAllocation,
+  settlementBillLinkLabel,
 } from "@/lib/settlements";
 import { formatMoney } from "@/lib/money";
 
@@ -132,7 +133,11 @@ export default async function CollectionDetailPage({
                   className="row-link"
                   href={`/bills/${collection.billId}`}
                 >
-                  Mở {billLabel}
+                  {settlementBillLinkLabel(
+                    collection.billId,
+                    collection.billNo,
+                    billLabel
+                  )}
                 </Link>
               ) : (
                 "—"

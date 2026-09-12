@@ -14,6 +14,7 @@ import {
   allocationStatusLabel,
   getPayment,
   isDraftAllocation,
+  settlementBillLinkLabel,
 } from "@/lib/settlements";
 import { formatMoney } from "@/lib/money";
 
@@ -121,7 +122,11 @@ export default async function PaymentDetailPage({
             <dd>
               {payment.billId ? (
                 <Link className="row-link" href={`/bills/${payment.billId}`}>
-                  Mở {billLabel}
+                  {settlementBillLinkLabel(
+                    payment.billId,
+                    payment.billNo,
+                    billLabel
+                  )}
                 </Link>
               ) : (
                 "—"

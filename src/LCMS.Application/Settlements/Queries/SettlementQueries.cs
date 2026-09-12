@@ -33,6 +33,7 @@ public sealed record PaymentDto(
     DateOnly ValueDate,
     Guid? CounterpartyId,
     Guid? BillId,
+    string? BillNo,
     string? ReferenceNo,
     string? Notes,
     string Status,
@@ -66,6 +67,7 @@ public sealed record CollectionDto(
     DateOnly ValueDate,
     Guid? CounterpartyId,
     Guid? BillId,
+    string? BillNo,
     string? ReferenceNo,
     string? Notes,
     string Status,
@@ -98,7 +100,16 @@ public sealed class ListPaymentsQueryHandler : IRequestHandler<ListPaymentsQuery
         var allocations = await _db.PaymentAllocations.AsNoTracking()
             .Where(a => ids.Contains(a.PaymentId))
             .ToListAsync(cancellationToken);
-        return payments.Select(p => MapPayment(p, allocations.Where(a => a.PaymentId == p.Id).ToList())).ToList();
+        var billNos = await LoadBillNosAsync(
+            _db,
+            payments.Where(p => p.BillId.HasValue).Select(p => p.BillId!.Value),
+            cancellationToken);
+        return payments
+            .Select(p => MapPayment(
+                p,
+                allocations.Where(a => a.PaymentId == p.Id).ToList(),
+                ResolveBillNo(p.BillId, billNos)))
+            .ToList();
     }
 
     internal static void EnsureTenant(ITenantContext tenantContext)
@@ -109,7 +120,29 @@ public sealed class ListPaymentsQueryHandler : IRequestHandler<ListPaymentsQuery
         }
     }
 
-    internal static PaymentDto MapPayment(Payment p, IReadOnlyList<PaymentAllocation> allocations)
+    internal static async Task<IReadOnlyDictionary<Guid, string>> LoadBillNosAsync(
+        ILcmsDbContext db,
+        IEnumerable<Guid> billIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = billIds.Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        return await db.Bills.AsNoTracking()
+            .Where(b => ids.Contains(b.Id))
+            .ToDictionaryAsync(b => b.Id, b => b.BillNo, cancellationToken);
+    }
+
+    internal static string? ResolveBillNo(Guid? billId, IReadOnlyDictionary<Guid, string> billNos) =>
+        billId.HasValue && billNos.TryGetValue(billId.Value, out var billNo) ? billNo : null;
+
+    internal static PaymentDto MapPayment(
+        Payment p,
+        IReadOnlyList<PaymentAllocation> allocations,
+        string? billNo = null)
     {
         var applied = allocations.Where(a => SettlementHelpers.IsFinalized(a.AllocationStatus)).Sum(a => a.Amount);
         var allocated = allocations.Where(a => SettlementHelpers.IsActiveAllocation(a.AllocationStatus)).Sum(a => a.Amount);
@@ -126,6 +159,7 @@ public sealed class ListPaymentsQueryHandler : IRequestHandler<ListPaymentsQuery
             p.ValueDate,
             p.CounterpartyId,
             p.BillId,
+            billNo,
             p.ReferenceNo,
             p.Notes,
             p.Status,
@@ -157,7 +191,14 @@ public sealed class GetPaymentByIdQueryHandler : IRequestHandler<GetPaymentByIdQ
         var allocations = await _db.PaymentAllocations.AsNoTracking()
             .Where(a => a.PaymentId == payment.Id)
             .ToListAsync(cancellationToken);
-        return ListPaymentsQueryHandler.MapPayment(payment, allocations);
+        var billNos = await ListPaymentsQueryHandler.LoadBillNosAsync(
+            _db,
+            payment.BillId.HasValue ? [payment.BillId.Value] : [],
+            cancellationToken);
+        return ListPaymentsQueryHandler.MapPayment(
+            payment,
+            allocations,
+            ListPaymentsQueryHandler.ResolveBillNo(payment.BillId, billNos));
     }
 }
 
@@ -182,10 +223,22 @@ public sealed class ListCollectionsQueryHandler : IRequestHandler<ListCollection
         var allocations = await _db.CollectionAllocations.AsNoTracking()
             .Where(a => ids.Contains(a.CollectionId))
             .ToListAsync(cancellationToken);
-        return collections.Select(c => MapCollection(c, allocations.Where(a => a.CollectionId == c.Id).ToList())).ToList();
+        var billNos = await ListPaymentsQueryHandler.LoadBillNosAsync(
+            _db,
+            collections.Where(c => c.BillId.HasValue).Select(c => c.BillId!.Value),
+            cancellationToken);
+        return collections
+            .Select(c => MapCollection(
+                c,
+                allocations.Where(a => a.CollectionId == c.Id).ToList(),
+                ListPaymentsQueryHandler.ResolveBillNo(c.BillId, billNos)))
+            .ToList();
     }
 
-    internal static CollectionDto MapCollection(Collection c, IReadOnlyList<CollectionAllocation> allocations)
+    internal static CollectionDto MapCollection(
+        Collection c,
+        IReadOnlyList<CollectionAllocation> allocations,
+        string? billNo = null)
     {
         var applied = allocations.Where(a => SettlementHelpers.IsFinalized(a.AllocationStatus)).Sum(a => a.Amount);
         var allocated = allocations.Where(a => SettlementHelpers.IsActiveAllocation(a.AllocationStatus)).Sum(a => a.Amount);
@@ -202,6 +255,7 @@ public sealed class ListCollectionsQueryHandler : IRequestHandler<ListCollection
             c.ValueDate,
             c.CounterpartyId,
             c.BillId,
+            billNo,
             c.ReferenceNo,
             c.Notes,
             c.Status,
@@ -233,6 +287,13 @@ public sealed class GetCollectionByIdQueryHandler : IRequestHandler<GetCollectio
         var allocations = await _db.CollectionAllocations.AsNoTracking()
             .Where(a => a.CollectionId == collection.Id)
             .ToListAsync(cancellationToken);
-        return ListCollectionsQueryHandler.MapCollection(collection, allocations);
+        var billNos = await ListPaymentsQueryHandler.LoadBillNosAsync(
+            _db,
+            collection.BillId.HasValue ? [collection.BillId.Value] : [],
+            cancellationToken);
+        return ListCollectionsQueryHandler.MapCollection(
+            collection,
+            allocations,
+            ListPaymentsQueryHandler.ResolveBillNo(collection.BillId, billNos));
     }
 }

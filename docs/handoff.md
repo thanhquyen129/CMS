@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-12 — G6 FULL: Settlement `billNo`
+
+### User
+làm full G6
+
+### Done
+- API: `PaymentDto` / `CollectionDto` + list/get join `Bill.BillNo`.
+- UI: `/settlements` + chi tiết payment/collection hiện số Bill (không còn «Mở Bill»).
+- Test `SettlementBillNoTests`; DoD `UI-G6-DOD.md`; UAT G1–G6 Done.
+
+### Files
+- `SettlementQueries.cs`
+- `apps/web/lib/settlements.ts`, `settlements/page.tsx`, payments/collections detail
+- `SettlementBillNoTests.cs`, `UI-G6-DOD.md`, UAT md/json
+
+### Verify
+- `dotnet test --filter SettlementBillNo`
+- `npm run build` apps/web
+
+### Follow-ups
+- Write-off UI · reverse allocation · bank feed (ngoài UAT gap)
+
+---
+
 ## 2026-09-12 — G5 FULL: AP/AR tab Đã tất toán
 
 ### User

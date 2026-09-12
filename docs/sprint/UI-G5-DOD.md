@@ -19,7 +19,7 @@ Operator audit lịch sử AP/AR **đã tất toán** trên desk `/ap-ar` và tr
 | 6 | Label `partially_settled` → «Tất toán một phần» | Done |
 
 ## Non-goals
-G6 settlement `billNo` · write-off UI · reverse allocation
+G6 settlement `billNo` (Done) · write-off UI · reverse allocation
 
 ## Verify
 - `npm run build` apps/web

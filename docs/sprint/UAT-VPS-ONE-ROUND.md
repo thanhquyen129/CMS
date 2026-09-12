@@ -13,7 +13,7 @@ Chứng minh (hoặc phủ định) go-live tài chính: một Bill đi hết **
 | Lớp | Kết quả |
 |-----|---------|
 | **API (JWT login)** | **PASS** — đủ vòng đến snapshot + P&L |
-| **UI (browser)** | **PASS (G1–G5 Done)** — đọc/confirm/settle/close + tạo Bill/Cost/Revenue/Exposure + add line + khớp + lọc chứng từ theo Bill + AP/AR đã tất toán; còn G6 minor |
+| **UI (browser)** | **PASS (G1–G6 Done)** — đọc/confirm/settle/close + tạo Bill/Cost/Revenue/Exposure + add line + khớp + lọc chứng từ theo Bill + AP/AR đã tất toán + settlement `billNo` |
 
 ### Chuỗi API đã chạy (đều OK)
 
@@ -49,7 +49,7 @@ Close id `01a093d3-41a3-7501-87a9-3d15fd6a1b12` — status **locked**, snapshot 
 | G3 | **major** → **Done** (`UI-G3-DOD.md`) | **Thêm dòng chứng từ** không có trên UI | Empty state: “Thêm dòng qua API” | Form add line trên `/documents/[id]` — **shipped** |
 | G4 | **minor** → **Done** (`UI-G4-DOD.md`) | List documents **không lọc `billId`** | Bill panel copy thừa nhận | API `?billId=` + UI filter — **shipped** |
 | G5 | **minor** → **Done** (`UI-G5-DOD.md`) | `/ap-ar` **ẩn đã tất toán** (`isOutstanding` only) | Sau settle: “Không có khoản… còn dư” — khó audit lịch sử trên desk | Tab “Đã tất toán” / filter status — **shipped** |
-| G6 | **minor** | Settlement list cột Bill = “Mở Bill”, **không hiện `billNo`** | `/settlements` text | Join/resolve billNo khi list |
+| G6 | **minor** → **Done** (`UI-G6-DOD.md`) | Settlement list cột Bill = “Mở Bill”, **không hiện `billNo`** | `/settlements` text | Join/resolve billNo khi list — **shipped** |
 
 ### Không phải gap (đã verify)
 

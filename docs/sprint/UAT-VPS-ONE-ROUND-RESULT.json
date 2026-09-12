@@ -3,7 +3,7 @@
   "billNo": "UAT-20260912-111445",
   "billId": "01a093d3-2e1f-7844-a43c-47d3712ea70b",
   "apiRound": "PASS",
-  "uiRound": "PARTIAL",
+  "uiRound": "PASS",
   "steps": [
     { "step": "login", "ok": true, "detail": "ok (token redacted)" },
     { "step": "create_bill", "ok": true, "detail": "01a093d3-2e1f-7844-a43c-47d3712ea70b" },
@@ -44,6 +44,6 @@
     { "id": "G3", "severity": "major", "note": "Done UI-G3-DOD — add document line UI" },
     { "id": "G4", "severity": "minor", "note": "Done UI-G4-DOD — billId filter API+UI" },
     { "id": "G5", "severity": "minor", "note": "Done UI-G5-DOD — AP/AR settled tab + Bill panel" },
-    { "id": "G6", "severity": "minor", "note": "Settlement list Bill column shows link text only, not billNo" }
+    { "id": "G6", "severity": "minor", "note": "Done UI-G6-DOD — settlement list/detail billNo" }
   ]
 }

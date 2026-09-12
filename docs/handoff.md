@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-12 — Fix CI #91–#96: Demo seed vs ThresholdApiFactory
+
+### User
+Sao lỗi nhiều vậy? (6 run đỏ liên tiếp trên Actions)
+
+### Answer
+- Không phải 6 bug khác nhau — **cùng 1 lỗi test** lặp mỗi push. VPS `/health` vẫn OK; deploy không chạy vì job `test` fail trước.
+- Root: `appsettings.Development.json` → `Demo:SeedOnStartup=true`. Factory S4/S5 `ThresholdApiFactory` tắt migrate nhưng **không** tắt demo seed → host start seed trước `EnsureCreated` → SQLite `no such table: tenants`.
+- Fix: `Demo:SeedOnStartup=false` trên ThresholdApiFactory (S4+S5), giống `LcmsApiFactory` / S6.
+
+### Files
+- `tests/LCMS.Api.Tests/Sprint4FullCostTests.cs`
+- `tests/LCMS.Api.Tests/Sprint5FullRevenueProfitabilityTests.cs`
+
+### Verify
+- `dotnet test` — 2 test threshold xanh; suite full xanh.
+
+---
+
 ## 2026-09-12 — UAT G2: gạch Done (stale doc)
 
 ### User

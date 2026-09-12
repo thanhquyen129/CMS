@@ -323,6 +323,8 @@ public sealed class Sprint5FullRevenueProfitabilityTests : IAsyncLifetime
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("Database:MigrateOnStartup", "false");
+            // Development appsettings enable demo seed; must off before EnsureCreated.
+            builder.UseSetting("Demo:SeedOnStartup", "false");
             builder.UseSetting("Auth:RequireJwt", "false");
             builder.UseSetting("Auth:AllowHeaderBootstrap", "true");
             builder.UseSetting("Auth:Jwt:SigningKey", LCMS.Api.Auth.AuthServiceCollectionExtensions.DevFallbackSigningKey);

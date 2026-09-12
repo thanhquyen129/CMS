@@ -126,7 +126,12 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             AllocationStatus = SettlementAllocationStatuses.Draft,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };
-        _fx.ApplyToPaymentAllocation(allocation, payment.CurrencyCode, amount);
+        await _fx.ApplyToPaymentAllocationAsync(
+            allocation,
+            payment.CurrencyCode,
+            amount,
+            payment.ValueDate,
+            cancellationToken);
 
         _db.PaymentAllocations.Add(allocation);
         await _db.SaveChangesAsync(cancellationToken);

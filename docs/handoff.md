@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-09-12 — P06 Dated fx_rates (Cost/Revenue/Settlement)
+
+### User
+Next: P06 — bảng fx_rates theo ngày.
+
+### Done
+- Entity + migration `fx_rates` (from/to/date/rate/source/version).
+- Lookup dated → set `BaseAmount` + `FxRateId`; stub config fallback nếu thiếu dòng.
+- API upsert/list/resolve/delete; dashboard roll-up dùng asOf + rates.
+- ADR-0004 amended; ADR-0011 note; tests `SprintP06FxRatesTests`.
+
+### Files
+- `FxRate.cs`, `FxRateLookup`, Commands/Queries, `Cost|Revenue|SettlementFxStub` (scoped + async Apply)
+- Migration `20260912164916_P06_FxRates`
+- `MasterDataEndpoints` `/api/fx-rates*`
+- `docs/sprint/P06-DOD.md`
+
+### Verify
+- `dotnet test` filter SprintP06FxRatesTests — 2 passed
+
+### Next
+- P07 Aging summary + dashboard tách quyền tài chính
+
+### End-user / ops
+`POST /api/fx-rates` (USD→VND theo ngày) trước khi ghi Cost/Revenue/Settlement ngoại tệ — hệ thống gắn `fx_rate_id`. Chưa có dòng thì vẫn dùng stub config (nếu khai báo).
+
+---
+
 ## 2026-09-12 — P05 Rate card / Rating / seed Expected (UI)
 
 ### User

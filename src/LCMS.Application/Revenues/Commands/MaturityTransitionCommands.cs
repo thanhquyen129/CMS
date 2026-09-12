@@ -108,7 +108,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         revenue.FinancialMaturity = RevenueMaturities.Confirmed;
         revenue.ConfirmedAt = DateTimeOffset.UtcNow;
         revenue.ConfirmedBy = _user.UserId;
-        _fx.ApplyToRevenue(revenue, confirmed);
+        await _fx.ApplyToRevenueAsync(revenue, confirmed, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
     }
@@ -179,7 +179,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         revenue.FinancialMaturity = RevenueMaturities.Actual;
         revenue.ActualizedAt = DateTimeOffset.UtcNow;
         revenue.ActualizedBy = _user.UserId;
-        _fx.ApplyToRevenue(revenue, actual);
+        await _fx.ApplyToRevenueAsync(revenue, actual, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
     }

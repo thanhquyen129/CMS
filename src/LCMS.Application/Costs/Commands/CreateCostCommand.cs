@@ -171,7 +171,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             throw new ConflictAppException("Chi phí chung (shared) không gắn Bill trực tiếp; dùng phân bổ.");
         }
 
-        _fx.ApplyToCost(cost, amount);
+        await _fx.ApplyToCostAsync(cost, amount, cancellationToken);
         _approvalGate.RefreshPendingFlag(cost);
 
         _db.Costs.Add(cost);

@@ -128,7 +128,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         cost.FinancialMaturity = CostMaturities.Confirmed;
         cost.ConfirmedAt = DateTimeOffset.UtcNow;
         cost.ConfirmedBy = _user.UserId;
-        _fx.ApplyToCost(cost, confirmed);
+        await _fx.ApplyToCostAsync(cost, confirmed, cancellationToken);
 
         _audit.Append(
             AuditActions.CostConfirm,
@@ -231,7 +231,7 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
         cost.FinancialMaturity = CostMaturities.Actual;
         cost.ActualizedAt = DateTimeOffset.UtcNow;
         cost.ActualizedBy = _user.UserId;
-        _fx.ApplyToCost(cost, actual);
+        await _fx.ApplyToCostAsync(cost, actual, cancellationToken);
 
         await _db.SaveChangesAsync(cancellationToken);
     }

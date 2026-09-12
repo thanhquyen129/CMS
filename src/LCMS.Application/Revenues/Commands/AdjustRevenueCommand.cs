@@ -101,7 +101,7 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
         }
 
         revenue.Amount = after;
-        _fx.ApplyToRevenue(revenue, after);
+        await _fx.ApplyToRevenueAsync(revenue, after, cancellationToken);
         _approvalGate.RefreshPendingFlag(revenue);
 
         var adj = new RevenueAdjustment

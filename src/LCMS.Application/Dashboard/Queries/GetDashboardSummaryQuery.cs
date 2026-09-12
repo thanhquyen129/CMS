@@ -107,6 +107,7 @@ public sealed class GetDashboardSummaryQueryHandler
         }
 
         var asOf = DateTimeOffset.UtcNow;
+        var asOfDate = DateOnly.FromDateTime(asOf.UtcDateTime);
 
         var billCount = await _db.Bills.AsNoTracking().CountAsync(cancellationToken);
 
@@ -254,8 +255,8 @@ public sealed class GetDashboardSummaryQueryHandler
 
             if (request.IncludeBaseCurrencyRollUp)
             {
-                costBase += _costFx.ToBaseAmount(code, costTotal);
-                revenueBase += _revenueFx.ToBaseAmount(code, revenueTotal);
+                costBase += await _costFx.ToBaseAmountAsync(code, costTotal, asOfDate, cancellationToken);
+                revenueBase += await _revenueFx.ToBaseAmountAsync(code, revenueTotal, asOfDate, cancellationToken);
             }
         }
 
@@ -268,7 +269,7 @@ public sealed class GetDashboardSummaryQueryHandler
                 decimal.Round(costBase, 4, MidpointRounding.AwayFromZero),
                 decimal.Round(revenueBase, 4, MidpointRounding.AwayFromZero),
                 decimal.Round(revenueBase - costBase, 4, MidpointRounding.AwayFromZero),
-                $"{VietnameseUiTerms.Get("FX_STUB_RATE")}: roll-up stub theo Cost/Revenue StubFxRatesToBase (ADR-0011). Không phải tỷ giá thị trường.");
+                $"{VietnameseUiTerms.Get("FX_STUB_RATE")}: roll-up theo fx_rates (ngày asOf) hoặc StubFxRatesToBase fallback (ADR-0004/0011).");
         }
 
         var mixed = totals.Count > 1;

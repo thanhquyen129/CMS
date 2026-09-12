@@ -85,7 +85,7 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
             Status = PaymentStatuses.Open,
             RecordStatus = "active"
         };
-        _fx.ApplyToPayment(payment, amount);
+        await _fx.ApplyToPaymentAsync(payment, amount, cancellationToken);
 
         _db.Payments.Add(payment);
         await _db.SaveChangesAsync(cancellationToken);

@@ -11,7 +11,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 
 **Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: COMPLETE (U0–U5 + G1–G6 + UAT PASS).**
 
-**Post-UAT backlog tuần tự:** `PO-GAP-CHECKLIST.md` (P01→P25). Next: **P06 `fx_rates` theo ngày**.
+**Post-UAT backlog tuần tự:** `PO-GAP-CHECKLIST.md` (P01→P25). Next: **P07 Aging summary + dashboard tách quyền tài chính**.
 
 ## Status Pass 2
 | Sprint | Status |

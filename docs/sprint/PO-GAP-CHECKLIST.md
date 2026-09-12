@@ -16,7 +16,7 @@
 | **P03** | Approval gate write-off > trần | ADR-0008; E10/E11; H-009 | **Done** (`P03-DOD.md`) | Trên trần → Approval → apply khi approved | Queue decide Done |
 | **P04** | UAT Strict close + period lock stress | E12; ADR-0010; AC-008 | **Done** (`P04-DOD.md` · VPS PASS) | Close `strict` + Locked chặn confirm/allocate | Close UI Done |
 | **P05** | Rate card / Rating / seed Expected (UI) | TD6 E04; C-011 | **Done** (`P05-DOD.md`) | CRUD card → publish → rate Bill → seed Expected | — |
-| **P06** | Bảng `fx_rates` theo ngày | TD1 D02; ADR-0004/0008/0011 | Stub config · FxRateId null | Entity dated rates + gắn Cost/Revenue/Settlement | — |
+| **P06** | Bảng `fx_rates` theo ngày | TD1 D02; ADR-0004/0008/0011 | **Done** (`P06-DOD.md`) | Entity dated rates + gắn Cost/Revenue/Settlement | — |
 | **P07** | Aging summary + dashboard tách quyền tài chính | E09; ADR-0006; H View Cost≠Revenue | Cột aging Done · thiếu summary/export | Màn bucket + export; dashboard theo quyền | — |
 | **P08** | Auto Exposure từ chứng từ đã khớp | E09; Received≠…≠Recognized | Link thủ công · chưa auto | Sau match → đề xuất/tạo exposure (không invent C/R) | Match Done |
 | **P09** | Confirm match session + auto-suggest | E08; ADR-0005 | Manual match Done · confirm/auto deferred | Confirm phiên; tolerance suggest (review tay) | P08 optional |
@@ -51,11 +51,11 @@
 
 ## Top 5 làm ngay
 
-1. **P06** `fx_rates` theo ngày — bỏ stub config.  
-2. **P07** Aging summary + dashboard tách quyền tài chính.  
-3. **P08** Auto Exposure từ chứng từ đã khớp.  
-4. **P09** Confirm match session + auto-suggest.  
-5. **P10** Reverse recognize AP/AR + sổ điều chỉnh.
+1. **P07** Aging summary + dashboard tách quyền tài chính.  
+2. **P08** Auto Exposure từ chứng từ đã khớp.  
+3. **P09** Confirm match session + auto-suggest.  
+4. **P10** Reverse recognize AP/AR + sổ điều chỉnh.  
+5. **P11** Inbox Variance (+ escalate thủ công).
 
 ## Không làm (trừ ADR mới)
 

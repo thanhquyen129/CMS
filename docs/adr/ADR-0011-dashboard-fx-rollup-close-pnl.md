@@ -9,8 +9,8 @@ Pass 1 dashboard kept Best Available totals per `currency_code` only. Controller
 Close snapshots already store immutable metric rows (`revenue_total`, `cost_total`, …). Reporting needs a derived P&L read without writing totals onto Bill (TD1-DB-003/004).
 
 ## Decision
-1. **Dashboard base roll-up stub**: optional `BaseCurrencyRollUp` on `GET /api/dashboard/summary` converts Best Available cost/revenue per currency via existing `Cost` / `Revenue` `StubFxRatesToBase` (same pattern as ADR-0004). Missing stub rate → validation error (no silent 1:1).
-2. **Caveat in payload**: `FxStubNote` states stub FX — not market rate; real `fx_rates` replaces conversion later without changing the DTO shape.
+1. **Dashboard base roll-up**: optional `BaseCurrencyRollUp` on `GET /api/dashboard/summary` converts Best Available cost/revenue per currency via dated `fx_rates` (asOf = UTC today) with `StubFxRatesToBase` fallback (ADR-0004). Missing rate → validation error (no silent 1:1).
+2. **Caveat in payload**: `FxStubNote` states conversion source (dated fx_rates and/or stub fallback); not a live market feed.
 3. **Close P&L stub**: `GET /api/financial-closes/{id}/pnl` derives `ProfitTotal = revenue_total − cost_total` from the latest (or selected) immutable snapshot details. Read-only; never mutates snapshot or Bill.
 4. **asOf maturity**: reconstruct Confirmed/Actual layers from `ConfirmedAt` / `ActualizedAt` when `?asOf=` is set; residual limits documented on the profile response and DoD.
 

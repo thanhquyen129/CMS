@@ -1,29 +1,39 @@
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
 using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.Revenues;
 
 /// <summary>
-/// Stub FX: fills Revenue.BaseAmount (+ leaves FxRateId null until real FX table).
-/// Same-currency ⇒ BaseAmount = amount; else amount × configured stub rate (ADR-0004).
+/// FX conversion for Revenue: dated fx_rates first; StubFxRatesToBase fallback (FxRateId null).
 /// </summary>
 public interface IRevenueFxStub
 {
     string BaseCurrency { get; }
 
-    /// <summary>Returns base equivalent; throws VI validation when rate missing.</summary>
     decimal ToBaseAmount(string currencyCode, decimal amount);
 
-    void ApplyToRevenue(Domain.Entities.Revenue revenue, decimal amountInTxnCurrency);
+    Task<decimal> ToBaseAmountAsync(
+        string currencyCode,
+        decimal amount,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default);
+
+    Task ApplyToRevenueAsync(
+        Domain.Entities.Revenue revenue,
+        decimal amountInTxnCurrency,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class RevenueFxStub : IRevenueFxStub
 {
     private readonly RevenueOptions _options;
+    private readonly IFxRateLookup _lookup;
 
-    public RevenueFxStub(IOptions<RevenueOptions> options)
+    public RevenueFxStub(IOptions<RevenueOptions> options, IFxRateLookup lookup)
     {
         _options = options.Value;
+        _lookup = lookup;
     }
 
     public string BaseCurrency =>
@@ -31,7 +41,63 @@ public sealed class RevenueFxStub : IRevenueFxStub
             ? "VND"
             : _options.BaseCurrency.Trim().ToUpperInvariant();
 
-    public decimal ToBaseAmount(string currencyCode, decimal amount)
+    public decimal ToBaseAmount(string currencyCode, decimal amount) =>
+        ConvertWithStubOnly(currencyCode, amount);
+
+    public async Task<decimal> ToBaseAmountAsync(
+        string currencyCode,
+        decimal amount,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default)
+    {
+        var currency = currencyCode.Trim().ToUpperInvariant();
+        var rounded = decimal.Round(amount, 4, MidpointRounding.AwayFromZero);
+        if (string.Equals(currency, BaseCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            return rounded;
+        }
+
+        var resolved = await _lookup.ResolveAsync(currency, BaseCurrency, asOf, cancellationToken);
+        if (resolved is not null)
+        {
+            return decimal.Round(rounded * resolved.Rate, 4, MidpointRounding.AwayFromZero);
+        }
+
+        return ConvertWithStubOnly(currency, rounded);
+    }
+
+    public async Task ApplyToRevenueAsync(
+        Domain.Entities.Revenue revenue,
+        decimal amountInTxnCurrency,
+        CancellationToken cancellationToken = default)
+    {
+        var currency = revenue.CurrencyCode.Trim().ToUpperInvariant();
+        var rounded = decimal.Round(amountInTxnCurrency, 4, MidpointRounding.AwayFromZero);
+        if (string.Equals(currency, BaseCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            revenue.BaseAmount = rounded;
+            revenue.FxRateId = null;
+            return;
+        }
+
+        var resolved = await _lookup.ResolveAsync(
+            currency,
+            BaseCurrency,
+            revenue.EffectiveDate,
+            cancellationToken);
+
+        if (resolved is not null)
+        {
+            revenue.BaseAmount = decimal.Round(rounded * resolved.Rate, 4, MidpointRounding.AwayFromZero);
+            revenue.FxRateId = resolved.FxRateId;
+            return;
+        }
+
+        revenue.BaseAmount = ConvertWithStubOnly(currency, rounded);
+        revenue.FxRateId = null;
+    }
+
+    private decimal ConvertWithStubOnly(string currencyCode, decimal amount)
     {
         var currency = currencyCode.Trim().ToUpperInvariant();
         var rounded = decimal.Round(amount, 4, MidpointRounding.AwayFromZero);
@@ -47,18 +113,11 @@ public sealed class RevenueFxStub : IRevenueFxStub
             {
                 ["CurrencyCode"] =
                 [
-                    $"Chưa có tỷ giá stub quy đổi từ {currency} sang {BaseCurrency}. Khai báo Revenue:StubFxRatesToBase."
+                    $"Chưa có tỷ giá quy đổi từ {currency} sang {BaseCurrency}. Thêm fx_rates hoặc khai báo Revenue:StubFxRatesToBase."
                 ]
             });
         }
 
         return decimal.Round(rounded * rate, 4, MidpointRounding.AwayFromZero);
-    }
-
-    public void ApplyToRevenue(Domain.Entities.Revenue revenue, decimal amountInTxnCurrency)
-    {
-        revenue.BaseAmount = ToBaseAmount(revenue.CurrencyCode, amountInTxnCurrency);
-        // Stub: no persisted fx_rates row yet — leave FxRateId null (ADR-0004).
-        revenue.FxRateId = null;
     }
 }

@@ -374,6 +374,42 @@ internal sealed class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
     }
 }
 
+internal sealed class FxRateConfiguration : IEntityTypeConfiguration<FxRate>
+{
+    public void Configure(EntityTypeBuilder<FxRate> builder)
+    {
+        builder.ToTable("fx_rates");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.FromCurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.ToCurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.RateDate).IsRequired();
+        builder.Property(e => e.Rate).HasPrecision(18, 8).IsRequired();
+        builder.Property(e => e.Source).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Version).IsRequired();
+        builder.Property(e => e.Note).HasMaxLength(512);
+
+        builder.HasIndex(e => new
+            {
+                e.TenantId,
+                e.FromCurrencyCode,
+                e.ToCurrencyCode,
+                e.RateDate,
+                e.Version
+            })
+            .IsUnique();
+
+        builder.HasIndex(e => new
+        {
+            e.TenantId,
+            e.FromCurrencyCode,
+            e.ToCurrencyCode,
+            e.RateDate
+        });
+    }
+}
+
 internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
     public void Configure(EntityTypeBuilder<Order> builder)

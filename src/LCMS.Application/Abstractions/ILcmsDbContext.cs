@@ -16,6 +16,7 @@ public interface ILcmsDbContext
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<UserRole> UserRoles { get; }
     DbSet<Currency> Currencies { get; }
+    DbSet<FxRate> FxRates { get; }
     DbSet<Cost> Costs { get; }
     DbSet<CostAdjustment> CostAdjustments { get; }
     DbSet<CostAllocation> CostAllocations { get; }

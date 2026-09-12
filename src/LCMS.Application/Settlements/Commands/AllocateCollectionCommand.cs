@@ -126,7 +126,12 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
             AllocationStatus = SettlementAllocationStatuses.Draft,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };
-        _fx.ApplyToCollectionAllocation(allocation, collection.CurrencyCode, amount);
+        await _fx.ApplyToCollectionAllocationAsync(
+            allocation,
+            collection.CurrencyCode,
+            amount,
+            collection.ValueDate,
+            cancellationToken);
 
         _db.CollectionAllocations.Add(allocation);
         await _db.SaveChangesAsync(cancellationToken);

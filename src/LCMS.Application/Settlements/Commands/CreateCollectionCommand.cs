@@ -85,7 +85,7 @@ public sealed class CreateCollectionCommandHandler : IRequestHandler<CreateColle
             Status = CollectionStatuses.Open,
             RecordStatus = "active"
         };
-        _fx.ApplyToCollection(collection, amount);
+        await _fx.ApplyToCollectionAsync(collection, amount, cancellationToken);
 
         _db.Collections.Add(collection);
         await _db.SaveChangesAsync(cancellationToken);

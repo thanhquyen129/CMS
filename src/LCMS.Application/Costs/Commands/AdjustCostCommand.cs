@@ -101,7 +101,7 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
         }
 
         cost.Amount = after;
-        _fx.ApplyToCost(cost, after);
+        await _fx.ApplyToCostAsync(cost, after, cancellationToken);
         _approvalGate.RefreshPendingFlag(cost);
 
         var adj = new CostAdjustment

@@ -5,6 +5,7 @@ using LCMS.Application.Demo;
 using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
 using LCMS.Application.FinancialDocuments;
+using LCMS.Application.Fx;
 using LCMS.Application.Identity;
 using LCMS.Application.Reconciliations;
 using LCMS.Application.Revenues;
@@ -48,11 +49,12 @@ public static class DependencyInjection
 
         services.AddScoped<DemoDataSeeder>();
 
-        services.AddSingleton<ICostFxStub, CostFxStub>();
-        services.AddSingleton<ICostApprovalGate, CostApprovalGate>();
-        services.AddSingleton<IRevenueFxStub, RevenueFxStub>();
-        services.AddSingleton<IRevenueApprovalGate, RevenueApprovalGate>();
-        services.AddSingleton<ISettlementFxStub, SettlementFxStub>();
+        services.AddScoped<IFxRateLookup, FxRateLookup>();
+        services.AddScoped<ICostFxStub, CostFxStub>();
+        services.AddScoped<ICostApprovalGate, CostApprovalGate>();
+        services.AddScoped<IRevenueFxStub, RevenueFxStub>();
+        services.AddScoped<IRevenueApprovalGate, RevenueApprovalGate>();
+        services.AddScoped<ISettlementFxStub, SettlementFxStub>();
         services.AddSingleton<IVarianceSeverityCalculator, VarianceSeverityCalculator>();
         services.AddScoped<ICriticalExceptionConfirmGate, CriticalExceptionConfirmGate>();
         services.AddScoped<ICloseEligibilityChecker, CloseEligibilityChecker>();

@@ -14,10 +14,10 @@ public sealed class Collection : TenantEntityBase
 
     public string CurrencyCode { get; set; } = "VND";
 
-    /// <summary>Amount in tenant base currency (FX stub / real fx_rates later — ADR-0004).</summary>
+    /// <summary>Amount in tenant base currency (dated fx_rates or stub — ADR-0004).</summary>
     public decimal? BaseAmount { get; set; }
 
-    /// <summary>Null while FX stub is in use (no persisted fx_rates row yet).</summary>
+    /// <summary>Set when converted via persisted fx_rates; null when same-currency or stub fallback.</summary>
     public Guid? FxRateId { get; set; }
 
     public DateOnly ValueDate { get; set; }

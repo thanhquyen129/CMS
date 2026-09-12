@@ -2,6 +2,8 @@ using LCMS.Application.BusinessParties.Commands;
 using LCMS.Application.BusinessParties.Queries;
 using LCMS.Application.Currencies.Commands;
 using LCMS.Application.Currencies.Queries;
+using LCMS.Application.Fx.Commands;
+using LCMS.Application.Fx.Queries;
 using LCMS.Application.Organizations.Commands;
 using LCMS.Application.Organizations.Queries;
 using LCMS.Application.PartyRoles.Commands;
@@ -132,9 +134,64 @@ public static class MasterDataEndpoints
             return Results.Ok(new { id });
         });
 
+        var fxRates = app.MapGroup("/api/fx-rates").WithTags("FxRates");
+        fxRates.MapGet("/", async (
+            string? fromCurrencyCode,
+            string? toCurrencyCode,
+            DateOnly? fromDate,
+            DateOnly? toDate,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var list = await sender.Send(
+                new ListFxRatesQuery(fromCurrencyCode, toCurrencyCode, fromDate, toDate),
+                ct);
+            return Results.Ok(list);
+        });
+        fxRates.MapGet("/resolve", async (
+            string fromCurrencyCode,
+            string toCurrencyCode,
+            DateOnly asOf,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var row = await sender.Send(
+                new ResolveFxRateQuery(fromCurrencyCode, toCurrencyCode, asOf),
+                ct);
+            return row is null ? Results.NotFound() : Results.Ok(row);
+        });
+        fxRates.MapPost("/", async (UpsertFxRateRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(
+                new UpsertFxRateCommand(
+                    body.FromCurrencyCode,
+                    body.ToCurrencyCode,
+                    body.RateDate,
+                    body.Rate,
+                    body.Source,
+                    body.Version,
+                    body.Note),
+                ct);
+            return Results.Created($"/api/fx-rates/{id}", new { id });
+        });
+        fxRates.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new SoftDeleteFxRateCommand(id), ct);
+            return Results.NoContent();
+        });
+
         return app;
     }
 }
+
+public sealed record UpsertFxRateRequest(
+    string FromCurrencyCode,
+    string ToCurrencyCode,
+    DateOnly RateDate,
+    decimal Rate,
+    string? Source,
+    int? Version,
+    string? Note);
 
 public sealed record CreateOrganizationRequest(string Code, string Name, Guid? ParentId);
 public sealed record UpdateOrganizationRequest(string Name, Guid? ParentId, bool IsActive);

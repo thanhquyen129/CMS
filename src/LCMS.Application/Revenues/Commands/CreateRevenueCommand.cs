@@ -157,7 +157,7 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
             EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
         };
 
-        _fx.ApplyToRevenue(revenue, amount);
+        await _fx.ApplyToRevenueAsync(revenue, amount, cancellationToken);
         _approvalGate.RefreshPendingFlag(revenue);
 
         _db.Revenues.Add(revenue);

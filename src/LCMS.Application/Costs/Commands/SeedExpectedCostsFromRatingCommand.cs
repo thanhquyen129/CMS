@@ -104,7 +104,7 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                 ApprovalStatus = "not_required",
                 EffectiveDate = effective
             };
-            _fx.ApplyToCost(cost, amount);
+            await _fx.ApplyToCostAsync(cost, amount, cancellationToken);
             _approvalGate.RefreshPendingFlag(cost);
             _db.Costs.Add(cost);
             costIds.Add(cost.Id);

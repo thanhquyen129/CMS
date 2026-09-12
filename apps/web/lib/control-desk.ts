@@ -1,3 +1,4 @@
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirect } from "next/navigation";
 import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
@@ -107,7 +108,9 @@ async function apiGet<T>(path: string): Promise<ApiResult<T>> {
     }
 
     return { ok: true, data: (await res.json()) as T };
-  } catch {
+  } catch (err) {
+    // Next.js redirect() throws — must not swallow as a connection error (Bugbot).
+    if (isRedirectError(err)) throw err;
     return {
       ok: false,
       status: 0,
@@ -147,6 +150,11 @@ export function objectTypeLabel(
     RECONCILIATION: term(terms, "RECONCILIATION", "Đối soát"),
     FINANCIAL_DOCUMENT: term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính"),
     DOCUMENT: term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính"),
+    EXCEPTION: term(terms, "EXCEPTION", "Ngoại lệ"),
+    PAYMENT: term(terms, "PAYMENT", "Thanh toán"),
+    COLLECTION: term(terms, "COLLECTION", "Thu tiền"),
+    SETTLEMENT: term(terms, "SETTLEMENT", "Tất toán"),
+    OTHER: "Khác",
   };
   return map[key] ?? objectType;
 }

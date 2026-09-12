@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public sealed class FinalizeCollectionAllocationCommandValidator
 /// Finalizes draft collection allocation: updates AR.FinalizedSettledAmount (AC-007).
 /// Re-checks C-008. Does not create Revenue (C-004).
 /// Idempotent: repeat finalize on already-finalized allocation is a safe no-op.
+/// Period lock when financial close is Locked (Pass 2 Sprint 10 FULL).
 /// </summary>
 public sealed class FinalizeCollectionAllocationCommandHandler
     : IRequestHandler<FinalizeCollectionAllocationCommand>
@@ -30,17 +32,20 @@ public sealed class FinalizeCollectionAllocationCommandHandler
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly IPeriodLockGate _periodLockGate;
 
     public FinalizeCollectionAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _periodLockGate = periodLockGate;
     }
 
     public async Task Handle(FinalizeCollectionAllocationCommand request, CancellationToken cancellationToken)
@@ -83,6 +88,12 @@ public sealed class FinalizeCollectionAllocationCommandHandler
         var ar = await _db.AccountsReceivable
             .FirstOrDefaultAsync(a => a.Id == allocation.AccountsReceivableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
+
+        await _periodLockGate.EnsureMutationAllowedAsync(
+            collection.BillId ?? ar.BillId,
+            collection.ValueDate,
+            "chốt phân bổ thu tiền",
+            cancellationToken);
 
         var collectionFinalizedAmounts = await _db.CollectionAllocations.AsNoTracking()
             .Where(a => a.CollectionId == collection.Id

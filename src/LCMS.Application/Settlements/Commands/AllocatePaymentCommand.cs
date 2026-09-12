@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -29,21 +30,25 @@ public sealed class AllocatePaymentCommandValidator : AbstractValidator<Allocate
 /// Draft allocation Payment → AP. Does NOT change outstanding (AC-007).
 /// Enforces C-008 ceilings against payment amount and AP open obligation (over policy stub = 0).
 /// Supports multi-allocation until Unapplied/AvailableToAllocate is exhausted.
+/// Period lock when financial close is Locked (Pass 2 Sprint 10 FULL).
 /// </summary>
 public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaymentCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ISettlementFxStub _fx;
+    private readonly IPeriodLockGate _periodLockGate;
 
     public AllocatePaymentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ISettlementFxStub fx)
+        ISettlementFxStub fx,
+        IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
+        _periodLockGate = periodLockGate;
     }
 
     public async Task<Guid> Handle(AllocatePaymentCommand request, CancellationToken cancellationToken)
@@ -68,6 +73,12 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
         var ap = await _db.AccountsPayable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsPayableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+
+        await _periodLockGate.EnsureMutationAllowedAsync(
+            payment.BillId ?? ap.BillId,
+            payment.ValueDate,
+            "phân bổ thanh toán",
+            cancellationToken);
 
         if (!string.Equals(payment.CurrencyCode, ap.CurrencyCode, StringComparison.OrdinalIgnoreCase))
         {

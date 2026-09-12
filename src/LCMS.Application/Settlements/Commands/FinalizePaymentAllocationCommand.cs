@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,7 @@ public sealed class FinalizePaymentAllocationCommandValidator : AbstractValidato
 /// Finalizes draft payment allocation: updates AP.FinalizedSettledAmount (AC-007).
 /// Re-checks C-008. Does not create Cost (C-003).
 /// Idempotent: repeat finalize on already-finalized allocation is a safe no-op.
+/// Period lock when financial close is Locked (Pass 2 Sprint 10 FULL).
 /// </summary>
 public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<FinalizePaymentAllocationCommand>
 {
@@ -28,17 +30,20 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly IPeriodLockGate _periodLockGate;
 
     public FinalizePaymentAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _periodLockGate = periodLockGate;
     }
 
     public async Task Handle(FinalizePaymentAllocationCommand request, CancellationToken cancellationToken)
@@ -81,6 +86,12 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
         var ap = await _db.AccountsPayable
             .FirstOrDefaultAsync(a => a.Id == allocation.AccountsPayableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+
+        await _periodLockGate.EnsureMutationAllowedAsync(
+            payment.BillId ?? ap.BillId,
+            payment.ValueDate,
+            "chốt phân bổ thanh toán",
+            cancellationToken);
 
         // C-008: finalized on payment + this amount ≤ payment.Amount
         var paymentFinalizedAmounts = await _db.PaymentAllocations.AsNoTracking()

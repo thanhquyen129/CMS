@@ -24,9 +24,9 @@ TD6: *Close eligibility; snapshot; lock; reopen/reclose* — Epic **E12**.
 | Item | Target | Reason |
 |------|--------|--------|
 | Reporting dashboard / P&L from snapshots | Sprint 11 | Non-goal |
-| Hardening / UAT / Strict policy matrix | Sprint 12 | Controlled policy stub Pass 1 |
-| Full eligibility checklist (docs/AP/AR/settlement gates) | Later | Critical-exception stub only |
-| Period lock blocking mutations on live ledger | Later | Snapshot history only Pass 1 |
+| Hardening / UAT / Strict policy matrix expansion | Sprint 12 | Pass 2 S10 FULL ships Controlled vs Strict stub |
+| Full eligibility checklist (docs/AP/AR/settlement gates) | **Done in Sprint 10 FULL** | See `SPRINT-10-FULL-DOD.md` |
+| Period lock blocking mutations on live ledger | **Done in Sprint 10 FULL** | See `SPRINT-10-FULL-DOD.md` + ADR-0010 |
 | JWT / OIDC | Later | Keep header bootstrap |
 | Next.js UI | Later | API-only this sprint |
 

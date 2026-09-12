@@ -23,7 +23,7 @@ public sealed class FinancialClose : TenantEntityBase
     /// <summary>open | locked | reopened</summary>
     public string Status { get; set; } = FinancialCloseStatuses.Open;
 
-    /// <summary>controlled | strict (Pass 1 policy stub).</summary>
+    /// <summary>controlled | strict — Strict forces eligibility + period lock (Pass 2 Sprint 10 FULL).</summary>
     public string PolicyVersion { get; set; } = FinancialClosePolicies.Controlled;
 
     public string BaseCurrency { get; set; } = "VND";

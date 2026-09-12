@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-12 — Sprint 10 FULL Financial Close (Pass 2)
+
+### User
+Pass 2 Sprint 10 FULL: eligibility checklist (critical exceptions / unmatched accepted docs / unsettled AP-AR threshold); period lock on confirm + allocate/finalize; Controlled vs Strict policy; reopen/reclose append-only; tests + SPRINT-10-FULL-DOD + ADR + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Eligibility checklist (`FinancialClose:Eligibility`, default on): three gates with distinct VI Conflict reasons; Strict forces all gates.
+- Period lock (`FinancialClose:EnforcePeriodLock` default true): Locked close blocks Cost/Revenue confirm and Payment/Collection allocate/finalize in scope; Strict always enforces.
+- Policy `controlled` | `strict` stored on close + copied to snapshot; reopen/reclose never mutates old snapshots (C-010 / AC-008).
+- ADR-0010; VI terms; `SPRINT-10-FULL-DOD.md`; Pass 1 DoD deferred marked done for eligibility/period lock.
+- Tests: `Sprint10FullFinancialCloseTests` (3).
+
+### Files / API / Config
+- Application: `FinancialCloseOptions`, `CloseEligibilityChecker`, `PeriodLockGate`; snapshot command uses checker; confirm/allocate/finalize call period lock.
+- Config: `FinancialClose` section in `appsettings.json`
+- ADR: `docs/adr/ADR-0010-financial-close-eligibility-period-lock.md`
+- DoD: `docs/sprint/SPRINT-10-FULL-DOD.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` (see PR / CI)
+
+### Deferred / Next
+- Pass 2 Sprint 11 Profile/Reporting FULL
+- Per-tenant eligibility tables; Next.js close UI
+
+---
+
 ## 2026-09-12 — Coordinator: S9 FULL merged → S10 FULL kickoff
 
 ### User

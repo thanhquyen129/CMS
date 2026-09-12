@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-12 — Coordinator: U4 merged — **Pass UI COMPLETE**
+
+### User
+Follow-up after [UI-4](bc-9c035d0b-b5a7-44ca-9511-2927f0d3c03d) PR #27.
+
+### Done
+- Rebased UI-4 onto main (handoff/orchestration conflicts); CI #80 green on prior tip.
+- Merged to `main` → `0953cce` (**Pass UI COMPLETE** U0–U4). Closed PR #27 (history already on main).
+
+### Next
+- VPS smoke `/documents` `/ap-ar` after Actions deploy; follow-ups in `UI-4-DOD.md`.
+
+---
+
 ## 2026-09-12 — Pass UI / Sprint U4 Documents & AP/AR (thin)
 
 ### User

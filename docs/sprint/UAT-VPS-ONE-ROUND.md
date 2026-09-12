@@ -46,7 +46,7 @@ Close id `01a093d3-41a3-7501-87a9-3d15fd6a1b12` — status **locked**, snapshot 
 |---|----------|-----|------------|---------------------|
 | G1 | **blocker (UI-only go-live)** → **Done** (`UI-G1-DOD.md`) | Operator **không** hoàn tất vòng từ UI: thiếu tạo Bill / Cost / Revenue / Exposure+Recognize | `/bills` không form tạo; Bill panel chỉ confirm/actualize; `/ap-ar` chỉ đọc outstanding | Thin create forms (Bill, Cost, Revenue, Exposure→Recognize) — **shipped** |
 | G2 | **major** | **Khớp chứng từ** không có trên UI | Copy document detail: “Khớp… chưa có trên UI U4” | UI match thin (`/api/document-matches`) |
-| G3 | **major** | **Thêm dòng chứng từ** không có trên UI | Empty state: “Thêm dòng qua API” | Form add line trên `/documents/[id]` |
+| G3 | **major** → **Done** (`UI-G3-DOD.md`) | **Thêm dòng chứng từ** không có trên UI | Empty state: “Thêm dòng qua API” | Form add line trên `/documents/[id]` — **shipped** |
 | G4 | **minor** | List documents **không lọc `billId`** | Bill panel copy thừa nhận | API `?billId=` + UI filter |
 | G5 | **minor** | `/ap-ar` **ẩn đã tất toán** (`isOutstanding` only) | Sau settle: “Không có khoản… còn dư” — khó audit lịch sử trên desk | Tab “Đã tất toán” / filter status |
 | G6 | **minor** | Settlement list cột Bill = “Mở Bill”, **không hiện `billNo`** | `/settlements` text | Join/resolve billNo khi list |

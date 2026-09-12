@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AddDocumentLineForm } from "@/components/AddDocumentLineForm";
 import { AppShell } from "@/components/AppShell";
 import { DocumentAcceptButton } from "@/components/DocumentAcceptButton";
 import { DocumentStatusTriad } from "@/components/DocumentStatusTriad";
@@ -9,6 +10,7 @@ import { fetchTerminology, term } from "@/lib/api";
 import { canStartMatch } from "@/lib/document-matches";
 import {
   canAcceptDocument,
+  canAddDocumentLine,
   directionLabel,
   documentTypeLabel,
   getFinancialDocument,
@@ -73,6 +75,7 @@ export default async function DocumentDetailPage({
   const doc = result.data;
   const canAccept = canAcceptDocument(doc);
   const canMatch = canStartMatch(doc);
+  const canAddLine = canAddDocumentLine(doc);
 
   return (
     <AppShell
@@ -169,8 +172,8 @@ export default async function DocumentDetailPage({
         <h2 className="section-title">{lineLabel}</h2>
         {doc.lines.length === 0 ? (
           <div className="empty-state" role="status">
-            Chưa có dòng chứng từ. (Thêm dòng qua API — không bắt buộc để chấp
-            nhận.)
+            Chưa có {lineLabel.toLowerCase()}. Không bắt buộc để chấp nhận —
+            cần dòng mở để khớp.
           </div>
         ) : (
           <div className="table-wrap">
@@ -209,6 +212,25 @@ export default async function DocumentDetailPage({
               </tbody>
             </table>
           </div>
+        )}
+
+        {canAddLine ? (
+          <>
+            <h2 className="section-title">Thêm {lineLabel.toLowerCase()}</h2>
+            <AddDocumentLineForm
+              terms={terms}
+              documentId={doc.id}
+              currencyCode={doc.currencyCode}
+              defaultBillId={doc.billId}
+              direction={doc.direction}
+            />
+          </>
+        ) : (
+          <p className="muted small" style={{ marginTop: "1rem" }}>
+            {doc.recordStatus?.toLowerCase() !== "active"
+              ? "Chứng từ không còn hiệu lực — không thêm dòng."
+              : "Chỉ thêm dòng khi chứng từ đã nhận."}
+          </p>
         )}
       </section>
     </AppShell>

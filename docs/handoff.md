@@ -1,5 +1,28 @@
 # Handoff
 
+## 2026-09-12 — G3 UI thêm dòng chứng từ
+
+### User
+làm G3
+
+### Done
+- Form **Thêm dòng chứng từ** trên `/documents/{id}` (đã nhận + hiệu lực).
+- BFF `POST /bff/financial-documents/{id}/lines` → API `AddFinancialDocumentLine`.
+- Empty state bỏ “Thêm dòng qua API”; copy: dòng để khớp, không tạo Cost/Revenue.
+- DoD: `docs/sprint/UI-G3-DOD.md`; cập nhật gap G3 trong UAT + follow-up Match.
+
+### Files
+- `AddDocumentLineForm.tsx`, `bff/financial-documents/[id]/lines`, `documents/[id]/page`, `lib/documents.ts`
+
+### Follow-ups
+- G4–G6 minor (`billId` filter documents; AP/AR settled tab; settlement `billNo`)
+
+### Verify
+- `npm run build` apps/web
+- VPS: chứng từ đã nhận → thêm dòng → khớp
+
+---
+
 ## 2026-09-12 — G1 FULL (confirm override + exposure link)
 
 ### User
@@ -35,7 +58,7 @@ G1 — UI tạo Bill / Cost / Revenue / Exposure→Recognize; làm hết full G1
 
 ### Follow-ups
 - Shared cost create/allocate UI
-- UAT G3 add document line; G4–G6 minor
+- ~~UAT G3 add document line~~ → Done; G4–G6 minor
 
 ### Verify
 - `npm run build` apps/web
@@ -44,7 +67,6 @@ G1 — UI tạo Bill / Cost / Revenue / Exposure→Recognize; làm hết full G1
 ---
 
 ## 2026-09-12 — Match UI (defer U4 / UAT G2)
-
 
 ### User
 Match UI (còn defer từ U4).
@@ -64,7 +86,7 @@ Match UI (còn defer từ U4).
 
 ### Follow-ups
 - List matches by `primaryDocumentId` (API).
-- Add document line UI (UAT G3).
+- ~~Add document line UI (UAT G3)~~ → Done (`UI-G3-DOD.md`).
 - Confirm-match workflow nếu cần.
 
 ### Verify
@@ -85,7 +107,7 @@ UAT trên VPS — một vòng Bill → Cost/Revenue → chứng từ/AP-AR → S
 
 ### Gaps ưu tiên
 - **G1 blocker:** ~~UI thiếu tạo Bill / Cost / Revenue / Exposure→Recognize~~ → Done (`UI-G1-DOD.md`).
-- **G2 major:** ~~thiếu match chứng từ~~ → Done (`UI-MATCH-DOD.md`); **G3:** add document line trên UI.
+- **G2 major:** ~~thiếu match chứng từ~~ → Done (`UI-MATCH-DOD.md`); **G3:** ~~add document line~~ → Done (`UI-G3-DOD.md`).
 - **G4–G6 minor:** `billId` filter documents; AP/AR ẩn settled; settlement list thiếu `billNo`.
 
 ### Verify

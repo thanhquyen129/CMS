@@ -142,6 +142,17 @@ export function canAcceptDocument(doc: {
   );
 }
 
+/** API: chỉ thêm dòng khi đã nhận + còn hiệu lực. */
+export function canAddDocumentLine(doc: {
+  receiptStatus: string;
+  recordStatus: string;
+}): boolean {
+  return (
+    doc.recordStatus?.toLowerCase() === "active" &&
+    doc.receiptStatus?.toLowerCase() === "received"
+  );
+}
+
 export function receiptStatusLabel(
   terms: TerminologyMap,
   status: string

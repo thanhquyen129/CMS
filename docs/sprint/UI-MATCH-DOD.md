@@ -30,12 +30,12 @@ Operator **khớp chứng từ** trên UI: mở phiên → thêm chi tiết → 
 - Document detail CTA updated
 
 ## Non-goals
-Auto-match engine, confirm-match workflow UI (API still draft-only add/reverse), list matches-by-document API, add document line UI (UAT G3).
+Auto-match engine, confirm-match workflow UI (API still draft-only add/reverse), list matches-by-document API.
 
 ## Follow-ups
 - `GET /api/document-matches?primaryDocumentId=` để liệt kê phiên cũ trên chứng từ.
 - Confirm match session (nếu bật FULL sau).
-- Add document line từ UI (UAT G3).
+- ~~Add document line từ UI (UAT G3)~~ → Done (`UI-G3-DOD.md`).
 
 ## Verify
 - `npm run build` trong `apps/web`

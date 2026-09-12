@@ -81,10 +81,17 @@ Ship Next.js to VPS: `/` = Vietnamese UI shell + login (not API JSON). Proxy `/a
 
 ### Host note
 Set `Auth__Bootstrap__Email` / `Auth__Bootstrap__Password` in `infra/.env` on VPS so login works (never commit).
+After U0 deploy: seeded `ops@cms.local` on host (password only in `infra/.env` — rotate as needed).
+
+### Verify (prod)
+- `/` → 307 → `/login` HTML (nginx → web)
+- `/health` + `/ready` OK
+- `/api/terminology` OK
+- `POST /api/auth/login` + `/bff/auth/login` OK with bootstrap user
 
 ### Next
 - U1 Bill hub (`PROMPT-UI-1.md`)
-- Operator: confirm bootstrap env on host after deploy
+- Operator: confirm/rotate bootstrap password on host
 
 ---
 

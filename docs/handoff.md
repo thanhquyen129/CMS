@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-12 — UAT G2: gạch Done (stale doc)
+
+### User
+G2 cũng đã ship (UI-MATCH-DOD) — bảng UAT chưa gạch Done (chỉ stale doc). Làm luôn G2.
+
+### Done
+- `UAT-VPS-ONE-ROUND.md`: G2 → **Done** (`UI-MATCH-DOD.md`); tóm tắt UI = PASS G1–G3.
+- `UAT-VPS-ONE-ROUND-RESULT.json`: G1/G2/G3 notes → Done (parity handoff).
+- Code Match UI đã ship trước — không đổi `apps/web`.
+
+### Follow-ups
+- G4–G6 minor
+
+---
+
 ## 2026-09-12 — G3 API+UI: sửa/xóa dòng, party picker, ép sum=header
 
 ### User

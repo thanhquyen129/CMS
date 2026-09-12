@@ -13,7 +13,7 @@ Chứng minh (hoặc phủ định) go-live tài chính: một Bill đi hết **
 | Lớp | Kết quả |
 |-----|---------|
 | **API (JWT login)** | **PASS** — đủ vòng đến snapshot + P&L |
-| **UI (browser)** | **PARTIAL** — đọc/confirm/settle/close OK; **không** tự seed Bill→Cost→Recognize từ UI |
+| **UI (browser)** | **PASS (G1–G3 Done)** — đọc/confirm/settle/close + tạo Bill/Cost/Revenue/Exposure + add line + khớp; còn G4–G6 minor |
 
 ### Chuỗi API đã chạy (đều OK)
 
@@ -45,7 +45,7 @@ Close id `01a093d3-41a3-7501-87a9-3d15fd6a1b12` — status **locked**, snapshot 
 | # | Severity | Gap | Bằng chứng | Hướng xử lý đề xuất |
 |---|----------|-----|------------|---------------------|
 | G1 | **blocker (UI-only go-live)** → **Done** (`UI-G1-DOD.md`) | Operator **không** hoàn tất vòng từ UI: thiếu tạo Bill / Cost / Revenue / Exposure+Recognize | `/bills` không form tạo; Bill panel chỉ confirm/actualize; `/ap-ar` chỉ đọc outstanding | Thin create forms (Bill, Cost, Revenue, Exposure→Recognize) — **shipped** |
-| G2 | **major** | **Khớp chứng từ** không có trên UI | Copy document detail: “Khớp… chưa có trên UI U4” | UI match thin (`/api/document-matches`) |
+| G2 | **major** → **Done** (`UI-MATCH-DOD.md`) | **Khớp chứng từ** không có trên UI | Copy document detail: “Khớp… chưa có trên UI U4” | UI match thin (`/api/document-matches`) — **shipped** |
 | G3 | **major** → **Done** (`UI-G3-DOD.md`) | **Thêm dòng chứng từ** không có trên UI | Empty state: “Thêm dòng qua API” | Form add line trên `/documents/[id]` — **shipped** |
 | G4 | **minor** | List documents **không lọc `billId`** | Bill panel copy thừa nhận | API `?billId=` + UI filter |
 | G5 | **minor** | `/ap-ar` **ẩn đã tất toán** (`isOutstanding` only) | Sau settle: “Không có khoản… còn dư” — khó audit lịch sử trên desk | Tab “Đã tất toán” / filter status |

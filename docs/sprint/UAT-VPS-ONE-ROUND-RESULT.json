@@ -39,9 +39,9 @@
     { "step": "ui/dashboard", "ok": true, "detail": "http=307" }
   ],
   "gaps": [
-    { "id": "G1", "severity": "blocker", "note": "UI-only cannot create Bill/Cost/Revenue/Exposure+Recognize" },
-    { "id": "G2", "severity": "major", "note": "Document match UI missing" },
-    { "id": "G3", "severity": "major", "note": "Add document line UI missing" },
+    { "id": "G1", "severity": "blocker", "note": "Done UI-G1-DOD — create Bill/Cost/Revenue/Exposure+Recognize" },
+    { "id": "G2", "severity": "major", "note": "Done UI-MATCH-DOD — document match UI" },
+    { "id": "G3", "severity": "major", "note": "Done UI-G3-DOD — add document line UI" },
     { "id": "G4", "severity": "minor", "note": "Documents list no billId filter" },
     { "id": "G5", "severity": "minor", "note": "AP/AR desk hides settled rows" },
     { "id": "G6", "severity": "minor", "note": "Settlement list Bill column shows link text only, not billNo" }

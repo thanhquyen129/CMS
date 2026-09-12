@@ -224,3 +224,13 @@ export function billHrefFromApproval(item: ApprovalQueueItem): string | null {
   }
   return null;
 }
+
+/** Deep-link when U4+ has a detail screen for the object type. */
+export function objectHrefFromApproval(item: ApprovalQueueItem): string | null {
+  const t = item.objectType.toLowerCase();
+  if (t === "bill") return `/bills/${item.objectId}`;
+  if (t === "financial_document" || t === "document") {
+    return `/documents/${item.objectId}`;
+  }
+  return null;
+}

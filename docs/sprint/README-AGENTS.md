@@ -9,21 +9,21 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | **Pass 2 — Full PO** | Chạy lại từng sprint cho đủ TD6 + CP + AC gates. |
 | **Pass UI** | Next.js trên VPS — song song Pass 2. Plan: `PLAN-UI.md`. |
 
-**Pass 1: COMPLETE.** **Pass 2: IN PROGRESS.** **Pass UI: U0 Done → start U1.**
+**Pass 1: COMPLETE.** **Pass 2: IN PROGRESS.** **Pass UI: IN PROGRESS (U0 done / U1+).**
 
 ## Status Pass 2
 | Sprint | Status |
 |--------|--------|
-| 0–8 FULL | Done |
-| 9 Financial Control FULL | Done (see `SPRINT-9-FULL-DOD.md`) |
-| 10 Financial Close FULL | In progress (cloud) |
-| 11–12 FULL | Queued |
+| 0–9 FULL | Done |
+| 10 Financial Close FULL | Done (see `SPRINT-10-FULL-DOD.md`) |
+| 11 Financial Profile & Reporting FULL | In progress (cloud) |
+| 12 Hardening FULL | Queued |
 
 ## Status Pass UI
 | Sprint | Status | Prompt |
 |--------|--------|--------|
-| U0 Scaffold + login + proxy | **Done** (`UI-0-DOD.md`) | `PROMPT-UI-0.md` |
-| U1 Bill hub | Ready | `PROMPT-UI-1.md` |
+| U0 Scaffold + login + proxy | Done | `PROMPT-UI-0.md` |
+| U1 Bill hub | Ready / Queued | `PROMPT-UI-1.md` |
 | U2 Cost & Revenue actions | Queued | `PROMPT-UI-2.md` |
 | U3 Control desk | Queued | `PROMPT-UI-3.md` |
 | U4 Documents & AP/AR thin | Queued | `PROMPT-UI-4.md` |
@@ -35,5 +35,5 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 
 ---
 
-Repo: `c:\A1\git\cms` · `main` · .NET 8 LCMS.* + `apps/web`  
+Repo: `c:\A1\git\cms` · `main` · .NET 8 LCMS.* + `apps/web` (from U0)  
 Ship: handoff + commit/PR. No secrets. Never alogex.

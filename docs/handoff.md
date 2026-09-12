@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-12 — Coordinator: U2 landed → U3 kickoff
+
+### User
+Follow-up after [UI-2](bc-5377dafd-4e8b-4761-801f-ae76de6079b7) completed (PR #24).
+
+### Done
+- Rebased UI-2 onto main (conflict handoff/orchestration); force-pushed branch; CI green then commits landed on `main` (`01d8a50` / `c6210b7`). PR #24 closed (not squash-merged — history already on main).
+- Pass 2 already COMPLETE on main; kicked off [UI-3](bc-e514db5a-484e-4333-a372-f8d08e0cdb32) Control desk.
+
+### Next
+- Merge U3 PR when green; then U4.
+
+---
+
 ## 2026-09-12 — Pass 2 Sprint 12 FULL Hardening & UAT (**Pass 2 COMPLETE**)
 
 ### User

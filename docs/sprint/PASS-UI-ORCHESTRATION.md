@@ -12,8 +12,8 @@
 |--------|-------|--------|-------|
 | U0 | [UI-0](cf1b501c-7007-42fa-a90f-5bf7076d3040) | Done | Scaffold + login + proxy — `52f5ca1`, 86 tests |
 | U1 | [UI-1](4138d876-5722-42f6-a69a-bc23f8656ab9) | Done | Bill hub — `4aeab7a`; VPS `/bills` + maturity verified |
-| U2 | [UI-2](0aefe08a-9f6f-4b1b-9cbb-b6018f50323d) | Done | Cost & Revenue confirm — ship to main |
-| U3 | — | Queued | Control desk |
+| U2 | [UI-2](bc-5377dafd-4e8b-4761-801f-ae76de6079b7) | Done | Cost & Revenue — [Review](bc-5377dafd-4e8b-4761-801f-ae76de6079b7#changes); on `main` (`01d8a50`+) |
+| U3 | [UI-3](bc-e514db5a-484e-4333-a372-f8d08e0cdb32) | In progress (cloud) | Control desk |
 | U4 | — | Blocked on U3 | Documents & AP/AR |
 
 ## Stop conditions (serious)

@@ -13,7 +13,8 @@ type NavKey =
   | "exceptions"
   | "approvals"
   | "reconciliations"
-  | "bank-feed";
+  | "bank-feed"
+  | "settings";
 
 type AppShellProps = {
   terms: TerminologyMap;
@@ -35,6 +36,7 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
   const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
+  const settingsLabel = term(terms, "SETTINGS", "Cài đặt");
 
   return (
     <div className="shell">
@@ -107,14 +109,28 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
               {reconQueueLabel}
             </Link>
           </div>
+          <div className="nav-section">
+            <div className="nav-section-label">Hệ thống</div>
+            <Link
+              className={active === "settings" ? "active" : undefined}
+              href="/settings"
+            >
+              {settingsLabel}
+            </Link>
+          </div>
         </nav>
+        <div className="sidebar-footer">
+          <LogoutButton />
+        </div>
       </aside>
       <div className="main">
         <div className="topbar">
-          <div className="muted">Đã đăng nhập</div>
+          <div className="muted topbar-status">Đã đăng nhập</div>
           <div className="topbar-actions">
             {topbarRight}
-            <LogoutButton />
+            <span className="topbar-logout">
+              <LogoutButton />
+            </span>
           </div>
         </div>
         {children}

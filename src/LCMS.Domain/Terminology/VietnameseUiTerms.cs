@@ -115,6 +115,9 @@ public static class VietnameseUiTerms
         // Reporting / dashboard / control queues (E13)
         ["DASHBOARD"] = "Bảng điều khiển",
         ["DASHBOARD_SUMMARY"] = "Tóm tắt bảng điều khiển",
+        ["SETTINGS"] = "Cài đặt",
+        ["SETTINGS_BASIC"] = "Thiết lập cơ bản",
+        ["SETTINGS_THEME"] = "Theme mặc định",
         ["CONTROL_QUEUE"] = "Hàng đợi kiểm soát",
         ["EXCEPTION_QUEUE"] = "Hàng đợi ngoại lệ",
         ["APPROVAL_QUEUE"] = "Hàng đợi phê duyệt",

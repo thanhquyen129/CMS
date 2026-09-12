@@ -26,6 +26,8 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/reconciliations/") ||
     pathname === "/bank-feed" ||
     pathname.startsWith("/bank-feed/") ||
+    pathname === "/settings" ||
+    pathname.startsWith("/settings/") ||
     pathname.startsWith("/queues/");
 
   if (!token && needsAuth) {
@@ -57,6 +59,8 @@ export const config = {
     "/reconciliations/:path*",
     "/bank-feed",
     "/bank-feed/:path*",
+    "/settings",
+    "/settings/:path*",
     "/queues/:path*",
   ],
 };

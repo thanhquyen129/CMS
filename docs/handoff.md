@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-12 — Invoika-inspired themes + Settings
+
+### User
+Clone theme Invoika horizontal; menu Setting admin; cơ bản + chọn theme mặc định.
+
+### Done
+- **Không** copy mã/assets Themesbrand — theme cảm hứng + ADR-0014.
+- 3 theme: `invoika` (mặc định) · `soft-purple` · `classic`; layout `horizontal`/`vertical`; density.
+- Cookie/localStorage `lcms_ui` + boot script chống FOUC.
+- `/settings`: bố cục, mật độ, ngôn ngữ VI khóa, picker theme mặc định.
+- Nav **Hệ thống → Cài đặt**; middleware auth `/settings`.
+
+### Files
+- `apps/web/lib/ui-preferences.ts`, `components/SettingsForm.tsx`, `app/settings/page.tsx`
+- `globals.css`, `AppShell.tsx`, `layout.tsx`, `middleware.ts`
+- `VietnameseUiTerms` SETTINGS*; `docs/adr/ADR-0014-ui-theme-preferences.md`
+
+### Verify
+- `npm run build` apps/web
+
+### Follow-ups
+- Tenant-scoped default theme API + `settings.manage` · icon nav · permission gate Settings
+
+---
+
 ## 2026-09-12 — Soft-UI purple theme (Kubayar-inspired)
 
 ### User

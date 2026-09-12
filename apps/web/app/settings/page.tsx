@@ -23,7 +23,7 @@ export default async function SettingsPage() {
         </p>
         <h1>Cài đặt</h1>
         <p className="lede">
-          Thiết lập cơ bản cho shell quản trị và theme mặc định. Thay đổi áp dụng ngay — không ảnh hưởng số liệu tài chính.
+          Giao diện, điều hướng, theme và tiện ích vận hành cho shell quản trị. Thay đổi áp dụng ngay trên trình duyệt — không ảnh hưởng số liệu tài chính.
         </p>
         <SettingsForm />
       </div>

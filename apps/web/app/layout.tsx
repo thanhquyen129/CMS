@@ -25,6 +25,11 @@ export default function RootLayout({
       data-theme={boot.theme}
       data-layout={boot.layout}
       data-density={boot.density}
+      data-zebra={boot.tableZebra ? "1" : "0"}
+      data-sticky-nav={boot.stickyNav ? "1" : "0"}
+      data-reduce-motion={boot.reduceMotion ? "1" : "0"}
+      data-nav-labels={boot.showNavLabels ? "1" : "0"}
+      data-show-queues={boot.showQueues ? "1" : "0"}
       suppressHydrationWarning
     >
       <head>

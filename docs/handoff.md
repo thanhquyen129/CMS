@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-12 — Settings: options + admin utilities
+
+### User
+thêm các chức năng, tiện ích, tùy chọn phù hợp cho phần cài đặt trong admin
+
+### Done
+- Cơ bản: layout, density, trang vào sau đăng nhập, ngôn ngữ VI khóa.
+- Hiển thị: sọc bảng, ghim nav, giảm chuyển động, nhãn nhóm menu ngang, ẩn/hiện hàng đợi.
+- Theme picker; lối tắt vận hành; tiện ích kiểm tra health/ready/session (BFF), xuất/nhập JSON UI, khôi phục mặc định.
+- `/` redirect theo `homePath` cookie `lcms_ui`. Không bỏ xác nhận thao tác tiền.
+
+### Files
+- `apps/web/lib/ui-preferences.ts`, `SettingsForm.tsx`, `AppShell.tsx`, `globals.css`
+- `app/settings`, `app/page.tsx`, `app/layout.tsx`
+- `app/bff/system/health|ready`
+
+### Verify
+- `npm run build` apps/web
+
+### Follow-ups
+- Tenant-scoped settings API · `settings.manage`
+
+---
+
 ## 2026-09-12 — Dashboard clusters (control + finance ops)
 
 ### User

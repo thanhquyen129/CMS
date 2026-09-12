@@ -908,6 +908,94 @@ a.stat-card:hover {
 /* ——— Settings / theme picker ——— */
 .settings-section { max-width: none; }
 
+.settings-grid {
+  margin-top: 0.35rem;
+}
+
+.settings-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+  max-width: 720px;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.settings-toggle label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.settings-switch {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.settings-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.settings-probe dd[data-state="ok"] { color: var(--success-ink, var(--accent)); }
+.settings-probe dd[data-state="fail"] { color: var(--danger); }
+
+html[data-zebra="1"] .data-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--accent-soft) 45%, #fff);
+}
+
+html[data-reduce-motion="1"] .skeleton-line,
+html[data-reduce-motion="1"] .skeleton-block {
+  animation: none;
+}
+
+html[data-sticky-nav="1"][data-layout="vertical"] .sidebar {
+  position: sticky;
+  top: 0;
+}
+
+html[data-sticky-nav="1"][data-layout="horizontal"] .sidebar {
+  position: sticky;
+  top: 0;
+}
+
+html[data-sticky-nav="0"][data-layout="vertical"] .sidebar {
+  position: relative;
+  height: auto;
+}
+
+html[data-show-queues="0"] .nav-section-queues {
+  display: none;
+}
+
+html[data-layout="horizontal"][data-nav-labels="1"] .nav-section-label {
+  display: inline-block;
+  padding: 0.35rem 0.5rem 0.35rem 0.15rem;
+  color: color-mix(in srgb, var(--topbar-ink) 65%, transparent);
+  font-size: 0.65rem;
+}
+
+html[data-layout="horizontal"][data-theme="soft-purple"][data-nav-labels="1"] .nav-section-label {
+  color: var(--muted);
+}
+
 .theme-picker {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

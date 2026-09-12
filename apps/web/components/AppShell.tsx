@@ -88,7 +88,7 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
               {closeLabel}
             </Link>
           </div>
-          <div className="nav-section">
+          <div className="nav-section nav-section-queues">
             <div className="nav-section-label">Hàng đợi</div>
             <Link
               className={active === "exceptions" ? "active" : undefined}

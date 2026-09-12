@@ -155,6 +155,22 @@ export function listReceivableExposures(opts?: {
   return apiGet<ReceivableExposureItem[]>(`/api/receivable-exposures${qs}`);
 }
 
+export function getPayableExposure(
+  id: string
+): Promise<ApiResult<PayableExposureItem>> {
+  return apiGet<PayableExposureItem>(
+    `/api/payable-exposures/${encodeURIComponent(id)}`
+  );
+}
+
+export function getReceivableExposure(
+  id: string
+): Promise<ApiResult<ReceivableExposureItem>> {
+  return apiGet<ReceivableExposureItem>(
+    `/api/receivable-exposures/${encodeURIComponent(id)}`
+  );
+}
+
 export function settlementStatusLabel(
   terms: TerminologyMap,
   status: string

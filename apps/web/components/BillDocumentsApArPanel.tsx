@@ -76,6 +76,18 @@ export function BillDocumentsApArPanel({
       <p className="cta-row" style={{ marginTop: 0 }}>
         <Link
           className="btn btn-sm"
+          href={`/ap-ar/exposures/new?kind=payable&billId=${billId}`}
+        >
+          Tạo exposure phải trả
+        </Link>{" "}
+        <Link
+          className="btn btn-sm"
+          href={`/ap-ar/exposures/new?kind=receivable&billId=${billId}`}
+        >
+          Tạo exposure phải thu
+        </Link>{" "}
+        <Link
+          className="btn btn-sm"
           href={`/settlements/payments/new?billId=${billId}`}
         >
           Tạo {paymentLabel.toLowerCase()}

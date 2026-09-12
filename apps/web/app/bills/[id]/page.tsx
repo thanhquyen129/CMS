@@ -292,6 +292,7 @@ export default async function BillDetailPage({ params }: { params: Params }) {
 
         <BillCostRevenuePanel
           terms={terms}
+          billId={id}
           costs={costsRes.ok ? costsRes.data : null}
           costsError={costsRes.ok ? null : costsRes.message}
           revenues={revenuesRes.ok ? revenuesRes.data : null}

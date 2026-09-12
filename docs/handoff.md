@@ -1,6 +1,33 @@
 # Handoff
 
+## 2026-09-12 — G1 UI tạo Bill / Cost / Revenue / Exposure→Recognize
+
+### User
+G1 — UI tạo Bill / Cost / Revenue / Exposure→Recognize; làm hết full G1.
+
+### Done
+- Form tạo: Bill (`/bills/new`), Cost/Revenue trên Bill, Exposure payable/receivable, Recognize → AP/AR.
+- BFF POST → API Pass 2 sẵn có; copy VI: Exposure ≠ AP/AR; Cost ≠ Payment; partial recognize; không nhập outstanding.
+- CTA trên `/bills`, Bill panel, `/ap-ar` (+ nút Ghi nhận trên dòng exposure).
+- DoD: `docs/sprint/UI-G1-DOD.md`; cập nhật gap G1 trong `UAT-VPS-ONE-ROUND.md`.
+
+### Files
+- `apps/web/app/bff/bills|costs|revenues|payable-exposures|receivable-exposures/**`
+- Forms + pages `bills/new`, `bills/[id]/costs|revenues/new`, `ap-ar/exposures/**`
+- `BillCostRevenuePanel`, `BillDocumentsApArPanel`, `ap-ar/page`, `bills/page`, `lib/ap-ar.ts` (get by id)
+
+### Follow-ups
+- Shared cost create/allocate UI
+- UAT G3 add document line; G4–G6 minor
+
+### Verify
+- `npm run build` apps/web
+- VPS: UI tạo Bill→Cost→Revenue→Exposure→Recognize
+
+---
+
 ## 2026-09-12 — Match UI (defer U4 / UAT G2)
+
 
 ### User
 Match UI (còn defer từ U4).
@@ -40,7 +67,7 @@ UAT trên VPS — một vòng Bill → Cost/Revenue → chứng từ/AP-AR → S
 - Ghi gap: `docs/sprint/UAT-VPS-ONE-ROUND.md` + `UAT-VPS-ONE-ROUND-RESULT.json` (token redact). Script tái chạy: `scripts/uat-vps-one-round.ps1`.
 
 ### Gaps ưu tiên
-- **G1 blocker:** UI thiếu tạo Bill / Cost / Revenue / Exposure→Recognize → không go-live UI-only.
+- **G1 blocker:** ~~UI thiếu tạo Bill / Cost / Revenue / Exposure→Recognize~~ → Done (`UI-G1-DOD.md`).
 - **G2 major:** ~~thiếu match chứng từ~~ → Done (`UI-MATCH-DOD.md`); **G3:** add document line trên UI.
 - **G4–G6 minor:** `billId` filter documents; AP/AR ẩn settled; settlement list thiếu `billNo`.
 

@@ -32,6 +32,12 @@ export default async function BillsPage({
           Tìm {billLabel} theo số hiệu, rồi mở hồ sơ tài chính (Dự kiến / Đã xác nhận / Thực tế).
         </p>
 
+        <p className="cta-row" style={{ marginTop: 0 }}>
+          <Link className="btn" href="/bills/new">
+            Tạo {billLabel}
+          </Link>
+        </p>
+
         <form className="search-bar" method="get" action="/bills" role="search">
           <label className="sr-only" htmlFor="q">
             Tìm {billLabel}
@@ -60,9 +66,17 @@ export default async function BillsPage({
           </div>
         ) : result.data.length === 0 ? (
           <div className="empty-state" role="status">
-            {q?.trim()
-              ? `Không có ${billLabel} khớp “${q.trim()}”. Thử số hiệu khác.`
-              : `Chưa có ${billLabel} nào trong phạm vi của bạn.`}
+            {q?.trim() ? (
+              `Không có ${billLabel} khớp “${q.trim()}”. Thử số hiệu khác.`
+            ) : (
+              <>
+                Chưa có {billLabel} nào trong phạm vi của bạn.{" "}
+                <Link className="row-link" href="/bills/new">
+                  Tạo {billLabel} mới
+                </Link>
+                .
+              </>
+            )}
           </div>
         ) : (
           <div className="table-wrap">

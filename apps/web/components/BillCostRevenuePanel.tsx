@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -26,6 +27,7 @@ type PendingAction = {
 
 type Props = {
   terms: TerminologyMap;
+  billId: string;
   costs: CostListItem[] | null;
   costsError: string | null;
   revenues: RevenueListItem[] | null;
@@ -60,6 +62,7 @@ function maturityVi(terms: TerminologyMap, maturity: string): string {
 
 export function BillCostRevenuePanel({
   terms,
+  billId,
   costs,
   costsError,
   revenues,
@@ -176,6 +179,14 @@ export function BillCostRevenuePanel({
         Một thao tác mỗi dòng: xác nhận ({expected} → {confirmed}) hoặc ghi nhận{" "}
         {actual} ({confirmed} → {actual}). Không ghi đè lớp trưởng thành trước đó.
       </p>
+      <p className="cta-row" style={{ marginTop: 0 }}>
+        <Link className="btn btn-sm" href={`/bills/${billId}/costs/new`}>
+          Tạo {costLabel.toLowerCase()}
+        </Link>{" "}
+        <Link className="btn btn-sm" href={`/bills/${billId}/revenues/new`}>
+          Tạo {revenueLabel.toLowerCase()}
+        </Link>
+      </p>
 
       {error ? (
         <div className="alert alert-error" role="alert">
@@ -190,7 +201,11 @@ export function BillCostRevenuePanel({
         </div>
       ) : !costs || costs.length === 0 ? (
         <div className="empty-state" role="status">
-          Chưa có dòng {costLabel.toLowerCase()} gắn Bill này.
+          Chưa có dòng {costLabel.toLowerCase()} gắn Bill này.{" "}
+          <Link className="row-link" href={`/bills/${billId}/costs/new`}>
+            Tạo {costLabel.toLowerCase()}
+          </Link>
+          .
         </div>
       ) : (
         <div className="table-wrap">
@@ -293,7 +308,11 @@ export function BillCostRevenuePanel({
         </div>
       ) : !revenues || revenues.length === 0 ? (
         <div className="empty-state" role="status">
-          Chưa có dòng {revenueLabel.toLowerCase()} gắn Bill này.
+          Chưa có dòng {revenueLabel.toLowerCase()} gắn Bill này.{" "}
+          <Link className="row-link" href={`/bills/${billId}/revenues/new`}>
+            Tạo {revenueLabel.toLowerCase()}
+          </Link>
+          .
         </div>
       ) : (
         <div className="table-wrap">

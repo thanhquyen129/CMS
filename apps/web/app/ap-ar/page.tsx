@@ -83,6 +83,18 @@ export default async function ApArPage({
           .
         </p>
 
+        <p className="cta-row" style={{ marginTop: 0 }}>
+          <Link className="btn btn-sm" href="/ap-ar/exposures/new?kind=payable">
+            Tạo exposure phải trả
+          </Link>{" "}
+          <Link
+            className="btn btn-sm"
+            href="/ap-ar/exposures/new?kind=receivable"
+          >
+            Tạo exposure phải thu
+          </Link>
+        </p>
+
         <div className="search-bar" role="tablist" aria-label="Chọn sổ">
           <Link
             className={activeTab === "ap" ? "btn" : "btn btn-ghost"}
@@ -249,7 +261,22 @@ export default async function ApArPage({
           <>
             <p className="note">
               Exposure = nghĩa vụ / quyền dự kiến trước khi ghi nhận AP/AR.
-              Chưa phải {paymentLabel}.
+              Chưa phải {paymentLabel}. Ghi nhận tạo sổ {apLabel}/{arLabel}{" "}
+              riêng — không đổi {costLabel}/{revenueLabel}.
+            </p>
+            <p className="cta-row" style={{ marginTop: 0 }}>
+              <Link
+                className="btn btn-sm"
+                href="/ap-ar/exposures/new?kind=payable"
+              >
+                Tạo {payableExposureLabel}
+              </Link>{" "}
+              <Link
+                className="btn btn-sm"
+                href="/ap-ar/exposures/new?kind=receivable"
+              >
+                Tạo {receivableExposureLabel}
+              </Link>
             </p>
 
             <h2 className="section-title sm">{payableExposureLabel}</h2>
@@ -259,7 +286,14 @@ export default async function ApArPage({
               </div>
             ) : peItems.length === 0 ? (
               <div className="empty-state" role="status">
-                Không có exposure phải trả còn mở.
+                Không có exposure phải trả còn mở.{" "}
+                <Link
+                  className="row-link"
+                  href="/ap-ar/exposures/new?kind=payable"
+                >
+                  Tạo exposure
+                </Link>
+                .
               </div>
             ) : (
               <div className="table-wrap">
@@ -274,6 +308,7 @@ export default async function ApArPage({
                         Còn mở
                       </th>
                       <th scope="col">Trạng thái</th>
+                      <th scope="col">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -295,6 +330,18 @@ export default async function ApArPage({
                           {formatMoney(row.openAmount, row.currencyCode)}
                         </td>
                         <td>{exposureStatusLabel(row.status)}</td>
+                        <td>
+                          {row.openAmount > 0 ? (
+                            <Link
+                              className="btn btn-sm"
+                              href={`/ap-ar/exposures/${row.id}/recognize?kind=payable`}
+                            >
+                              Ghi nhận → {apLabel}
+                            </Link>
+                          ) : (
+                            <span className="muted small">—</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -309,7 +356,14 @@ export default async function ApArPage({
               </div>
             ) : reItems.length === 0 ? (
               <div className="empty-state" role="status">
-                Không có exposure phải thu còn mở.
+                Không có exposure phải thu còn mở.{" "}
+                <Link
+                  className="row-link"
+                  href="/ap-ar/exposures/new?kind=receivable"
+                >
+                  Tạo exposure
+                </Link>
+                .
               </div>
             ) : (
               <div className="table-wrap">
@@ -324,6 +378,7 @@ export default async function ApArPage({
                         Còn mở
                       </th>
                       <th scope="col">Trạng thái</th>
+                      <th scope="col">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -345,6 +400,18 @@ export default async function ApArPage({
                           {formatMoney(row.openAmount, row.currencyCode)}
                         </td>
                         <td>{exposureStatusLabel(row.status)}</td>
+                        <td>
+                          {row.openAmount > 0 ? (
+                            <Link
+                              className="btn btn-sm"
+                              href={`/ap-ar/exposures/${row.id}/recognize?kind=receivable`}
+                            >
+                              Ghi nhận → {arLabel}
+                            </Link>
+                          ) : (
+                            <span className="muted small">—</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

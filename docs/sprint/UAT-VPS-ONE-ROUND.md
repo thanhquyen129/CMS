@@ -44,7 +44,7 @@ Close id `01a093d3-41a3-7501-87a9-3d15fd6a1b12` — status **locked**, snapshot 
 
 | # | Severity | Gap | Bằng chứng | Hướng xử lý đề xuất |
 |---|----------|-----|------------|---------------------|
-| G1 | **blocker (UI-only go-live)** | Operator **không** hoàn tất vòng từ UI: thiếu tạo Bill / Cost / Revenue / Exposure+Recognize | `/bills` không form tạo; Bill panel chỉ confirm/actualize; `/ap-ar` chỉ đọc outstanding | Thin create forms (Bill, Cost, Revenue, Exposure→Recognize) hoặc seed+wizard “một vòng demo” |
+| G1 | **blocker (UI-only go-live)** → **Done** (`UI-G1-DOD.md`) | Operator **không** hoàn tất vòng từ UI: thiếu tạo Bill / Cost / Revenue / Exposure+Recognize | `/bills` không form tạo; Bill panel chỉ confirm/actualize; `/ap-ar` chỉ đọc outstanding | Thin create forms (Bill, Cost, Revenue, Exposure→Recognize) — **shipped** |
 | G2 | **major** | **Khớp chứng từ** không có trên UI | Copy document detail: “Khớp… chưa có trên UI U4” | UI match thin (`/api/document-matches`) |
 | G3 | **major** | **Thêm dòng chứng từ** không có trên UI | Empty state: “Thêm dòng qua API” | Form add line trên `/documents/[id]` |
 | G4 | **minor** | List documents **không lọc `billId`** | Bill panel copy thừa nhận | API `?billId=` + UI filter |

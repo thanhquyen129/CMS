@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-09-12 — P04 Strict close + period lock UAT (VPS PASS)
+
+### User
+Next: P04 Strict close + period lock UAT trên VPS.
+
+### Done
+- Script `scripts/uat-vps-p04-strict-period-lock.ps1`.
+- Chạy VPS `194.233.89.26` → **PASS** (strict lock → 409 confirm/allocate → reopen → mutate → reclose v2; snapshot v1 immutable).
+- Kết quả: `docs/sprint/P04-UAT-VPS-RESULT.json` · DoD `P04-DOD.md`.
+- UI note Strict trên form mở chốt.
+
+### Verify
+- VPS UAT verdict PASS (no secrets in result JSON).
+
+### Next
+- P05 Rate card / Rating / seed Expected (UI)
+
+### End-user
+Chọn chính sách **Strict** khi mở chốt → sau snapshot: không xác nhận CP/DT / không phân bổ TT khi Locked; mở lại mới thao tác tiếp; bản chốt cũ không đổi.
+
+---
+
 ## 2026-09-12 — P03 Approval gate write-off > trần
 
 ### User

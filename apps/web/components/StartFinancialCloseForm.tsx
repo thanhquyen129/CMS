@@ -105,7 +105,9 @@ export function StartFinancialCloseForm({
     <form className="receive-form" onSubmit={onSubmit} noValidate>
       <p className="note">
         Mở lần {closeLabel.toLowerCase()} (trạng thái đang mở). Bản chốt bất
-        biến và {periodLock.toLowerCase()} chỉ sau khi tạo snapshot.
+        biến và {periodLock.toLowerCase()} chỉ sau khi tạo snapshot.{" "}
+        <strong>Strict</strong> luôn ép eligibility + {periodLock.toLowerCase()}{" "}
+        (không bypass config). Controlled tôn trọng cấu hình máy chủ.
       </p>
 
       {error ? (

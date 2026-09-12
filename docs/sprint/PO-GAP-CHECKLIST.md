@@ -14,7 +14,7 @@
 | **P01** | Phân bổ Shared cost → Bill (UI) | TD6 E05/E06; C-005/C-006 | **Done** (`P01-DOD.md`) | Basis equal/qty/manual → draft → finalize | — |
 | **P02** | Adjust Cost/Revenue + nhập số Confirm/Actual | TD6 E05/E07; C-009 | **Done** (`P02-DOD.md`) | Dialog số + lý do; list adjustments | — |
 | **P03** | Approval gate write-off > trần | ADR-0008; E10/E11; H-009 | **Done** (`P03-DOD.md`) | Trên trần → Approval → apply khi approved | Queue decide Done |
-| **P04** | UAT Strict close + period lock stress | E12; ADR-0010; AC-008 | API Done · chưa stress VPS | Close `strict` + Locked chặn confirm/allocate | Close UI Done |
+| **P04** | UAT Strict close + period lock stress | E12; ADR-0010; AC-008 | **Done** (`P04-DOD.md` · VPS PASS) | Close `strict` + Locked chặn confirm/allocate | Close UI Done |
 | **P05** | Rate card / Rating / seed Expected (UI) | TD6 E04; C-011 | API FULL · **thiếu UI** | CRUD card → publish → rate Bill → seed Expected | — |
 | **P06** | Bảng `fx_rates` theo ngày | TD1 D02; ADR-0004/0008/0011 | Stub config · FxRateId null | Entity dated rates + gắn Cost/Revenue/Settlement | — |
 | **P07** | Aging summary + dashboard tách quyền tài chính | E09; ADR-0006; H View Cost≠Revenue | Cột aging Done · thiếu summary/export | Màn bucket + export; dashboard theo quyền | — |
@@ -51,11 +51,11 @@
 
 ## Top 5 làm ngay
 
-1. **P04** Strict + period lock UAT — chứng minh AC-008 trên VPS.  
-2. **P05** Rate card UI — Expected không phụ thuộc seed/API tay.  
-3. **P06** `fx_rates` theo ngày — bỏ stub config.  
-4. **P07** Aging summary + dashboard tách quyền tài chính.  
-5. **P08** Auto Exposure từ chứng từ đã khớp.
+1. **P05** Rate card UI — Expected không phụ thuộc seed/API tay.  
+2. **P06** `fx_rates` theo ngày — bỏ stub config.  
+3. **P07** Aging summary + dashboard tách quyền tài chính.  
+4. **P08** Auto Exposure từ chứng từ đã khớp.  
+5. **P09** Confirm match session + auto-suggest.
 
 ## Không làm (trừ ADR mới)
 

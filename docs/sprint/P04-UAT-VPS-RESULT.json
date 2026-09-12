@@ -1,0 +1,76 @@
+﻿{
+    "runAt":  "2026-09-12T23:26:06.6713474+07:00",
+    "base":  "http://194.233.89.26",
+    "billNo":  "P04-STRICT-20260912-232603",
+    "billId":  "01a09670-aee4-7701-b194-63f1f2ea8647",
+    "closeId":  "01a09670-b095-7d10-afed-57d1980ca9cb",
+    "snapshotV1Id":  "01a09670-b0f7-70c8-a993-2a438263ebe1",
+    "verdict":  "PASS",
+    "steps":  [
+                  {
+                      "step":  "login",
+                      "ok":  true,
+                      "detail":  "ok (token redacted)"
+                  },
+                  {
+                      "step":  "create_bill",
+                      "ok":  true,
+                      "detail":  "P04-STRICT-20260912-232603"
+                  },
+                  {
+                      "step":  "create_cost_expected",
+                      "ok":  true,
+                      "detail":  "01a09670-af78-71a4-968d-81747a202ee0"
+                  },
+                  {
+                      "step":  "create_revenue_expected",
+                      "ok":  true,
+                      "detail":  "01a09670-b000-74fa-88c2-52dbe2951e4b"
+                  },
+                  {
+                      "step":  "start_close_strict",
+                      "ok":  true,
+                      "detail":  "closeId=01a09670-b095-7d10-afed-57d1980ca9cb policy=strict"
+                  },
+                  {
+                      "step":  "snapshot_lock_strict",
+                      "ok":  true,
+                      "detail":  "status=locked policy=strict snapPolicy=strict hashLen=64"
+                  },
+                  {
+                      "step":  "period_lock_blocks_confirm_cost",
+                      "ok":  true,
+                      "detail":  "HTTP 409 periodLockMarker=True"
+                  },
+                  {
+                      "step":  "period_lock_blocks_confirm_revenue",
+                      "ok":  true,
+                      "detail":  "HTTP 409 periodLockMarker=True"
+                  },
+                  {
+                      "step":  "period_lock_blocks_allocate",
+                      "ok":  true,
+                      "detail":  "HTTP 409 periodLockMarker=True"
+                  },
+                  {
+                      "step":  "reopen_snapshot_immutable",
+                      "ok":  true,
+                      "detail":  "status=reopened hashUnchanged=True"
+                  },
+                  {
+                      "step":  "confirm_cost_after_reopen",
+                      "ok":  true,
+                      "detail":  "HTTP 204"
+                  },
+                  {
+                      "step":  "allocate_finalize_after_reopen",
+                      "ok":  true,
+                      "detail":  "allocId=01a09670-b881-721a-87ac-8febe5f9561d"
+                  },
+                  {
+                      "step":  "reclose_appends_v2",
+                      "ok":  true,
+                      "detail":  "snap1v=1 snap2v=2 hash1stable=True"
+                  }
+              ]
+}

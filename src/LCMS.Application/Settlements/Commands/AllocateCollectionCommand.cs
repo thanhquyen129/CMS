@@ -28,16 +28,22 @@ public sealed class AllocateCollectionCommandValidator : AbstractValidator<Alloc
 /// <summary>
 /// Draft allocation Collection → AR. Does NOT change outstanding (AC-007).
 /// Enforces C-008 ceilings (over policy stub = 0).
+/// Supports multi-allocation until Unapplied/AvailableToAllocate is exhausted.
 /// </summary>
 public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateCollectionCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ISettlementFxStub _fx;
 
-    public AllocateCollectionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public AllocateCollectionCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ISettlementFxStub fx)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
     }
 
     public async Task<Guid> Handle(AllocateCollectionCommand request, CancellationToken cancellationToken)
@@ -109,6 +115,7 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
             AllocationStatus = SettlementAllocationStatuses.Draft,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };
+        _fx.ApplyToCollectionAllocation(allocation, collection.CurrencyCode, amount);
 
         _db.CollectionAllocations.Add(allocation);
         await _db.SaveChangesAsync(cancellationToken);

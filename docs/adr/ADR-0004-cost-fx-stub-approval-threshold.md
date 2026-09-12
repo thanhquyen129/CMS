@@ -2,14 +2,14 @@
 
 - Status: Accepted
 - Date: 2026-09-11
-- Relates: TD1 D05/D06 money fields (`base_amount`, `fx_rate_id`); C-014; Sprint 4 FULL Cost; Sprint 5 FULL Revenue (Pass 2)
+- Relates: TD1 D05/D06/D09 money fields (`base_amount`, `fx_rate_id`); C-014; Sprint 4 FULL Cost; Sprint 5 FULL Revenue; Sprint 8 FULL Settlement (Pass 2)
 
 ## Context
 Pass 1 Cost/Revenue stored `base_amount` / `fx_rate_id` but never filled them. Cross-currency reporting must not sum raw amounts (C-014). Full FX table + market feed is later; go-live slice needs an honest stub.
 Large cost/revenue confirm may need an approval gate before Expected→Confirmed without building a full multi-step matrix (Sprint 9 already owns Approval ≠ Permission).
 
 ## Decision
-1. **FX stub** (`Cost` / `Revenue` options): `BaseCurrency` (default `VND`) + `StubFxRatesToBase` map. On create/confirm/actualize/adjust/seed, set `BaseAmount = amount` when same currency; else `amount × stub rate`. `FxRateId` stays null until a real `fx_rates` entity exists.
+1. **FX stub** (`Cost` / `Revenue` / `Settlement` options): `BaseCurrency` (default `VND`) + `StubFxRatesToBase` map. On create/confirm/actualize/adjust/seed (Cost/Revenue) or create payment/collection/allocate (Settlement), set `BaseAmount = amount` when same currency; else `amount × stub rate`. `FxRateId` stays null until a real `fx_rates` entity exists.
 2. Missing stub rate for a foreign currency → VI validation error (do not invent 1:1).
 3. **Optional confirm threshold**: `ConfirmApprovalThresholdBase` (nullable) per module. When set and `BaseAmount` exceeds it, set `ApprovalStatus=pending` and **block confirm** until Sprint 9 approval sets `approved`. Null = disabled (Pass 1 behavior).
 4. Allocation bases locked to `equal` | `quantity` | `manual_ratio` (C-006); reallocation supersedes prior finalized rows (history kept).

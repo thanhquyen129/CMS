@@ -1062,6 +1062,7 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.ReferenceNo).HasMaxLength(128);
         builder.Property(e => e.Notes).HasMaxLength(2048);
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
@@ -1087,6 +1088,7 @@ internal sealed class CollectionConfiguration : IEntityTypeConfiguration<Collect
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.ReferenceNo).HasMaxLength(128);
         builder.Property(e => e.Notes).HasMaxLength(2048);
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
@@ -1113,6 +1115,8 @@ internal sealed class PaymentAllocationConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.PaymentId).IsRequired();
         builder.Property(e => e.AccountsPayableId).IsRequired();
         builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.ReverseReason).HasMaxLength(1024);
         builder.Property(e => e.Notes).HasMaxLength(2048);
@@ -1142,6 +1146,8 @@ internal sealed class CollectionAllocationConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.CollectionId).IsRequired();
         builder.Property(e => e.AccountsReceivableId).IsRequired();
         builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.ReverseReason).HasMaxLength(1024);
         builder.Property(e => e.Notes).HasMaxLength(2048);

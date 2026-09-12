@@ -11,6 +11,9 @@ public sealed record PaymentAllocationDto(
     Guid PaymentId,
     Guid AccountsPayableId,
     decimal Amount,
+    string CurrencyCode,
+    decimal? BaseAmount,
+    Guid? FxRateId,
     string AllocationStatus,
     DateTimeOffset? FinalizedAt,
     DateTimeOffset? ReversedAt,
@@ -20,6 +23,8 @@ public sealed record PaymentAllocationDto(
 public sealed record PaymentDto(
     Guid Id,
     decimal Amount,
+    decimal? BaseAmount,
+    Guid? FxRateId,
     decimal AppliedAmount,
     decimal AllocatedAmount,
     decimal UnappliedAmount,
@@ -39,6 +44,9 @@ public sealed record CollectionAllocationDto(
     Guid CollectionId,
     Guid AccountsReceivableId,
     decimal Amount,
+    string CurrencyCode,
+    decimal? BaseAmount,
+    Guid? FxRateId,
     string AllocationStatus,
     DateTimeOffset? FinalizedAt,
     DateTimeOffset? ReversedAt,
@@ -48,6 +56,8 @@ public sealed record CollectionAllocationDto(
 public sealed record CollectionDto(
     Guid Id,
     decimal Amount,
+    decimal? BaseAmount,
+    Guid? FxRateId,
     decimal AppliedAmount,
     decimal AllocatedAmount,
     decimal UnappliedAmount,
@@ -106,6 +116,8 @@ public sealed class ListPaymentsQueryHandler : IRequestHandler<ListPaymentsQuery
         return new PaymentDto(
             p.Id,
             p.Amount,
+            p.BaseAmount,
+            p.FxRateId,
             applied,
             allocated,
             p.Amount - applied,
@@ -119,7 +131,8 @@ public sealed class ListPaymentsQueryHandler : IRequestHandler<ListPaymentsQuery
             p.Status,
             p.RecordStatus,
             allocations.Select(a => new PaymentAllocationDto(
-                a.Id, a.PaymentId, a.AccountsPayableId, a.Amount, a.AllocationStatus,
+                a.Id, a.PaymentId, a.AccountsPayableId, a.Amount,
+                a.CurrencyCode, a.BaseAmount, a.FxRateId, a.AllocationStatus,
                 a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes)).ToList());
     }
 }
@@ -179,6 +192,8 @@ public sealed class ListCollectionsQueryHandler : IRequestHandler<ListCollection
         return new CollectionDto(
             c.Id,
             c.Amount,
+            c.BaseAmount,
+            c.FxRateId,
             applied,
             allocated,
             c.Amount - applied,
@@ -192,7 +207,8 @@ public sealed class ListCollectionsQueryHandler : IRequestHandler<ListCollection
             c.Status,
             c.RecordStatus,
             allocations.Select(a => new CollectionAllocationDto(
-                a.Id, a.CollectionId, a.AccountsReceivableId, a.Amount, a.AllocationStatus,
+                a.Id, a.CollectionId, a.AccountsReceivableId, a.Amount,
+                a.CurrencyCode, a.BaseAmount, a.FxRateId, a.AllocationStatus,
                 a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes)).ToList());
     }
 }

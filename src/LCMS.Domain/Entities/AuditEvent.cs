@@ -39,6 +39,9 @@ public static class AuditActions
     public const string CostConfirm = "cost.confirm";
     public const string RevenueCreate = "revenue.create";
     public const string PaymentAllocationFinalize = "payment_allocation.finalize";
+    public const string CollectionAllocationFinalize = "collection_allocation.finalize";
+    public const string AccountsPayableWriteOff = "accounts_payable.write_off";
+    public const string AccountsReceivableWriteOff = "accounts_receivable.write_off";
     public const string FinancialCloseSnapshotCreate = "financial_close_snapshot.create";
 }
 
@@ -47,5 +50,8 @@ public static class AuditObjectTypes
     public const string Cost = "cost";
     public const string Revenue = "revenue";
     public const string PaymentAllocation = "payment_allocation";
+    public const string CollectionAllocation = "collection_allocation";
+    public const string AccountsPayable = "accounts_payable";
+    public const string AccountsReceivable = "accounts_receivable";
     public const string FinancialCloseSnapshot = "financial_close_snapshot";
 }

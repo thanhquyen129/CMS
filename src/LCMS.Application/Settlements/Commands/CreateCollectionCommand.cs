@@ -32,16 +32,22 @@ public sealed class CreateCollectionCommandValidator : AbstractValidator<CreateC
 
 /// <summary>
 /// Creates a cash-in collection. Does not create Revenue (C-004) and does not touch AR outstanding.
+/// Fills BaseAmount via FX stub (ADR-0004).
 /// </summary>
 public sealed class CreateCollectionCommandHandler : IRequestHandler<CreateCollectionCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ISettlementFxStub _fx;
 
-    public CreateCollectionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreateCollectionCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ISettlementFxStub fx)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
     }
 
     public async Task<Guid> Handle(CreateCollectionCommand request, CancellationToken cancellationToken)
@@ -65,10 +71,11 @@ public sealed class CreateCollectionCommandHandler : IRequestHandler<CreateColle
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
 
+        var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
         var collection = new Collection
         {
             TenantId = tenantId,
-            Amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero),
+            Amount = amount,
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
             ValueDate = request.ValueDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
             CounterpartyId = request.CounterpartyId,
@@ -78,6 +85,7 @@ public sealed class CreateCollectionCommandHandler : IRequestHandler<CreateColle
             Status = CollectionStatuses.Open,
             RecordStatus = "active"
         };
+        _fx.ApplyToCollection(collection, amount);
 
         _db.Collections.Add(collection);
         await _db.SaveChangesAsync(cancellationToken);

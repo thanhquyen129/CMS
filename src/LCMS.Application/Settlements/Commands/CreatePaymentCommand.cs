@@ -32,16 +32,22 @@ public sealed class CreatePaymentCommandValidator : AbstractValidator<CreatePaym
 
 /// <summary>
 /// Creates a cash-out payment. Does not create Cost (C-003) and does not touch AP outstanding.
+/// Fills BaseAmount via FX stub (ADR-0004).
 /// </summary>
 public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ISettlementFxStub _fx;
 
-    public CreatePaymentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreatePaymentCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ISettlementFxStub fx)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
     }
 
     public async Task<Guid> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
@@ -65,10 +71,11 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
 
+        var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
         var payment = new Payment
         {
             TenantId = tenantId,
-            Amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero),
+            Amount = amount,
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
             ValueDate = request.ValueDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
             CounterpartyId = request.CounterpartyId,
@@ -78,6 +85,7 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
             Status = PaymentStatuses.Open,
             RecordStatus = "active"
         };
+        _fx.ApplyToPayment(payment, amount);
 
         _db.Payments.Add(payment);
         await _db.SaveChangesAsync(cancellationToken);

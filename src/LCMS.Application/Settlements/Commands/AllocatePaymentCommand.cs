@@ -28,16 +28,22 @@ public sealed class AllocatePaymentCommandValidator : AbstractValidator<Allocate
 /// <summary>
 /// Draft allocation Payment → AP. Does NOT change outstanding (AC-007).
 /// Enforces C-008 ceilings against payment amount and AP open obligation (over policy stub = 0).
+/// Supports multi-allocation until Unapplied/AvailableToAllocate is exhausted.
 /// </summary>
 public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaymentCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ISettlementFxStub _fx;
 
-    public AllocatePaymentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public AllocatePaymentCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ISettlementFxStub fx)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
     }
 
     public async Task<Guid> Handle(AllocatePaymentCommand request, CancellationToken cancellationToken)
@@ -95,7 +101,7 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
         if (apActive + amount > apCeiling)
         {
             throw new ConflictAppException(
-                $"Tổng phân bổ vượt số dư còn lại của khoản phải trả (C-008).");
+                "Tổng phân bổ vượt số dư còn lại của khoản phải trả (C-008).");
         }
 
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
@@ -109,6 +115,7 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             AllocationStatus = SettlementAllocationStatuses.Draft,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };
+        _fx.ApplyToPaymentAllocation(allocation, payment.CurrencyCode, amount);
 
         _db.PaymentAllocations.Add(allocation);
         await _db.SaveChangesAsync(cancellationToken);

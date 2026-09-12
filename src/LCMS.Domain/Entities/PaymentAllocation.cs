@@ -13,6 +13,15 @@ public sealed class PaymentAllocation : TenantEntityBase
     public Guid AccountsPayableId { get; set; }
     public decimal Amount { get; set; }
 
+    /// <summary>Txn currency (copied from payment; C-014 same-currency allocate).</summary>
+    public string CurrencyCode { get; set; } = "VND";
+
+    /// <summary>Allocated amount in base currency (FX stub).</summary>
+    public decimal? BaseAmount { get; set; }
+
+    /// <summary>Null while FX stub is in use.</summary>
+    public Guid? FxRateId { get; set; }
+
     /// <summary>draft | finalized | reversed</summary>
     public string AllocationStatus { get; set; } = SettlementAllocationStatuses.Draft;
 

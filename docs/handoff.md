@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — Sprint 8 FULL Settlement (Pass 2)
+
+### User
+Pass 2 Sprint 8 FULL: unapplied cash + multi-allocation; C-008 over-allocate reject; FX stub base_amount on settlement; write-off stub with reason; idempotent finalize; tests + SPRINT-8-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Unapplied / AvailableToAllocate: multi-AP/AR allocate from one payment/collection; subsequent allocate until fully applied; over → 409 C-008 VI.
+- FX stub: `Settlement:BaseCurrency` + `StubFxRatesToBase` fills `base_amount` on create/allocate; `fx_rate_id` null (ADR-0004/0008); missing rate → VI validation.
+- Write-off: `POST /api/accounts-payable|accounts-receivable/{id}/write-off` — negative AdjustmentAmount + `[xóa nợ]` note; capped by `MaxWriteOffAmount`; never silent wipe / never invents Cost/Revenue.
+- Idempotent finalize: re-finalize finalized allocation → 204 no-op; reversed → 409 VI.
+- Migration `Sprint8Full_Settlement`; ADR-0008; VI terms WRITE_OFF, SETTLEMENT_BASE_AMOUNT, IDEMPOTENT_FINALIZE.
+- Tests: `Sprint8FullSettlementTests` (3); suite green (count in verify below).
+
+### Files / API / Config
+- APIs: write-off endpoints; GET payment/collection + baseAmount/fxRateId; finalize idempotent
+- Application: Settlements/SettlementOptions, SettlementFxStub; create/allocate/finalize; WriteOff* commands
+- Config: Settlement section in appsettings.json
+- Migration: 20260912022427_Sprint8Full_Settlement
+- ADR: docs/adr/ADR-0008-settlement-fx-writeoff.md; ADR-0004 extended
+
+### Verify
+- `dotnet test Cms.sln -c Release` → see commit notes / CI
+
+### Deferred / Next
+- Pass 2 Sprint 9 FULL Financial Control / reconciliation
+- Bank feed; real fx_rates; write-off approval
+
+---
+
 ## 2026-09-12 — Pass UI plan (parallel track)
 
 ### User

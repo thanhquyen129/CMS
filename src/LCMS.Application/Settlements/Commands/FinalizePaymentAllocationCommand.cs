@@ -20,6 +20,7 @@ public sealed class FinalizePaymentAllocationCommandValidator : AbstractValidato
 /// <summary>
 /// Finalizes draft payment allocation: updates AP.FinalizedSettledAmount (AC-007).
 /// Re-checks C-008. Does not create Cost (C-003).
+/// Idempotent: repeat finalize on already-finalized allocation is a safe no-op.
 /// </summary>
 public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<FinalizePaymentAllocationCommand>
 {
@@ -50,6 +51,18 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
         var allocation = await _db.PaymentAllocations
             .FirstOrDefaultAsync(a => a.Id == request.AllocationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phân bổ thanh toán.");
+
+        // Idempotent finalize: already finalized → safe no-op (no double settle).
+        if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Finalized, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException(
+                "Không thể chốt phân bổ thanh toán đã đảo. Tạo phân bổ mới nếu cần.");
+        }
 
         if (!string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Draft, StringComparison.OrdinalIgnoreCase))
         {

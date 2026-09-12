@@ -155,11 +155,16 @@ public static class VietnameseUiTerms
         ["PAYMENT_ALLOCATION"] = "Phân bổ thanh toán",
         ["COLLECTION_ALLOCATION"] = "Phân bổ thu tiền",
         ["UNAPPLIED_AMOUNT"] = "Số tiền chưa phân bổ",
+        ["AVAILABLE_TO_ALLOCATE"] = "Số tiền còn phân bổ được",
         ["PARTIAL_SETTLEMENT"] = "Tất toán một phần",
         ["SETTLEMENT_REVERSAL"] = "Đảo tất toán",
         ["ALLOCATION_DRAFT"] = "Nháp phân bổ",
         ["ALLOCATION_FINALIZED"] = "Đã chốt phân bổ",
         ["ALLOCATION_REVERSED"] = "Đã đảo phân bổ",
+        ["WRITE_OFF"] = "Xóa nợ / write-off",
+        ["WRITE_OFF_REASON"] = "Lý do xóa nợ",
+        ["SETTLEMENT_BASE_AMOUNT"] = "Số tiền quy đổi tất toán",
+        ["IDEMPOTENT_FINALIZE"] = "Chốt phân bổ an toàn khi gửi lại",
 
         // Hardening / Audit / Integration (D12 / E14–E16)
         ["AUDIT_EVENT"] = "Sự kiện kiểm toán",

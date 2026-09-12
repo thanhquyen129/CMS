@@ -13,6 +13,13 @@ public sealed class Payment : TenantEntityBase
     public decimal Amount { get; set; }
 
     public string CurrencyCode { get; set; } = "VND";
+
+    /// <summary>Amount in tenant base currency (FX stub / real fx_rates later — ADR-0004).</summary>
+    public decimal? BaseAmount { get; set; }
+
+    /// <summary>Null while FX stub is in use (no persisted fx_rates row yet).</summary>
+    public Guid? FxRateId { get; set; }
+
     public DateOnly ValueDate { get; set; }
     public Guid? CounterpartyId { get; set; }
     public Guid? BillId { get; set; }

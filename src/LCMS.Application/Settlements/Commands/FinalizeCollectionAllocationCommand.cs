@@ -21,6 +21,7 @@ public sealed class FinalizeCollectionAllocationCommandValidator
 /// <summary>
 /// Finalizes draft collection allocation: updates AR.FinalizedSettledAmount (AC-007).
 /// Re-checks C-008. Does not create Revenue (C-004).
+/// Idempotent: repeat finalize on already-finalized allocation is a safe no-op.
 /// </summary>
 public sealed class FinalizeCollectionAllocationCommandHandler
     : IRequestHandler<FinalizeCollectionAllocationCommand>
@@ -28,15 +29,18 @@ public sealed class FinalizeCollectionAllocationCommandHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public FinalizeCollectionAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task Handle(FinalizeCollectionAllocationCommand request, CancellationToken cancellationToken)
@@ -49,6 +53,18 @@ public sealed class FinalizeCollectionAllocationCommandHandler
         var allocation = await _db.CollectionAllocations
             .FirstOrDefaultAsync(a => a.Id == request.AllocationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phân bổ thu tiền.");
+
+        // Idempotent finalize: already finalized → safe no-op (no double settle).
+        if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Finalized, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException(
+                "Không thể chốt phân bổ thu tiền đã đảo. Tạo phân bổ mới nếu cần.");
+        }
 
         if (!string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Draft, StringComparison.OrdinalIgnoreCase))
         {
@@ -91,6 +107,8 @@ public sealed class FinalizeCollectionAllocationCommandHandler
 
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
+        var beforeJson =
+            $"{{\"status\":\"{allocation.AllocationStatus}\",\"arSettled\":{ar.FinalizedSettledAmount}}}";
 
         allocation.AllocationStatus = SettlementAllocationStatuses.Finalized;
         allocation.FinalizedAt = now;
@@ -101,6 +119,13 @@ public sealed class FinalizeCollectionAllocationCommandHandler
             ar.RecognizedAmount, ar.AdjustmentAmount, ar.FinalizedSettledAmount);
         ar.UpdatedAt = now;
         ar.UpdatedBy = _user.UserId;
+
+        _audit.Append(
+            AuditActions.CollectionAllocationFinalize,
+            AuditObjectTypes.CollectionAllocation,
+            allocation.Id,
+            beforeJson: beforeJson,
+            afterJson: $"{{\"status\":\"{SettlementAllocationStatuses.Finalized}\",\"amount\":{allocation.Amount},\"arSettled\":{nextSettled}}}");
 
         await _db.SaveChangesAsync(cancellationToken);
 

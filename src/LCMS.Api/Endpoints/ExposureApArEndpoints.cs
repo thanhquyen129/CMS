@@ -159,6 +159,19 @@ public static class ExposureApArEndpoints
             return Results.NoContent();
         });
 
+        ap.MapPost("/{id:guid}/write-off", async (
+            Guid id,
+            WriteOffRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new LCMS.Application.Settlements.Commands.WriteOffAccountsPayableCommand(
+                    id, body.Amount, body.Reason),
+                ct);
+            return Results.NoContent();
+        });
+
         var ar = app.MapGroup("/api/accounts-receivable").WithTags("AccountsReceivable");
 
         ar.MapGet("/aging", async (
@@ -194,6 +207,19 @@ public static class ExposureApArEndpoints
             CancellationToken ct) =>
         {
             await sender.Send(new AdjustAccountsReceivableCommand(id, body.DeltaAmount, body.Reason), ct);
+            return Results.NoContent();
+        });
+
+        ar.MapPost("/{id:guid}/write-off", async (
+            Guid id,
+            WriteOffRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new LCMS.Application.Settlements.Commands.WriteOffAccountsReceivableCommand(
+                    id, body.Amount, body.Reason),
+                ct);
             return Results.NoContent();
         });
 
@@ -234,5 +260,7 @@ public sealed record RecognizeExposureRequest(
     string? Notes);
 
 public sealed record AdjustApArRequest(decimal DeltaAmount, string Reason);
+
+public sealed record WriteOffRequest(decimal Amount, string Reason);
 
 public sealed record LinkDocumentRequest(Guid FinancialDocumentId);

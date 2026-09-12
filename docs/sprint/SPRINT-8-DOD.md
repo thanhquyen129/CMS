@@ -28,8 +28,9 @@ TD6: *Payment/collection; allocation; reversal; outstanding* — Epic **E10**.
 | Reconciliation / exceptions | Sprint 9 | Non-goal |
 | Financial close | Sprint 10 | Non-goal |
 | Bank feed / auto-match cash | Later | Manual create Pass 1 |
-| Over-settlement policy | Later | Stub = reject all over |
+| Over-settlement policy | Later | Stub = reject all over (Pass 2 FULL keeps stub=0) |
 | Reverse allocation as new opposite row | Later | Pass 1 uses status=reversed |
+| FX stub + write-off + idempotent finalize | Sprint 8 FULL | Done — see `SPRINT-8-FULL-DOD.md` / ADR-0008 |
 | JWT / OIDC | Later | Keep header bootstrap |
 | Next.js UI | Later | API-only this sprint |
 

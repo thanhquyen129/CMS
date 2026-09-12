@@ -4,6 +4,8 @@
 
 **Rule:** U0→U4 = **một agent/chat riêng từng sprint**. Coordinator chỉ kickoff tuần tự; vá lỗi sau này → resume đúng agent hoặc New Chat paste lại `PROMPT-UI-N.md`.
 
+**vs Pass 2:** Dev song song OK. Merge/deploy **serialize** (xem `README-AGENTS.md` § Parallel). Prefer PR; không đua push `main` với S-FULL agent. `handoff.md` / README: append section riêng — không rewrite cả file.
+
 ## Queue
 
 | Sprint | Agent | Status | Notes |

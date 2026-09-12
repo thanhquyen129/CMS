@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-09-12 — CI concurrency + Pass2∥UI ship rules
+
+### User
+Làm những gì tốt nhất cho agent Sprint và Agent U chạy song song.
+
+### Done
+- `.github/workflows/ci.yml`: `concurrency` per ref + `cancel-in-progress` — hết dual deploy race trên VPS.
+- `README-AGENTS.md` + `PASS-UI-ORCHESTRATION.md`: quy tắc serialize merge/deploy; PR ưu tiên khi Pass 2 ∥ Pass UI.
+
+### Verify
+- Actions: run mới hủy run cũ cùng `main`; `/health` sau deploy.
+
+### Next
+- Kickoff U2; S11 merge tuần tự khi PR sẵn (không đua push `main`).
+
+---
+
 ## 2026-09-12 — Pass UI / Sprint U1 Bill hub
 
 ### User

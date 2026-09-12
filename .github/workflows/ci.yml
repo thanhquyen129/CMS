@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# Pass 2 + Pass UI agents often push main close together.
+# One group per ref: newer run cancels stale (avoids dual rsync/compose on VPS).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest

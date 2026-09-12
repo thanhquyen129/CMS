@@ -31,7 +31,17 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 ## How to run Pass 2 / Pass UI
 1. Cloud / New Agent Chat riêng.
 2. Paste `PROMPT-SPRINT-N-FULL.md` **hoặc** `PROMPT-UI-N.md`.
-3. Ship PR → merge → sprint kế.
+3. Ship **PR** → merge tuần tự → sprint kế (tránh hai agent push `main` cùng lúc).
+
+## Parallel Pass 2 ∥ Pass UI (coordinator)
+| OK | Không OK |
+|----|----------|
+| Dev song song: S-FULL API vs U-sprint UI | Hai deploy / hai push `main` xen kẽ |
+| UI chỉ `apps/web` (+ proxy nhẹ); thiếu API → follow-up | UI sửa money path Pass 2 |
+| S-FULL không đụng screens/BFF | U2 trước khi U1 Done (trong Pass UI) |
+| Merge: API PR trước → rebase UI PR → merge UI | Cả hai `rsync` VPS cùng lúc |
+
+CI: `concurrency` hủy run cũ cùng `ref` — giữ run commit mới. Coordinator: Cancel deploy cũ nếu còn sống; smoke `/health` `/ready` `/`.
 
 ---
 

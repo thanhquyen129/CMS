@@ -51,6 +51,7 @@ public interface ILcmsDbContext
     DbSet<CollectionAllocation> CollectionAllocations { get; }
     DbSet<Reconciliation> Reconciliations { get; }
     DbSet<ReconciliationDetail> ReconciliationDetails { get; }
+    DbSet<BankFeedLine> BankFeedLines { get; }
     DbSet<Variance> Variances { get; }
     DbSet<FinancialException> Exceptions { get; }
     DbSet<Approval> Approvals { get; }

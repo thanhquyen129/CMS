@@ -127,6 +127,13 @@ public static class VietnameseUiTerms
         ["OPEN_VARIANCE_COUNT"] = "Số chênh lệch đang mở",
         ["OVERDUE_EXCEPTION_COUNT"] = "Số ngoại lệ quá hạn",
         ["RECONCILIATION_QUEUE"] = "Hàng đợi đối soát",
+        ["BANK_FEED"] = "Sao kê ngân hàng",
+        ["BANK_FEED_LINE"] = "Dòng sao kê",
+        ["BANK_FEED_UNMATCHED"] = "Chưa đối soát",
+        ["BANK_FEED_MATCHED"] = "Đã đối soát",
+        ["BANK_FEED_IGNORED"] = "Đã bỏ qua",
+        ["BANK_CREDIT"] = "Thu vào",
+        ["BANK_DEBIT"] = "Chi ra",
 
         // Financial documents (D07 / E08) — Received ≠ Accepted ≠ Matched
         ["FINANCIAL_DOCUMENT"] = "Chứng từ tài chính",

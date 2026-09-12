@@ -38,6 +38,7 @@ public sealed class ReconciliationDetailWriter : IReconciliationDetailWriter
         ReconciliationObjectTypes.Document,
         ReconciliationObjectTypes.AccountsPayable,
         ReconciliationObjectTypes.AccountsReceivable,
+        ReconciliationObjectTypes.BankLine,
         ReconciliationObjectTypes.Other
     };
 
@@ -130,6 +131,21 @@ public sealed class ReconciliationDetailWriter : IReconciliationDetailWriter
         _db.ReconciliationDetails.Add(detail);
         await _db.SaveChangesAsync(cancellationToken);
 
+        if (normalizedSourceType == ReconciliationObjectTypes.BankLine
+            && lineStatus == ReconciliationDetailStatuses.Matched)
+        {
+            var bankLine = await _db.BankFeedLines
+                .FirstOrDefaultAsync(x => x.Id == sourceId, cancellationToken);
+            if (bankLine is not null
+                && string.Equals(bankLine.Status, BankFeedLineStatuses.Unmatched, StringComparison.OrdinalIgnoreCase))
+            {
+                bankLine.Status = BankFeedLineStatuses.Matched;
+                bankLine.MatchedReconciliationDetailId = detail.Id;
+                bankLine.MatchedAt = DateTimeOffset.UtcNow;
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+        }
+
         // Auto-create Variance for unmatched / residual delta (never Exception).
         if (varianceAmount != 0m || lineStatus == ReconciliationDetailStatuses.Unmatched)
         {
@@ -182,6 +198,8 @@ public sealed class ReconciliationDetailWriter : IReconciliationDetailWriter
             ReconciliationObjectTypes.Document => await _db.FinancialDocuments.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ReconciliationObjectTypes.AccountsPayable => await _db.AccountsPayable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ReconciliationObjectTypes.AccountsReceivable => await _db.AccountsReceivable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ReconciliationObjectTypes.BankLine => await _db.BankFeedLines.AsNoTracking()
+                .AnyAsync(x => x.Id == objectId && x.Status == BankFeedLineStatuses.Unmatched, cancellationToken),
             ReconciliationObjectTypes.Other => true,
             _ => false
         };

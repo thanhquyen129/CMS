@@ -34,6 +34,7 @@ public sealed class AddReconciliationDetailBatchCommandValidator
         ReconciliationObjectTypes.Document,
         ReconciliationObjectTypes.AccountsPayable,
         ReconciliationObjectTypes.AccountsReceivable,
+        ReconciliationObjectTypes.BankLine,
         ReconciliationObjectTypes.Other
     };
 

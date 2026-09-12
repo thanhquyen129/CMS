@@ -79,6 +79,12 @@ public static class FinancialControlEndpoints
             return Results.Created($"/api/reconciliations/{id}/details/batch", new { ids });
         });
 
+        reconciliations.MapPost("/{id:guid}/complete", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new CompleteReconciliationCommand(id), ct);
+            return Results.NoContent();
+        });
+
         var variances = app.MapGroup("/api/variances").WithTags("Variances");
 
         variances.MapGet("/", async (string? status, ISender sender, CancellationToken ct) =>

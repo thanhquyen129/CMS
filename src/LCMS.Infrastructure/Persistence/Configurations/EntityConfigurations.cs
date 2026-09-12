@@ -1488,3 +1488,26 @@ internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outb
         builder.HasIndex(e => new { e.TenantId, e.Topic, e.EnqueuedAt });
     }
 }
+
+internal sealed class BankFeedLineConfiguration : IEntityTypeConfiguration<BankFeedLine>
+{
+    public void Configure(EntityTypeBuilder<BankFeedLine> builder)
+    {
+        builder.ToTable("bank_feed_lines");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ValueDate).IsRequired();
+        builder.Property(e => e.Amount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Direction).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.BankReference).HasMaxLength(128);
+        builder.Property(e => e.CounterpartyName).HasMaxLength(256);
+        builder.Property(e => e.Description).HasMaxLength(2048);
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.IgnoreReason).HasMaxLength(2048);
+
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.ValueDate });
+        builder.HasIndex(e => new { e.TenantId, e.BankReference });
+        builder.HasIndex(e => new { e.TenantId, e.MatchedReconciliationDetailId });
+    }
+}

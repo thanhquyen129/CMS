@@ -11,7 +11,9 @@ type NavKey =
   | "settlements"
   | "financial-closes"
   | "exceptions"
-  | "approvals";
+  | "approvals"
+  | "reconciliations"
+  | "bank-feed";
 
 type AppShellProps = {
   terms: TerminologyMap;
@@ -31,6 +33,8 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
   const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
   const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
+  const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
+  const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
 
   return (
     <div className="shell">
@@ -65,6 +69,12 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
             {paymentLabel} / {collectionLabel}
           </Link>
           <Link
+            className={active === "bank-feed" ? "active" : undefined}
+            href="/bank-feed"
+          >
+            {bankFeedLabel}
+          </Link>
+          <Link
             className={active === "financial-closes" ? "active" : undefined}
             href="/financial-closes"
           >
@@ -81,6 +91,12 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
             href="/queues/approvals"
           >
             {approvalQueueLabel}
+          </Link>
+          <Link
+            className={active === "reconciliations" ? "active" : undefined}
+            href="/queues/reconciliations"
+          >
+            {reconQueueLabel}
           </Link>
         </nav>
       </aside>

@@ -55,5 +55,6 @@ public static class ReconciliationObjectTypes
     public const string Document = "document";
     public const string AccountsPayable = "accounts_payable";
     public const string AccountsReceivable = "accounts_receivable";
+    public const string BankLine = "bank_line";
     public const string Other = "other";
 }

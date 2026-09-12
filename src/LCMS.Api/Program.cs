@@ -129,6 +129,7 @@ try
     app.MapExposureApArEndpoints();
     app.MapSettlementEndpoints();
     app.MapFinancialControlEndpoints();
+    app.MapBankFeedEndpoints();
     app.MapFinancialCloseEndpoints();
     app.MapDashboardReportingEndpoints();
     app.MapAuditIntegrationEndpoints();

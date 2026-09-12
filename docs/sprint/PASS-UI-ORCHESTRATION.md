@@ -20,9 +20,10 @@
 ## Follow-ups (not blocking)
 - ~~Match UI, reverse allocation, write-off~~ → Done
 - ~~Queue decide (approve/reject + exception resolve)~~ → Done (`UI-QUEUE-DECIDE-DOD.md`)
-- Manual reconciliation session UI (`/api/reconciliations`)
-- Bank feed (cần backend)
+- ~~Manual reconciliation session UI (`/api/reconciliations`)~~ → Done (`UI-RECON-BANKFEED-DOD.md`)
+- ~~Bank feed (cần backend)~~ → Done thin manual (`ADR-0013`, `/bank-feed`)
 - `billId` filter on document list DTO
+- Write-off approval gate · CSV/open-banking bank sync
 - Actions race → prefer serialize deploy / `--no-cache web` when UI drifts
 
 ## Vá lỗi theo sprint

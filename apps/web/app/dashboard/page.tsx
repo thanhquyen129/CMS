@@ -21,6 +21,7 @@ export default async function DashboardPage() {
   const billLabel = term(terms, "BILL", "Bill");
   const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
+  const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
   const overdueLabel = term(terms, "OVERDUE_EXCEPTION_COUNT", "Số ngoại lệ quá hạn");
   const openVarianceLabel = term(terms, "OPEN_VARIANCE_COUNT", "Số chênh lệch đang mở");
   const bestAvailableLabel = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
@@ -30,6 +31,7 @@ export default async function DashboardPage() {
   const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
   const asOfLabel = term(terms, "AS_OF", "Tại thời điểm");
   const rollUpLabel = term(terms, "BASE_CURRENCY_ROLLUP", "Cộng gộp theo tiền tệ cơ sở");
+  const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
 
   const result = await getDashboardSummary();
 
@@ -38,8 +40,8 @@ export default async function DashboardPage() {
       <section className="panel panel-wide">
         <h1>{summaryLabel}</h1>
         <p className="lede">
-          Việc cần xử lý trên {dashboardLabel}: ngoại lệ, phê duyệt, và tổng{" "}
-          {bestAvailableLabel} theo tiền tệ (projection — không phải sổ cái).
+          Việc cần xử lý trên {dashboardLabel}: ngoại lệ, phê duyệt, đối soát, và
+          tổng {bestAvailableLabel} theo tiền tệ (projection — không phải sổ cái).
         </p>
 
         {!result.ok ? (
@@ -71,6 +73,15 @@ export default async function DashboardPage() {
                 <span className="stat-value">{result.data.pendingApprovalCount}</span>
                 <span className="stat-hint">Mở hàng đợi phê duyệt</span>
               </Link>
+              <Link
+                className="stat-card"
+                href="/queues/reconciliations"
+                role="listitem"
+              >
+                <span className="stat-label">{reconQueueLabel}</span>
+                <span className="stat-value">→</span>
+                <span className="stat-hint">Phiên đang mở</span>
+              </Link>
               <div className="stat-card stat-card-static" role="listitem">
                 <span className="stat-label">{overdueLabel}</span>
                 <span
@@ -97,16 +108,31 @@ export default async function DashboardPage() {
                   Mở danh sách {billLabel}
                 </Link>
               </div>
-              <div className="stat-card stat-card-static" role="listitem">
+              <Link
+                className="stat-card"
+                href="/queues/reconciliations"
+                role="listitem"
+              >
                 <span className="stat-label">{openVarianceLabel}</span>
                 <span className="stat-value">{result.data.openVarianceCount}</span>
-                <span className="stat-hint">Chỉ đếm — chi tiết ở sprint sau</span>
-              </div>
+                <span className="stat-hint">Xem phiên đối soát</span>
+              </Link>
               <div className="stat-card stat-card-static" role="listitem">
                 <span className="stat-label">{closeLabel} đang mở</span>
                 <span className="stat-value">{result.data.openCloseCount}</span>
-                <span className="stat-hint">Không mở wizard chốt ở U3</span>
+                <Link className="stat-hint row-link" href="/financial-closes">
+                  Mở sổ chốt
+                </Link>
               </div>
+              <Link
+                className="stat-card"
+                href="/bank-feed?status=unmatched"
+                role="listitem"
+              >
+                <span className="stat-label">{bankFeedLabel}</span>
+                <span className="stat-value">→</span>
+                <span className="stat-hint">Dòng chưa đối soát</span>
+              </Link>
             </div>
 
             <h2 className="section-title">{bestAvailableLabel} theo tiền tệ</h2>

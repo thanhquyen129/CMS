@@ -30,6 +30,7 @@ public sealed class AddReconciliationDetailCommandValidator : AbstractValidator<
         ReconciliationObjectTypes.Document,
         ReconciliationObjectTypes.AccountsPayable,
         ReconciliationObjectTypes.AccountsReceivable,
+        ReconciliationObjectTypes.BankLine,
         ReconciliationObjectTypes.Other
     };
 

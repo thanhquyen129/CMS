@@ -1,5 +1,31 @@
 # Handoff
 
+## 2026-09-12 — Reconciliation UI + bank feed thin
+
+### User
+Tiếp theo: reconciliation UI (API sẵn) · bank feed (cần backend).
+
+### Done
+- UI đối soát: `/queues/reconciliations`, `/reconciliations`, `/new`, `/{id}` — mở phiên, thêm dòng, hoàn tất.
+- `POST /api/reconciliations/{id}/complete`.
+- Bank feed (ADR-0013): `bank_feed_lines` + create/list/ignore; UI `/bank-feed`.
+- `sourceType=bank_line` khi khớp đủ → dòng sao kê `matched`.
+- DoD `UI-RECON-BANKFEED-DOD.md`; test `BankFeedAndCompleteReconciliationTests`.
+
+### Files
+- Domain/App/Api: BankFeed*, CompleteReconciliation, ReconciliationDetailWriter, migration `BankFeedLines`
+- `apps/web`: reconciliations + bank-feed pages/BFF/components; AppShell/middleware/dashboard
+- `docs/adr/ADR-0013-bank-feed-lines.md`, `docs/sprint/UI-RECON-BANKFEED-DOD.md`
+
+### Verify
+- `dotnet test --filter BankFeedAndComplete` (2 pass)
+- `npm run build` apps/web
+
+### Follow-ups
+- Write-off approval gate · CSV/open-banking sync · `billId` filter document list · period close Strict stress
+
+---
+
 ## 2026-09-12 — Queue decide: approve/reject + exception resolve
 
 ### User

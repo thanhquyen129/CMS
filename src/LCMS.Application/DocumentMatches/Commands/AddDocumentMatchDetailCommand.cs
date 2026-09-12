@@ -1,9 +1,11 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialDocuments;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.DocumentMatches.Commands;
 
@@ -37,18 +39,23 @@ public sealed class AddDocumentMatchDetailCommandValidator : AbstractValidator<A
 }
 
 /// <summary>
-/// Adds N:N match detail. Enforces C-007 (no over-match; tolerance stub = 0).
+/// Adds N:N match detail. Enforces method shape + C-007 tolerance policy.
 /// Links only — never creates Cost/Revenue (C-003/C-004).
 /// </summary>
 public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDocumentMatchDetailCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly DocumentOptions _options;
 
-    public AddDocumentMatchDetailCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public AddDocumentMatchDetailCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IOptions<DocumentOptions> options)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _options = options.Value;
     }
 
     public async Task<Guid> Handle(AddDocumentMatchDetailCommand request, CancellationToken cancellationToken)
@@ -68,14 +75,26 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
             throw new ConflictAppException("Chỉ thêm chi tiết khớp khi phiên ở trạng thái nháp.");
         }
 
+        EnsureMethodTargets(match.MatchMethod, request);
+
         var amount = decimal.Round(request.MatchedAmount, 4, MidpointRounding.AwayFromZero);
-        var tolerance = match.ToleranceAmount; // stub 0
 
         var sourceLine = await _db.FinancialDocumentLines
             .FirstOrDefaultAsync(l => l.Id == request.SourceLineId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy dòng chứng từ nguồn.");
 
-        await EnsureOpenAmountAllowsAsync(sourceLine, amount, tolerance, cancellationToken);
+        var sourceDocument = await _db.FinancialDocuments
+            .FirstOrDefaultAsync(d => d.Id == sourceLine.DocumentId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy chứng từ nguồn.");
+
+        EnsureDocumentMatchable(sourceDocument);
+
+        await EnsureOpenAmountAllowsAsync(
+            sourceLine,
+            amount,
+            match.ToleranceAmount,
+            match.TolerancePercent,
+            cancellationToken);
 
         FinancialDocumentLine? targetLine = null;
         if (request.TargetLineId.HasValue)
@@ -89,12 +108,23 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
                 .FirstOrDefaultAsync(l => l.Id == request.TargetLineId, cancellationToken)
                 ?? throw new NotFoundAppException("Không tìm thấy dòng chứng từ đích.");
 
+            var targetDocument = await _db.FinancialDocuments
+                .FirstOrDefaultAsync(d => d.Id == targetLine.DocumentId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy chứng từ đích.");
+
+            EnsureDocumentMatchable(targetDocument);
+
             if (!string.Equals(sourceLine.CurrencyCode, targetLine.CurrencyCode, StringComparison.OrdinalIgnoreCase))
             {
                 throw new ConflictAppException("Không khớp khác tiền tệ (C-014).");
             }
 
-            await EnsureOpenAmountAllowsAsync(targetLine, amount, tolerance, cancellationToken);
+            await EnsureOpenAmountAllowsAsync(
+                targetLine,
+                amount,
+                match.ToleranceAmount,
+                match.TolerancePercent,
+                cancellationToken);
         }
 
         if (request.TargetCostId.HasValue)
@@ -127,7 +157,8 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
             TargetLineId = targetLine?.Id,
             TargetCostId = request.TargetCostId,
             TargetRevenueId = request.TargetRevenueId,
-            MatchedAmount = amount
+            MatchedAmount = amount,
+            DetailStatus = DocumentMatchDetailStatuses.Active
         };
 
         _db.DocumentMatchDetails.Add(detail);
@@ -149,19 +180,77 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
         return detail.Id;
     }
 
+    private static void EnsureMethodTargets(string matchMethod, AddDocumentMatchDetailCommand request)
+    {
+        if (string.Equals(matchMethod, DocumentMatchMethods.LineToLine, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!request.TargetLineId.HasValue || request.TargetCostId.HasValue || request.TargetRevenueId.HasValue)
+            {
+                throw new ConflictAppException("Phương thức line_to_line chỉ cho phép khớp dòng ↔ dòng.");
+            }
+
+            return;
+        }
+
+        if (string.Equals(matchMethod, DocumentMatchMethods.LineToCost, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!request.TargetCostId.HasValue || request.TargetLineId.HasValue || request.TargetRevenueId.HasValue)
+            {
+                throw new ConflictAppException("Phương thức line_to_cost chỉ cho phép liên kết dòng ↔ chi phí (C-003).");
+            }
+
+            return;
+        }
+
+        if (string.Equals(matchMethod, DocumentMatchMethods.LineToRevenue, StringComparison.OrdinalIgnoreCase))
+        {
+            if (!request.TargetRevenueId.HasValue || request.TargetLineId.HasValue || request.TargetCostId.HasValue)
+            {
+                throw new ConflictAppException("Phương thức line_to_revenue chỉ cho phép liên kết dòng ↔ doanh thu (C-004).");
+            }
+
+            return;
+        }
+
+        throw new ConflictAppException("Phương thức khớp không được hỗ trợ.");
+    }
+
+    private void EnsureDocumentMatchable(FinancialDocument document)
+    {
+        if (!string.Equals(document.RecordStatus, FinancialDocumentRecordStatuses.Active, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Không khớp chứng từ đã hủy hoặc vô hiệu.");
+        }
+
+        if (!string.Equals(document.ReceiptStatus, FinancialDocumentReceiptStatuses.Received, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Chỉ khớp chứng từ đã nhận.");
+        }
+
+        if (_options.RequireAcceptBeforeMatch
+            && !string.Equals(document.AcceptanceStatus, FinancialDocumentAcceptanceStatuses.Accepted, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Phải chấp nhận chứng từ trước khi khớp (Received ≠ Accepted).");
+        }
+    }
+
     private async Task EnsureOpenAmountAllowsAsync(
         FinancialDocumentLine line,
         decimal additional,
-        decimal tolerance,
+        decimal toleranceAbsolute,
+        decimal tolerancePercent,
         CancellationToken cancellationToken)
     {
         var amounts = await _db.DocumentMatchDetails.AsNoTracking()
-            .Where(d => d.SourceLineId == line.Id || d.TargetLineId == line.Id)
+            .Where(d =>
+                (d.SourceLineId == line.Id || d.TargetLineId == line.Id)
+                && d.DetailStatus == DocumentMatchDetailStatuses.Active)
             .Select(d => d.MatchedAmount)
             .ToListAsync(cancellationToken);
         var alreadyMatched = amounts.Sum();
 
         var openAmount = line.Amount - alreadyMatched;
+        var tolerance = DocumentMatchTolerance.EffectiveTolerance(line.Amount, toleranceAbsolute, tolerancePercent);
         if (additional > openAmount + tolerance)
         {
             throw new ConflictAppException(

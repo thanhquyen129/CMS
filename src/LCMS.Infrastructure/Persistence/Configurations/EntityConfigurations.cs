@@ -807,6 +807,7 @@ internal sealed class FinancialDocumentConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.AcceptanceStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.MatchingStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.CancelReason).HasMaxLength(512);
         builder.Property(e => e.Notes).HasMaxLength(2048);
         builder.Property(e => e.SourceSystem).HasMaxLength(64);
         builder.Property(e => e.ExternalId).HasMaxLength(128);
@@ -858,7 +859,9 @@ internal sealed class DocumentMatchConfiguration : IEntityTypeConfiguration<Docu
         builder.Property(e => e.MatchStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.VersionNo).IsRequired();
         builder.Property(e => e.ToleranceAmount).HasPrecision(18, 4);
+        builder.Property(e => e.TolerancePercent).HasPrecision(18, 4);
         builder.Property(e => e.Notes).HasMaxLength(1024);
+        builder.Property(e => e.CancelReason).HasMaxLength(512);
 
         builder.HasIndex(e => new { e.TenantId, e.PrimaryDocumentId, e.VersionNo });
 
@@ -879,10 +882,13 @@ internal sealed class DocumentMatchDetailConfiguration : IEntityTypeConfiguratio
         builder.Property(e => e.MatchId).IsRequired();
         builder.Property(e => e.SourceLineId).IsRequired();
         builder.Property(e => e.MatchedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.DetailStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ReverseReason).HasMaxLength(512);
 
         builder.HasIndex(e => new { e.TenantId, e.MatchId });
         builder.HasIndex(e => new { e.TenantId, e.SourceLineId });
         builder.HasIndex(e => new { e.TenantId, e.TargetLineId });
+        builder.HasIndex(e => new { e.TenantId, e.DetailStatus });
 
         builder.HasOne(e => e.Match)
             .WithMany()

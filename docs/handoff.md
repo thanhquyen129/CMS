@@ -1,6 +1,38 @@
 # Handoff
 
+## 2026-09-12 — Sprint 6 FULL Financial Documents (Pass 2)
+
+### User
+Pass 2 Sprint 6 FULL: match methods line_to_line/line_to_cost/line_to_revenue (link-only C-003/C-004); tolerance policy; accept-before-match; duplicate control; reverse/cancel match detail; tests + SPRINT-6-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Match methods enforce target shape; Cost/Revenue links never invent economic rows.
+- Tolerance: `Documents:DefaultToleranceAbsolute` / `DefaultTolerancePercent` (+ per-match override); C-007 beyond effective tolerance → 409 VI.
+- Accept-before-match gate (`RequireAcceptBeforeMatch` default true); soft cancel/void document + cancel match session; reverse match detail restores open amounts (RV-003).
+- Duplicate control on active (type, document_no, counterparty) — IDX-006 / BR-FIN-023.
+- `GET /api/financial-documents/open-amounts`; reverse/cancel APIs.
+- Migration `Sprint6Full_FinancialDocuments`; ADR-0005.
+- Tests: `Sprint6FullFinancialDocumentTests` (3); Pass 1 Sprint6 updated for methods/accept; suite **74 passed**.
+- DoD: `docs/sprint/SPRINT-6-FULL-DOD.md`.
+
+### Files / API / Config
+- APIs: `/api/document-matches` (methods+tolerance), `.../details/{id}/reverse`, `.../cancel`; `/api/financial-documents/open-amounts`, `.../{id}/cancel`
+- Application: `DocumentOptions`, match/receive/cancel/reverse commands; queries open amounts
+- Config: `Documents` section in `appsettings.json`
+- Migration: `20260912020613_Sprint6Full_FinancialDocuments`
+- ADR: `docs/adr/ADR-0005-document-match-tolerance-accept.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → **74 passed**
+
+### Deferred / Next
+- Pass 2 Sprint 7 FULL Exposure/AP/AR
+- Auto-match engine; e-invoice; Next.js Documents UI
+
+---
+
 ## 2026-09-11 — Sprint 5 FULL Revenue & Profitability (Pass 2)
+
 
 ### User
 Pass 2 Sprint 5 FULL: Revenue FX stub + optional confirm approval threshold (parity Cost FULL); profitability view API + profile enhancements; C-004 hardened; tests green; SPRINT-5-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.

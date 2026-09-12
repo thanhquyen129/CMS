@@ -181,3 +181,75 @@ public sealed class ListFinancialDocumentsQueryHandler
             .ToListAsync(cancellationToken);
     }
 }
+
+public sealed record OpenMatchAmountDto(
+    Guid DocumentId,
+    string DocumentNo,
+    string DocumentType,
+    Guid LineId,
+    int LineNo,
+    string? Description,
+    decimal Amount,
+    decimal MatchedAmount,
+    decimal OpenAmount,
+    string CurrencyCode);
+
+public sealed record ListOpenMatchAmountsQuery(
+    Guid? DocumentId = null,
+    bool OnlyOpen = true) : IRequest<IReadOnlyList<OpenMatchAmountDto>>;
+
+public sealed class ListOpenMatchAmountsQueryHandler
+    : IRequestHandler<ListOpenMatchAmountsQuery, IReadOnlyList<OpenMatchAmountDto>>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public ListOpenMatchAmountsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<IReadOnlyList<OpenMatchAmountDto>> Handle(
+        ListOpenMatchAmountsQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var query =
+            from line in _db.FinancialDocumentLines.AsNoTracking()
+            join doc in _db.FinancialDocuments.AsNoTracking() on line.DocumentId equals doc.Id
+            where doc.RecordStatus == "active"
+            select new { line, doc };
+
+        if (request.DocumentId.HasValue)
+        {
+            var documentId = request.DocumentId.Value;
+            query = query.Where(x => x.doc.Id == documentId);
+        }
+
+        if (request.OnlyOpen)
+        {
+            query = query.Where(x => x.line.Amount - x.line.MatchedAmount > 0m);
+        }
+
+        return await query
+            .OrderBy(x => x.doc.DocumentNo)
+            .ThenBy(x => x.line.LineNo)
+            .Select(x => new OpenMatchAmountDto(
+                x.doc.Id,
+                x.doc.DocumentNo,
+                x.doc.DocumentType,
+                x.line.Id,
+                x.line.LineNo,
+                x.line.Description,
+                x.line.Amount,
+                x.line.MatchedAmount,
+                x.line.Amount - x.line.MatchedAmount,
+                x.line.CurrencyCode))
+            .ToListAsync(cancellationToken);
+    }
+}

@@ -4,6 +4,7 @@ using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.FinancialDocuments.Commands;
 
@@ -64,15 +65,18 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly DocumentOptions _options;
 
     public ReceiveFinancialDocumentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IOptions<DocumentOptions> options)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _options = options.Value;
     }
 
     public async Task<Guid> Handle(ReceiveFinancialDocumentCommand request, CancellationToken cancellationToken)
@@ -83,6 +87,8 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var documentType = request.DocumentType.Trim().ToLowerInvariant();
+        var documentNo = request.DocumentNo.Trim();
 
         if (request.BillId.HasValue)
         {
@@ -106,12 +112,31 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
             }
         }
 
+        if (_options.EnforceDuplicateControl)
+        {
+            var duplicateQuery = _db.FinancialDocuments.AsNoTracking()
+                .Where(d =>
+                    d.DocumentType == documentType
+                    && d.DocumentNo == documentNo
+                    && d.RecordStatus == FinancialDocumentRecordStatuses.Active);
+
+            duplicateQuery = request.CounterpartyId.HasValue
+                ? duplicateQuery.Where(d => d.CounterpartyId == request.CounterpartyId)
+                : duplicateQuery.Where(d => d.CounterpartyId == null);
+
+            if (await duplicateQuery.AnyAsync(cancellationToken))
+            {
+                throw new ConflictAppException(
+                    "Chứng từ trùng loại/số/đối tác trong thuê bao (IDX-006 / kiểm soát trùng).");
+            }
+        }
+
         var now = DateTimeOffset.UtcNow;
         var document = new FinancialDocument
         {
             TenantId = tenantId,
-            DocumentType = request.DocumentType.Trim().ToLowerInvariant(),
-            DocumentNo = request.DocumentNo.Trim(),
+            DocumentType = documentType,
+            DocumentNo = documentNo,
             Direction = request.Direction.Trim().ToLowerInvariant(),
             TotalAmount = decimal.Round(request.TotalAmount, 4, MidpointRounding.AwayFromZero),
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
@@ -127,7 +152,7 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
             MatchingStatus = FinancialDocumentMatchingStatuses.Unmatched,
             ReceivedAt = now,
             ReceivedBy = _user.UserId,
-            RecordStatus = "active"
+            RecordStatus = FinancialDocumentRecordStatuses.Active
         };
 
         _db.FinancialDocuments.Add(document);

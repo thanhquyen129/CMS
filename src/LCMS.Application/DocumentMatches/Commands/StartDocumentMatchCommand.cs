@@ -1,40 +1,59 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialDocuments;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.DocumentMatches.Commands;
 
 public sealed record StartDocumentMatchCommand(
     Guid? PrimaryDocumentId,
     string? MatchMethod,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    decimal? ToleranceAmount,
+    decimal? TolerancePercent) : IRequest<Guid>;
 
 public sealed class StartDocumentMatchCommandValidator : AbstractValidator<StartDocumentMatchCommand>
 {
     public StartDocumentMatchCommandValidator()
     {
         RuleFor(x => x.MatchMethod)
-            .Must(m => m is null || string.Equals(m, DocumentMatchMethods.Manual, StringComparison.OrdinalIgnoreCase))
-            .WithMessage("Phương thức khớp Pass 1 chỉ hỗ trợ manual.");
+            .NotEmpty().WithMessage("Phương thức khớp không được để trống.")
+            .Must(m => m is not null && DocumentMatchMethods.All.Contains(m.Trim()))
+            .WithMessage("Phương thức khớp phải là line_to_line, line_to_cost hoặc line_to_revenue.");
         RuleFor(x => x.Notes).MaximumLength(1024).When(x => x.Notes is not null);
+        RuleFor(x => x.ToleranceAmount)
+            .GreaterThanOrEqualTo(0).When(x => x.ToleranceAmount.HasValue)
+            .WithMessage("Dung sai tuyệt đối không được âm.");
+        RuleFor(x => x.TolerancePercent)
+            .GreaterThanOrEqualTo(0).When(x => x.TolerancePercent.HasValue)
+            .WithMessage("Dung sai phần trăm không được âm.")
+            .LessThanOrEqualTo(100).When(x => x.TolerancePercent.HasValue)
+            .WithMessage("Dung sai phần trăm không được vượt quá 100.");
     }
 }
 
 /// <summary>
-/// Starts a draft match session. Tolerance stub = 0 (C-007). Does not create Cost/Revenue.
+/// Starts a draft match session with explicit method + tolerance policy (C-007).
+/// Does not create Cost/Revenue (C-003/C-004). Requires Accept before match when configured.
 /// </summary>
 public sealed class StartDocumentMatchCommandHandler : IRequestHandler<StartDocumentMatchCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly DocumentOptions _options;
 
-    public StartDocumentMatchCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public StartDocumentMatchCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IOptions<DocumentOptions> options)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _options = options.Value;
     }
 
     public async Task<Guid> Handle(StartDocumentMatchCommand request, CancellationToken cancellationToken)
@@ -46,6 +65,7 @@ public sealed class StartDocumentMatchCommandHandler : IRequestHandler<StartDocu
 
         var tenantId = _tenantContext.TenantId!.Value;
         int versionNo = 1;
+        var method = request.MatchMethod!.Trim().ToLowerInvariant();
 
         if (request.PrimaryDocumentId.HasValue)
         {
@@ -53,10 +73,7 @@ public sealed class StartDocumentMatchCommandHandler : IRequestHandler<StartDocu
                 .FirstOrDefaultAsync(d => d.Id == request.PrimaryDocumentId, cancellationToken)
                 ?? throw new NotFoundAppException("Không tìm thấy chứng từ tài chính.");
 
-            if (!string.Equals(document.ReceiptStatus, FinancialDocumentReceiptStatuses.Received, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new ConflictAppException("Chỉ khớp chứng từ đã nhận.");
-            }
+            EnsureDocumentMatchable(document);
 
             versionNo = (await _db.DocumentMatches
                 .Where(m => m.PrimaryDocumentId == document.Id)
@@ -68,15 +85,37 @@ public sealed class StartDocumentMatchCommandHandler : IRequestHandler<StartDocu
         {
             TenantId = tenantId,
             PrimaryDocumentId = request.PrimaryDocumentId,
-            MatchMethod = DocumentMatchMethods.Manual,
+            MatchMethod = method,
             MatchStatus = DocumentMatchStatuses.Draft,
             VersionNo = versionNo,
-            ToleranceAmount = 0m, // C-007 Pass 1 stub
+            ToleranceAmount = request.ToleranceAmount
+                ?? decimal.Round(_options.DefaultToleranceAbsolute, 4, MidpointRounding.AwayFromZero),
+            TolerancePercent = request.TolerancePercent
+                ?? decimal.Round(_options.DefaultTolerancePercent, 4, MidpointRounding.AwayFromZero),
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };
 
         _db.DocumentMatches.Add(match);
         await _db.SaveChangesAsync(cancellationToken);
         return match.Id;
+    }
+
+    private void EnsureDocumentMatchable(FinancialDocument document)
+    {
+        if (!string.Equals(document.RecordStatus, FinancialDocumentRecordStatuses.Active, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Không khớp chứng từ đã hủy hoặc vô hiệu.");
+        }
+
+        if (!string.Equals(document.ReceiptStatus, FinancialDocumentReceiptStatuses.Received, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Chỉ khớp chứng từ đã nhận.");
+        }
+
+        if (_options.RequireAcceptBeforeMatch
+            && !string.Equals(document.AcceptanceStatus, FinancialDocumentAcceptanceStatuses.Accepted, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Phải chấp nhận chứng từ trước khi khớp (Received ≠ Accepted).");
+        }
     }
 }

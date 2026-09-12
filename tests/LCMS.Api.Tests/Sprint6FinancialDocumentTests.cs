@@ -71,7 +71,7 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         var lineId = await AddLineAsync(tenantId, docId, 1000m, "Cước vận chuyển");
         var costId = await CreateDirectCostAsync(tenantId, billId, 1000m, "FREIGHT");
 
-        var matchId = await StartMatchAsync(tenantId, docId);
+        var matchId = await StartMatchAsync(tenantId, docId, "line_to_cost");
         using (var detail = new HttpRequestMessage(HttpMethod.Post, $"/api/document-matches/{matchId}/details")
         {
             Content = JsonContent.Create(new
@@ -125,10 +125,12 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         var billId = await CreateBillAsync(tenantId, "BL-OM", "freight");
         var docA = await ReceiveDocumentAsync(tenantId, billId, "DN-A", 500m);
         var docB = await ReceiveDocumentAsync(tenantId, billId, "INV-B", 500m);
+        await AcceptDocumentAsync(tenantId, docA);
+        await AcceptDocumentAsync(tenantId, docB);
         var lineA = await AddLineAsync(tenantId, docA, 500m, "DN line");
         var lineB = await AddLineAsync(tenantId, docB, 500m, "INV line");
 
-        var matchId = await StartMatchAsync(tenantId, docA);
+        var matchId = await StartMatchAsync(tenantId, docA, "line_to_line");
 
         using (var ok = new HttpRequestMessage(HttpMethod.Post, $"/api/document-matches/{matchId}/details")
         {
@@ -175,8 +177,9 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         var tenantB = await CreateTenantAsync("TN-DOC-B", "Doc B");
         var billId = await CreateBillAsync(tenantA, "BL-ISO-DOC", "freight");
         var docId = await ReceiveDocumentAsync(tenantA, billId, "INV-ISO", 100m);
+        await AcceptDocumentAsync(tenantA, docId);
         var lineId = await AddLineAsync(tenantA, docId, 100m, "line");
-        var matchId = await StartMatchAsync(tenantA, docId);
+        var matchId = await StartMatchAsync(tenantA, docId, "line_to_cost");
 
         using var getDoc = new HttpRequestMessage(HttpMethod.Get, $"/api/financial-documents/{docId}");
         getDoc.Headers.Add("X-Tenant-Id", tenantB.ToString());
@@ -258,11 +261,19 @@ public sealed class Sprint6FinancialDocumentTests : IAsyncLifetime
         return (await res.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
     }
 
-    private async Task<Guid> StartMatchAsync(Guid tenantId, Guid primaryDocumentId)
+    private async Task AcceptDocumentAsync(Guid tenantId, Guid documentId)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"/api/financial-documents/{documentId}/accept");
+        req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+    }
+
+    private async Task<Guid> StartMatchAsync(Guid tenantId, Guid primaryDocumentId, string matchMethod)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/document-matches")
         {
-            Content = JsonContent.Create(new { primaryDocumentId, matchMethod = "manual" })
+            Content = JsonContent.Create(new { primaryDocumentId, matchMethod })
         };
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var res = await _client.SendAsync(req);

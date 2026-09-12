@@ -11,7 +11,10 @@ public sealed record DocumentMatchDetailDto(
     Guid? TargetLineId,
     Guid? TargetCostId,
     Guid? TargetRevenueId,
-    decimal MatchedAmount);
+    decimal MatchedAmount,
+    string DetailStatus,
+    DateTimeOffset? ReversedAt,
+    string? ReverseReason);
 
 public sealed record DocumentMatchDto(
     Guid Id,
@@ -20,8 +23,11 @@ public sealed record DocumentMatchDto(
     int VersionNo,
     Guid? PrimaryDocumentId,
     decimal ToleranceAmount,
+    decimal TolerancePercent,
     string? Notes,
     DateTimeOffset? ConfirmedAt,
+    DateTimeOffset? CancelledAt,
+    string? CancelReason,
     IReadOnlyList<DocumentMatchDetailDto> Details);
 
 public sealed record GetDocumentMatchByIdQuery(Guid Id) : IRequest<DocumentMatchDto>;
@@ -57,7 +63,10 @@ public sealed class GetDocumentMatchByIdQueryHandler : IRequestHandler<GetDocume
                 d.TargetLineId,
                 d.TargetCostId,
                 d.TargetRevenueId,
-                d.MatchedAmount))
+                d.MatchedAmount,
+                d.DetailStatus,
+                d.ReversedAt,
+                d.ReverseReason))
             .ToListAsync(cancellationToken);
 
         return new DocumentMatchDto(
@@ -67,8 +76,11 @@ public sealed class GetDocumentMatchByIdQueryHandler : IRequestHandler<GetDocume
             match.VersionNo,
             match.PrimaryDocumentId,
             match.ToleranceAmount,
+            match.TolerancePercent,
             match.Notes,
             match.ConfirmedAt,
+            match.CancelledAt,
+            match.CancelReason,
             details);
     }
 }

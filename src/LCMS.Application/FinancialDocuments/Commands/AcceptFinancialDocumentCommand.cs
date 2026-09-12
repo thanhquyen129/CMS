@@ -62,6 +62,11 @@ public sealed class AcceptFinancialDocumentCommandHandler : IRequestHandler<Acce
             throw new ConflictAppException("Chứng từ đã bị từ chối; không thể chấp nhận.");
         }
 
+        if (!string.Equals(document.RecordStatus, FinancialDocumentRecordStatuses.Active, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Không chấp nhận chứng từ đã hủy hoặc vô hiệu.");
+        }
+
         document.AcceptanceStatus = FinancialDocumentAcceptanceStatuses.Accepted;
         document.AcceptedAt = DateTimeOffset.UtcNow;
         document.AcceptedBy = _user.UserId;

@@ -5,6 +5,7 @@ namespace LCMS.Domain.Entities;
 /// <summary>
 /// Table: document_match_details (D07) — N:N detail matching.
 /// Targets: another document line, or stub link to existing Cost/Revenue (no invent).
+/// Reverse/cancel sets status — no hard delete (C-013 / RV-003).
 /// </summary>
 public sealed class DocumentMatchDetail : TenantEntityBase
 {
@@ -22,9 +23,22 @@ public sealed class DocumentMatchDetail : TenantEntityBase
 
     public decimal MatchedAmount { get; set; }
 
+    /// <summary>active | reversed</summary>
+    public string DetailStatus { get; set; } = DocumentMatchDetailStatuses.Active;
+
+    public DateTimeOffset? ReversedAt { get; set; }
+    public Guid? ReversedBy { get; set; }
+    public string? ReverseReason { get; set; }
+
     public DocumentMatch? Match { get; set; }
     public FinancialDocumentLine? SourceLine { get; set; }
     public FinancialDocumentLine? TargetLine { get; set; }
     public Cost? TargetCost { get; set; }
     public Revenue? TargetRevenue { get; set; }
+}
+
+public static class DocumentMatchDetailStatuses
+{
+    public const string Active = "active";
+    public const string Reversed = "reversed";
 }

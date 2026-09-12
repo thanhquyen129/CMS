@@ -37,12 +37,25 @@ public sealed class FinancialDocument : TenantEntityBase
     public DateTimeOffset? AcceptedAt { get; set; }
     public Guid? AcceptedBy { get; set; }
 
-    public string RecordStatus { get; set; } = "active";
+    /// <summary>active | cancelled | voided — soft cancel/void; no hard delete (C-013).</summary>
+    public string RecordStatus { get; set; } = FinancialDocumentRecordStatuses.Active;
+
+    public DateTimeOffset? CancelledAt { get; set; }
+    public Guid? CancelledBy { get; set; }
+    public string? CancelReason { get; set; }
+
     public string? Notes { get; set; }
     public string? SourceSystem { get; set; }
     public string? ExternalId { get; set; }
 
     public Bill? Bill { get; set; }
+}
+
+public static class FinancialDocumentRecordStatuses
+{
+    public const string Active = "active";
+    public const string Cancelled = "cancelled";
+    public const string Voided = "voided";
 }
 
 public static class FinancialDocumentTypes

@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
+using LCMS.Application.FinancialDocuments;
 using LCMS.Application.Identity;
 using LCMS.Application.Revenues;
 using MediatR;
@@ -23,11 +24,13 @@ public static class DependencyInjection
         {
             services.Configure<CostOptions>(configuration.GetSection(CostOptions.SectionName));
             services.Configure<RevenueOptions>(configuration.GetSection(RevenueOptions.SectionName));
+            services.Configure<DocumentOptions>(configuration.GetSection(DocumentOptions.SectionName));
         }
         else
         {
             services.AddOptions<CostOptions>();
             services.AddOptions<RevenueOptions>();
+            services.AddOptions<DocumentOptions>();
         }
 
         services.AddSingleton<ICostFxStub, CostFxStub>();

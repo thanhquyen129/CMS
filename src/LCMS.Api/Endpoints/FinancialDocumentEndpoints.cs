@@ -45,6 +45,18 @@ public static class FinancialDocumentEndpoints
             return Results.Ok(list);
         });
 
+        docs.MapGet("/open-amounts", async (
+            Guid? documentId,
+            bool? onlyOpen,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var list = await sender.Send(
+                new ListOpenMatchAmountsQuery(documentId, onlyOpen ?? true),
+                ct);
+            return Results.Ok(list);
+        });
+
         docs.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             var document = await sender.Send(new GetFinancialDocumentByIdQuery(id), ct);
@@ -54,6 +66,16 @@ public static class FinancialDocumentEndpoints
         docs.MapPost("/{id:guid}/accept", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             await sender.Send(new AcceptFinancialDocumentCommand(id), ct);
+            return Results.NoContent();
+        });
+
+        docs.MapPost("/{id:guid}/cancel", async (
+            Guid id,
+            CancelFinancialDocumentRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new CancelFinancialDocumentCommand(id, body.Reason, body.Void), ct);
             return Results.NoContent();
         });
 
@@ -81,7 +103,12 @@ public static class FinancialDocumentEndpoints
         matches.MapPost("/", async (StartDocumentMatchRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
-                new StartDocumentMatchCommand(body.PrimaryDocumentId, body.MatchMethod, body.Notes),
+                new StartDocumentMatchCommand(
+                    body.PrimaryDocumentId,
+                    body.MatchMethod,
+                    body.Notes,
+                    body.ToleranceAmount,
+                    body.TolerancePercent),
                 ct);
             return Results.Created($"/api/document-matches/{id}", new { id });
         });
@@ -90,6 +117,16 @@ public static class FinancialDocumentEndpoints
         {
             var match = await sender.Send(new GetDocumentMatchByIdQuery(id), ct);
             return Results.Ok(match);
+        });
+
+        matches.MapPost("/{id:guid}/cancel", async (
+            Guid id,
+            CancelDocumentMatchRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new CancelDocumentMatchCommand(id, body.Reason), ct);
+            return Results.NoContent();
         });
 
         matches.MapPost("/{id:guid}/details", async (
@@ -108,6 +145,17 @@ public static class FinancialDocumentEndpoints
                     body.MatchedAmount),
                 ct);
             return Results.Created($"/api/document-matches/{id}/details/{detailId}", new { id = detailId });
+        });
+
+        matches.MapPost("/{id:guid}/details/{detailId:guid}/reverse", async (
+            Guid id,
+            Guid detailId,
+            ReverseDocumentMatchDetailRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new ReverseDocumentMatchDetailCommand(id, detailId, body.Reason), ct);
+            return Results.NoContent();
         });
 
         return app;
@@ -135,10 +183,14 @@ public sealed record AddFinancialDocumentLineRequest(
     string? RevenueTypeCode,
     string? CurrencyCode);
 
+public sealed record CancelFinancialDocumentRequest(string Reason, bool Void = false);
+
 public sealed record StartDocumentMatchRequest(
     Guid? PrimaryDocumentId,
     string? MatchMethod,
-    string? Notes);
+    string? Notes,
+    decimal? ToleranceAmount,
+    decimal? TolerancePercent);
 
 public sealed record AddDocumentMatchDetailRequest(
     Guid SourceLineId,
@@ -146,3 +198,7 @@ public sealed record AddDocumentMatchDetailRequest(
     Guid? TargetCostId,
     Guid? TargetRevenueId,
     decimal MatchedAmount);
+
+public sealed record ReverseDocumentMatchDetailRequest(string Reason);
+
+public sealed record CancelDocumentMatchRequest(string Reason);

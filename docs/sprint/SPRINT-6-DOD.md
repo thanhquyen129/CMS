@@ -25,11 +25,12 @@ TD6: *Document intake/acceptance; line detail; N:N matching* — Epic **E08**.
 |------|--------|--------|
 | AP/AR recognition / exposures | Sprint 7 | Non-goal |
 | Settlement / payment allocation | Later | Non-goal |
-| Auto-match engine | Later | Manual only Pass 1 |
+| Auto-match engine | Later | Manual methods only Pass 1/2 |
 | E-invoice providers | Later | Non-goal |
-| Confirm match session workflow | Later | Draft + details sufficient for thin slice |
+| Confirm match session workflow | Later / S6 FULL partial | Draft + reverse/cancel in FULL; confirm workflow still deferred |
 | JWT / OIDC | Later | Keep header bootstrap |
 | Next.js UI | Later | API-only this sprint |
+| Tolerance policy + match methods + duplicate + accept gate | Sprint 6 FULL | Done in Pass 2 |
 
 ## Headers (bootstrap until JWT)
 

@@ -50,7 +50,14 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>CMS</h1>
+        <div className="brand" style={{ marginBottom: "1rem", padding: 0 }}>
+          <span className="brand-mark" aria-hidden="true" />
+          <div>
+            CMS
+            <small>Kiểm soát chi phí &amp; lợi nhuận</small>
+          </div>
+        </div>
+        <h1 className="sr-only">Đăng nhập CMS</h1>
         <p className="lede">Đăng nhập để mở shell kiểm soát tài chính.</p>
 
         {state === "error" && message ? (

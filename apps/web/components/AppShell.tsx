@@ -40,64 +40,73 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          CMS
-          <small>Kiểm soát chi phí &amp; lợi nhuận</small>
+          <span className="brand-mark" aria-hidden="true" />
+          <div>
+            CMS
+            <small>Kiểm soát chi phí &amp; lợi nhuận</small>
+          </div>
         </div>
         <nav className="nav" aria-label="Điều hướng chính">
-          <Link
-            className={active === "dashboard" ? "active" : undefined}
-            href="/dashboard"
-          >
-            {dashboardLabel}
-          </Link>
-          <Link className={active === "bills" ? "active" : undefined} href="/bills">
-            {billLabel}
-          </Link>
-          <Link
-            className={active === "documents" ? "active" : undefined}
-            href="/documents"
-          >
-            {docLabel}
-          </Link>
-          <Link className={active === "ap-ar" ? "active" : undefined} href="/ap-ar">
-            {apLabel} / {arLabel}
-          </Link>
-          <Link
-            className={active === "settlements" ? "active" : undefined}
-            href="/settlements"
-          >
-            {paymentLabel} / {collectionLabel}
-          </Link>
-          <Link
-            className={active === "bank-feed" ? "active" : undefined}
-            href="/bank-feed"
-          >
-            {bankFeedLabel}
-          </Link>
-          <Link
-            className={active === "financial-closes" ? "active" : undefined}
-            href="/financial-closes"
-          >
-            {closeLabel}
-          </Link>
-          <Link
-            className={active === "exceptions" ? "active" : undefined}
-            href="/queues/exceptions"
-          >
-            {exceptionQueueLabel}
-          </Link>
-          <Link
-            className={active === "approvals" ? "active" : undefined}
-            href="/queues/approvals"
-          >
-            {approvalQueueLabel}
-          </Link>
-          <Link
-            className={active === "reconciliations" ? "active" : undefined}
-            href="/queues/reconciliations"
-          >
-            {reconQueueLabel}
-          </Link>
+          <div className="nav-section">
+            <div className="nav-section-label">Chính</div>
+            <Link
+              className={active === "dashboard" ? "active" : undefined}
+              href="/dashboard"
+            >
+              {dashboardLabel}
+            </Link>
+            <Link className={active === "bills" ? "active" : undefined} href="/bills">
+              {billLabel}
+            </Link>
+            <Link
+              className={active === "documents" ? "active" : undefined}
+              href="/documents"
+            >
+              {docLabel}
+            </Link>
+            <Link className={active === "ap-ar" ? "active" : undefined} href="/ap-ar">
+              {apLabel} / {arLabel}
+            </Link>
+            <Link
+              className={active === "settlements" ? "active" : undefined}
+              href="/settlements"
+            >
+              {paymentLabel} / {collectionLabel}
+            </Link>
+            <Link
+              className={active === "bank-feed" ? "active" : undefined}
+              href="/bank-feed"
+            >
+              {bankFeedLabel}
+            </Link>
+            <Link
+              className={active === "financial-closes" ? "active" : undefined}
+              href="/financial-closes"
+            >
+              {closeLabel}
+            </Link>
+          </div>
+          <div className="nav-section">
+            <div className="nav-section-label">Hàng đợi</div>
+            <Link
+              className={active === "exceptions" ? "active" : undefined}
+              href="/queues/exceptions"
+            >
+              {exceptionQueueLabel}
+            </Link>
+            <Link
+              className={active === "approvals" ? "active" : undefined}
+              href="/queues/approvals"
+            >
+              {approvalQueueLabel}
+            </Link>
+            <Link
+              className={active === "reconciliations" ? "active" : undefined}
+              href="/queues/reconciliations"
+            >
+              {reconQueueLabel}
+            </Link>
+          </div>
         </nav>
       </aside>
       <div className="main">

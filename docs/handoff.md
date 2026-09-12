@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-12 — Soft-UI purple theme (Kubayar-inspired)
+
+### User
+Full restyle toàn web; khóa tím như mockup; layout soft-UI.
+
+### Done
+- Token CSS: accent `#5D5FEF`, bg `#F8F9FB`, radius ~14px / pill, shadow mềm.
+- Sidebar trắng + active pill tím; brand mark; nhóm nav Chính / Hàng đợi.
+- Topbar card; panel/btn/table/status/form/login đồng bộ soft-UI.
+- Giữ Be Vietnam Pro + nhãn CP6.5; không copy widget thẻ tín dụng trang trí.
+
+### Files
+- `apps/web/app/globals.css`
+- `apps/web/components/AppShell.tsx`
+- `apps/web/app/login/page.tsx`
+
+### Verify
+- `npm run build` apps/web
+
+### Follow-ups
+- Icon line-style cho nav (tùy chọn) · dark mode không làm
+
+---
+
 ## 2026-09-12 — Reconciliation UI + bank feed thin
 
 ### User

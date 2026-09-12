@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-09-12 — CI #58–#60 deploy fail: missing JWT signing key on VPS
+
+### User
+Những lỗi CI trên main giải quyết thế nào? Fix ngay hay đợi build sau?
+
+### Answer
+- Fail ở job **deploy** / step **Compose up on host**, không phải job `test` (PR xanh vì không chạy deploy).
+- Root cause: `/opt/cms/infra/.env` thiếu `Auth__Jwt__SigningKey` (compose bắt buộc kể từ Sprint 0 JWT). Đợi push sau **không** hết — cùng lỗi.
+- Fixed ngay trên `cms-sg-01`: thêm SigningKey + khôi phục `LCMS_DB_PASSWORD`; `compose up -d --build`. Verify `/health` `/ready` `/api/terminology` OK; `/` → 307 (web).
+- Secret chỉ trên host — không commit. Re-run Actions (optional) sẽ xanh sau khi `.env` đủ.
+
+### Next
+- Optional: Re-run failed workflow trên Actions tab để ghi nhận xanh.
+- Operator: set `Auth__Bootstrap__*` trên host nếu cần login UI-0.
+
+---
+
 ## 2026-09-12 — Pass UI / Sprint U0 Scaffold + login + proxy
 
 ### User

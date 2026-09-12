@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-09-12 — UAT UI-only VPS re-run Bill → Close = PASS
+
+### User
+Chạy lại UAT UI-only trên VPS — một vòng không Postman (Bill → Close) để xác nhận PASS thật, không chỉ DoD.
+
+### Done
+- Browser UAT trên `194.233.89.26` (BFF cookie, **không** Postman/JWT script).
+- Bill `UAT-UI-20260912-161500` → Cost confirm 1.1M → Revenue confirm 2.5M → doc accept+match → AP/AR recognize → payment/collection finalize → close **locked** + P&L 1.4M.
+- G1–G6 **PASS thật** (settlements hiện `billNo`; AP/AR Đã tất toán; close list Đã khóa).
+
+### Files
+- `docs/sprint/UAT-VPS-ONE-ROUND.md`, `UAT-VPS-ONE-ROUND-RESULT.json`
+
+### Verify
+- `/health` `/ready` OK; close `01a094e9-a71a-7408-b58b-11a68c461644` locked
+
+### Follow-ups
+- Write-off UI · reverse allocation · bank feed
+
+---
+
 ## 2026-09-12 — G6 FULL: Settlement `billNo`
 
 ### User

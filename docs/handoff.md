@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-12 — Next wave sau P01–P06: P07→P11
+
+### User
+đã xong từ P01 đến P05, lên checklist tiếp theo làm gì
+
+### Done
+- Checklist cập nhật: P01–P06 Done (P06 đã ship trước đó); wave tiếp **P07→P11**.
+- Next kickoff: **P07** Aging summary + dashboard tách quyền.
+
+### Next
+- P07 → P08 → P09 → P10 → P11 → rồi P12+
+
+---
+
 ## 2026-09-12 — P06 Dated fx_rates (Cost/Revenue/Settlement)
 
 ### User

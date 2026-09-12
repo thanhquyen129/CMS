@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — Sprint 11 FULL Financial Profile & Reporting (Pass 2)
+
+### User
+Pass 2 Sprint 11 FULL: asOf maturity reconstruct; dashboard FX roll-up + variance/overdue counts; queue filters; close snapshot P&L; tests + DoD + ADR + PR. Never secrets/alogex.
+
+### Done
+- Financial profile: asOf reconstructs Confirmed/Actual via `ConfirmedAt`/`ActualizedAt`; settlement outstanding from finalized allocations at asOf; residual limits on DTO note + DoD.
+- Dashboard: `OpenVarianceCount`, `OverdueExceptionCount`; optional `BaseCurrencyRollUp` via Cost/Revenue FX stub (ADR-0011).
+- Queues: exceptions (status/severity/overdue/objectType), approvals (status/objectType/requiredLevel), `GET /api/queues/reconciliations` stub.
+- Close P&L: `GET /api/financial-closes/{id}/pnl` derived from immutable snapshot metrics only.
+- Derived read-only — no totals written onto Bill. VI labels/errors.
+- Tests: `Sprint11FullFinancialProfileReportingTests` (4); suite **93 passed**.
+
+### Files / API
+- Profile: `GetBillFinancialProfileQuery`
+- Dashboard/queues: `GetDashboardSummaryQuery`, `ControlQueueQueries`, `DashboardReportingEndpoints`
+- P&L: `GetFinancialClosePnlQuery` + `FinancialCloseEndpoints`
+- ADR: `docs/adr/ADR-0011-dashboard-fx-rollup-close-pnl.md`
+- DoD: `docs/sprint/SPRINT-11-FULL-DOD.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` → **93 passed**
+
+### Deferred / Next
+- Pass 2 Sprint 12 Hardening FULL
+- Real FX table; Next.js dashboard UI
+
+---
+
 ## 2026-09-12 — Coordinator: S10 FULL merged → S11 FULL kickoff
 
 ### User

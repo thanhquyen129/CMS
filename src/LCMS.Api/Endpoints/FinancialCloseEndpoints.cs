@@ -60,6 +60,16 @@ public static class FinancialCloseEndpoints
             return Results.Ok(list);
         });
 
+        closes.MapGet("/{id:guid}/pnl", async (
+            Guid id,
+            Guid? snapshotId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var pnl = await sender.Send(new GetFinancialClosePnlQuery(id, snapshotId), ct);
+            return Results.Ok(pnl);
+        });
+
         var snapshots = app.MapGroup("/api/financial-close-snapshots").WithTags("FinancialCloseSnapshots");
 
         snapshots.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

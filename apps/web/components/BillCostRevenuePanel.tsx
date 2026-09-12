@@ -123,12 +123,17 @@ export function BillCostRevenuePanel({
               ? "Không thể thực hiện vì xung đột trạng thái. Tải lại trang và thử lại."
               : "Thao tác thất bại.");
         setError(msg);
-        if (res.status === 403) {
+        if (res.status === 403 || res.status === 409) {
           setBlocked((prev) => ({
             ...prev,
             [`${pending.kind}:${pending.action}:${pending.id}`]: true,
           }));
           setPending(null);
+          if (res.status === 409) {
+            startTransition(() => {
+              router.refresh();
+            });
+          }
         }
         return;
       }
@@ -264,7 +269,7 @@ export function BillCostRevenuePanel({
                         </button>
                       ) : isBlocked("cost", "confirm", c.id) ||
                         isBlocked("cost", "actualize", c.id) ? (
-                        <span className="muted small">Không có quyền</span>
+                        <span className="muted small">Không thể thao tác</span>
                       ) : c.financialMaturity?.toLowerCase() === "actual" ? (
                         <span className="muted small">{actual}</span>
                       ) : c.recordStatus !== "active" ? (
@@ -361,7 +366,7 @@ export function BillCostRevenuePanel({
                         </button>
                       ) : isBlocked("revenue", "confirm", r.id) ||
                         isBlocked("revenue", "actualize", r.id) ? (
-                        <span className="muted small">Không có quyền</span>
+                        <span className="muted small">Không thể thao tác</span>
                       ) : r.financialMaturity?.toLowerCase() === "actual" ? (
                         <span className="muted small">{actual}</span>
                       ) : r.recordStatus !== "active" ? (

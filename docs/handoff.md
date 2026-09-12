@@ -26,6 +26,7 @@ Ship U2: trên Bill detail xác nhận Chi phí / Doanh thu (CTA rõ; maturity k
 ### Follow-ups
 - Permission codes riêng cho confirm (hiện 403 runtime)
 - Shared allocation UI (non-goal U2)
+- 409 cũng khóa nút + refresh (U2 polish)
 
 ---
 

@@ -42,5 +42,6 @@ Shared allocation UI, documents, settlement finalize, amount override form (API 
 - Shared cost không gắn Bill: không hiện trên list theo `billId` (đúng API).
 
 ## Verify
-- `npm run build` trong `apps/web` xanh
-- Không đụng API / `dotnet test`
+- `npm run build` trong `apps/web` xanh (BFF confirm/actualize routes included)
+- `dotnet test Cms.sln -c Release` → **93 passed** (API unchanged)
+- VPS: login → Bill detail → confirm cost/revenue path (or honest empty) + `/health` OK

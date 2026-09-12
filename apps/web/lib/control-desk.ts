@@ -1,0 +1,226 @@
+import { redirect } from "next/navigation";
+import { getApiInternalUrl } from "./auth";
+import { getSessionToken } from "./api";
+import type { ApiResult } from "./bills";
+import type { TerminologyMap } from "./terminology";
+import { term } from "./terminology";
+
+export type DashboardCurrencyTotals = {
+  currencyCode: string;
+  costBestAvailable: number;
+  revenueBestAvailable: number;
+  profitBestAvailable: number;
+};
+
+export type DashboardBaseCurrencyRollUp = {
+  baseCurrency: string;
+  costBestAvailableBase: number;
+  revenueBestAvailableBase: number;
+  profitBestAvailableBase: number;
+  fxStubNote: string;
+};
+
+export type DashboardSummary = {
+  asOfTimestamp: string;
+  billCount: number;
+  openExceptionCount: number;
+  pendingApprovalCount: number;
+  openCloseCount: number;
+  openVarianceCount: number;
+  overdueExceptionCount: number;
+  totalsByCurrency: DashboardCurrencyTotals[];
+  baseCurrencyRollUp: DashboardBaseCurrencyRollUp | null;
+  hasMixedCurrencies: boolean;
+  note: string;
+};
+
+export type ExceptionQueueItem = {
+  id: string;
+  ruleCode: string;
+  severity: string;
+  ownerId: string | null;
+  status: string;
+  dueAt: string | null;
+  title: string;
+  description: string | null;
+  billId: string | null;
+  reconciliationId: string | null;
+  varianceId: string | null;
+  objectType: string | null;
+  objectId: string | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  resolutionNotes: string | null;
+  closedAt: string | null;
+  closedBy: string | null;
+  escalatedAt: string | null;
+  escalatedBy: string | null;
+  escalationReason: string | null;
+};
+
+export type ApprovalQueueItem = {
+  id: string;
+  objectType: string;
+  objectId: string;
+  status: string;
+  requiredLevel: number;
+  currentLevel: number;
+  requestedBy: string | null;
+  requestedAt: string;
+  requestReason: string | null;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionReason: string | null;
+  notes: string | null;
+};
+
+async function apiGet<T>(path: string): Promise<ApiResult<T>> {
+  const token = await getSessionToken();
+  if (!token) {
+    redirect("/login");
+  }
+
+  try {
+    const res = await fetch(`${getApiInternalUrl()}${path}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (res.status === 401) {
+      redirect("/login");
+    }
+
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      return {
+        ok: false,
+        status: res.status,
+        message:
+          body.message ||
+          (res.status === 403
+            ? "Bạn không có quyền xem dữ liệu này."
+            : "Không tải được dữ liệu từ máy chủ."),
+      };
+    }
+
+    return { ok: true, data: (await res.json()) as T };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      message: "Không kết nối được máy chủ API. Thử lại sau.",
+    };
+  }
+}
+
+export function getDashboardSummary(): Promise<ApiResult<DashboardSummary>> {
+  return apiGet<DashboardSummary>("/api/dashboard/summary");
+}
+
+export function listExceptionQueue(opts?: {
+  overdueOnly?: boolean;
+}): Promise<ApiResult<ExceptionQueueItem[]>> {
+  const qs =
+    opts?.overdueOnly === true ? "?overdueOnly=true" : "";
+  return apiGet<ExceptionQueueItem[]>(`/api/queues/exceptions${qs}`);
+}
+
+export function listApprovalQueue(): Promise<ApiResult<ApprovalQueueItem[]>> {
+  return apiGet<ApprovalQueueItem[]>("/api/queues/approvals");
+}
+
+/** Resolve object type CodeKey → Vietnamese UI term (CP6.5). */
+export function objectTypeLabel(
+  terms: TerminologyMap,
+  objectType: string | null | undefined
+): string {
+  if (!objectType) return "—";
+  const key = objectType.trim().toUpperCase();
+  const map: Record<string, string> = {
+    BILL: term(terms, "BILL", "Bill"),
+    COST: term(terms, "COST", "Chi phí"),
+    REVENUE: term(terms, "REVENUE", "Doanh thu"),
+    VARIANCE: term(terms, "VARIANCE", "Chênh lệch"),
+    RECONCILIATION: term(terms, "RECONCILIATION", "Đối soát"),
+    FINANCIAL_DOCUMENT: term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính"),
+    DOCUMENT: term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính"),
+  };
+  return map[key] ?? objectType;
+}
+
+export function exceptionStatusLabel(
+  terms: TerminologyMap,
+  status: string
+): string {
+  switch (status.toLowerCase()) {
+    case "open":
+      return term(terms, "EXCEPTION_OPEN", "Ngoại lệ mở");
+    case "in_progress":
+      return "Đang xử lý";
+    case "escalated":
+      return term(terms, "EXCEPTION_ESCALATED", "Ngoại lệ đã leo thang");
+    case "resolved":
+      return term(terms, "EXCEPTION_RESOLVED", "Ngoại lệ đã xử lý");
+    case "closed":
+      return term(terms, "EXCEPTION_CLOSED", "Ngoại lệ đã đóng");
+    default:
+      return status;
+  }
+}
+
+export function approvalStatusLabel(
+  terms: TerminologyMap,
+  status: string
+): string {
+  switch (status.toLowerCase()) {
+    case "pending":
+      return term(terms, "APPROVAL_PENDING", "Chờ phê duyệt");
+    case "approved":
+      return term(terms, "APPROVAL_APPROVED", "Đã phê duyệt");
+    case "rejected":
+      return term(terms, "APPROVAL_REJECTED", "Từ chối phê duyệt");
+    default:
+      return status;
+  }
+}
+
+/** Severity is CodeKey — map to Vietnamese; avoid leaking English enums. */
+export function severityLabel(severity: string): string {
+  switch (severity.toLowerCase()) {
+    case "critical":
+      return "Nghiêm trọng";
+    case "high":
+      return "Cao";
+    case "medium":
+      return "Trung bình";
+    case "low":
+      return "Thấp";
+    default:
+      return severity;
+  }
+}
+
+export function isOverdue(dueAt: string | null | undefined, now = Date.now()): boolean {
+  if (!dueAt) return false;
+  const t = new Date(dueAt).getTime();
+  return !Number.isNaN(t) && t < now;
+}
+
+/** Best href when we can deep-link to an operable UI screen. */
+export function billHrefFromException(item: ExceptionQueueItem): string | null {
+  if (item.billId) return `/bills/${item.billId}`;
+  if (item.objectType?.toLowerCase() === "bill" && item.objectId) {
+    return `/bills/${item.objectId}`;
+  }
+  return null;
+}
+
+export function billHrefFromApproval(item: ApprovalQueueItem): string | null {
+  if (item.objectType.toLowerCase() === "bill") {
+    return `/bills/${item.objectId}`;
+  }
+  return null;
+}

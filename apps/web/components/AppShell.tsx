@@ -3,7 +3,11 @@ import Link from "next/link";
 import { LogoutButton } from "./LogoutButton";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
-type NavKey = "home" | "bills" | "dashboard";
+type NavKey =
+  | "dashboard"
+  | "bills"
+  | "exceptions"
+  | "approvals";
 
 type AppShellProps = {
   terms: TerminologyMap;
@@ -15,6 +19,8 @@ type AppShellProps = {
 export function AppShell({ terms, active, children, topbarRight }: AppShellProps) {
   const billLabel = term(terms, "BILL", "Bill");
   const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
+  const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
+  const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
 
   return (
     <div className="shell">
@@ -24,16 +30,27 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
           <small>Kiểm soát chi phí &amp; lợi nhuận</small>
         </div>
         <nav className="nav" aria-label="Điều hướng chính">
-          <Link className={active === "home" ? "active" : undefined} href="/">
-            Trang chính
+          <Link
+            className={active === "dashboard" ? "active" : undefined}
+            href="/dashboard"
+          >
+            {dashboardLabel}
           </Link>
           <Link className={active === "bills" ? "active" : undefined} href="/bills">
             {billLabel}
           </Link>
-          <span className="soon" title="Sẽ có ở sprint U3">
-            {dashboardLabel}
-            <em>sắp có</em>
-          </span>
+          <Link
+            className={active === "exceptions" ? "active" : undefined}
+            href="/queues/exceptions"
+          >
+            {exceptionQueueLabel}
+          </Link>
+          <Link
+            className={active === "approvals" ? "active" : undefined}
+            href="/queues/approvals"
+          >
+            {approvalQueueLabel}
+          </Link>
         </nav>
       </aside>
       <div className="main">

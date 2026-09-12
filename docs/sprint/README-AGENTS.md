@@ -9,7 +9,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | **Pass 2 — Full PO** | Chạy lại từng sprint cho đủ TD6 + CP + AC gates. |
 | **Pass UI** | Next.js trên VPS — song song Pass 2. Plan: `PLAN-UI.md`. |
 
-**Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: IN PROGRESS (U0–U2 done / U3+).**
+**Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: IN PROGRESS (U0–U3 done / U4).**
 
 ## Status Pass 2
 | Sprint | Status |
@@ -23,7 +23,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | U0 Scaffold + login + proxy | Done | `PROMPT-UI-0.md` |
 | U1 Bill hub | Done | `PROMPT-UI-1.md` |
 | U2 Cost & Revenue actions | Done | `PROMPT-UI-2.md` |
-| U3 Control desk | In progress | `PROMPT-UI-3.md` |
+| U3 Control desk | Done | `PROMPT-UI-3.md` |
 | U4 Documents & AP/AR thin | Queued | `PROMPT-UI-4.md` |
 
 ## How to run Pass 2 / Pass UI

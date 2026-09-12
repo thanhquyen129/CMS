@@ -5,6 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Exposures.Queries;
 
+public sealed record ExposureRecognitionDto(
+    Guid Id,
+    decimal RecognizedAmount,
+    decimal Outstanding,
+    decimal FinalizedSettledAmount,
+    string SettlementStatus,
+    DateOnly? DueDate,
+    DateTimeOffset RecognizedAt);
+
 public sealed record PayableExposureDto(
     Guid Id,
     decimal Amount,
@@ -19,7 +28,8 @@ public sealed record PayableExposureDto(
     Guid? CostId,
     Guid? FinancialDocumentId,
     string? Notes,
-    string RecordStatus);
+    string RecordStatus,
+    IReadOnlyList<ExposureRecognitionDto> Recognitions);
 
 public sealed record ReceivableExposureDto(
     Guid Id,
@@ -35,7 +45,8 @@ public sealed record ReceivableExposureDto(
     Guid? RevenueId,
     Guid? FinancialDocumentId,
     string? Notes,
-    string RecordStatus);
+    string RecordStatus,
+    IReadOnlyList<ExposureRecognitionDto> Recognitions);
 
 public sealed record ListPayableExposuresQuery(string? Status) : IRequest<IReadOnlyList<PayableExposureDto>>;
 public sealed record GetPayableExposureByIdQuery(Guid Id) : IRequest<PayableExposureDto>;
@@ -70,25 +81,51 @@ public sealed class ListPayableExposuresQueryHandler
             query = query.Where(e => e.Status == status);
         }
 
-        return await query
-            .OrderByDescending(e => e.Id)
-            .Select(e => new PayableExposureDto(
-                e.Id,
-                e.Amount,
-                e.RecognizedAmount,
-                e.Amount - e.RecognizedAmount,
-                e.CurrencyCode,
-                e.Status,
-                e.EffectiveDate,
-                e.DueDate,
-                e.BillId,
-                e.CounterpartyId,
-                e.CostId,
-                e.FinancialDocumentId,
-                e.Notes,
-                e.RecordStatus))
+        var exposures = await query.OrderByDescending(e => e.Id).ToListAsync(cancellationToken);
+        if (exposures.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = exposures.Select(e => e.Id).ToList();
+        var apRows = await _db.AccountsPayable.AsNoTracking()
+            .Where(a => ids.Contains(a.PayableExposureId))
+            .OrderBy(a => a.Id)
             .ToListAsync(cancellationToken);
+        var byExposure = apRows.GroupBy(a => a.PayableExposureId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ExposureRecognitionDto>)g
+                .Select(a => new ExposureRecognitionDto(
+                    a.Id,
+                    a.RecognizedAmount,
+                    a.DeriveOutstanding(),
+                    a.FinalizedSettledAmount,
+                    a.SettlementStatus,
+                    a.DueDate,
+                    a.RecognizedAt))
+                .ToList());
+
+        return exposures.Select(e => MapPayable(e, byExposure.GetValueOrDefault(e.Id, []))).ToList();
     }
+
+    internal static PayableExposureDto MapPayable(
+        Domain.Entities.PayableExposure e,
+        IReadOnlyList<ExposureRecognitionDto> recognitions) =>
+        new(
+            e.Id,
+            e.Amount,
+            e.RecognizedAmount,
+            e.Amount - e.RecognizedAmount,
+            e.CurrencyCode,
+            e.Status,
+            e.EffectiveDate,
+            e.DueDate,
+            e.BillId,
+            e.CounterpartyId,
+            e.CostId,
+            e.FinancialDocumentId,
+            e.Notes,
+            e.RecordStatus,
+            recognitions);
 }
 
 public sealed class GetPayableExposureByIdQueryHandler
@@ -116,21 +153,20 @@ public sealed class GetPayableExposureByIdQueryHandler
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy nghĩa vụ phải trả (exposure).");
 
-        return new PayableExposureDto(
-            e.Id,
-            e.Amount,
-            e.RecognizedAmount,
-            e.Amount - e.RecognizedAmount,
-            e.CurrencyCode,
-            e.Status,
-            e.EffectiveDate,
-            e.DueDate,
-            e.BillId,
-            e.CounterpartyId,
-            e.CostId,
-            e.FinancialDocumentId,
-            e.Notes,
-            e.RecordStatus);
+        var recognitions = await _db.AccountsPayable.AsNoTracking()
+            .Where(a => a.PayableExposureId == e.Id)
+            .OrderBy(a => a.Id)
+            .Select(a => new ExposureRecognitionDto(
+                a.Id,
+                a.RecognizedAmount,
+                a.RecognizedAmount + a.AdjustmentAmount - a.FinalizedSettledAmount,
+                a.FinalizedSettledAmount,
+                a.SettlementStatus,
+                a.DueDate,
+                a.RecognizedAt))
+            .ToListAsync(cancellationToken);
+
+        return ListPayableExposuresQueryHandler.MapPayable(e, recognitions);
     }
 }
 
@@ -162,25 +198,51 @@ public sealed class ListReceivableExposuresQueryHandler
             query = query.Where(e => e.Status == status);
         }
 
-        return await query
-            .OrderByDescending(e => e.Id)
-            .Select(e => new ReceivableExposureDto(
-                e.Id,
-                e.Amount,
-                e.RecognizedAmount,
-                e.Amount - e.RecognizedAmount,
-                e.CurrencyCode,
-                e.Status,
-                e.EffectiveDate,
-                e.DueDate,
-                e.BillId,
-                e.CounterpartyId,
-                e.RevenueId,
-                e.FinancialDocumentId,
-                e.Notes,
-                e.RecordStatus))
+        var exposures = await query.OrderByDescending(e => e.Id).ToListAsync(cancellationToken);
+        if (exposures.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = exposures.Select(e => e.Id).ToList();
+        var arRows = await _db.AccountsReceivable.AsNoTracking()
+            .Where(a => ids.Contains(a.ReceivableExposureId))
+            .OrderBy(a => a.Id)
             .ToListAsync(cancellationToken);
+        var byExposure = arRows.GroupBy(a => a.ReceivableExposureId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ExposureRecognitionDto>)g
+                .Select(a => new ExposureRecognitionDto(
+                    a.Id,
+                    a.RecognizedAmount,
+                    a.DeriveOutstanding(),
+                    a.FinalizedSettledAmount,
+                    a.SettlementStatus,
+                    a.DueDate,
+                    a.RecognizedAt))
+                .ToList());
+
+        return exposures.Select(e => MapReceivable(e, byExposure.GetValueOrDefault(e.Id, []))).ToList();
     }
+
+    internal static ReceivableExposureDto MapReceivable(
+        Domain.Entities.ReceivableExposure e,
+        IReadOnlyList<ExposureRecognitionDto> recognitions) =>
+        new(
+            e.Id,
+            e.Amount,
+            e.RecognizedAmount,
+            e.Amount - e.RecognizedAmount,
+            e.CurrencyCode,
+            e.Status,
+            e.EffectiveDate,
+            e.DueDate,
+            e.BillId,
+            e.CounterpartyId,
+            e.RevenueId,
+            e.FinancialDocumentId,
+            e.Notes,
+            e.RecordStatus,
+            recognitions);
 }
 
 public sealed class GetReceivableExposureByIdQueryHandler
@@ -208,20 +270,19 @@ public sealed class GetReceivableExposureByIdQueryHandler
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy quyền thu dự kiến (exposure).");
 
-        return new ReceivableExposureDto(
-            e.Id,
-            e.Amount,
-            e.RecognizedAmount,
-            e.Amount - e.RecognizedAmount,
-            e.CurrencyCode,
-            e.Status,
-            e.EffectiveDate,
-            e.DueDate,
-            e.BillId,
-            e.CounterpartyId,
-            e.RevenueId,
-            e.FinancialDocumentId,
-            e.Notes,
-            e.RecordStatus);
+        var recognitions = await _db.AccountsReceivable.AsNoTracking()
+            .Where(a => a.ReceivableExposureId == e.Id)
+            .OrderBy(a => a.Id)
+            .Select(a => new ExposureRecognitionDto(
+                a.Id,
+                a.RecognizedAmount,
+                a.RecognizedAmount + a.AdjustmentAmount - a.FinalizedSettledAmount,
+                a.FinalizedSettledAmount,
+                a.SettlementStatus,
+                a.DueDate,
+                a.RecognizedAt))
+            .ToListAsync(cancellationToken);
+
+        return ListReceivableExposuresQueryHandler.MapReceivable(e, recognitions);
     }
 }

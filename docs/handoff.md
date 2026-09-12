@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — Sprint 7 FULL Exposure + AP/AR (Pass 2)
+
+### User
+Pass 2 Sprint 7 FULL: partial/multi recognition + recognized_amount; aging buckets on AP/AR; optional document→exposure link (no Cost/Revenue); outstanding respects settlements; tests + SPRINT-7-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Multi-recognize: `recognized_amount` recomputed from sum of AP/AR slices before each recognize; over-recognize / already-full → 409 VI; GET exposure returns `recognitions[]`.
+- Aging (ADR-0006): `daysPastDue` + `agingBucket` on AP/AR DTOs; `GET /api/accounts-payable/aging` and `…/accounts-receivable/aging` with bucket summary.
+- Document→exposure: create with `financialDocumentId` + `POST /api/{payable|receivable}-exposures/{id}/link-document`; direction mismatch rejected; never invents Cost/Revenue.
+- Outstanding: draft payment allocation unchanged; finalize reduces outstanding (AC-007 / C-015) — covered in FULL aging/settlement test.
+- VI terms: AGING, AGING_BUCKET, DAYS_PAST_DUE, LINK_DOCUMENT, RECOGNIZED_AMOUNT.
+- Tests: `Sprint7FullExposureApArTests` (3); suite **74 passed**.
+- DoD: `docs/sprint/SPRINT-7-FULL-DOD.md`; prompt: `PROMPT-SPRINT-7-FULL.md`; ADR-0006.
+
+### Files / API
+- APIs: link-document; `/api/accounts-payable/aging`; `/api/accounts-receivable/aging`; exposure GET + recognitions; AP/AR aging fields
+- Application: `Exposures/AgingBuckets`; link commands; recognize recompute; aging queries
+- ADR: `docs/adr/ADR-0006-ap-ar-aging-buckets.md`
+- No new EF migration (derived fields + existing `financial_document_id`)
+
+### Verify
+- `dotnet test Cms.sln -c Release` → **74 passed**
+
+### Deferred / Next
+- Pass 2 Sprint 6 FULL merge if still open; Sprint 8 FULL Settlement
+- Next.js aging UI; auto-exposure engine; Data Scope on AP/AR
+
+---
+
 ## 2026-09-11 — Sprint 5 FULL Revenue & Profitability (Pass 2)
 
 ### User

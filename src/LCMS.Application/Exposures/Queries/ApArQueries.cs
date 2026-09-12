@@ -7,7 +7,7 @@ namespace LCMS.Application.Exposures.Queries;
 
 /// <summary>
 /// AP/AR DTOs always expose Outstanding as a derived field (C-015).
-/// There is no write path that accepts outstanding as source of truth.
+/// Aging fields are derived (ADR-0006) — never user SoT.
 /// </summary>
 public sealed record AccountsPayableDto(
     Guid Id,
@@ -23,7 +23,9 @@ public sealed record AccountsPayableDto(
     Guid? CounterpartyId,
     DateTimeOffset RecognizedAt,
     string? Notes,
-    string RecordStatus);
+    string RecordStatus,
+    int? DaysPastDue,
+    string AgingBucket);
 
 public sealed record AccountsReceivableDto(
     Guid Id,
@@ -39,17 +41,42 @@ public sealed record AccountsReceivableDto(
     Guid? CounterpartyId,
     DateTimeOffset RecognizedAt,
     string? Notes,
-    string RecordStatus);
+    string RecordStatus,
+    int? DaysPastDue,
+    string AgingBucket);
 
-public sealed record ListAccountsPayableQuery(string? SettlementStatus)
+public sealed record AgingBucketSummaryDto(
+    string Bucket,
+    int Count,
+    decimal Outstanding);
+
+public sealed record ApArAgingReportDto(
+    DateOnly AsOf,
+    IReadOnlyList<AgingBucketSummaryDto> Buckets,
+    IReadOnlyList<AccountsPayableDto>? PayableItems,
+    IReadOnlyList<AccountsReceivableDto>? ReceivableItems);
+
+public sealed record ListAccountsPayableQuery(string? SettlementStatus, DateOnly? AsOf)
     : IRequest<IReadOnlyList<AccountsPayableDto>>;
 
-public sealed record GetAccountsPayableByIdQuery(Guid Id) : IRequest<AccountsPayableDto>;
+public sealed record GetAccountsPayableByIdQuery(Guid Id, DateOnly? AsOf) : IRequest<AccountsPayableDto>;
 
-public sealed record ListAccountsReceivableQuery(string? SettlementStatus)
+public sealed record ListAccountsReceivableQuery(string? SettlementStatus, DateOnly? AsOf)
     : IRequest<IReadOnlyList<AccountsReceivableDto>>;
 
-public sealed record GetAccountsReceivableByIdQuery(Guid Id) : IRequest<AccountsReceivableDto>;
+public sealed record GetAccountsReceivableByIdQuery(Guid Id, DateOnly? AsOf) : IRequest<AccountsReceivableDto>;
+
+public sealed record GetAccountsPayableAgingQuery(
+    DateOnly? AsOf,
+    Guid? CounterpartyId,
+    string? CurrencyCode,
+    bool IncludeSettled) : IRequest<ApArAgingReportDto>;
+
+public sealed record GetAccountsReceivableAgingQuery(
+    DateOnly? AsOf,
+    Guid? CounterpartyId,
+    string? CurrencyCode,
+    bool IncludeSettled) : IRequest<ApArAgingReportDto>;
 
 public sealed class ListAccountsPayableQueryHandler
     : IRequestHandler<ListAccountsPayableQuery, IReadOnlyList<AccountsPayableDto>>
@@ -72,6 +99,7 @@ public sealed class ListAccountsPayableQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.AccountsPayable.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(request.SettlementStatus))
         {
@@ -81,11 +109,13 @@ public sealed class ListAccountsPayableQueryHandler
 
         // Order by Id (UUIDv7 time-sortable) — SQLite rejects DateTimeOffset in ORDER BY.
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
-        return rows.Select(MapAp).ToList();
+        return rows.Select(a => MapAp(a, asOf)).ToList();
     }
 
-    private static AccountsPayableDto MapAp(Domain.Entities.AccountsPayable a) =>
-        new(
+    internal static AccountsPayableDto MapAp(Domain.Entities.AccountsPayable a, DateOnly asOf)
+    {
+        var (days, bucket) = AgingBuckets.Classify(a.DueDate, asOf);
+        return new(
             a.Id,
             a.PayableExposureId,
             a.RecognizedAmount,
@@ -99,7 +129,10 @@ public sealed class ListAccountsPayableQueryHandler
             a.CounterpartyId,
             a.RecognizedAt,
             a.Notes,
-            a.RecordStatus);
+            a.RecordStatus,
+            days,
+            bucket);
+    }
 }
 
 public sealed class GetAccountsPayableByIdQueryHandler
@@ -127,21 +160,8 @@ public sealed class GetAccountsPayableByIdQueryHandler
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
 
-        return new AccountsPayableDto(
-            a.Id,
-            a.PayableExposureId,
-            a.RecognizedAmount,
-            a.AdjustmentAmount,
-            a.FinalizedSettledAmount,
-            a.DeriveOutstanding(),
-            a.CurrencyCode,
-            a.DueDate,
-            a.SettlementStatus,
-            a.BillId,
-            a.CounterpartyId,
-            a.RecognizedAt,
-            a.Notes,
-            a.RecordStatus);
+        var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        return ListAccountsPayableQueryHandler.MapAp(a, asOf);
     }
 }
 
@@ -166,6 +186,7 @@ public sealed class ListAccountsReceivableQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.AccountsReceivable.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(request.SettlementStatus))
         {
@@ -173,9 +194,14 @@ public sealed class ListAccountsReceivableQueryHandler
             query = query.Where(a => a.SettlementStatus == status);
         }
 
-        // Order by Id (UUIDv7 time-sortable) — SQLite rejects DateTimeOffset in ORDER BY.
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
-        return rows.Select(a => new AccountsReceivableDto(
+        return rows.Select(a => MapAr(a, asOf)).ToList();
+    }
+
+    internal static AccountsReceivableDto MapAr(Domain.Entities.AccountsReceivable a, DateOnly asOf)
+    {
+        var (days, bucket) = AgingBuckets.Classify(a.DueDate, asOf);
+        return new(
             a.Id,
             a.ReceivableExposureId,
             a.RecognizedAmount,
@@ -189,7 +215,9 @@ public sealed class ListAccountsReceivableQueryHandler
             a.CounterpartyId,
             a.RecognizedAt,
             a.Notes,
-            a.RecordStatus)).ToList();
+            a.RecordStatus,
+            days,
+            bucket);
     }
 }
 
@@ -218,20 +246,117 @@ public sealed class GetAccountsReceivableByIdQueryHandler
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
 
-        return new AccountsReceivableDto(
-            a.Id,
-            a.ReceivableExposureId,
-            a.RecognizedAmount,
-            a.AdjustmentAmount,
-            a.FinalizedSettledAmount,
-            a.DeriveOutstanding(),
-            a.CurrencyCode,
-            a.DueDate,
-            a.SettlementStatus,
-            a.BillId,
-            a.CounterpartyId,
-            a.RecognizedAt,
-            a.Notes,
-            a.RecordStatus);
+        var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        return ListAccountsReceivableQueryHandler.MapAr(a, asOf);
+    }
+}
+
+public sealed class GetAccountsPayableAgingQueryHandler
+    : IRequestHandler<GetAccountsPayableAgingQuery, ApArAgingReportDto>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public GetAccountsPayableAgingQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<ApArAgingReportDto> Handle(
+        GetAccountsPayableAgingQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var query = _db.AccountsPayable.AsNoTracking().AsQueryable();
+        if (request.CounterpartyId.HasValue)
+        {
+            query = query.Where(a => a.CounterpartyId == request.CounterpartyId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CurrencyCode))
+        {
+            var cc = request.CurrencyCode.Trim().ToUpperInvariant();
+            query = query.Where(a => a.CurrencyCode == cc);
+        }
+
+        var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
+        var items = rows
+            .Select(a => ListAccountsPayableQueryHandler.MapAp(a, asOf))
+            .Where(a => request.IncludeSettled || a.Outstanding > 0m)
+            .ToList();
+
+        var buckets = AgingBuckets.Ordered
+            .Select(code =>
+            {
+                var inBucket = items.Where(i => i.AgingBucket == code).ToList();
+                return new AgingBucketSummaryDto(
+                    code,
+                    inBucket.Count,
+                    inBucket.Sum(i => i.Outstanding));
+            })
+            .ToList();
+
+        return new ApArAgingReportDto(asOf, buckets, items, null);
+    }
+}
+
+public sealed class GetAccountsReceivableAgingQueryHandler
+    : IRequestHandler<GetAccountsReceivableAgingQuery, ApArAgingReportDto>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public GetAccountsReceivableAgingQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<ApArAgingReportDto> Handle(
+        GetAccountsReceivableAgingQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var query = _db.AccountsReceivable.AsNoTracking().AsQueryable();
+        if (request.CounterpartyId.HasValue)
+        {
+            query = query.Where(a => a.CounterpartyId == request.CounterpartyId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CurrencyCode))
+        {
+            var cc = request.CurrencyCode.Trim().ToUpperInvariant();
+            query = query.Where(a => a.CurrencyCode == cc);
+        }
+
+        var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
+        var items = rows
+            .Select(a => ListAccountsReceivableQueryHandler.MapAr(a, asOf))
+            .Where(a => request.IncludeSettled || a.Outstanding > 0m)
+            .ToList();
+
+        var buckets = AgingBuckets.Ordered
+            .Select(code =>
+            {
+                var inBucket = items.Where(i => i.AgingBucket == code).ToList();
+                return new AgingBucketSummaryDto(
+                    code,
+                    inBucket.Count,
+                    inBucket.Sum(i => i.Outstanding));
+            })
+            .ToList();
+
+        return new ApArAgingReportDto(asOf, buckets, null, items);
     }
 }

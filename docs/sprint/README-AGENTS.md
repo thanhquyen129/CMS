@@ -13,10 +13,10 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 ## Status Pass 2
 | Sprint | Status |
 |--------|--------|
-| 0–4 FULL | Done |
-| 5 Revenue & Profitability FULL | Done (see `SPRINT-5-FULL-DOD.md`) |
+| 0–5 FULL | Done |
 | 6 Financial Documents FULL | In progress (cloud) |
-| 7–12 FULL | Queued |
+| 7 Exposure + AP/AR FULL | In progress (cloud) |
+| 8–12 FULL | Queued |
 
 ## How to run Pass 2
 1. Cloud / New Agent Chat riêng.

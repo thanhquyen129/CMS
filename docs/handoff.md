@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-12 — Pass UI / Sprint U1 Bill hub
+
+### User
+Ship Bill hub: `/bills` list+search → `/bills/[id]` financial profile (Expected/Confirmed/Actual) + profitability. Enable Bill nav. DoD + handoff + ship. No Cost mutate (U2).
+
+### Done
+- `/bills` list + `?q=` search via existing `GET /api/bills`; auth Bearer from `lcms_at` cookie.
+- `/bills/[id]` loads `financial-profile` + `profitability?view=best`; maturity table scannable; money `vi-VN`.
+- Terminology labels; empty/error/loading; AppShell Bill link live; Dashboard still “sắp có”.
+- No new backend — APIs already on main. Docs: `UI-1-DOD.md`, README/orchestration U1 Done.
+
+### Files / API
+- UI: `apps/web/app/bills/**`, `lib/bills.ts`, `lib/money.ts`, `components/AppShell.tsx`
+- API (unchanged): `GET /api/bills`, `/api/bills/{id}`, `.../financial-profile`, `.../profitability`, `/api/terminology`
+
+### Verify
+- `dotnet test` + `npm run build` (web)
+- After deploy: login, `/bills`, bill detail maturity, `/health`
+
+### Next
+- U2 Cost & Revenue confirm actions on Bill
+
+---
+
 ## 2026-09-12 — Coordinator: S10 FULL merged → S11 FULL kickoff
 
 ### User

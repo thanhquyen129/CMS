@@ -8,7 +8,10 @@ export function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get(AUTH_COOKIE)?.value;
-  if (!token && pathname === "/") {
+  const needsAuth =
+    pathname === "/" || pathname === "/bills" || pathname.startsWith("/bills/");
+
+  if (!token && needsAuth) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -18,5 +21,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login"],
+  matcher: ["/", "/login", "/bills", "/bills/:path*"],
 };

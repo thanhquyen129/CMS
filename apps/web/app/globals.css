@@ -46,8 +46,74 @@ button, input { font: inherit; }
 .nav a, .nav span { display: block; padding: 0.55rem 0.75rem; border-radius: var(--radius); }
 .nav a:hover { background: rgba(255, 255, 255, 0.08); }
 .nav .active { background: rgba(255, 255, 255, 0.12); font-weight: 600; }
-.nav .soon { color: #8fa3b5; cursor: not-allowed; font-size: 0.92rem; }
-.nav .soon em { font-style: normal; font-size: 0.75rem; margin-left: 0.35rem; opacity: 0.85; }
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 0.5rem;
+}
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  background: #fafbfc;
+  color: inherit;
+}
+a.stat-card:hover {
+  border-color: var(--accent);
+  background: #f3f8f6;
+}
+.stat-card-static { cursor: default; }
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.stat-value {
+  font-size: 1.55rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.stat-value.stat-warn { color: var(--danger); }
+.stat-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+.queue-title { font-weight: 600; }
+.mono-id {
+  font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+  font-size: 0.78rem;
+}
+.severity-pill {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: #eef3f6;
+}
+.severity-pill.severity-critical {
+  background: #fdecec;
+  color: var(--danger);
+}
+.severity-pill.severity-high {
+  background: #fdf0e6;
+  color: #8a3b12;
+}
+.severity-pill.severity-medium {
+  background: #eef3f6;
+  color: var(--ink);
+}
+.severity-pill.severity-low {
+  background: #eef6f1;
+  color: #2a4a3a;
+}
 .main { padding: 1.75rem 2rem; }
 .panel {
   background: var(--surface);

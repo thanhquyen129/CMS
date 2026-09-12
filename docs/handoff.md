@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — Pass UI / Sprint U3 Control desk
+
+### User
+Ship U3: Dashboard tóm tắt + hàng đợi Exception / Approval (CP6.5 VI). DoD mỏng: `/` hoặc `/dashboard` từ `GET /api/dashboard/summary`; queues từ API Pass 2; link Bill khi có id; empty/loading/error thật. Chỉ `apps/web/**` + docs. PR vào main.
+
+### Done
+- `/` → redirect `/dashboard`; summary cards (exception/approval/overdue/bill/variance/close counts) + totals by currency + FX stub roll-up note.
+- `/queues/exceptions` (+ `?overdueOnly=1`), `/queues/approvals` — table VI, link `Mở Bill` khi `billId` / `objectType=bill`.
+- AppShell nav: Dashboard + Bill + hai hàng đợi (bỏ placeholder “sắp có”).
+- Docs: `UI-3-DOD.md`; README Pass UI U3 Done; orchestration U3 Done / U4 Ready.
+
+### Files / API
+- UI: `apps/web/app/dashboard/**`, `apps/web/app/queues/**`, `apps/web/lib/control-desk.ts`, `AppShell`, `middleware`, `globals.css`
+- API (unchanged): `GET /api/dashboard/summary`, `/api/queues/exceptions`, `/api/queues/approvals`, `/api/terminology`
+
+### Verify
+- `npm run build` trong `apps/web` (pre-merge)
+- Sau merge/Actions: `http://194.233.89.26/dashboard` + `/queues/*` + `/health`
+
+### Next
+- Merge U3 PR → kickoff U4 Documents & AP/AR thin.
+- Follow-up: approve/reject UI; deep-link cost/revenue từ approval object.
+
+### Residual risks
+- Approval `objectType` ≠ bill: không có màn chi tiết — hiện “—” (trung thực).
+- Counts/totals là projection read-only (ADR-0011); không SoT.
+
+---
+
 ## 2026-09-12 — Coordinator: U2 landed → U3 kickoff
 
 ### User

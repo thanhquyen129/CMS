@@ -9,7 +9,12 @@ export function middleware(req: NextRequest) {
 
   const token = req.cookies.get(AUTH_COOKIE)?.value;
   const needsAuth =
-    pathname === "/" || pathname === "/bills" || pathname.startsWith("/bills/");
+    pathname === "/" ||
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/bills" ||
+    pathname.startsWith("/bills/") ||
+    pathname.startsWith("/queues/");
 
   if (!token && needsAuth) {
     const url = req.nextUrl.clone();
@@ -21,5 +26,13 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/bills", "/bills/:path*"],
+  matcher: [
+    "/",
+    "/login",
+    "/dashboard",
+    "/dashboard/:path*",
+    "/bills",
+    "/bills/:path*",
+    "/queues/:path*",
+  ],
 };

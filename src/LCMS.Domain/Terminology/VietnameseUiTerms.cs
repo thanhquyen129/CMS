@@ -143,6 +143,11 @@ public static class VietnameseUiTerms
         ["SETTLEMENT_OPEN"] = "Chưa tất toán",
         ["SETTLEMENT_PARTIAL"] = "Tất toán một phần",
         ["SETTLEMENT_SETTLED"] = "Đã tất toán",
+        ["AGING"] = "Tuổi nợ",
+        ["AGING_BUCKET"] = "Nhóm tuổi nợ",
+        ["DAYS_PAST_DUE"] = "Số ngày quá hạn",
+        ["LINK_DOCUMENT"] = "Liên kết chứng từ",
+        ["RECOGNIZED_AMOUNT"] = "Số tiền đã ghi nhận",
 
         // Settlement (D09 / E10) — Payment/Collection; allocation finalizes outstanding
         ["PAYMENT"] = "Thanh toán",

@@ -74,15 +74,28 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
             }
         }
 
-        if (request.FinancialDocumentId.HasValue)
+        Guid? billId = request.BillId;
+        Guid? counterpartyId = request.CounterpartyId;
+        Guid? financialDocumentId = request.FinancialDocumentId;
+
+        if (financialDocumentId.HasValue)
         {
-            var docExists = await _db.FinancialDocuments.AsNoTracking()
-                .AnyAsync(d => d.Id == request.FinancialDocumentId, cancellationToken);
-            if (!docExists)
+            var doc = await _db.FinancialDocuments.AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Id == financialDocumentId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy chứng từ tài chính.");
+
+            if (doc.Direction == FinancialDocumentDirections.Payable)
             {
-                throw new NotFoundAppException("Không tìm thấy chứng từ tài chính.");
+                throw new ConflictAppException(
+                    "Chứng từ phải trả không thể liên kết với exposure phải thu.");
             }
+
+            billId ??= doc.BillId;
+            counterpartyId ??= doc.CounterpartyId;
         }
+
+        var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
+        var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
 
         var exposure = new ReceivableExposure
         {
@@ -93,10 +106,10 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
             Status = ExposureStatuses.Open,
             EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
             DueDate = request.DueDate,
-            BillId = request.BillId,
-            CounterpartyId = request.CounterpartyId,
+            BillId = billId,
+            CounterpartyId = counterpartyId,
             RevenueId = request.RevenueId,
-            FinancialDocumentId = request.FinancialDocumentId,
+            FinancialDocumentId = financialDocumentId,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
             SourceType = string.IsNullOrWhiteSpace(request.SourceType) ? null : request.SourceType.Trim(),
             SourceId = request.SourceId,
@@ -105,6 +118,15 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
 
         _db.ReceivableExposures.Add(exposure);
         await _db.SaveChangesAsync(cancellationToken);
+
+        var costCountAfter = await _db.Costs.CountAsync(cancellationToken);
+        var revenueCountAfter = await _db.Revenues.CountAsync(cancellationToken);
+        if (costCountAfter != costCountBefore || revenueCountAfter != revenueCountBefore)
+        {
+            throw new ConflictAppException(
+                "Tạo exposure không được tạo Chi phí hoặc Doanh thu mới (C-003/C-004).");
+        }
+
         return exposure.Id;
     }
 }

@@ -69,7 +69,16 @@ public sealed class RecognizeReceivableExposureCommandHandler
         }
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
-        var open = exposure.Amount - exposure.RecognizedAmount;
+
+        // SoT for recognized_amount = sum of AR recognition slices (cache kept in sync).
+        var recognizedSum = await _db.AccountsReceivable
+            .Where(a => a.ReceivableExposureId == exposure.Id)
+            .Select(a => a.RecognizedAmount)
+            .ToListAsync(cancellationToken);
+        var alreadyRecognized = decimal.Round(recognizedSum.Sum(), 4, MidpointRounding.AwayFromZero);
+        exposure.RecognizedAmount = alreadyRecognized;
+
+        var open = exposure.Amount - alreadyRecognized;
         if (amount > open)
         {
             throw new ConflictAppException(
@@ -99,12 +108,13 @@ public sealed class RecognizeReceivableExposureCommandHandler
         };
 
         exposure.RecognizedAmount = decimal.Round(
-            exposure.RecognizedAmount + amount, 4, MidpointRounding.AwayFromZero);
+            alreadyRecognized + amount, 4, MidpointRounding.AwayFromZero);
         exposure.Status = exposure.RecognizedAmount >= exposure.Amount
             ? ExposureStatuses.FullyRecognized
             : ExposureStatuses.PartiallyRecognized;
         exposure.UpdatedAt = now;
         exposure.UpdatedBy = _user.UserId;
+        exposure.TouchRowVersion();
 
         _db.AccountsReceivable.Add(ar);
         // Explicit: recognition must not invent Cost or Revenue (C-003 / C-004).

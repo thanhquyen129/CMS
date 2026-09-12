@@ -26,8 +26,8 @@ TD6: *Exposure; AP/AR recognition; partial recognition; outstanding* — Epic **
 |------|--------|--------|
 | Payment / Collection settlement | Sprint 8 | Non-goal; `FinalizedSettledAmount` stays 0 |
 | Dedicated AP/AR adjustment tables | Later | Pass 1 uses `AdjustmentAmount` on AP/AR |
-| Aging UI / reports | Later | IDX ready; UI deferred |
-| Auto-exposure from documents/costs | Later | Manual create Pass 1 |
+| Aging UI / reports | Sprint 7 FULL | API aging buckets shipped (`SPRINT-7-FULL-DOD.md`); UI deferred |
+| Auto-exposure from documents/costs | Later | Manual create + optional document link (Pass 2 FULL) |
 | JWT / OIDC | Later | Keep header bootstrap |
 | Next.js UI | Later | API-only this sprint |
 

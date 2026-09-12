@@ -1,5 +1,54 @@
 # Handoff
 
+## 2026-09-12 — Pass UI plan (parallel track)
+
+### User
+Lên kế hoạch chạy UI ngay — http://194.233.89.26/ hiện chỉ JSON API.
+
+### Done
+- Plan: docs/sprint/PLAN-UI.md — U0→U4 song song Pass 2 FULL; nginx proxy /→Next.js, /api→API; login JWT mỏng (ADR-0007 trong U0).
+- Prompts: PROMPT-UI-0.md … PROMPT-UI-4.md.
+- docs/sprint/README-AGENTS.md cập nhật Status Pass UI = Ready (start U0).
+- Resolved merge conflict with Sprint 7 FULL (aging ADR-0006).
+
+### Next
+- Kickoff **U0**: paste PROMPT-UI-0.md vào New Chat / cloud agent riêng.
+- Pass 2: paste PROMPT-SPRINT-8-FULL.md cho Settlement FULL.
+- Sau U1: Bill list + financial profile trên VPS.
+
+---
+
+## 2026-09-12 — Sprint 7 FULL Exposure + AP/AR (Pass 2)
+
+### User
+Pass 2 Sprint 7 FULL: partial/multi recognition + recognized_amount; aging buckets on AP/AR; optional document→exposure link (no Cost/Revenue); outstanding respects settlements; tests + SPRINT-7-FULL-DOD + PR. Never secrets/alogex. Vietnamese errors.
+
+### Done
+- Multi-recognize: 
+ecognized_amount recomputed from sum of AP/AR slices before each recognize; over-recognize / already-full → 409 VI; GET exposure returns 
+ecognitions[].
+- Aging (ADR-0006): daysPastDue + gingBucket on AP/AR DTOs; GET /api/accounts-payable/aging and …/accounts-receivable/aging with bucket summary.
+- Document→exposure: create with inancialDocumentId + POST /api/{payable|receivable}-exposures/{id}/link-document; direction mismatch rejected; never invents Cost/Revenue.
+- Outstanding: draft payment allocation unchanged; finalize reduces outstanding (AC-007 / C-015) — covered in FULL aging/settlement test.
+- VI terms: AGING, AGING_BUCKET, DAYS_PAST_DUE, LINK_DOCUMENT, RECOGNIZED_AMOUNT.
+- Tests: Sprint7FullExposureApArTests (3); suite **74 passed**.
+- DoD: docs/sprint/SPRINT-7-FULL-DOD.md; prompt: PROMPT-SPRINT-7-FULL.md; ADR-0006.
+
+### Files / API
+- APIs: link-document; /api/accounts-payable/aging; /api/accounts-receivable/aging; exposure GET + recognitions; AP/AR aging fields
+- Application: Exposures/AgingBuckets; link commands; recognize recompute; aging queries
+- ADR: docs/adr/ADR-0006-ap-ar-aging-buckets.md
+- No new EF migration (derived fields + existing inancial_document_id)
+
+### Verify
+- dotnet test Cms.sln -c Release → **74 passed**
+
+### Deferred / Next
+- Pass 2 Sprint 8 FULL Settlement
+- Next.js aging UI (Pass UI U4+)
+
+---
+
 ## 2026-09-12 — Sprint 6 FULL Financial Documents (Pass 2)
 
 ### User
@@ -7,23 +56,23 @@ Pass 2 Sprint 6 FULL: match methods line_to_line/line_to_cost/line_to_revenue (l
 
 ### Done
 - Match methods enforce target shape; Cost/Revenue links never invent economic rows.
-- Tolerance: `Documents:DefaultToleranceAbsolute` / `DefaultTolerancePercent` (+ per-match override); C-007 beyond effective tolerance → 409 VI.
-- Accept-before-match gate (`RequireAcceptBeforeMatch` default true); soft cancel/void document + cancel match session; reverse match detail restores open amounts (RV-003).
+- Tolerance: Documents:DefaultToleranceAbsolute / DefaultTolerancePercent (+ per-match override); C-007 beyond effective tolerance → 409 VI.
+- Accept-before-match gate (RequireAcceptBeforeMatch default true); soft cancel/void document + cancel match session; reverse match detail restores open amounts (RV-003).
 - Duplicate control on active (type, document_no, counterparty) — IDX-006 / BR-FIN-023.
-- `GET /api/financial-documents/open-amounts`; reverse/cancel APIs.
-- Migration `Sprint6Full_FinancialDocuments`; ADR-0005.
-- Tests: `Sprint6FullFinancialDocumentTests` (3); Pass 1 Sprint6 updated for methods/accept; suite **74 passed**.
-- DoD: `docs/sprint/SPRINT-6-FULL-DOD.md`.
+- GET /api/financial-documents/open-amounts; reverse/cancel APIs.
+- Migration Sprint6Full_FinancialDocuments; ADR-0005.
+- Tests: Sprint6FullFinancialDocumentTests (3); Pass 1 Sprint6 updated for methods/accept; suite **74 passed**.
+- DoD: docs/sprint/SPRINT-6-FULL-DOD.md.
 
 ### Files / API / Config
-- APIs: `/api/document-matches` (methods+tolerance), `.../details/{id}/reverse`, `.../cancel`; `/api/financial-documents/open-amounts`, `.../{id}/cancel`
-- Application: `DocumentOptions`, match/receive/cancel/reverse commands; queries open amounts
-- Config: `Documents` section in `appsettings.json`
-- Migration: `20260912020613_Sprint6Full_FinancialDocuments`
-- ADR: `docs/adr/ADR-0005-document-match-tolerance-accept.md`
+- APIs: /api/document-matches (methods+tolerance), .../details/{id}/reverse, .../cancel; /api/financial-documents/open-amounts, .../{id}/cancel
+- Application: DocumentOptions, match/receive/cancel/reverse commands; queries open amounts
+- Config: Documents section in ppsettings.json
+- Migration: 20260912020613_Sprint6Full_FinancialDocuments
+- ADR: docs/adr/ADR-0005-document-match-tolerance-accept.md
 
 ### Verify
-- `dotnet test Cms.sln -c Release` → **74 passed**
+- dotnet test Cms.sln -c Release → **74 passed**
 
 ### Deferred / Next
 - Pass 2 Sprint 7 FULL Exposure/AP/AR

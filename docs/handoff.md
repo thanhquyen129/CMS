@@ -1,5 +1,28 @@
 # Handoff
 
+## 2026-09-12 — Fix CI deploy smoke: follow `/` → `/login` redirect
+
+### User
+Những lỗi CI trên Actions (run đỏ liên tiếp) — tự fix luôn chứ?
+
+### Answer
+- VPS `/health` `/ready` OK; app chạy. Fail ở **deploy Health check**, không phải `dotnet test`.
+- Root cause (từ UI-0): unauthenticated `/` trả **307 → `/login`**. Smoke dùng `curl -fsS` **không** follow redirect → body chỉ `/login` (6 bytes) → grep HTML fail → đỏ từ #61 trở đi (sau JWT fix #58–#60).
+- Fix: `curl -fsSL` + kiểm tra marker `Đăng nhập|CMS` trên HTML sau redirect. JWT SigningKey trên host đã đủ từ trước.
+
+### Files
+- `.github/workflows/ci.yml` (Health check)
+- `docs/ops/github-actions.md`
+
+### Verify
+- Local repro: `curl -fsS /` → no HTML; `curl -fsSL /` → login HTML.
+- Actions: push main → CI `deploy` smoke xanh; http://194.233.89.26/health
+
+### Next
+- Re-run cũ không bắt buộc; run mới sau push là đủ.
+
+---
+
 ## 2026-09-12 — Coordinator: S11 FULL merged → S12 FULL kickoff
 
 ### User

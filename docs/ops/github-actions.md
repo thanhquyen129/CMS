@@ -20,6 +20,7 @@ Add secrets: GitHub → Settings → Secrets and variables → Actions.
 - `rsync` **excludes** `infra/.env` so host secrets are never overwritten.
 - Host should keep `infra/.env` (from `infra/.env.example`) with `LCMS_DB_PASSWORD`, `Auth__Jwt__SigningKey`, and optional `Auth__Bootstrap__Email` / `Auth__Bootstrap__Password` for UI login.
 - Compose brings up `db` + `api` + `web` + `proxy` (nginx). Host `:80` is the proxy — not the API alone.
+- Post-deploy smoke follows redirects (`curl -fsSL /`) because unauthenticated `/` is **307 → `/login`** (HTML). Without `-L`, the check falsely fails.
 
 ## Fallback
 If Actions deploy fails or the runner cannot reach the host, use operator SSH per `docs/ops/vps-bootstrap.md` (rsync/scp; never `git pull` on the VPS as the primary path).

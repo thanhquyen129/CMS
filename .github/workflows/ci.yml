@@ -134,13 +134,20 @@ jobs:
 
       - name: Health check
         run: |
+          # Unauthenticated / redirects 307 → /login (HTML). Must follow (-L)
+          # or smoke sees redirect body "/login" and fails the HTML grep.
           for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
             if curl -fsS "http://${DEPLOY_HOST}/health" \
               && curl -fsS "http://${DEPLOY_HOST}/ready" \
               && curl -fsS "http://${DEPLOY_HOST}/api/terminology" >/tmp/cms-terms.json \
-              && curl -fsS "http://${DEPLOY_HOST}/" >/tmp/cms-root.html; then
+              && curl -fsSL "http://${DEPLOY_HOST}/" >/tmp/cms-root.html; then
               if ! grep -qi '<html\|<!doctype html' /tmp/cms-root.html; then
-                echo "::error::Root / did not return HTML UI"
+                echo "::error::Root / (follow redirects) did not return HTML UI"
+                head -c 400 /tmp/cms-root.html || true
+                exit 1
+              fi
+              if ! grep -qi 'Đăng nhập\|CMS\|login' /tmp/cms-root.html; then
+                echo "::error::UI HTML missing login/CMS markers"
                 head -c 400 /tmp/cms-root.html || true
                 exit 1
               fi
@@ -149,7 +156,7 @@ jobs:
                 head -c 400 /tmp/cms-terms.json || true
                 exit 1
               fi
-              echo "Deploy smoke OK: /health /ready /api/terminology / (HTML)"
+              echo "Deploy smoke OK: /health /ready /api/terminology /→login (HTML)"
               exit 0
             fi
             sleep 10

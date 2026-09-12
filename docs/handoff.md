@@ -78,8 +78,9 @@ Ship Bill hub: `/bills` list+search → `/bills/[id]` financial profile (Expecte
 - API (unchanged): `GET /api/bills`, `/api/bills/{id}`, `.../financial-profile`, `.../profitability`, `/api/terminology`
 
 ### Verify
-- `dotnet test` + `npm run build` (web)
-- After deploy: login, `/bills`, bill detail maturity, `/health`
+- Local: `dotnet test` **89 passed**; `npm run build` (web) OK
+- VPS after deploy (`4aeab7a`): login OK; `/bills` 307→login then 200; search `?q=`; detail maturity Dự kiến/Đã xác nhận/Thực tế; `/health` OK
+- Actions: https://github.com/thanhquyen129/CMS/actions
 
 ### Next
 - U2 Cost & Revenue confirm actions on Bill

@@ -369,6 +369,7 @@ export default async function DocumentMatchSessionPage({
               sourceLines={sourceLines}
               targets={targets}
               targetDocHint={targetDocHint}
+              documentId={doc.id}
             />
           </>
         ) : (

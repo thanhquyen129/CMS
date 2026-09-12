@@ -3,27 +3,41 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
   terms: TerminologyMap;
   documentId: string;
   currencyCode: string;
+  documentTotal: number;
+  linesSum: number;
+  /** Prefill = max(0, total − sum lines); parity UAT first line = header. */
+  defaultAmount: number;
   defaultBillId?: string | null;
   direction?: string;
+  formKey: string;
 };
 
 export function AddDocumentLineForm({
   terms,
   documentId,
   currencyCode,
+  documentTotal,
+  linesSum,
+  defaultAmount,
   defaultBillId,
   direction,
+  formKey,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [amountDraft, setAmountDraft] = useState(
+    defaultAmount > 0 ? String(defaultAmount) : ""
+  );
 
   const lineLabel = term(terms, "FINANCIAL_DOCUMENT_LINE", "Dòng chứng từ");
   const billLabel = term(terms, "BILL", "Bill");
@@ -33,9 +47,18 @@ export function AddDocumentLineForm({
   const isPayable = direction?.toLowerCase() === "payable";
   const isReceivable = direction?.toLowerCase() === "receivable";
 
+  const amountNum = Number(String(amountDraft).replace(",", "."));
+  const projectedSum =
+    linesSum + (Number.isFinite(amountNum) && amountNum > 0 ? amountNum : 0);
+  const overTotal =
+    Number.isFinite(amountNum) &&
+    amountNum > 0 &&
+    projectedSum > Number(documentTotal) + 0.0000001;
+
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setSubmitting(true);
 
     const form = e.currentTarget;
@@ -92,7 +115,7 @@ export function AddDocumentLineForm({
         return;
       }
 
-      form.reset();
+      setSuccess(`Đã thêm ${lineLabel.toLowerCase()}.`);
       startTransition(() => {
         router.refresh();
       });
@@ -106,7 +129,12 @@ export function AddDocumentLineForm({
   const busy = submitting || isPending;
 
   return (
-    <form className="receive-form" onSubmit={onSubmit} noValidate>
+    <form
+      key={formKey}
+      className="receive-form"
+      onSubmit={onSubmit}
+      noValidate
+    >
       <p className="note">
         Thêm {lineLabel.toLowerCase()} để khớp sau — không tạo {costLabel}/
         {revenueLabel}. Tiền tệ cố định theo chứng từ ({currencyCode}). Số mở
@@ -116,6 +144,19 @@ export function AddDocumentLineForm({
       {error ? (
         <div className="alert alert-error" role="alert">
           {error}
+        </div>
+      ) : null}
+      {success ? (
+        <div className="alert alert-info" role="status">
+          {success}
+        </div>
+      ) : null}
+      {overTotal ? (
+        <div className="alert alert-info" role="status">
+          Tổng dòng sau khi thêm (
+          {formatMoney(projectedSum, currencyCode)}) sẽ vượt tổng chứng từ (
+          {formatMoney(documentTotal, currencyCode)}). API vẫn cho phép — kiểm
+          tra lại nếu không chủ đích.
         </div>
       ) : null}
 
@@ -132,7 +173,15 @@ export function AddDocumentLineForm({
             required
             disabled={busy}
             autoFocus
+            value={amountDraft}
+            onChange={(ev) => setAmountDraft(ev.target.value)}
           />
+          {defaultAmount > 0 ? (
+            <p className="muted small">
+              Gợi ý còn theo header:{" "}
+              {formatMoney(defaultAmount, currencyCode)}
+            </p>
+          ) : null}
         </div>
 
         <div className="field field-span">
@@ -143,6 +192,7 @@ export function AddDocumentLineForm({
             maxLength={512}
             disabled={busy}
             autoComplete="off"
+            placeholder="vd. cước vận chuyển"
           />
         </div>
 

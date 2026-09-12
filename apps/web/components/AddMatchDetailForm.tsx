@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { formatMoney } from "@/lib/money";
@@ -26,6 +27,8 @@ type Props = {
   targets: MatchTargetOption[];
   /** When line_to_line and no remote doc loaded yet */
   targetDocHint?: string | null;
+  /** Link back to add lines when no open source lines */
+  documentId?: string;
 };
 
 export function AddMatchDetailForm({
@@ -35,6 +38,7 @@ export function AddMatchDetailForm({
   sourceLines,
   targets,
   targetDocHint,
+  documentId,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -63,8 +67,17 @@ export function AddMatchDetailForm({
   if (sourceLines.length === 0) {
     return (
       <div className="empty-state" role="status">
-        Không còn dòng mở để khớp (open = 0). Nhận thêm dòng hoặc đảo khớp
-        trước.
+        <p>
+          Không còn dòng mở để khớp (open = 0). Thêm dòng trên chứng từ hoặc đảo
+          khớp trước.
+        </p>
+        {documentId ? (
+          <p className="cta-row" style={{ marginTop: "0.75rem" }}>
+            <Link className="btn btn-sm" href={`/documents/${documentId}`}>
+              Thêm {lineLabel.toLowerCase()}
+            </Link>
+          </p>
+        ) : null}
       </div>
     );
   }

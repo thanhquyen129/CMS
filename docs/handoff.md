@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-12 — G3 FULL (prefill + coverage + match CTA)
+
+### User
+kiểm tra G3 còn gì nữa không, làm full luôn nhé
+
+### Done
+- Prefill số tiền = còn theo header (`total − Σ lines`); soft warn khi vượt tổng.
+- Metric đối chiếu header↔dòng; bảng hiện loại + Bill; success sau thêm.
+- CTA khi đã accept nhưng chưa có dòng mở (detail + match start + match detail empty).
+- DoD `UI-G3-DOD.md` → FULL; non-goals giữ edit/delete / ép sum / G4–G6.
+
+### Verify
+- `npm run build` apps/web
+
+---
+
 ## 2026-09-12 — G3 UI thêm dòng chứng từ
 
 ### User

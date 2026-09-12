@@ -12,6 +12,7 @@ import {
   canAcceptDocument,
   canAddDocumentLine,
   directionLabel,
+  documentLineCoverage,
   documentTypeLabel,
   getFinancialDocument,
   recordStatusLabel,
@@ -39,6 +40,7 @@ export default async function DocumentDetailPage({
   const outstandingLabel = term(terms, "OUTSTANDING", "Số dư còn lại");
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
   const costLabel = term(terms, "COST", "Chi phí");
+  const revenueLabel = term(terms, "REVENUE", "Doanh thu");
 
   const result = await getFinancialDocument(id);
 
@@ -76,6 +78,14 @@ export default async function DocumentDetailPage({
   const canAccept = canAcceptDocument(doc);
   const canMatch = canStartMatch(doc);
   const canAddLine = canAddDocumentLine(doc);
+  const coverage = documentLineCoverage(doc);
+  const remainingTowardTotal = Math.max(0, coverage.remainingTowardTotal);
+  const accepted =
+    doc.acceptanceStatus?.toLowerCase() === "accepted";
+  const needsLineForMatch =
+    accepted &&
+    canAddLine &&
+    !doc.lines.some((l) => Number(l.openAmount) > 0);
 
   return (
     <AppShell
@@ -156,7 +166,13 @@ export default async function DocumentDetailPage({
               Khớp chứng từ
             </Link>
           ) : null}
-          {!canAccept && !canMatch ? (
+          {needsLineForMatch ? (
+            <p className="note" style={{ margin: 0 }}>
+              Đã chấp nhận nhưng chưa có dòng mở — thêm {lineLabel.toLowerCase()}{" "}
+              bên dưới rồi mới khớp được.
+            </p>
+          ) : null}
+          {!canAccept && !canMatch && !needsLineForMatch ? (
             <p className="muted small">
               {doc.acceptanceStatus?.toLowerCase() === "accepted"
                 ? doc.lines.every((l) => Number(l.openAmount) <= 0)
@@ -170,6 +186,42 @@ export default async function DocumentDetailPage({
         </div>
 
         <h2 className="section-title">{lineLabel}</h2>
+        <dl className="metric-grid" style={{ marginBottom: "1rem" }}>
+          <div>
+            <dt>Tổng chứng từ</dt>
+            <dd>{formatMoney(doc.totalAmount, doc.currencyCode)}</dd>
+          </div>
+          <div>
+            <dt>Tổng dòng</dt>
+            <dd>{formatMoney(coverage.linesSum, doc.currencyCode)}</dd>
+          </div>
+          <div>
+            <dt>Còn theo header</dt>
+            <dd>
+              {coverage.remainingTowardTotal < -0.0000001 ? (
+                <span className="neg">
+                  {formatMoney(coverage.remainingTowardTotal, doc.currencyCode)}
+                </span>
+              ) : (
+                formatMoney(
+                  Math.max(0, coverage.remainingTowardTotal),
+                  doc.currencyCode
+                )
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>Tổng số mở</dt>
+            <dd>{formatMoney(coverage.openSum, doc.currencyCode)}</dd>
+          </div>
+        </dl>
+        {Math.abs(coverage.remainingTowardTotal) > 0.0000001 ? (
+          <p className="note">
+            Tổng dòng {coverage.remainingTowardTotal > 0 ? "thấp hơn" : "cao hơn"}{" "}
+            tổng chứng từ — API không ép bằng nhau; đối chiếu trước khi khớp.
+          </p>
+        ) : null}
+
         {doc.lines.length === 0 ? (
           <div className="empty-state" role="status">
             Chưa có {lineLabel.toLowerCase()}. Không bắt buộc để chấp nhận —
@@ -182,6 +234,8 @@ export default async function DocumentDetailPage({
                 <tr>
                   <th scope="col">#</th>
                   <th scope="col">Mô tả</th>
+                  <th scope="col">Loại</th>
+                  <th scope="col">{billLabel}</th>
                   <th scope="col" className="num">
                     Số tiền
                   </th>
@@ -198,6 +252,22 @@ export default async function DocumentDetailPage({
                   <tr key={line.id}>
                     <td>{line.lineNo}</td>
                     <td>{line.description || "—"}</td>
+                    <td>
+                      {line.costTypeCode
+                        ? `${costLabel}: ${line.costTypeCode}`
+                        : line.revenueTypeCode
+                          ? `${revenueLabel}: ${line.revenueTypeCode}`
+                          : "—"}
+                    </td>
+                    <td>
+                      {line.billId ? (
+                        <Link className="row-link" href={`/bills/${line.billId}`}>
+                          Mở
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="num">
                       {formatMoney(line.amount, line.currencyCode)}
                     </td>
@@ -221,8 +291,12 @@ export default async function DocumentDetailPage({
               terms={terms}
               documentId={doc.id}
               currencyCode={doc.currencyCode}
+              documentTotal={doc.totalAmount}
+              linesSum={coverage.linesSum}
+              defaultAmount={remainingTowardTotal}
               defaultBillId={doc.billId}
               direction={doc.direction}
+              formKey={`${doc.lines.length}-${remainingTowardTotal}`}
             />
           </>
         ) : (

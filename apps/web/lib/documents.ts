@@ -153,6 +153,21 @@ export function canAddDocumentLine(doc: {
   );
 }
 
+/** Đối chiếu header vs dòng (API không ép bằng nhau — UI chỉ cảnh báo). */
+export function documentLineCoverage(doc: {
+  totalAmount: number;
+  lines: { amount: number; openAmount: number }[];
+}): {
+  linesSum: number;
+  openSum: number;
+  remainingTowardTotal: number;
+} {
+  const linesSum = doc.lines.reduce((s, l) => s + Number(l.amount || 0), 0);
+  const openSum = doc.lines.reduce((s, l) => s + Number(l.openAmount || 0), 0);
+  const remainingTowardTotal = Number(doc.totalAmount) - linesSum;
+  return { linesSum, openSum, remainingTowardTotal };
+}
+
 export function receiptStatusLabel(
   terms: TerminologyMap,
   status: string

@@ -80,10 +80,29 @@ export default async function StartDocumentMatchPage({
         </p>
 
         {!allowed ? (
-          <div className="alert alert-error" role="alert">
-            Chỉ mở khớp khi chứng từ đã nhận, đã chấp nhận, còn hiệu lực và còn
-            số mở trên dòng. Kiểm tra ba chiều trạng thái trên chứng từ.
-          </div>
+          <>
+            <div className="alert alert-error" role="alert">
+              {doc.acceptanceStatus?.toLowerCase() !== "accepted"
+                ? "Chỉ mở khớp khi chứng từ đã nhận, đã chấp nhận và còn hiệu lực."
+                : !doc.lines.some((l) => Number(l.openAmount) > 0)
+                  ? "Chưa có dòng mở để khớp. Thêm dòng chứng từ trước."
+                  : "Không mở khớp được ở trạng thái hiện tại."}
+            </div>
+            {doc.acceptanceStatus?.toLowerCase() === "accepted" &&
+            !doc.lines.some((l) => Number(l.openAmount) > 0) ? (
+              <p className="cta-row">
+                <Link className="btn" href={`/documents/${doc.id}`}>
+                  Thêm dòng chứng từ
+                </Link>
+              </p>
+            ) : (
+              <p className="cta-row">
+                <Link className="btn btn-ghost" href={`/documents/${doc.id}`}>
+                  Quay lại chứng từ
+                </Link>
+              </p>
+            )}
+          </>
         ) : (
           <StartDocumentMatchForm
             terms={terms}

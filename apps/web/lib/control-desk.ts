@@ -183,6 +183,8 @@ export function objectTypeLabel(
     PAYMENT: term(terms, "PAYMENT", "Thanh toán"),
     COLLECTION: term(terms, "COLLECTION", "Thu tiền"),
     EXCEPTION: term(terms, "EXCEPTION", "Ngoại lệ"),
+    ACCOUNTS_PAYABLE: term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả"),
+    ACCOUNTS_RECEIVABLE: term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu"),
   };
   return map[key] ?? objectType;
 }
@@ -270,6 +272,9 @@ export function objectHrefFromApproval(item: ApprovalQueueItem): string | null {
   }
   if (t === "payment") return `/settlements/payments/${item.objectId}`;
   if (t === "collection") return `/settlements/collections/${item.objectId}`;
+  if (t === "accounts_payable" || t === "accounts_receivable") {
+    return "/ap-ar";
+  }
   return null;
 }
 

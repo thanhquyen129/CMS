@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-12 — P03 Approval gate write-off > trần
+
+### User
+Next: P03 Approval gate write-off > trần.
+
+### Done
+- Write-off ≤ `MaxWriteOffAmount` (1000): áp ngay (204).
+- Vượt trần: tạo Approval + 202 `{ requiresApproval, approvalId }`; outstanding giữ nguyên đến khi duyệt.
+- `DecideApproval` final approve → áp xóa nợ từ payload `Notes`; reject → không ghi.
+- UI: cho phép số lớn; thông báo + link `/queues/approvals`.
+- ADR-0008 cập nhật; objectType `accounts_payable` / `accounts_receivable`.
+
+### Files
+- `WriteOffApplier.cs`, `WriteOffAccountsPayable|ReceivableCommand.cs`, `DecideApprovalCommand.cs`
+- `Approval.cs` object types; `ExposureApArEndpoints.cs`
+- `WriteOffButton.tsx`, `control-desk.ts`
+- `docs/sprint/P03-DOD.md`, ADR-0008, tests Sprint8
+
+### Verify
+- Sprint8FullSettlementTests 4 passed · `npm run build` OK
+
+### Next
+- P04 Strict close + period lock UAT trên VPS
+
+### End-user
+Xóa nợ nhỏ → ghi ngay. Xóa nợ lớn → chờ **Hàng đợi phê duyệt**; duyệt xong mới giảm outstanding.
+
+---
+
 ## 2026-09-12 — P02 Adjust Cost/Revenue + số Confirm/Actual
 
 ### User

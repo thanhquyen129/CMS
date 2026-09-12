@@ -21,8 +21,8 @@ public sealed class SettlementOptions
     };
 
     /// <summary>
-    /// Max write-off amount in the AP/AR transaction currency (small remainder stub).
-    /// Over this ceiling → 409 VI; never silent wipe of larger outstanding.
+    /// Max write-off amount applied immediately without Approval (txn currency).
+    /// Above this → create pending Approval; apply when approved (P03 / ADR-0008).
     /// </summary>
     public decimal MaxWriteOffAmount { get; set; } = 1_000m;
 }

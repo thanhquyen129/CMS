@@ -26,6 +26,8 @@ public sealed class RequestApprovalCommandValidator : AbstractValidator<RequestA
         ApprovalObjectTypes.Settlement,
         ApprovalObjectTypes.Variance,
         ApprovalObjectTypes.Exception,
+        ApprovalObjectTypes.AccountsPayable,
+        ApprovalObjectTypes.AccountsReceivable,
         ApprovalObjectTypes.Other
     };
 
@@ -148,6 +150,8 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
             ApprovalObjectTypes.Collection => await _db.Collections.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ApprovalObjectTypes.Variance => await _db.Variances.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ApprovalObjectTypes.Exception => await _db.Exceptions.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.AccountsPayable => await _db.AccountsPayable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.AccountsReceivable => await _db.AccountsReceivable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ApprovalObjectTypes.Settlement or ApprovalObjectTypes.Other => true,
             _ => false
         };

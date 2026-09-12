@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { formatMoney } from "@/lib/money";
@@ -7,8 +8,8 @@ import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Kind = "payable" | "receivable";
 
-/** Matches Settlement:MaxWriteOffAmount default (ADR-0008 stub). */
-export const MAX_WRITE_OFF_HINT = 1000;
+/** Matches Settlement:MaxWriteOffAmount — apply immediately under this; above → Approval (P03). */
+export const MAX_WRITE_OFF_IMMEDIATE = 1000;
 
 type Props = {
   terms: TerminologyMap;
@@ -31,6 +32,7 @@ export function WriteOffButton({
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -41,8 +43,9 @@ export function WriteOffButton({
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
   const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
   const cashLabel = kind === "payable" ? paymentLabel : collectionLabel;
+  const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
 
-  const maxAllowed = Math.min(outstanding, MAX_WRITE_OFF_HINT);
+  const defaultAmount = Math.min(outstanding, MAX_WRITE_OFF_IMMEDIATE);
 
   const close = useCallback(() => {
     if (submitting) return;
@@ -61,12 +64,6 @@ export function WriteOffButton({
       );
       return;
     }
-    if (parsed > MAX_WRITE_OFF_HINT + 0.0000001) {
-      setError(
-        `Số tiền xóa nợ vượt trần stub (${MAX_WRITE_OFF_HINT}). Không được xóa nợ lớn im lặng.`
-      );
-      return;
-    }
     const trimmed = reason.trim();
     if (!trimmed) {
       setError("Nhập lý do xóa nợ.");
@@ -75,6 +72,7 @@ export function WriteOffButton({
 
     setSubmitting(true);
     setError(null);
+    setInfo(null);
     const endpoint =
       kind === "payable"
         ? `/bff/accounts-payable/${accountsId}/write-off`
@@ -95,6 +93,22 @@ export function WriteOffButton({
         return;
       }
 
+      if (res.status === 202) {
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string;
+          approvalId?: string;
+        };
+        setOpen(false);
+        setAmount("");
+        setReason("");
+        setInfo(
+          body.message ||
+            `Đã gửi phê duyệt xóa nợ (vượt trần ${formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)}). Số dư chưa đổi cho đến khi duyệt.`
+        );
+        startTransition(() => router.refresh());
+        return;
+      }
+
       if (!res.ok && res.status !== 204) {
         const body = (await res.json().catch(() => ({}))) as {
           message?: string;
@@ -102,7 +116,7 @@ export function WriteOffButton({
         setError(
           body.message ||
             (res.status === 409
-              ? "Không xóa nợ được (số dư / trần / trạng thái). Tải lại trang."
+              ? "Không xóa nợ được (số dư / trạng thái / đang chờ duyệt). Tải lại trang."
               : "Xóa nợ thất bại.")
         );
         return;
@@ -111,6 +125,7 @@ export function WriteOffButton({
       setOpen(false);
       setAmount("");
       setReason("");
+      setInfo(null);
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
@@ -128,13 +143,27 @@ export function WriteOffButton({
         className="btn btn-ghost btn-sm"
         onClick={() => {
           setError(null);
-          setAmount(String(maxAllowed));
+          setInfo(null);
+          setAmount(String(defaultAmount));
           setOpen(true);
         }}
         disabled={isPending}
       >
         {writeOffLabel}
       </button>
+
+      {info && !open ? (
+        <div
+          className="alert alert-info"
+          role="status"
+          style={{ marginTop: "0.35rem" }}
+        >
+          {info}{" "}
+          <Link className="row-link" href="/queues/approvals">
+            Mở {approvalQueueLabel.toLowerCase()}
+          </Link>
+        </div>
+      ) : null}
 
       {error && !open ? (
         <div
@@ -163,9 +192,11 @@ export function WriteOffButton({
             <h2 id={dialogTitleId}>{writeOffLabel}?</h2>
             <p>
               Giảm nghĩa vụ {target} bằng điều chỉnh (không tạo {cashLabel},
-              không giả tất toán tiền mặt). Số dư hiện tại:{" "}
-              {formatMoney(outstanding, currencyCode)}. Trần stub:{" "}
-              {formatMoney(MAX_WRITE_OFF_HINT, currencyCode)}.
+              không giả tất toán tiền mặt). Số dư:{" "}
+              {formatMoney(outstanding, currencyCode)}. Trần áp dụng ngay:{" "}
+              {formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)} — vượt trần
+              sẽ gửi {approvalQueueLabel.toLowerCase()}, chỉ ghi nợ khi được
+              duyệt.
             </p>
             <div className="field">
               <label htmlFor={`wo-amt-${accountsId}`}>Số tiền xóa nợ</label>
@@ -175,7 +206,7 @@ export function WriteOffButton({
                 inputMode="decimal"
                 step="any"
                 min="0"
-                max={maxAllowed}
+                max={outstanding}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 disabled={submitting}
@@ -192,7 +223,7 @@ export function WriteOffButton({
                 maxLength={1024}
                 disabled={submitting}
                 required
-                placeholder="Ví dụ: chênh lệch làm tròn ngân hàng"
+                placeholder="Ví dụ: chênh lệch làm tròn / miễn thỏa thuận"
               />
             </div>
             {error ? (
@@ -215,7 +246,7 @@ export function WriteOffButton({
                 onClick={runWriteOff}
                 disabled={submitting}
               >
-                {submitting ? "Đang xóa nợ…" : "Xác nhận xóa nợ"}
+                {submitting ? "Đang gửi…" : "Xác nhận xóa nợ"}
               </button>
             </div>
           </div>

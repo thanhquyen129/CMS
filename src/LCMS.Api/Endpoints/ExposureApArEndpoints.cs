@@ -165,10 +165,22 @@ public static class ExposureApArEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(
+            var result = await sender.Send(
                 new LCMS.Application.Settlements.Commands.WriteOffAccountsPayableCommand(
                     id, body.Amount, body.Reason),
                 ct);
+            if (!result.AppliedImmediately)
+            {
+                return Results.Json(
+                    new
+                    {
+                        requiresApproval = true,
+                        approvalId = result.ApprovalId,
+                        message = "Số xóa nợ vượt trần áp dụng ngay; đã gửi yêu cầu phê duyệt. Xóa nợ chỉ ghi khi được duyệt."
+                    },
+                    statusCode: StatusCodes.Status202Accepted);
+            }
+
             return Results.NoContent();
         });
 
@@ -216,10 +228,22 @@ public static class ExposureApArEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(
+            var result = await sender.Send(
                 new LCMS.Application.Settlements.Commands.WriteOffAccountsReceivableCommand(
                     id, body.Amount, body.Reason),
                 ct);
+            if (!result.AppliedImmediately)
+            {
+                return Results.Json(
+                    new
+                    {
+                        requiresApproval = true,
+                        approvalId = result.ApprovalId,
+                        message = "Số xóa nợ vượt trần áp dụng ngay; đã gửi yêu cầu phê duyệt. Xóa nợ chỉ ghi khi được duyệt."
+                    },
+                    statusCode: StatusCodes.Status202Accepted);
+            }
+
             return Results.NoContent();
         });
 

@@ -8,7 +8,7 @@ namespace LCMS.Domain.Entities;
 /// </summary>
 public sealed class Approval : TenantEntityBase
 {
-    /// <summary>cost | revenue | document | payment | collection | settlement | variance | exception | other</summary>
+    /// <summary>cost | revenue | document | payment | collection | settlement | variance | exception | accounts_payable | accounts_receivable | other</summary>
     public string ObjectType { get; set; } = string.Empty;
 
     public Guid ObjectId { get; set; }
@@ -46,6 +46,8 @@ public static class ApprovalObjectTypes
     public const string Settlement = "settlement";
     public const string Variance = "variance";
     public const string Exception = "exception";
+    public const string AccountsPayable = "accounts_payable";
+    public const string AccountsReceivable = "accounts_receivable";
     public const string Other = "other";
 }
 

@@ -1,6 +1,8 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Settlements;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,21 +26,25 @@ public sealed class DecideApprovalCommandValidator : AbstractValidator<DecideApp
 /// <summary>
 /// Approves (multi-step stub) or rejects a pending approval.
 /// Permission ≠ Approval: never calls IPermissionService; role without action still may decide.
+/// Write-off over threshold: on final approve, applies pending AP/AR write-off payload (P03).
 /// </summary>
 public sealed class DecideApprovalCommandHandler : IRequestHandler<DecideApprovalCommand>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public DecideApprovalCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task Handle(DecideApprovalCommand request, CancellationToken cancellationToken)
@@ -84,7 +90,6 @@ public sealed class DecideApprovalCommandHandler : IRequestHandler<DecideApprova
             approval.DecidedAt = DateTimeOffset.UtcNow;
             approval.DecidedBy = _user.UserId;
             approval.DecisionReason = reason;
-            // Stay pending — object remains pending.
             await _db.SaveChangesAsync(cancellationToken);
             await EnsurePermissionUntouchedAsync(permissionCountBefore, rolePermissionCountBefore, cancellationToken);
             return;
@@ -96,8 +101,39 @@ public sealed class DecideApprovalCommandHandler : IRequestHandler<DecideApprova
         approval.DecidedBy = _user.UserId;
         approval.DecisionReason = reason;
         await ApplyObjectStatusAsync(approval, "approved", cancellationToken);
+        await ApplyPendingWriteOffIfAnyAsync(approval, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await EnsurePermissionUntouchedAsync(permissionCountBefore, rolePermissionCountBefore, cancellationToken);
+    }
+
+    private async Task ApplyPendingWriteOffIfAnyAsync(Approval approval, CancellationToken cancellationToken)
+    {
+        if (!WriteOffApplier.TryDecodePendingNotes(approval.Notes, out var payload))
+        {
+            return;
+        }
+
+        if (approval.ObjectType == ApprovalObjectTypes.AccountsPayable)
+        {
+            var ap = await _db.AccountsPayable
+                .FirstOrDefaultAsync(a => a.Id == approval.ObjectId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả để áp xóa nợ đã duyệt.");
+            // Mutate only — outer SaveChanges persists approval + write-off together.
+            await WriteOffApplier.ApplyPayableAsync(
+                _db, _audit, _user, ap, payload.Amount, payload.Reason, cancellationToken,
+                saveChanges: false);
+            return;
+        }
+
+        if (approval.ObjectType == ApprovalObjectTypes.AccountsReceivable)
+        {
+            var ar = await _db.AccountsReceivable
+                .FirstOrDefaultAsync(a => a.Id == approval.ObjectId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu để áp xóa nợ đã duyệt.");
+            await WriteOffApplier.ApplyReceivableAsync(
+                _db, _audit, _user, ar, payload.Amount, payload.Reason, cancellationToken,
+                saveChanges: false);
+        }
     }
 
     private async Task ApplyObjectStatusAsync(Approval approval, string statusOnObject, CancellationToken cancellationToken)

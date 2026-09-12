@@ -10,13 +10,13 @@ using Microsoft.Extensions.Options;
 namespace LCMS.Application.Settlements.Commands;
 
 /// <summary>
-/// Small-remainder AR write-off stub: reduces obligation via AdjustmentAmount + required reason note.
-/// Never silently wipes outstanding; never invents Revenue (C-004); does not fake collection cash.
+/// AR write-off: ≤ MaxWriteOffAmount apply immediately; above → Approval then apply on approve.
+/// Never invents Revenue; does not fake collection cash.
 /// </summary>
 public sealed record WriteOffAccountsReceivableCommand(
     Guid AccountsReceivableId,
     decimal Amount,
-    string Reason) : IRequest;
+    string Reason) : IRequest<WriteOffResult>;
 
 public sealed class WriteOffAccountsReceivableCommandValidator
     : AbstractValidator<WriteOffAccountsReceivableCommand>
@@ -33,7 +33,7 @@ public sealed class WriteOffAccountsReceivableCommandValidator
 }
 
 public sealed class WriteOffAccountsReceivableCommandHandler
-    : IRequestHandler<WriteOffAccountsReceivableCommand>
+    : IRequestHandler<WriteOffAccountsReceivableCommand, WriteOffResult>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -55,7 +55,9 @@ public sealed class WriteOffAccountsReceivableCommandHandler
         _options = options.Value;
     }
 
-    public async Task Handle(WriteOffAccountsReceivableCommand request, CancellationToken cancellationToken)
+    public async Task<WriteOffResult> Handle(
+        WriteOffAccountsReceivableCommand request,
+        CancellationToken cancellationToken)
     {
         if (!_tenantContext.HasTenant)
         {
@@ -63,12 +65,8 @@ public sealed class WriteOffAccountsReceivableCommandHandler
         }
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
-        var max = _options.MaxWriteOffAmount;
-        if (amount > max)
-        {
-            throw new ConflictAppException(
-                $"Số tiền xóa nợ vượt trần stub ({max}). Không được xóa nợ lớn im lặng.");
-        }
+        var reason = request.Reason.Trim();
+        var maxImmediate = _options.MaxWriteOffAmount;
 
         var ar = await _db.AccountsReceivable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsReceivableId, cancellationToken)
@@ -91,55 +89,42 @@ public sealed class WriteOffAccountsReceivableCommandHandler
                 $"Số tiền xóa nợ vượt số dư còn lại ({outstanding}) (C-008).");
         }
 
-        var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
-        var beforeJson = AuditJson.Serialize(new
+        if (amount <= maxImmediate)
         {
-            id = ar.Id,
-            billId = ar.BillId,
-            recognized = ar.RecognizedAmount,
-            adjustment = ar.AdjustmentAmount,
-            settled = ar.FinalizedSettledAmount,
-            outstanding,
-            settlementStatus = ar.SettlementStatus,
-            currency = ar.CurrencyCode
-        });
-
-        ar.AdjustmentAmount = decimal.Round(ar.AdjustmentAmount - amount, 4, MidpointRounding.AwayFromZero);
-        ar.SettlementStatus = SettlementHelpers.DeriveApArSettlementStatus(
-            ar.RecognizedAmount, ar.AdjustmentAmount, ar.FinalizedSettledAmount);
-        ar.UpdatedAt = DateTimeOffset.UtcNow;
-        ar.UpdatedBy = _user.UserId;
-
-        var reasonLine = $"[xóa nợ {amount}] {request.Reason.Trim()}";
-        ar.Notes = string.IsNullOrWhiteSpace(ar.Notes)
-            ? reasonLine
-            : $"{ar.Notes}\n{reasonLine}";
-
-        _audit.Append(
-            AuditActions.AccountsReceivableWriteOff,
-            AuditObjectTypes.AccountsReceivable,
-            ar.Id,
-            beforeJson: beforeJson,
-            afterJson: AuditJson.Serialize(new
-            {
-                id = ar.Id,
-                billId = ar.BillId,
-                writeOff = amount,
-                recognized = ar.RecognizedAmount,
-                adjustment = ar.AdjustmentAmount,
-                settled = ar.FinalizedSettledAmount,
-                outstanding = ar.DeriveOutstanding(),
-                settlementStatus = ar.SettlementStatus,
-                currency = ar.CurrencyCode
-            }),
-            reason: request.Reason.Trim());
-
-        await _db.SaveChangesAsync(cancellationToken);
-
-        var revenueCountAfter = await _db.Revenues.CountAsync(cancellationToken);
-        if (revenueCountAfter != revenueCountBefore)
-        {
-            throw new ConflictAppException("Xóa nợ phải thu không được tạo Doanh thu mới (C-004).");
+            await WriteOffApplier.ApplyReceivableAsync(
+                _db, _audit, _user, ar, amount, reason, cancellationToken);
+            return new WriteOffResult(true, null);
         }
+
+        var objectType = ApprovalObjectTypes.AccountsReceivable;
+        var pendingExists = await _db.Approvals.AsNoTracking()
+            .AnyAsync(
+                a => a.ObjectType == objectType
+                     && a.ObjectId == ar.Id
+                     && a.Status == ApprovalStatuses.Pending,
+                cancellationToken);
+        if (pendingExists)
+        {
+            throw new ConflictAppException(
+                "Khoản phải thu đã có yêu cầu xóa nợ đang chờ phê duyệt.");
+        }
+
+        var payload = new WriteOffApplier.PendingPayload(amount, reason, ar.CurrencyCode);
+        var approval = new Approval
+        {
+            TenantId = _tenantContext.TenantId!.Value,
+            ObjectType = objectType,
+            ObjectId = ar.Id,
+            Status = ApprovalStatuses.Pending,
+            RequiredLevel = 1,
+            CurrentLevel = 0,
+            RequestedBy = _user.UserId,
+            RequestedAt = DateTimeOffset.UtcNow,
+            RequestReason = $"Xóa nợ {amount} {ar.CurrencyCode} (vượt trần {maxImmediate}): {reason}",
+            Notes = WriteOffApplier.EncodePendingNotes(payload)
+        };
+        _db.Approvals.Add(approval);
+        await _db.SaveChangesAsync(cancellationToken);
+        return new WriteOffResult(false, approval.Id);
     }
 }

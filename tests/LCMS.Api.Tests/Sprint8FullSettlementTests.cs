@@ -146,14 +146,14 @@ public sealed class Sprint8FullSettlementTests : IAsyncLifetime
         Assert.Equal(995m, afterSettle.FinalizedSettledAmount);
         Assert.Equal("partially_settled", afterSettle.SettlementStatus);
 
-        // Write-off over max (1000) rejected when amount > max
-        using (var overMax = new HttpRequestMessage(HttpMethod.Post, $"/api/accounts-receivable/{arId}/write-off")
+        // Write-off over outstanding rejected (C-008); threshold alone no longer hard-rejects.
+        using (var overOutstanding = new HttpRequestMessage(HttpMethod.Post, $"/api/accounts-receivable/{arId}/write-off")
         {
-            Content = JsonContent.Create(new { amount = 1001m, reason = "Quá trần" })
+            Content = JsonContent.Create(new { amount = 1001m, reason = "Quá số dư" })
         })
         {
-            overMax.Headers.Add("X-Tenant-Id", tenantA.ToString());
-            var response = await _client.SendAsync(overMax);
+            overOutstanding.Headers.Add("X-Tenant-Id", tenantA.ToString());
+            var response = await _client.SendAsync(overOutstanding);
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         }
 
@@ -254,6 +254,53 @@ public sealed class Sprint8FullSettlementTests : IAsyncLifetime
         Assert.Equal(50m, apAfter.FinalizedSettledAmount);
         Assert.Equal(40m, apAfter.Outstanding);
     }
+
+    [Fact]
+    public async Task WriteOff_OverThreshold_RequiresApproval_ThenApplies()
+    {
+        var tenantId = await CreateTenantAsync("TN-P03-WO", "WriteOff Approval");
+        var billId = await CreateBillAsync(tenantId, "BL-P03-WO", "freight");
+        var apId = await RecognizePayableAsync(
+            tenantId,
+            await CreatePayableExposureAsync(tenantId, billId, 5_000m),
+            5_000m);
+
+        Guid approvalId;
+        using (var req = new HttpRequestMessage(HttpMethod.Post, $"/api/accounts-payable/{apId}/write-off")
+        {
+            Content = JsonContent.Create(new { amount = 2_000m, reason = "Miễn thỏa thuận lớn" })
+        })
+        {
+            req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var response = await _client.SendAsync(req);
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            var body = await response.Content.ReadFromJsonAsync<WriteOffPendingResponse>(JsonOptions);
+            Assert.True(body!.RequiresApproval);
+            Assert.NotEqual(Guid.Empty, body.ApprovalId);
+            approvalId = body.ApprovalId;
+        }
+
+        var pendingAp = await GetAccountsPayableAsync(tenantId, apId);
+        Assert.Equal(5_000m, pendingAp.Outstanding);
+        Assert.Equal(0m, pendingAp.AdjustmentAmount);
+
+        using (var decide = new HttpRequestMessage(HttpMethod.Post, $"/api/approvals/{approvalId}/approve")
+        {
+            Content = JsonContent.Create(new { decisionReason = "Controller duyệt xóa nợ" })
+        })
+        {
+            decide.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(decide)).StatusCode);
+        }
+
+        var after = await GetAccountsPayableAsync(tenantId, apId);
+        Assert.Equal(3_000m, after.Outstanding);
+        Assert.Equal(-2_000m, after.AdjustmentAmount);
+        Assert.Contains("Miễn thỏa thuận lớn", after.Notes!);
+        Assert.Contains("xóa nợ", after.Notes!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record WriteOffPendingResponse(bool RequiresApproval, Guid ApprovalId, string? Message);
 
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {

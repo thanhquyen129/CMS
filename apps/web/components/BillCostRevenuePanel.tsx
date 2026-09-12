@@ -71,6 +71,7 @@ export function BillCostRevenuePanel({
   const router = useRouter();
   const dialogTitleId = useId();
   const [pending, setPending] = useState<PendingAction | null>(null);
+  const [overrideAmount, setOverrideAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [blocked, setBlocked] = useState<Record<string, true>>({});
   const [isPending, startTransition] = useTransition();
@@ -85,11 +86,13 @@ export function BillCostRevenuePanel({
   const closeDialog = useCallback(() => {
     if (submitting) return;
     setPending(null);
+    setOverrideAmount("");
   }, [submitting]);
 
   const openAction = useCallback((p: PendingAction) => {
     setError(null);
     setPending(p);
+    setOverrideAmount(String(p.amount));
   }, []);
 
   const runAction = useCallback(async () => {
@@ -97,18 +100,29 @@ export function BillCostRevenuePanel({
     setSubmitting(true);
     setError(null);
 
+    const parsed = Number(String(overrideAmount).replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setError("Số tiền không hợp lệ.");
+      setSubmitting(false);
+      return;
+    }
+
     const base =
       pending.kind === "cost"
         ? `/bff/costs/${pending.id}`
         : `/bff/revenues/${pending.id}`;
     const path =
       pending.action === "confirm" ? `${base}/confirm` : `${base}/actualize`;
+    const body =
+      pending.action === "confirm"
+        ? { confirmedAmount: parsed }
+        : { actualAmount: parsed };
 
     try {
       const res = await fetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify(body),
       });
 
       if (res.status === 401) {
@@ -142,6 +156,7 @@ export function BillCostRevenuePanel({
       }
 
       setPending(null);
+      setOverrideAmount("");
       startTransition(() => {
         router.refresh();
       });
@@ -150,7 +165,7 @@ export function BillCostRevenuePanel({
     } finally {
       setSubmitting(false);
     }
-  }, [pending, router]);
+  }, [pending, overrideAmount, router]);
 
   const isBlocked = (kind: Kind, action: Action, id: string) =>
     Boolean(blocked[`${kind}:${action}:${id}`]);
@@ -159,13 +174,15 @@ export function BillCostRevenuePanel({
     pending?.action === "confirm"
       ? {
           title: `Xác nhận ${pending.kind === "cost" ? costLabel : revenueLabel}`,
-          body: `Chuyển từ ${expected} → ${confirmed}. Số tiền ${formatMoney(pending.amount, pending.currencyCode)} sẽ ghi vào lớp ${confirmed}. Lớp ${expected} được giữ nguyên — không ghi đè im lặng.`,
+          body: `Chuyển từ ${expected} → ${confirmed}. Có thể chỉnh số ghi vào lớp ${confirmed} (Dự kiến và Đã xác nhận độc lập). Lớp ${expected} (${formatMoney(pending.amount, pending.currencyCode)}) được giữ nguyên — không ghi đè im lặng.`,
+          amountLabel: `Số ${confirmed}`,
           cta: `Xác nhận ${pending.kind === "cost" ? costLabel : revenueLabel}`,
         }
       : pending
         ? {
             title: `Ghi nhận ${actual} — ${pending.kind === "cost" ? costLabel : revenueLabel}`,
-            body: `Chuyển từ ${confirmed} → ${actual}. Số tiền ${formatMoney(pending.amount, pending.currencyCode)}. Các lớp ${expected}/${confirmed} được giữ nguyên.`,
+            body: `Chuyển từ ${confirmed} → ${actual}. Có thể chỉnh số lớp ${actual}. Các lớp ${expected}/${confirmed} được giữ nguyên.`,
+            amountLabel: `Số ${actual}`,
             cta: `Ghi nhận ${actual}`,
           }
         : null;
@@ -246,52 +263,62 @@ export function BillCostRevenuePanel({
                     </td>
                     <td className="num">{formatMoney(c.amount, c.currencyCode)}</td>
                     <td>
-                      {confirmOk ? (
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          disabled={submitting || isPending}
-                          onClick={() =>
-                            openAction({
-                              kind: "cost",
-                              action: "confirm",
-                              id: c.id,
-                              amount: c.amount,
-                              currencyCode: c.currencyCode,
-                              label: costLabel,
-                            })
-                          }
-                        >
-                          Xác nhận {costLabel}
-                        </button>
-                      ) : actualizeOk ? (
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          disabled={submitting || isPending}
-                          onClick={() =>
-                            openAction({
-                              kind: "cost",
-                              action: "actualize",
-                              id: c.id,
-                              amount: c.amount,
-                              currencyCode: c.currencyCode,
-                              label: costLabel,
-                            })
-                          }
-                        >
-                          Ghi nhận {actual}
-                        </button>
-                      ) : isBlocked("cost", "confirm", c.id) ||
-                        isBlocked("cost", "actualize", c.id) ? (
-                        <span className="muted small">Không thể thao tác</span>
-                      ) : c.financialMaturity?.toLowerCase() === "actual" ? (
-                        <span className="muted small">{actual}</span>
-                      ) : c.recordStatus !== "active" ? (
-                        <span className="muted small">Không hiệu lực</span>
-                      ) : (
-                        <span className="muted small">—</span>
-                      )}
+                      <div className="row-actions">
+                        {confirmOk ? (
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            disabled={submitting || isPending}
+                            onClick={() =>
+                              openAction({
+                                kind: "cost",
+                                action: "confirm",
+                                id: c.id,
+                                amount: c.amount,
+                                currencyCode: c.currencyCode,
+                                label: costLabel,
+                              })
+                            }
+                          >
+                            Xác nhận {costLabel}
+                          </button>
+                        ) : actualizeOk ? (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            disabled={submitting || isPending}
+                            onClick={() =>
+                              openAction({
+                                kind: "cost",
+                                action: "actualize",
+                                id: c.id,
+                                amount: c.amount,
+                                currencyCode: c.currencyCode,
+                                label: costLabel,
+                              })
+                            }
+                          >
+                            Ghi nhận {actual}
+                          </button>
+                        ) : isBlocked("cost", "confirm", c.id) ||
+                          isBlocked("cost", "actualize", c.id) ? (
+                          <span className="muted small">Không thể thao tác</span>
+                        ) : c.financialMaturity?.toLowerCase() === "actual" ? (
+                          <span className="muted small">{actual}</span>
+                        ) : c.recordStatus !== "active" ? (
+                          <span className="muted small">Không hiệu lực</span>
+                        ) : (
+                          <span className="muted small">—</span>
+                        )}
+                        {c.recordStatus === "active" ? (
+                          <Link
+                            className="btn btn-ghost btn-sm"
+                            href={`/ap-ar/exposures/new?kind=payable&billId=${encodeURIComponent(billId)}&costId=${encodeURIComponent(c.id)}&amount=${encodeURIComponent(String(c.amount))}&currency=${encodeURIComponent(c.currencyCode)}`}
+                          >
+                            Exposure
+                          </Link>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -347,52 +374,62 @@ export function BillCostRevenuePanel({
                     </td>
                     <td className="num">{formatMoney(r.amount, r.currencyCode)}</td>
                     <td>
-                      {confirmOk ? (
-                        <button
-                          type="button"
-                          className="btn btn-sm"
-                          disabled={submitting || isPending}
-                          onClick={() =>
-                            openAction({
-                              kind: "revenue",
-                              action: "confirm",
-                              id: r.id,
-                              amount: r.amount,
-                              currencyCode: r.currencyCode,
-                              label: revenueLabel,
-                            })
-                          }
-                        >
-                          Xác nhận {revenueLabel}
-                        </button>
-                      ) : actualizeOk ? (
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          disabled={submitting || isPending}
-                          onClick={() =>
-                            openAction({
-                              kind: "revenue",
-                              action: "actualize",
-                              id: r.id,
-                              amount: r.amount,
-                              currencyCode: r.currencyCode,
-                              label: revenueLabel,
-                            })
-                          }
-                        >
-                          Ghi nhận {actual}
-                        </button>
-                      ) : isBlocked("revenue", "confirm", r.id) ||
-                        isBlocked("revenue", "actualize", r.id) ? (
-                        <span className="muted small">Không thể thao tác</span>
-                      ) : r.financialMaturity?.toLowerCase() === "actual" ? (
-                        <span className="muted small">{actual}</span>
-                      ) : r.recordStatus !== "active" ? (
-                        <span className="muted small">Không hiệu lực</span>
-                      ) : (
-                        <span className="muted small">—</span>
-                      )}
+                      <div className="row-actions">
+                        {confirmOk ? (
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            disabled={submitting || isPending}
+                            onClick={() =>
+                              openAction({
+                                kind: "revenue",
+                                action: "confirm",
+                                id: r.id,
+                                amount: r.amount,
+                                currencyCode: r.currencyCode,
+                                label: revenueLabel,
+                              })
+                            }
+                          >
+                            Xác nhận {revenueLabel}
+                          </button>
+                        ) : actualizeOk ? (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            disabled={submitting || isPending}
+                            onClick={() =>
+                              openAction({
+                                kind: "revenue",
+                                action: "actualize",
+                                id: r.id,
+                                amount: r.amount,
+                                currencyCode: r.currencyCode,
+                                label: revenueLabel,
+                              })
+                            }
+                          >
+                            Ghi nhận {actual}
+                          </button>
+                        ) : isBlocked("revenue", "confirm", r.id) ||
+                          isBlocked("revenue", "actualize", r.id) ? (
+                          <span className="muted small">Không thể thao tác</span>
+                        ) : r.financialMaturity?.toLowerCase() === "actual" ? (
+                          <span className="muted small">{actual}</span>
+                        ) : r.recordStatus !== "active" ? (
+                          <span className="muted small">Không hiệu lực</span>
+                        ) : (
+                          <span className="muted small">—</span>
+                        )}
+                        {r.recordStatus === "active" ? (
+                          <Link
+                            className="btn btn-ghost btn-sm"
+                            href={`/ap-ar/exposures/new?kind=receivable&billId=${encodeURIComponent(billId)}&revenueId=${encodeURIComponent(r.id)}&amount=${encodeURIComponent(String(r.amount))}&currency=${encodeURIComponent(r.currencyCode)}`}
+                          >
+                            Exposure
+                          </Link>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -420,6 +457,21 @@ export function BillCostRevenuePanel({
           >
             <h2 id={dialogTitleId}>{dialogCopy.title}</h2>
             <p>{dialogCopy.body}</p>
+            <div className="field" style={{ marginTop: "0.75rem" }}>
+              <label htmlFor="maturity-override-amount">
+                {dialogCopy.amountLabel} ({pending.currencyCode})
+              </label>
+              <input
+                id="maturity-override-amount"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                value={overrideAmount}
+                disabled={submitting}
+                onChange={(e) => setOverrideAmount(e.target.value)}
+              />
+            </div>
             {error ? (
               <div className="alert alert-error" role="alert">
                 {error}

@@ -1,11 +1,11 @@
 # UAT G1 — UI tạo Bill / Cost / Revenue / Exposure→Recognize
 
-**Status:** Done  
+**Status:** Done (FULL operable create path)  
 **Date:** 2026-09-12  
 **Source:** `docs/sprint/UAT-VPS-ONE-ROUND.md` gap G1 (blocker UI-only go-live)
 
 ## Outcome
-Operator hoàn tất bước tạo từ UI (không Postman): **Bill → Cost → Revenue → Exposure → Recognize AP/AR**. Confirm/actualize + settle/close đã có từ U2–U5.
+Operator hoàn tất **tạo + xác nhận có chỉnh số + exposure gắn cost/revenue + recognize** từ UI (không Postman). Settle/close = U5; document line = G3.
 
 ## Checklist
 
@@ -14,37 +14,29 @@ Operator hoàn tất bước tạo từ UI (không Postman): **Bill → Cost →
 | 1 | `/bills/new` + CTA trên danh sách Bill | Done |
 | 2 | `/bills/{id}/costs/new` — Cost trực tiếp gắn Bill (lớp Dự kiến) | Done |
 | 3 | `/bills/{id}/revenues/new` — Revenue gắn Bill | Done |
-| 4 | `/ap-ar/exposures/new` — payable/receivable exposure | Done |
-| 5 | `/ap-ar/exposures/{id}/recognize` — ghi nhận → AP/AR (partial OK; C-015 không nhập outstanding) | Done |
-| 6 | CTA trên Bill detail + `/ap-ar` (exposure tab Recognize) | Done |
-| 7 | Copy CP6.5: Cost≠Payment; Revenue≠Collection; Exposure≠AP/AR; empty/error thật | Done |
-| 8 | BFF cookie → API existing (không invent money API) | Done |
+| 4 | `/ap-ar/exposures/new` — payable/receivable; prefill bill/amount; gắn cost/revenue | Done |
+| 5 | `/ap-ar/exposures/{id}/recognize` — partial OK; prefill hạn; C-015 không nhập outstanding | Done |
+| 6 | CTA trên Bill detail + `/ap-ar` (+ Exposure từ dòng Cost/Revenue) | Done |
+| 7 | Confirm/Actual **có chỉnh số** (Expected ≠ Confirmed như vòng UAT) | Done |
+| 8 | Copy CP6.5; empty/error thật; BFF → API sẵn có | Done |
 
-## APIs (Pass 2 — unchanged)
-- `POST /api/bills`
-- `POST /api/costs`, `POST /api/revenues`
-- `POST /api/payable-exposures`, `…/recognize`
-- `POST /api/receivable-exposures`, `…/recognize`
+## Thin → Full (lượt này)
+| Trước (thin) | Full |
+|--------------|------|
+| Confirm body `{}` | `confirmedAmount` / `actualAmount` trong dialog |
+| Exposure không gắn Cost/Revenue | Select/UUID `costId`/`revenueId` + prefill amount |
+| Recognize không prefill hạn | `defaultDueDate` từ exposure |
+| CTA exposure chỉ từ AP/AR | Thêm nút Exposure trên từng dòng Cost/Revenue |
 
-## BFF
-- `/bff/bills`, `/bff/costs`, `/bff/revenues`
-- `/bff/payable-exposures`, `/bff/payable-exposures/[id]/recognize`
-- `/bff/receivable-exposures`, `/bff/receivable-exposures/[id]/recognize`
+## Non-goals (vẫn ngoài G1)
+Shared cost create/allocate UI · party pickers · write-off · reverse recognize · document line (G3).
 
-## UI files
-- Forms: `CreateBillForm`, `CreateCostForm`, `CreateRevenueForm`, `CreateExposureForm`, `RecognizeExposureForm`
-- Pages: `bills/new`, `bills/[id]/costs/new`, `bills/[id]/revenues/new`, `ap-ar/exposures/new`, `ap-ar/exposures/[id]/recognize`
-- Panels: `BillCostRevenuePanel` (+billId), `BillDocumentsApArPanel`, `bills/page`, `ap-ar/page`
-
-## Non-goals
-Shared cost create/allocate UI; write-off; reverse recognize; party pickers; document line (G3).
-
-## Operator path (UI-only vòng mỏng G1)
-1. Login → `/bills` → **Tạo Bill**
-2. Trên Bill → **Tạo chi phí** / **Tạo doanh thu** → Xác nhận (U2)
-3. `/ap-ar` hoặc Bill panel → **Tạo exposure** → **Ghi nhận → AP/AR**
-4. Tiếp settle/close (U5) như trước
+## Operator path (UI-only — parity UAT create)
+1. `/bills` → **Tạo Bill**
+2. **Tạo chi phí** (1.000.000) → **Xác nhận** chỉnh 1.100.000 → **Tạo doanh thu** → xác nhận
+3. Dòng Cost → **Exposure** (gắn cost) → **Ghi nhận → AP**; tương tự Revenue → AR
+4. Settle/close (U5); chứng từ (G2/G3)
 
 ## Verify
-- `npm run build` trong `apps/web`
-- VPS: tạo Bill mới từ UI → Cost/Revenue → Exposure → Recognize → thấy outstanding trên `/ap-ar`
+- `npm run build` apps/web
+- VPS: Expected≠Confirmed trên UI; exposure gắn cost; recognize có hạn

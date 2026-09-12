@@ -15,6 +15,7 @@ type Props = {
   openAmount: number;
   currencyCode: string;
   billId?: string | null;
+  defaultDueDate?: string | null;
 };
 
 export function RecognizeExposureForm({
@@ -24,6 +25,7 @@ export function RecognizeExposureForm({
   openAmount,
   currencyCode,
   billId,
+  defaultDueDate,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +163,7 @@ export function RecognizeExposureForm({
             name="dueDate"
             type="date"
             disabled={busy || !canRecognize}
+            defaultValue={defaultDueDate ?? undefined}
           />
         </div>
         <div className="field field-span">

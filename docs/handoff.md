@@ -1,6 +1,23 @@
 # Handoff
 
+## 2026-09-12 — G1 FULL (confirm override + exposure link)
+
+### User
+G1 lát mỏng? Còn gì thì làm full.
+
+### Done
+- Confirm/Actual dialog: chỉnh `confirmedAmount` / `actualAmount` (parity UAT Expected≠Confirmed).
+- Exposure: gắn cost/revenue (select khi có Bill), prefill amount/currency từ query; CTA **Exposure** trên dòng Cost/Revenue.
+- Recognize: prefill hạn từ exposure.
+- DoD `UI-G1-DOD.md` cập nhật FULL; non-goals giữ shared allocate / party / G3.
+
+### Verify
+- `npm run build` apps/web
+
+---
+
 ## 2026-09-12 — G1 UI tạo Bill / Cost / Revenue / Exposure→Recognize
+
 
 ### User
 G1 — UI tạo Bill / Cost / Revenue / Exposure→Recognize; làm hết full G1.

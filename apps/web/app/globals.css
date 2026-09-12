@@ -342,6 +342,12 @@ a.stat-card:hover {
 }
 .field-span { grid-column: 1 / -1; }
 .receive-form { margin-top: 0.5rem; }
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
 .status-triad {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-12 — Coordinator: S8 FULL merged → S9 FULL kickoff
+
+### User
+Follow-up after Pass2 Sprint8 Settle Full cloud agent completed.
+
+### Done
+- Merged Sprint 8 FULL onto `main`; verified `dotnet test` → **80 passed**.
+- README Pass 2: S8 Done; S9 In progress.
+- Added `docs/sprint/PROMPT-SPRINT-9-FULL.md`; pushed `325d80d`.
+- Launched cloud agent Pass2 Sprint9 Control Full.
+
+### Next
+- Merge Sprint 9 FULL PR when ready → kickoff Sprint 10 Close FULL.
+
+---
+
 ## 2026-09-12 — Sprint 8 FULL Settlement (Pass 2)
 
 ### User

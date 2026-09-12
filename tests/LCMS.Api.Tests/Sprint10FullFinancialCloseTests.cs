@@ -98,9 +98,9 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
             confirm.Headers.Add("X-Tenant-Id", tenantId.ToString());
             var res = await _client.SendAsync(confirm);
             Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
-            var body = await res.Content.ReadAsStringAsync();
-            Assert.Contains("đã khóa chốt", body);
-            Assert.Contains("xác nhận chi phí", body);
+            var err = await res.Content.ReadFromJsonAsync<ErrorResponse>(JsonOptions);
+            Assert.Contains("đã khóa chốt", err!.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("xác nhận chi phí", err.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         using (var confirmRev = new HttpRequestMessage(HttpMethod.Post, $"/api/revenues/{revenueId}/confirm")
@@ -111,7 +111,8 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
             confirmRev.Headers.Add("X-Tenant-Id", tenantId.ToString());
             var res = await _client.SendAsync(confirmRev);
             Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
-            Assert.Contains("đã khóa chốt", await res.Content.ReadAsStringAsync());
+            var err = await res.Content.ReadFromJsonAsync<ErrorResponse>(JsonOptions);
+            Assert.Contains("đã khóa chốt", err!.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         // Allocate blocked while locked (create AP/payment after lock — create allowed, allocate not)
@@ -128,9 +129,9 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
             alloc.Headers.Add("X-Tenant-Id", tenantId.ToString());
             var res = await _client.SendAsync(alloc);
             Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
-            var body = await res.Content.ReadAsStringAsync();
-            Assert.Contains("đã khóa chốt", body);
-            Assert.Contains("phân bổ thanh toán", body);
+            var err = await res.Content.ReadFromJsonAsync<ErrorResponse>(JsonOptions);
+            Assert.Contains("đã khóa chốt", err!.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("phân bổ thanh toán", err.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         // Reopen — snapshots untouched; mutations allowed again
@@ -207,7 +208,8 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
             confirm.Headers.Add("X-Tenant-Id", tenantA.ToString());
             var res = await _client.SendAsync(confirm);
             Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
-            Assert.Contains("đã khóa chốt", await res.Content.ReadAsStringAsync());
+            var err = await res.Content.ReadFromJsonAsync<ErrorResponse>(JsonOptions);
+            Assert.Contains("đã khóa chốt", err!.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         // Reclose → new VersionNo; old snapshot preserved
@@ -232,9 +234,9 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
         snap.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var response = await _client.SendAsync(snap);
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("concurrency_conflict", body);
-        Assert.Contains(expectedViFragment, body);
+        var err = await response.Content.ReadFromJsonAsync<ErrorResponse>(JsonOptions);
+        Assert.Equal("concurrency_conflict", err!.Code);
+        Assert.Contains(expectedViFragment, err.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("open", (await GetCloseAsync(tenantId, closeId)).Status);
         Assert.Empty(await ListSnapshotsAsync(tenantId, closeId));
     }
@@ -461,6 +463,8 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
     }
 
     private sealed record IdResponse(Guid Id);
+
+    private sealed record ErrorResponse(string CorrelationId, string Code, string Message);
 
     private sealed record FinancialCloseSnapshotDetailDto(
         Guid Id,

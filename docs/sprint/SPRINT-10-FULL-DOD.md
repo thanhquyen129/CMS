@@ -17,7 +17,7 @@ Pass 2 closes TD6 E12 depth: full eligibility checklist, period lock on live led
 | Snapshots insert-only (C-010 / AC-008) | Done | Unchanged DbContext guard; reopen/reclose append only |
 | Reopen/reclose history | Done | Pass 1 behavior retained; VI errors |
 | Vietnamese errors + UI terms | Done | Eligibility / period lock / Strict terms |
-| Tests | Done | `Sprint10FullFinancialCloseTests` (3); suite green |
+| Tests | Done | `Sprint10FullFinancialCloseTests` (3); suite **86 passed** |
 | DoD + handoff + ADR-0010 | Done | This file |
 
 ## Config

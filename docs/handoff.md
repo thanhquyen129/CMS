@@ -10,7 +10,7 @@ Pass 2 Sprint 10 FULL: eligibility checklist (critical exceptions / unmatched ac
 - Period lock (`FinancialClose:EnforcePeriodLock` default true): Locked close blocks Cost/Revenue confirm and Payment/Collection allocate/finalize in scope; Strict always enforces.
 - Policy `controlled` | `strict` stored on close + copied to snapshot; reopen/reclose never mutates old snapshots (C-010 / AC-008).
 - ADR-0010; VI terms; `SPRINT-10-FULL-DOD.md`; Pass 1 DoD deferred marked done for eligibility/period lock.
-- Tests: `Sprint10FullFinancialCloseTests` (3).
+- Tests: `Sprint10FullFinancialCloseTests` (3); suite **86 passed**.
 
 ### Files / API / Config
 - Application: `FinancialCloseOptions`, `CloseEligibilityChecker`, `PeriodLockGate`; snapshot command uses checker; confirm/allocate/finalize call period lock.
@@ -19,7 +19,7 @@ Pass 2 Sprint 10 FULL: eligibility checklist (critical exceptions / unmatched ac
 - DoD: `docs/sprint/SPRINT-10-FULL-DOD.md`
 
 ### Verify
-- `dotnet test Cms.sln -c Release` (see PR / CI)
+- `dotnet test Cms.sln -c Release` → **86 passed**
 
 ### Deferred / Next
 - Pass 2 Sprint 11 Profile/Reporting FULL

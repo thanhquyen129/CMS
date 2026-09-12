@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -121,7 +122,20 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
             AuditActions.FinancialCloseSnapshotCreate,
             AuditObjectTypes.FinancialCloseSnapshot,
             snapshot.Id,
-            afterJson: $"{{\"financialCloseId\":\"{close.Id}\",\"snapshotVersion\":{nextSnapshotVersion},\"immutableHash\":\"{hash}\",\"policyVersion\":\"{close.PolicyVersion}\"}}");
+            afterJson: AuditJson.Serialize(new
+            {
+                snapshotId = snapshot.Id,
+                financialCloseId = close.Id,
+                snapshotVersion = nextSnapshotVersion,
+                immutableHash = hash,
+                policyVersion = close.PolicyVersion,
+                scopeType = close.ScopeType,
+                scopeId = close.ScopeId,
+                periodFrom = close.PeriodFrom,
+                periodTo = close.PeriodTo,
+                metricCount = metrics.Count,
+                closedAt
+            }));
 
         await _db.SaveChangesAsync(cancellationToken);
         return snapshot.Id;

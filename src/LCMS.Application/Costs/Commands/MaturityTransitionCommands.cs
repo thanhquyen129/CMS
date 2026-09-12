@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Application.FinancialCloses;
@@ -109,8 +110,17 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
             4,
             MidpointRounding.AwayFromZero);
 
-        var beforeJson =
-            $"{{\"maturity\":\"{cost.FinancialMaturity}\",\"expected\":{cost.ExpectedAmount},\"amount\":{cost.Amount}}}";
+        var beforeJson = AuditJson.Serialize(new
+        {
+            id = cost.Id,
+            billId = cost.BillId,
+            maturity = cost.FinancialMaturity,
+            expected = cost.ExpectedAmount,
+            confirmed = cost.ConfirmedAmount,
+            amount = cost.Amount,
+            currency = cost.CurrencyCode,
+            baseAmount = cost.BaseAmount
+        });
 
         // Keep ExpectedAmount intact (C-009).
         cost.ConfirmedAmount = confirmed;
@@ -125,7 +135,17 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
             AuditObjectTypes.Cost,
             cost.Id,
             beforeJson: beforeJson,
-            afterJson: $"{{\"maturity\":\"{CostMaturities.Confirmed}\",\"confirmed\":{confirmed},\"amount\":{confirmed},\"baseAmount\":{cost.BaseAmount}}}");
+            afterJson: AuditJson.Serialize(new
+            {
+                id = cost.Id,
+                billId = cost.BillId,
+                maturity = CostMaturities.Confirmed,
+                expected = cost.ExpectedAmount,
+                confirmed,
+                amount = confirmed,
+                currency = cost.CurrencyCode,
+                baseAmount = cost.BaseAmount
+            }));
 
         await _db.SaveChangesAsync(cancellationToken);
     }

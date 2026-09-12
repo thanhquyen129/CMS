@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -33,15 +34,18 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public RecognizePayableExposureCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(RecognizePayableExposureCommand request, CancellationToken cancellationToken)
@@ -86,6 +90,17 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
 
+        var beforeJson = AuditJson.Serialize(new
+        {
+            exposureId = exposure.Id,
+            billId = exposure.BillId,
+            exposureAmount = exposure.Amount,
+            recognizedAmount = alreadyRecognized,
+            openAmount = open,
+            exposureStatus = exposure.Status,
+            currency = exposure.CurrencyCode
+        });
+
         var now = DateTimeOffset.UtcNow;
         var ap = new AccountsPayable
         {
@@ -115,6 +130,25 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         exposure.TouchRowVersion();
 
         _db.AccountsPayable.Add(ap);
+        _audit.Append(
+            AuditActions.AccountsPayableRecognize,
+            AuditObjectTypes.AccountsPayable,
+            ap.Id,
+            beforeJson: beforeJson,
+            afterJson: AuditJson.Serialize(new
+            {
+                accountsPayableId = ap.Id,
+                exposureId = exposure.Id,
+                billId = ap.BillId,
+                recognizedAmount = amount,
+                exposureRecognizedTotal = exposure.RecognizedAmount,
+                exposureStatus = exposure.Status,
+                settlementStatus = ap.SettlementStatus,
+                outstanding = ap.DeriveOutstanding(),
+                currency = ap.CurrencyCode,
+                dueDate = ap.DueDate
+            }));
+
         // Explicit: recognition must not invent Cost or Revenue (C-003 / C-004).
         await _db.SaveChangesAsync(cancellationToken);
 

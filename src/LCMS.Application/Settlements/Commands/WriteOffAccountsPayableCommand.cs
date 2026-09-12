@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -89,8 +90,17 @@ public sealed class WriteOffAccountsPayableCommandHandler : IRequestHandler<Writ
         }
 
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
-        var beforeJson =
-            $"{{\"outstanding\":{outstanding},\"adjustment\":{ap.AdjustmentAmount}}}";
+        var beforeJson = AuditJson.Serialize(new
+        {
+            id = ap.Id,
+            billId = ap.BillId,
+            recognized = ap.RecognizedAmount,
+            adjustment = ap.AdjustmentAmount,
+            settled = ap.FinalizedSettledAmount,
+            outstanding,
+            settlementStatus = ap.SettlementStatus,
+            currency = ap.CurrencyCode
+        });
 
         // Write-off reduces obligation (negative adjustment) — not fake cash settlement.
         ap.AdjustmentAmount = decimal.Round(ap.AdjustmentAmount - amount, 4, MidpointRounding.AwayFromZero);
@@ -109,7 +119,18 @@ public sealed class WriteOffAccountsPayableCommandHandler : IRequestHandler<Writ
             AuditObjectTypes.AccountsPayable,
             ap.Id,
             beforeJson: beforeJson,
-            afterJson: $"{{\"writeOff\":{amount},\"outstanding\":{ap.DeriveOutstanding()},\"adjustment\":{ap.AdjustmentAmount}}}",
+            afterJson: AuditJson.Serialize(new
+            {
+                id = ap.Id,
+                billId = ap.BillId,
+                writeOff = amount,
+                recognized = ap.RecognizedAmount,
+                adjustment = ap.AdjustmentAmount,
+                settled = ap.FinalizedSettledAmount,
+                outstanding = ap.DeriveOutstanding(),
+                settlementStatus = ap.SettlementStatus,
+                currency = ap.CurrencyCode
+            }),
             reason: request.Reason.Trim());
 
         await _db.SaveChangesAsync(cancellationToken);

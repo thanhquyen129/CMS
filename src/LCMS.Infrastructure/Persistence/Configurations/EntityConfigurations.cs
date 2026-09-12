@@ -1457,13 +1457,34 @@ internal sealed class IntegrationErrorConfiguration : IEntityTypeConfiguration<I
         builder.Property(e => e.Detail).HasMaxLength(8192);
         builder.Property(e => e.AttemptNo).IsRequired();
         builder.Property(e => e.OccurredAt).IsRequired();
+        builder.Property(e => e.RecoveryStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RecoveryNote).HasMaxLength(2048);
 
         builder.HasIndex(e => new { e.TenantId, e.IntegrationRecordId, e.AttemptNo });
         builder.HasIndex(e => new { e.TenantId, e.OccurredAt });
+        builder.HasIndex(e => new { e.TenantId, e.RecoveryStatus, e.OccurredAt });
 
         builder.HasOne(e => e.IntegrationRecord)
             .WithMany(r => r.Errors)
             .HasForeignKey(e => e.IntegrationRecordId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<OutboxMessage>
+{
+    public void Configure(EntityTypeBuilder<OutboxMessage> builder)
+    {
+        builder.ToTable("outbox_messages");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Topic).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.PayloadJson).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.LastError).HasMaxLength(2048);
+        builder.Property(e => e.EnqueuedAt).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.EnqueuedAt });
+        builder.HasIndex(e => new { e.TenantId, e.Topic, e.EnqueuedAt });
     }
 }

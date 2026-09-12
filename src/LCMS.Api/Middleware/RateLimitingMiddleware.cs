@@ -6,6 +6,7 @@ namespace LCMS.Api.Middleware;
 
 /// <summary>
 /// Fixed-window rate limit for /api/* only (health/ready/metrics exempt). Config: RateLimiting section.
+/// Money paths can use a stricter permit limit (Pass 2 Sprint 12 FULL).
 /// </summary>
 public sealed class RateLimitingMiddleware
 {
@@ -27,8 +28,9 @@ public sealed class RateLimitingMiddleware
             return;
         }
 
-        var key = ResolvePartitionKey(context);
-        var limiter = _limiters.GetOrAdd(key, _ => CreateLimiter());
+        var moneyPath = IsMoneyPath(context.Request.Path);
+        var key = $"{ResolvePartitionKey(context)}:{(moneyPath ? "money" : "api")}";
+        var limiter = _limiters.GetOrAdd(key, _ => CreateLimiter(moneyPath));
 
         using var lease = await limiter.AcquireAsync(1, context.RequestAborted);
         if (!lease.IsAcquired)
@@ -46,14 +48,44 @@ public sealed class RateLimitingMiddleware
         await _next(context);
     }
 
-    private FixedWindowRateLimiter CreateLimiter() =>
-        new(new FixedWindowRateLimiterOptions
+    private FixedWindowRateLimiter CreateLimiter(bool moneyPath)
+    {
+        var permit = moneyPath
+            ? Math.Max(1, _options.MoneyPathPermitLimit)
+            : Math.Max(1, _options.PermitLimit);
+
+        return new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
         {
-            PermitLimit = Math.Max(1, _options.PermitLimit),
+            PermitLimit = permit,
             Window = _options.Window <= TimeSpan.Zero ? TimeSpan.FromMinutes(1) : _options.Window,
             QueueLimit = 0,
             AutoReplenishment = true
         });
+    }
+
+    private bool IsMoneyPath(PathString path)
+    {
+        var prefixes = _options.MoneyPathPrefixes;
+        if (prefixes is null || prefixes.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var prefix in prefixes)
+        {
+            if (string.IsNullOrWhiteSpace(prefix))
+            {
+                continue;
+            }
+
+            if (path.StartsWithSegments(prefix.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static bool IsApiPath(PathString path) =>
         path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase);
@@ -76,8 +108,29 @@ public sealed class RateLimitingOptions
 
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Max requests per window per partition (tenant or IP).</summary>
+    /// <summary>Max requests per window per partition (tenant or IP) for general /api/*.</summary>
     public int PermitLimit { get; set; } = 300;
+
+    /// <summary>Stricter max for money-critical paths (costs, settlements, close, …).</summary>
+    public int MoneyPathPermitLimit { get; set; } = 60;
+
+    /// <summary>Path prefixes treated as money paths (case-insensitive StartsWithSegments).</summary>
+    public string[] MoneyPathPrefixes { get; set; } =
+    [
+        "/api/costs",
+        "/api/revenues",
+        "/api/payments",
+        "/api/payment-allocations",
+        "/api/collections",
+        "/api/collection-allocations",
+        "/api/accounts-payable",
+        "/api/accounts-receivable",
+        "/api/payable-exposures",
+        "/api/receivable-exposures",
+        "/api/financial-closes",
+        "/api/financial-documents",
+        "/api/document-matches"
+    ];
 
     /// <summary>Fixed window length (e.g. 00:01:00).</summary>
     public TimeSpan Window { get; set; } = TimeSpan.FromMinutes(1);

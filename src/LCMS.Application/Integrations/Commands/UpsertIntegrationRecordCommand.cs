@@ -9,7 +9,7 @@ namespace LCMS.Application.Integrations.Commands;
 
 /// <summary>
 /// Upsert stub for integration_records. First insert succeeds; duplicate C-002 key → Conflict (safe reject).
-/// Full outbox/retry topology deferred to Pass 2.
+/// Recovery/retry: see integration_errors mark-retried / dead-letter + optional outbox stub (Sprint 12 FULL).
 /// </summary>
 public sealed record UpsertIntegrationRecordCommand(
     string SourceSystem,

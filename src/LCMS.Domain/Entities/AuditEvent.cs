@@ -42,6 +42,10 @@ public static class AuditActions
     public const string CollectionAllocationFinalize = "collection_allocation.finalize";
     public const string AccountsPayableWriteOff = "accounts_payable.write_off";
     public const string AccountsReceivableWriteOff = "accounts_receivable.write_off";
+    public const string AccountsPayableRecognize = "accounts_payable.recognize";
+    public const string AccountsReceivableRecognize = "accounts_receivable.recognize";
+    public const string FinancialDocumentAccept = "financial_document.accept";
+    public const string DocumentMatchDetailAdd = "document_match.detail_add";
     public const string FinancialCloseSnapshotCreate = "financial_close_snapshot.create";
 }
 
@@ -53,5 +57,7 @@ public static class AuditObjectTypes
     public const string CollectionAllocation = "collection_allocation";
     public const string AccountsPayable = "accounts_payable";
     public const string AccountsReceivable = "accounts_receivable";
+    public const string FinancialDocument = "financial_document";
+    public const string DocumentMatch = "document_match";
     public const string FinancialCloseSnapshot = "financial_close_snapshot";
 }

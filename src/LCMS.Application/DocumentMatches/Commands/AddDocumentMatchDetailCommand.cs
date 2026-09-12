@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialDocuments;
 using LCMS.Domain.Entities;
@@ -47,15 +48,18 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly DocumentOptions _options;
+    private readonly IAuditWriter _audit;
 
     public AddDocumentMatchDetailCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IOptions<DocumentOptions> options)
+        IOptions<DocumentOptions> options,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _options = options.Value;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(AddDocumentMatchDetailCommand request, CancellationToken cancellationToken)
@@ -161,6 +165,16 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
             DetailStatus = DocumentMatchDetailStatuses.Active
         };
 
+        var beforeJson = AuditJson.Serialize(new
+        {
+            matchId = match.Id,
+            documentId = sourceDocument.Id,
+            matchingStatus = sourceDocument.MatchingStatus,
+            sourceLineId = sourceLine.Id,
+            sourceMatchedAmount = sourceLine.MatchedAmount,
+            lineAmount = sourceLine.Amount
+        });
+
         _db.DocumentMatchDetails.Add(detail);
 
         sourceLine.MatchedAmount = decimal.Round(sourceLine.MatchedAmount + amount, 4, MidpointRounding.AwayFromZero);
@@ -176,6 +190,31 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
         {
             await RefreshDocumentMatchingStatusAsync(targetLine.DocumentId, cancellationToken);
         }
+
+        // Reload matching status for audit after refresh
+        var refreshedDoc = await _db.FinancialDocuments.AsNoTracking()
+            .FirstAsync(d => d.Id == sourceDocument.Id, cancellationToken);
+
+        _audit.Append(
+            AuditActions.DocumentMatchDetailAdd,
+            AuditObjectTypes.DocumentMatch,
+            match.Id,
+            beforeJson: beforeJson,
+            afterJson: AuditJson.Serialize(new
+            {
+                matchId = match.Id,
+                detailId = detail.Id,
+                documentId = sourceDocument.Id,
+                matchingStatus = refreshedDoc.MatchingStatus,
+                sourceLineId = sourceLine.Id,
+                targetLineId = targetLine?.Id,
+                targetCostId = request.TargetCostId,
+                targetRevenueId = request.TargetRevenueId,
+                matchedAmount = amount,
+                sourceMatchedAmount = sourceLine.MatchedAmount,
+                matchMethod = match.MatchMethod
+            }));
+        await _db.SaveChangesAsync(cancellationToken);
 
         return detail.Id;
     }

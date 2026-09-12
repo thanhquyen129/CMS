@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-12 — Pass 2 Sprint 12 FULL Hardening & UAT (**Pass 2 COMPLETE**)
+
+### User
+Follow-up after Pass2 Sprint12 Hardening Full — merge final Pass 2 sprint.
+
+### Done
+- Merged `cursor/sprint-12-full-hardening-uat-cb6e` onto `main` (S11 already on main).
+- Audit richer before/after JSON; cover finalize, document accept/match, AP/AR recognize, write-off; audit filters `from`/`to`.
+- Integration recovery: mark-retried / dead-letter; duplicate 409 C-002; outbox enqueue + process-once.
+- Rate-limit money paths; AC-007/008/009 smoke; VI gaps; `SPRINT-12-FULL-DOD.md` → **Pass 2 COMPLETE**.
+- README Pass 2 board = all Done.
+
+### Files / API
+- `/api/integration-errors*`, `/api/outbox*`; migration `Sprint12Full_HardeningRecovery`
+- DoD: `docs/sprint/SPRINT-12-FULL-DOD.md`
+
+### Verify
+- `dotnet test Cms.sln -c Release` (post-merge)
+
+### Next
+- Pass UI continues (U3+). Residual backlog in SPRINT-12-FULL-DOD only.
+
+---
+
 ## 2026-09-12 — Pass UI / Sprint U2 Cost & Revenue confirm
 
 ### User

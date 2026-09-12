@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
@@ -178,7 +179,18 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             AuditActions.CostCreate,
             AuditObjectTypes.Cost,
             cost.Id,
-            afterJson: $"{{\"amount\":{amount},\"currency\":\"{currency}\",\"maturity\":\"{CostMaturities.Expected}\",\"attribution\":\"{attribution}\"}}");
+            afterJson: AuditJson.Serialize(new
+            {
+                id = cost.Id,
+                billId = cost.BillId,
+                amount,
+                expectedAmount = amount,
+                currency,
+                maturity = CostMaturities.Expected,
+                attribution,
+                costTypeCode = cost.CostTypeCode,
+                baseAmount = cost.BaseAmount
+            }));
 
         try
         {

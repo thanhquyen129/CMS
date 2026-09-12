@@ -75,6 +75,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<IntegrationRecord> IntegrationRecords => Set<IntegrationRecord>();
     public DbSet<IntegrationError> IntegrationErrors => Set<IntegrationError>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -4,7 +4,7 @@ namespace LCMS.Domain.Entities;
 
 /// <summary>
 /// Table: integration_errors (D12) — retry/reprocess trace for a failed integration record.
-/// Thin stub for Pass 1 (full outbox/retry = Pass 2).
+/// Pass 2: mark-retried / dead-letter recovery stub (no broker).
 /// </summary>
 public sealed class IntegrationError : TenantEntityBase
 {
@@ -18,5 +18,19 @@ public sealed class IntegrationError : TenantEntityBase
     public DateTimeOffset OccurredAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? NextRetryAt { get; set; }
 
+    /// <summary>pending | retried | dead_letter</summary>
+    public string RecoveryStatus { get; set; } = IntegrationErrorRecoveryStatuses.Pending;
+
+    public DateTimeOffset? RecoveredAt { get; set; }
+    public Guid? RecoveredBy { get; set; }
+    public string? RecoveryNote { get; set; }
+
     public IntegrationRecord? IntegrationRecord { get; set; }
+}
+
+public static class IntegrationErrorRecoveryStatuses
+{
+    public const string Pending = "pending";
+    public const string Retried = "retried";
+    public const string DeadLetter = "dead_letter";
 }

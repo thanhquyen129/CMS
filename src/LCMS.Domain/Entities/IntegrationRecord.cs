@@ -41,4 +41,5 @@ public static class IntegrationRecordStatuses
     public const string Rejected = "rejected";
     public const string Processed = "processed";
     public const string Failed = "failed";
+    public const string DeadLetter = "dead_letter";
 }

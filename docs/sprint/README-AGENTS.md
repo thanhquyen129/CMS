@@ -9,15 +9,13 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | **Pass 2 — Full PO** | Chạy lại từng sprint cho đủ TD6 + CP + AC gates. |
 | **Pass UI** | Next.js trên VPS — song song Pass 2. Plan: `PLAN-UI.md`. |
 
-**Pass 1: COMPLETE.** **Pass 2: IN PROGRESS.** **Pass UI: IN PROGRESS (U0–U2 done / U3+).**
+**Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: IN PROGRESS (U0–U2 done / U3+).**
 
 ## Status Pass 2
 | Sprint | Status |
 |--------|--------|
-| 0–9 FULL | Done |
-| 10 Financial Close FULL | Done (see `SPRINT-10-FULL-DOD.md`) |
-| 11 Financial Profile & Reporting FULL | Done (see `SPRINT-11-FULL-DOD.md`) |
-| 12 Hardening FULL | In progress (cloud) — last Pass 2 |
+| 0–11 FULL | Done |
+| 12 Hardening FULL | Done (see `SPRINT-12-FULL-DOD.md`) — **Pass 2 COMPLETE** |
 
 ## Status Pass UI
 | Sprint | Status | Prompt |

@@ -16,12 +16,14 @@ public static class AuditIntegrationEndpoints
             Guid? objectId,
             string? action,
             string? correlationId,
+            DateTimeOffset? from,
+            DateTimeOffset? to,
             int? take,
             ISender sender,
             CancellationToken ct) =>
         {
             var list = await sender.Send(
-                new ListAuditEventsQuery(objectType, objectId, action, correlationId, take ?? 100),
+                new ListAuditEventsQuery(objectType, objectId, action, correlationId, from, to, take ?? 100),
                 ct);
             return Results.Ok(list);
         });
@@ -62,6 +64,84 @@ public static class AuditIntegrationEndpoints
             return Results.Ok(list);
         });
 
+        var errors = app.MapGroup("/api/integration-errors").WithTags("IntegrationErrors");
+
+        errors.MapPost("/", async (
+            RecordIntegrationErrorRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var id = await sender.Send(
+                new RecordIntegrationErrorCommand(
+                    body.IntegrationRecordId,
+                    body.ErrorCode,
+                    body.Message,
+                    body.Detail,
+                    body.NextRetryAt),
+                ct);
+            return Results.Created($"/api/integration-errors/{id}", new { id });
+        });
+
+        errors.MapGet("/", async (
+            Guid? integrationRecordId,
+            string? recoveryStatus,
+            int? take,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var list = await sender.Send(
+                new ListIntegrationErrorsQuery(integrationRecordId, recoveryStatus, take ?? 100),
+                ct);
+            return Results.Ok(list);
+        });
+
+        errors.MapPost("/{id:guid}/mark-retried", async (
+            Guid id,
+            MarkIntegrationErrorRequest? body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new MarkIntegrationErrorRetriedCommand(id, body?.Note), ct);
+            return Results.NoContent();
+        });
+
+        errors.MapPost("/{id:guid}/dead-letter", async (
+            Guid id,
+            MarkIntegrationErrorRequest? body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new DeadLetterIntegrationErrorCommand(id, body?.Note), ct);
+            return Results.NoContent();
+        });
+
+        var outbox = app.MapGroup("/api/outbox").WithTags("Outbox");
+
+        outbox.MapPost("/enqueue", async (
+            EnqueueOutboxRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var id = await sender.Send(new EnqueueOutboxMessageCommand(body.Topic, body.PayloadJson), ct);
+            return Results.Created($"/api/outbox/{id}", new { id });
+        });
+
+        outbox.MapPost("/process-once", async (ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ProcessOutboxOnceCommand(), ct);
+            return Results.Ok(result);
+        });
+
+        outbox.MapGet("/", async (
+            string? status,
+            int? take,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListOutboxMessagesQuery(status, take ?? 100), ct);
+            return Results.Ok(list);
+        });
+
         return app;
     }
 }
@@ -76,3 +156,14 @@ public sealed record UpsertIntegrationRecordRequest(
     Guid? LocalObjectId,
     string? PayloadHash,
     string? Notes);
+
+public sealed record RecordIntegrationErrorRequest(
+    Guid IntegrationRecordId,
+    string ErrorCode,
+    string Message,
+    string? Detail,
+    DateTimeOffset? NextRetryAt);
+
+public sealed record MarkIntegrationErrorRequest(string? Note);
+
+public sealed record EnqueueOutboxRequest(string Topic, string PayloadJson);

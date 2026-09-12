@@ -26,6 +26,12 @@ public sealed class Variance : TenantEntityBase
     /// <summary>open | accepted | written_off | cleared</summary>
     public string Status { get; set; } = VarianceStatuses.Open;
 
+    /// <summary>
+    /// low | medium | high | critical — derived from absolute amount vs config thresholds.
+    /// Control severity only; does not open Exception (Variance ≠ Exception).
+    /// </summary>
+    public string Severity { get; set; } = VarianceSeverities.Low;
+
     public string? Explanation { get; set; }
 
     /// <summary>Optional escalation link — Exception is a separate entity/workflow.</summary>
@@ -50,4 +56,12 @@ public static class VarianceStatuses
     public const string Accepted = "accepted";
     public const string WrittenOff = "written_off";
     public const string Cleared = "cleared";
+}
+
+public static class VarianceSeverities
+{
+    public const string Low = "low";
+    public const string Medium = "medium";
+    public const string High = "high";
+    public const string Critical = "critical";
 }

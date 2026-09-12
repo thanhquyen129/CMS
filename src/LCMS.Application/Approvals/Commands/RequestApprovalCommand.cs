@@ -11,7 +11,8 @@ public sealed record RequestApprovalCommand(
     string ObjectType,
     Guid ObjectId,
     string? RequestReason,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    int? RequiredLevel) : IRequest<Guid>;
 
 public sealed class RequestApprovalCommandValidator : AbstractValidator<RequestApprovalCommand>
 {
@@ -37,11 +38,14 @@ public sealed class RequestApprovalCommandValidator : AbstractValidator<RequestA
         RuleFor(x => x.ObjectId).NotEmpty().WithMessage("Đối tượng phê duyệt không hợp lệ.");
         RuleFor(x => x.RequestReason).MaximumLength(2048).When(x => x.RequestReason is not null);
         RuleFor(x => x.Notes).MaximumLength(2048).When(x => x.Notes is not null);
+        RuleFor(x => x.RequiredLevel)
+            .InclusiveBetween(1, 2).WithMessage("Cấp phê duyệt phải là 1 hoặc 2.")
+            .When(x => x.RequiredLevel.HasValue);
     }
 }
 
 /// <summary>
-/// Requests approval on a financial object ref.
+/// Requests approval on a financial object ref (multi-step stub via RequiredLevel).
 /// Permission ≠ Approval: does NOT call IPermissionService / mutate RolePermission.
 /// </summary>
 public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestApprovalCommand, Guid>
@@ -85,12 +89,16 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
             throw new ConflictAppException("Đối tượng đã có yêu cầu phê duyệt đang chờ.");
         }
 
+        var requiredLevel = request.RequiredLevel ?? 1;
+
         var approval = new Approval
         {
             TenantId = tenantId,
             ObjectType = objectType,
             ObjectId = request.ObjectId,
             Status = ApprovalStatuses.Pending,
+            RequiredLevel = requiredLevel,
+            CurrentLevel = 0,
             RequestedBy = _user.UserId,
             RequestedAt = DateTimeOffset.UtcNow,
             RequestReason = string.IsNullOrWhiteSpace(request.RequestReason) ? null : request.RequestReason.Trim(),

@@ -128,7 +128,9 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         // Thin eligibility: block when open/in_progress critical exceptions exist in scope.
         var query = _db.Exceptions.AsNoTracking()
             .Where(e =>
-                (e.Status == ExceptionStatuses.Open || e.Status == ExceptionStatuses.InProgress)
+                (e.Status == ExceptionStatuses.Open
+                 || e.Status == ExceptionStatuses.InProgress
+                 || e.Status == ExceptionStatuses.Escalated)
                 && e.Severity == ExceptionSeverities.Critical);
 
         if (close.ScopeType == FinancialCloseScopeTypes.Bill && close.ScopeId.HasValue)

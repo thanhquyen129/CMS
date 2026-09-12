@@ -62,17 +62,22 @@ public sealed class AddReconciliationDetailCommandValidator : AbstractValidator<
 
 /// <summary>
 /// Adds reconciliation detail. When variance amount ≠ 0, creates a Variance control fact —
-/// does NOT open an Exception (Variance ≠ Exception).
+/// does NOT open an Exception (Variance ≠ Exception). Severity from amount thresholds.
 /// </summary>
 public sealed class AddReconciliationDetailCommandHandler : IRequestHandler<AddReconciliationDetailCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IReconciliationDetailWriter _writer;
 
-    public AddReconciliationDetailCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public AddReconciliationDetailCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IReconciliationDetailWriter writer)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _writer = writer;
     }
 
     public async Task<Guid> Handle(AddReconciliationDetailCommand request, CancellationToken cancellationToken)
@@ -87,85 +92,21 @@ public sealed class AddReconciliationDetailCommandHandler : IRequestHandler<AddR
             .FirstOrDefaultAsync(r => r.Id == request.ReconciliationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên đối soát.");
 
-        if (string.Equals(session.Status, ReconciliationStatuses.Completed, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(session.Status, ReconciliationStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ConflictAppException("Không thể thêm chi tiết vào phiên đối soát đã hoàn tất hoặc đã hủy.");
-        }
-
-        var sourceAmount = decimal.Round(request.SourceAmount, 4, MidpointRounding.AwayFromZero);
-        var targetAmount = decimal.Round(request.TargetAmount, 4, MidpointRounding.AwayFromZero);
-        var matchedAmount = decimal.Round(request.MatchedAmount, 4, MidpointRounding.AwayFromZero);
-        if (matchedAmount > sourceAmount || matchedAmount > targetAmount)
-        {
-            throw new ConflictAppException("Số tiền khớp không được vượt số tiền nguồn hoặc đích.");
-        }
-
-        var varianceAmount = decimal.Round(sourceAmount - matchedAmount, 4, MidpointRounding.AwayFromZero);
-        var lineStatus = varianceAmount == 0m && matchedAmount > 0m
-            ? ReconciliationDetailStatuses.Matched
-            : varianceAmount != 0m
-                ? ReconciliationDetailStatuses.Variance
-                : ReconciliationDetailStatuses.Unmatched;
-
-        var sourceType = request.SourceType.Trim().ToLowerInvariant();
-        var targetType = string.IsNullOrWhiteSpace(request.TargetType)
-            ? null
-            : request.TargetType.Trim().ToLowerInvariant();
-        var currency = request.CurrencyCode.Trim().ToUpperInvariant();
-
-        await EnsureObjectExistsAsync(sourceType, request.SourceId, cancellationToken);
-        if (request.TargetId.HasValue && targetType is not null)
-        {
-            await EnsureObjectExistsAsync(targetType, request.TargetId.Value, cancellationToken);
-        }
-
         var exceptionCountBefore = await _db.Exceptions.CountAsync(cancellationToken);
 
-        var detail = new ReconciliationDetail
-        {
-            TenantId = tenantId,
-            ReconciliationId = session.Id,
-            SourceType = sourceType,
-            SourceId = request.SourceId,
-            TargetType = targetType,
-            TargetId = request.TargetId,
-            SourceAmount = sourceAmount,
-            TargetAmount = targetAmount,
-            MatchedAmount = matchedAmount,
-            VarianceAmount = varianceAmount,
-            CurrencyCode = currency,
-            LineStatus = lineStatus,
-            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
-        };
-
-        _db.ReconciliationDetails.Add(detail);
-        await _db.SaveChangesAsync(cancellationToken);
-
-        if (varianceAmount != 0m)
-        {
-            var variance = new Variance
-            {
-                TenantId = tenantId,
-                ReconciliationId = session.Id,
-                ReconciliationDetailId = detail.Id,
-                VarianceType = VarianceTypes.Amount,
-                Amount = varianceAmount,
-                CurrencyCode = currency,
-                SourceType = sourceType,
-                SourceId = request.SourceId,
-                TargetType = targetType,
-                TargetId = request.TargetId,
-                Status = VarianceStatuses.Open,
-                Explanation = null,
-                ExceptionId = null
-            };
-            _db.Variances.Add(variance);
-            await _db.SaveChangesAsync(cancellationToken);
-
-            detail.VarianceId = variance.Id;
-            await _db.SaveChangesAsync(cancellationToken);
-        }
+        var detailId = await _writer.AddAsync(
+            session,
+            tenantId,
+            request.SourceType,
+            request.SourceId,
+            request.TargetType,
+            request.TargetId,
+            request.SourceAmount,
+            request.TargetAmount,
+            request.MatchedAmount,
+            request.CurrencyCode,
+            request.Notes,
+            cancellationToken);
 
         var exceptionCountAfter = await _db.Exceptions.CountAsync(cancellationToken);
         if (exceptionCountAfter != exceptionCountBefore)
@@ -174,33 +115,6 @@ public sealed class AddReconciliationDetailCommandHandler : IRequestHandler<AddR
                 "Chi tiết đối soát không được tự tạo Ngoại lệ — Chênh lệch ≠ Ngoại lệ.");
         }
 
-        if (string.Equals(session.Status, ReconciliationStatuses.Draft, StringComparison.OrdinalIgnoreCase))
-        {
-            session.Status = ReconciliationStatuses.InProgress;
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-
-        return detail.Id;
-    }
-
-    private async Task EnsureObjectExistsAsync(string objectType, Guid objectId, CancellationToken cancellationToken)
-    {
-        var exists = objectType switch
-        {
-            ReconciliationObjectTypes.Payment => await _db.Payments.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
-            ReconciliationObjectTypes.Collection => await _db.Collections.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
-            ReconciliationObjectTypes.Cost => await _db.Costs.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
-            ReconciliationObjectTypes.Revenue => await _db.Revenues.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
-            ReconciliationObjectTypes.Document => await _db.FinancialDocuments.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
-            ReconciliationObjectTypes.AccountsPayable => await _db.AccountsPayable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
-            ReconciliationObjectTypes.AccountsReceivable => await _db.AccountsReceivable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
-            ReconciliationObjectTypes.Other => true,
-            _ => false
-        };
-
-        if (!exists)
-        {
-            throw new NotFoundAppException("Không tìm thấy đối tượng đối soát.");
-        }
+        return detailId;
     }
 }

@@ -55,7 +55,9 @@ public sealed class GetDashboardSummaryQueryHandler
 
         var openExceptionCount = await _db.Exceptions.AsNoTracking()
             .CountAsync(
-                e => e.Status == ExceptionStatuses.Open || e.Status == ExceptionStatuses.InProgress,
+                e => e.Status == ExceptionStatuses.Open
+                     || e.Status == ExceptionStatuses.InProgress
+                     || e.Status == ExceptionStatuses.Escalated,
                 cancellationToken);
 
         var pendingApprovalCount = await _db.Approvals.AsNoTracking()

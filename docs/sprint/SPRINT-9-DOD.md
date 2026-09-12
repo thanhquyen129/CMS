@@ -25,8 +25,8 @@ TD6: *Reconciliation; variance; exception; approval* — Epic **E11**.
 | Item | Target | Reason |
 |------|--------|--------|
 | Financial close snapshots | Sprint 10 | Non-goal |
-| Full SLA inbox UI / auto-escalate variance→exception | Later | Manual open Pass 1 |
-| Multi-step approval chains / thresholds | Later | Single request/decide Pass 1 |
+| Full SLA inbox UI / auto-escalate variance→exception | Pass 2 / later | Auto-exception still deferred; escalate stub + SLA in FULL |
+| Multi-step approval chains / thresholds | Pass 2 Sprint 9 FULL | Level 1/2 stub shipped |
 | Bank feed / auto-reconcile | Later | Manual session Pass 1 |
 | JWT / OIDC | Later | Keep header bootstrap |
 | Next.js UI | Later | API-only this sprint |

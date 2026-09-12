@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
+using LCMS.Application.FinancialControl;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ public sealed class ConfirmCostCommandValidator : AbstractValidator<ConfirmCostC
 /// <summary>
 /// Expected → Confirmed. Preserves ExpectedAmount (C-009); writes ConfirmedAmount + audit.
 /// Optional approval threshold gate (Pass 2 Sprint 4 FULL).
+/// Optional critical-exception block (Pass 2 Sprint 9 FULL).
 /// </summary>
 public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostCommand>
 {
@@ -33,6 +35,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     private readonly IAuditWriter _audit;
     private readonly ICostFxStub _fx;
     private readonly ICostApprovalGate _approvalGate;
+    private readonly ICriticalExceptionConfirmGate _criticalExceptionGate;
 
     public ConfirmCostCommandHandler(
         ILcmsDbContext db,
@@ -40,7 +43,8 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         ICurrentUserContext user,
         IAuditWriter audit,
         ICostFxStub fx,
-        ICostApprovalGate approvalGate)
+        ICostApprovalGate approvalGate,
+        ICriticalExceptionConfirmGate criticalExceptionGate)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -48,6 +52,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         _audit = audit;
         _fx = fx;
         _approvalGate = approvalGate;
+        _criticalExceptionGate = criticalExceptionGate;
     }
 
     public async Task Handle(ConfirmCostCommand request, CancellationToken cancellationToken)
@@ -71,6 +76,11 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         }
 
         EnforceAttributionInvariants(cost);
+
+        await _criticalExceptionGate.EnsureConfirmAllowedAsync(
+            ApprovalObjectTypes.Cost,
+            cost.Id,
+            cancellationToken);
 
         try
         {

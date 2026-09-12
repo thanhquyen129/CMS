@@ -18,13 +18,22 @@ public sealed record ExceptionDto(
     Guid? BillId,
     Guid? ReconciliationId,
     Guid? VarianceId,
+    string? ObjectType,
+    Guid? ObjectId,
     DateTimeOffset? ResolvedAt,
     Guid? ResolvedBy,
     string? ResolutionNotes,
     DateTimeOffset? ClosedAt,
-    Guid? ClosedBy);
+    Guid? ClosedBy,
+    DateTimeOffset? EscalatedAt,
+    Guid? EscalatedBy,
+    string? EscalationReason);
 
-public sealed record ListExceptionsQuery(string? Status, string? Severity) : IRequest<IReadOnlyList<ExceptionDto>>;
+public sealed record ListExceptionsQuery(
+    string? Status,
+    string? Severity,
+    string? ObjectType = null,
+    bool? OverdueOnly = null) : IRequest<IReadOnlyList<ExceptionDto>>;
 public sealed record GetExceptionByIdQuery(Guid Id) : IRequest<ExceptionDto>;
 
 public sealed class ListExceptionsQueryHandler : IRequestHandler<ListExceptionsQuery, IReadOnlyList<ExceptionDto>>
@@ -54,7 +63,27 @@ public sealed class ListExceptionsQueryHandler : IRequestHandler<ListExceptionsQ
             query = query.Where(e => e.Severity == severity);
         }
 
-        var list = await query.OrderByDescending(e => e.Id).ToListAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(request.ObjectType))
+        {
+            var objectType = request.ObjectType.Trim().ToLowerInvariant();
+            query = query.Where(e => e.ObjectType == objectType);
+        }
+
+        if (request.OverdueOnly == true)
+        {
+            var now = DateTimeOffset.UtcNow;
+            query = query.Where(e =>
+                e.DueAt != null
+                && e.DueAt < now
+                && (e.Status == ExceptionStatuses.Open
+                    || e.Status == ExceptionStatuses.InProgress
+                    || e.Status == ExceptionStatuses.Escalated));
+        }
+
+        var list = await query
+            .OrderBy(e => e.DueAt ?? DateTimeOffset.MaxValue)
+            .ThenByDescending(e => e.Id)
+            .ToListAsync(cancellationToken);
         return list.Select(Map).ToList();
     }
 
@@ -79,11 +108,16 @@ public sealed class ListExceptionsQueryHandler : IRequestHandler<ListExceptionsQ
             e.BillId,
             e.ReconciliationId,
             e.VarianceId,
+            e.ObjectType,
+            e.ObjectId,
             e.ResolvedAt,
             e.ResolvedBy,
             e.ResolutionNotes,
             e.ClosedAt,
-            e.ClosedBy);
+            e.ClosedBy,
+            e.EscalatedAt,
+            e.EscalatedBy,
+            e.EscalationReason);
 }
 
 public sealed class GetExceptionByIdQueryHandler : IRequestHandler<GetExceptionByIdQuery, ExceptionDto>

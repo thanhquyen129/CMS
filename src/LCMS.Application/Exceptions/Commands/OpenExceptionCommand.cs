@@ -1,9 +1,11 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialControl;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.Exceptions.Commands;
 
@@ -16,7 +18,9 @@ public sealed record OpenExceptionCommand(
     DateTimeOffset? DueAt,
     Guid? BillId,
     Guid? ReconciliationId,
-    Guid? VarianceId) : IRequest<Guid>;
+    Guid? VarianceId,
+    string? ObjectType,
+    Guid? ObjectId) : IRequest<Guid>;
 
 public sealed class OpenExceptionCommandValidator : AbstractValidator<OpenExceptionCommand>
 {
@@ -26,6 +30,21 @@ public sealed class OpenExceptionCommandValidator : AbstractValidator<OpenExcept
         ExceptionSeverities.Medium,
         ExceptionSeverities.High,
         ExceptionSeverities.Critical
+    };
+
+    private static readonly HashSet<string> ObjectTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ApprovalObjectTypes.Cost,
+        ApprovalObjectTypes.Revenue,
+        ApprovalObjectTypes.Document,
+        ApprovalObjectTypes.Payment,
+        ApprovalObjectTypes.Collection,
+        ApprovalObjectTypes.Settlement,
+        ApprovalObjectTypes.Variance,
+        ApprovalObjectTypes.Exception,
+        ApprovalObjectTypes.Other,
+        ReconciliationObjectTypes.AccountsPayable,
+        ReconciliationObjectTypes.AccountsReceivable
     };
 
     public OpenExceptionCommandValidator()
@@ -41,21 +60,32 @@ public sealed class OpenExceptionCommandValidator : AbstractValidator<OpenExcept
             .NotEmpty().WithMessage("Tiêu đề ngoại lệ không được để trống.")
             .MaximumLength(256).WithMessage("Tiêu đề ngoại lệ tối đa 256 ký tự.");
         RuleFor(x => x.Description).MaximumLength(4096).When(x => x.Description is not null);
+        RuleFor(x => x.ObjectType)
+            .Must(t => t is null || ObjectTypes.Contains(t.Trim()))
+            .WithMessage("Loại đối tượng ngoại lệ không hợp lệ.");
+        RuleFor(x => x)
+            .Must(x => !(x.ObjectId.HasValue ^ !string.IsNullOrWhiteSpace(x.ObjectType)))
+            .WithMessage("Đối tượng ngoại lệ phải có đủ loại và mã, hoặc cả hai để trống.");
     }
 }
 
 /// <summary>
-/// Opens an exception work item (severity/owner/SLA). Does not invent Variance (Variance ≠ Exception).
+/// Opens an exception work item (severity/owner/SLA/object link). Does not invent Variance (Variance ≠ Exception).
 /// </summary>
 public sealed class OpenExceptionCommandHandler : IRequestHandler<OpenExceptionCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly FinancialControlOptions _options;
 
-    public OpenExceptionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public OpenExceptionCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IOptions<FinancialControlOptions> options)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _options = options.Value;
     }
 
     public async Task<Guid> Handle(OpenExceptionCommand request, CancellationToken cancellationToken)
@@ -66,6 +96,7 @@ public sealed class OpenExceptionCommandHandler : IRequestHandler<OpenExceptionC
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var severity = request.Severity.Trim().ToLowerInvariant();
 
         if (request.BillId.HasValue)
         {
@@ -94,20 +125,39 @@ public sealed class OpenExceptionCommandHandler : IRequestHandler<OpenExceptionC
                 ?? throw new NotFoundAppException("Không tìm thấy chênh lệch.");
         }
 
+        string? objectType = null;
+        Guid? objectId = null;
+        if (!string.IsNullOrWhiteSpace(request.ObjectType) && request.ObjectId.HasValue)
+        {
+            objectType = request.ObjectType.Trim().ToLowerInvariant();
+            objectId = request.ObjectId;
+            await EnsureObjectExistsAsync(objectType, objectId.Value, cancellationToken);
+        }
+
+        var dueAt = request.DueAt;
+        if (dueAt is null
+            && _options.DefaultExceptionSlaHours.TryGetValue(severity, out var hours)
+            && hours > 0)
+        {
+            dueAt = DateTimeOffset.UtcNow.AddHours(hours);
+        }
+
         var varianceCountBefore = await _db.Variances.CountAsync(cancellationToken);
 
         var entity = new FinancialException
         {
             TenantId = tenantId,
             RuleCode = request.RuleCode.Trim(),
-            Severity = request.Severity.Trim().ToLowerInvariant(),
+            Severity = severity,
             Title = request.Title.Trim(),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
             OwnerId = request.OwnerId,
-            DueAt = request.DueAt,
+            DueAt = dueAt,
             BillId = request.BillId,
             ReconciliationId = request.ReconciliationId,
             VarianceId = request.VarianceId,
+            ObjectType = objectType,
+            ObjectId = objectId,
             Status = ExceptionStatuses.Open
         };
 
@@ -128,5 +178,27 @@ public sealed class OpenExceptionCommandHandler : IRequestHandler<OpenExceptionC
         }
 
         return entity.Id;
+    }
+
+    private async Task EnsureObjectExistsAsync(string objectType, Guid objectId, CancellationToken cancellationToken)
+    {
+        var exists = objectType switch
+        {
+            ApprovalObjectTypes.Cost => await _db.Costs.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.Revenue => await _db.Revenues.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.Document => await _db.FinancialDocuments.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.Payment => await _db.Payments.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.Collection => await _db.Collections.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.Variance => await _db.Variances.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ReconciliationObjectTypes.AccountsPayable => await _db.AccountsPayable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ReconciliationObjectTypes.AccountsReceivable => await _db.AccountsReceivable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.Settlement or ApprovalObjectTypes.Other or ApprovalObjectTypes.Exception => true,
+            _ => false
+        };
+
+        if (!exists)
+        {
+            throw new NotFoundAppException("Không tìm thấy đối tượng gắn ngoại lệ.");
+        }
     }
 }

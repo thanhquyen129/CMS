@@ -57,6 +57,28 @@ public static class FinancialControlEndpoints
             return Results.Created($"/api/reconciliations/{id}/details/{detailId}", new { id = detailId });
         });
 
+        reconciliations.MapPost("/{id:guid}/details/batch", async (
+            Guid id,
+            AddReconciliationDetailBatchRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var lines = (body.Details ?? Array.Empty<AddReconciliationDetailRequest>())
+                .Select(d => new ReconciliationDetailLine(
+                    d.SourceType,
+                    d.SourceId,
+                    d.TargetType,
+                    d.TargetId,
+                    d.SourceAmount,
+                    d.TargetAmount,
+                    d.MatchedAmount,
+                    d.CurrencyCode,
+                    d.Notes))
+                .ToList();
+            var ids = await sender.Send(new AddReconciliationDetailBatchCommand(id, lines), ct);
+            return Results.Created($"/api/reconciliations/{id}/details/batch", new { ids });
+        });
+
         var variances = app.MapGroup("/api/variances").WithTags("Variances");
 
         variances.MapGet("/", async (string? status, ISender sender, CancellationToken ct) =>
@@ -85,14 +107,24 @@ public static class FinancialControlEndpoints
                     body.DueAt,
                     body.BillId,
                     body.ReconciliationId,
-                    body.VarianceId),
+                    body.VarianceId,
+                    body.ObjectType,
+                    body.ObjectId),
                 ct);
             return Results.Created($"/api/exceptions/{id}", new { id });
         });
 
-        exceptions.MapGet("/", async (string? status, string? severity, ISender sender, CancellationToken ct) =>
+        exceptions.MapGet("/", async (
+            string? status,
+            string? severity,
+            string? objectType,
+            bool? overdueOnly,
+            ISender sender,
+            CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListExceptionsQuery(status, severity), ct);
+            var list = await sender.Send(
+                new ListExceptionsQuery(status, severity, objectType, overdueOnly),
+                ct);
             return Results.Ok(list);
         });
 
@@ -118,12 +150,27 @@ public static class FinancialControlEndpoints
             return Results.NoContent();
         });
 
+        exceptions.MapPost("/{id:guid}/escalate", async (
+            Guid id,
+            EscalateExceptionRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new EscalateExceptionCommand(id, body.EscalationReason), ct);
+            return Results.NoContent();
+        });
+
         var approvals = app.MapGroup("/api/approvals").WithTags("Approvals");
 
         approvals.MapPost("/", async (RequestApprovalRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
-                new RequestApprovalCommand(body.ObjectType, body.ObjectId, body.RequestReason, body.Notes),
+                new RequestApprovalCommand(
+                    body.ObjectType,
+                    body.ObjectId,
+                    body.RequestReason,
+                    body.Notes,
+                    body.RequiredLevel),
                 ct);
             return Results.Created($"/api/approvals/{id}", new { id });
         });
@@ -181,6 +228,9 @@ public sealed record AddReconciliationDetailRequest(
     string CurrencyCode,
     string? Notes);
 
+public sealed record AddReconciliationDetailBatchRequest(
+    IReadOnlyList<AddReconciliationDetailRequest>? Details);
+
 public sealed record OpenExceptionRequest(
     string RuleCode,
     string Severity,
@@ -190,14 +240,19 @@ public sealed record OpenExceptionRequest(
     DateTimeOffset? DueAt,
     Guid? BillId,
     Guid? ReconciliationId,
-    Guid? VarianceId);
+    Guid? VarianceId,
+    string? ObjectType,
+    Guid? ObjectId);
 
 public sealed record ResolveExceptionRequest(string? ResolutionNotes);
+
+public sealed record EscalateExceptionRequest(string EscalationReason);
 
 public sealed record RequestApprovalRequest(
     string ObjectType,
     Guid ObjectId,
     string? RequestReason,
-    string? Notes);
+    string? Notes,
+    int? RequiredLevel);
 
 public sealed record DecideApprovalRequest(string? DecisionReason);

@@ -1,8 +1,10 @@
 using FluentValidation;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
+using LCMS.Application.FinancialControl;
 using LCMS.Application.FinancialDocuments;
 using LCMS.Application.Identity;
+using LCMS.Application.Reconciliations;
 using LCMS.Application.Revenues;
 using LCMS.Application.Settlements;
 using MediatR;
@@ -27,6 +29,7 @@ public static class DependencyInjection
             services.Configure<RevenueOptions>(configuration.GetSection(RevenueOptions.SectionName));
             services.Configure<DocumentOptions>(configuration.GetSection(DocumentOptions.SectionName));
             services.Configure<SettlementOptions>(configuration.GetSection(SettlementOptions.SectionName));
+            services.Configure<FinancialControlOptions>(configuration.GetSection(FinancialControlOptions.SectionName));
         }
         else
         {
@@ -34,6 +37,7 @@ public static class DependencyInjection
             services.AddOptions<RevenueOptions>();
             services.AddOptions<DocumentOptions>();
             services.AddOptions<SettlementOptions>();
+            services.AddOptions<FinancialControlOptions>();
         }
 
         services.AddSingleton<ICostFxStub, CostFxStub>();
@@ -41,6 +45,9 @@ public static class DependencyInjection
         services.AddSingleton<IRevenueFxStub, RevenueFxStub>();
         services.AddSingleton<IRevenueApprovalGate, RevenueApprovalGate>();
         services.AddSingleton<ISettlementFxStub, SettlementFxStub>();
+        services.AddSingleton<IVarianceSeverityCalculator, VarianceSeverityCalculator>();
+        services.AddScoped<ICriticalExceptionConfirmGate, CriticalExceptionConfirmGate>();
+        services.AddScoped<IReconciliationDetailWriter, ReconciliationDetailWriter>();
         return services;
     }
 }

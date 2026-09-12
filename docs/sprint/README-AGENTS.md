@@ -14,9 +14,8 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 ## Status Pass 2
 | Sprint | Status |
 |--------|--------|
-| 0–7 FULL | Done |
-| 8 Settlement FULL | Done (see `SPRINT-8-FULL-DOD.md`) |
-| 9 Financial Control FULL | In progress (cloud) |
+| 0–8 FULL | Done |
+| 9 Financial Control FULL | In PR (see `SPRINT-9-FULL-DOD.md`) |
 | 10–12 FULL | Queued |
 
 ## Status Pass UI

@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-09-12 — UAT VPS một vòng Bill → Close + gap thật
+
+### User
+UAT trên VPS — một vòng Bill → Cost/Revenue → chứng từ/AP-AR → Settlement → Close; ghi gap thật. Giải thích ngắn + triển khai.
+
+### Done
+- Chạy vòng **API** trên `194.233.89.26` với JWT bootstrap `ops@cms.local` (password chỉ trên host `infra/.env`): Bill `UAT-20260912-111445` → Cost/Revenue confirm → document accept+match → AP/AR recognize → payment/collection finalize → financial close **locked** + P&L. **API = PASS.**
+- Smoke **UI** browser: login → dashboard/bills/documents/ap-ar/settlements/financial-closes. Profile số khớp API; close hiện Đã khóa. **UI = PARTIAL** (không tạo đủ entity từ UI).
+- Ghi gap: `docs/sprint/UAT-VPS-ONE-ROUND.md` + `UAT-VPS-ONE-ROUND-RESULT.json` (token redact). Script tái chạy: `scripts/uat-vps-one-round.ps1`.
+
+### Gaps ưu tiên
+- **G1 blocker:** UI thiếu tạo Bill / Cost / Revenue / Exposure→Recognize → không go-live UI-only.
+- **G2/G3 major:** thiếu match chứng từ + add document line trên UI.
+- **G4–G6 minor:** `billId` filter documents; AP/AR ẩn settled; settlement list thiếu `billNo`.
+
+### Verify
+- `/health` `/ready` 200; UI `/login` 200
+- Bill UAT trên `/bills`; close locked trên `/financial-closes`
+
+---
+
 ## 2026-09-12 — Demo seed: đủ case bấm test UI
 
 ### User

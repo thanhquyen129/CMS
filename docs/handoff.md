@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-12 — PO gap checklist (post UAT G1–G6)
+
+### User
+Lên checklist tuần tự các chức năng còn thiếu so với documents PO để làm tuần tự.
+
+### Done
+- `docs/sprint/PO-GAP-CHECKLIST.md` — P01→P25 (go-live → control → NFR).
+- README trỏ backlog; next đề xuất **P01 Shared allocation UI**.
+
+### Next
+- P01 → P02 → P03 → P04 → P05 …
+
+---
+
 ## 2026-09-12 — Settings: options + admin utilities
 
 ### User

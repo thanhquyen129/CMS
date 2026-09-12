@@ -9,7 +9,9 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 | **Pass 2 — Full PO** | Chạy lại từng sprint cho đủ TD6 + CP + AC gates. |
 | **Pass UI** | Next.js trên VPS — song song Pass 2. Plan: `PLAN-UI.md`. |
 
-**Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: COMPLETE (U0–U5).**
+**Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: COMPLETE (U0–U5 + G1–G6 + UAT PASS).**
+
+**Post-UAT backlog tuần tự:** `PO-GAP-CHECKLIST.md` (P01→P25). Next: **P01 Shared allocation UI**.
 
 ## Status Pass 2
 | Sprint | Status |

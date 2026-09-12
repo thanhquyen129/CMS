@@ -17,7 +17,7 @@ Follow-up after Pass2 Sprint12 Hardening Full — merge final Pass 2 sprint.
 - DoD: `docs/sprint/SPRINT-12-FULL-DOD.md`
 
 ### Verify
-- `dotnet test Cms.sln -c Release` (post-merge)
+- `dotnet test Cms.sln -c Release` → **97 passed** (S12 FULL +4 on main after S11)
 
 ### Next
 - Pass UI continues (U3+). Residual backlog in SPRINT-12-FULL-DOD only.

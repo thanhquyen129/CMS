@@ -23,7 +23,7 @@ This is the **final Pass 2 sprint**. After merge, Pass 2 board = all Done. Resid
 | Timed API smoke | Done | 20× `/api/terminology` &lt; 5s in-process (not soak) |
 | AC-008 / AC-007 / AC-009 smoke | Done | Focused gate test |
 | Vietnamese UX gaps | Done | Audit/integration/outbox/NFR keys + checklist |
-| Tests + DoD + Pass 2 COMPLETE | Done | `Sprint12FullHardeningUatTests` (4); suite **93 passed** |
+| Tests + DoD + Pass 2 COMPLETE | Done | `Sprint12FullHardeningUatTests` (4); suite **97 passed** (post-merge on main) |
 
 ## Vietnamese UX acceptance checklist (Pass 2)
 

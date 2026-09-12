@@ -70,4 +70,4 @@ Người vận hành (không Postman): login → tạo/mở Bill → tạo+xác 
 
 ## Follow-up ngoài phạm vi vòng này
 
-~~Write-off UI · reverse allocation UI~~ → Done (`UI-WRITEOFF-REVERSE-DOD.md`) · bank feed · period close Strict policy stress · demo seeder trên VPS nếu chưa bật (`Demo__SeedOnStartup`).
+~~Write-off UI · reverse allocation UI~~ → Done (`UI-WRITEOFF-REVERSE-DOD.md`) · ~~queue decide~~ → Done (`UI-QUEUE-DECIDE-DOD.md`) · bank feed · period close Strict policy stress · demo seeder trên VPS nếu chưa bật (`Demo__SeedOnStartup`) · reconciliation UI.

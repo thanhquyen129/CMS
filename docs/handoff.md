@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-12 — Queue decide: approve/reject + exception resolve
+
+### User
+làm tiếp
+
+### Done
+- BFF approvals approve/reject; exceptions resolve/close/escalate.
+- UI `/queues/approvals`: Phê duyệt / Từ chối (lý do bắt buộc khi reject; multi-step stub).
+- UI `/queues/exceptions`: Xử lý · Leo thang · Đóng.
+- Deep-link payment/collection từ approval; DoD `UI-QUEUE-DECIDE-DOD.md`.
+
+### Files
+- `apps/web/app/bff/approvals/[id]/approve|reject`
+- `apps/web/app/bff/exceptions/[id]/resolve|close|escalate`
+- `DecideApprovalButton.tsx`, `ExceptionActionButtons.tsx`
+- `queues/approvals/page.tsx`, `queues/exceptions/page.tsx`, `lib/control-desk.ts`
+
+### Verify
+- `npm run build` apps/web
+
+### Follow-ups
+- Manual reconciliation UI · bank feed · write-off approval
+
+---
+
 ## 2026-09-12 — Write-off UI + đảo phân bổ
 
 ### User
@@ -22,7 +47,7 @@ Write-off UI + đảo phân bổ (follow-up ngoài G1–G6).
 - `npm run build` apps/web
 
 ### Follow-ups
-- Bank feed · write-off approval · period close Strict stress
+- ~~Queue decide~~ → Done (`UI-QUEUE-DECIDE-DOD.md`) · bank feed · write-off approval · period close Strict stress
 
 ---
 

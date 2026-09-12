@@ -2,10 +2,12 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { DecideApprovalButton } from "@/components/DecideApprovalButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
   approvalStatusLabel,
+  isPendingApproval,
   listApprovalQueue,
   objectHrefFromApproval,
   objectTypeLabel,
@@ -38,8 +40,9 @@ export default async function ApprovalQueuePage() {
         </p>
         <h1>{queueLabel}</h1>
         <p className="lede">
-          {approvalLabel} đang chờ quyết định. Quyết định approve/reject trên UI
-          vẫn follow-up. Mở {billLabel} / {docLabel} khi có màn chi tiết.
+          {approvalLabel} đang chờ quyết định. Phê duyệt / từ chối tại đây —{" "}
+          {approvalLabel} ≠ quyền hệ thống. Mở {billLabel} / {docLabel} khi có
+          màn chi tiết.
         </p>
 
         {!result.ok ? (
@@ -61,18 +64,23 @@ export default async function ApprovalQueuePage() {
                   <th scope="col">Yêu cầu lúc</th>
                   <th scope="col">Lý do</th>
                   <th scope="col">Liên kết</th>
+                  <th scope="col">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {result.data.map((item) => {
                   const href = objectHrefFromApproval(item);
+                  const t = item.objectType.toLowerCase();
                   const linkLabel =
-                    item.objectType.toLowerCase() === "bill"
+                    t === "bill"
                       ? `Mở ${billLabel}`
-                      : item.objectType.toLowerCase() === "financial_document" ||
-                          item.objectType.toLowerCase() === "document"
+                      : t === "financial_document" || t === "document"
                         ? `Mở ${docLabel}`
-                        : "Mở";
+                        : t === "payment"
+                          ? "Mở thanh toán"
+                          : t === "collection"
+                            ? "Mở thu tiền"
+                            : "Mở";
                   return (
                     <tr key={item.id}>
                       <td>
@@ -95,9 +103,24 @@ export default async function ApprovalQueuePage() {
                             {linkLabel}
                           </Link>
                         ) : (
-                          <span className="muted" title="Chưa có màn chi tiết cho loại này">
+                          <span
+                            className="muted"
+                            title="Chưa có màn chi tiết cho loại này"
+                          >
                             —
                           </span>
+                        )}
+                      </td>
+                      <td>
+                        {isPendingApproval(item.status) ? (
+                          <DecideApprovalButton
+                            terms={terms}
+                            approvalId={item.id}
+                            currentLevel={item.currentLevel}
+                            requiredLevel={item.requiredLevel}
+                          />
+                        ) : (
+                          "—"
                         )}
                       </td>
                     </tr>

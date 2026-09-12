@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ExceptionActionButtons } from "@/components/ExceptionActionButtons";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -49,8 +50,8 @@ export default async function ExceptionQueuePage({
         </p>
         <h1>{queueLabel}</h1>
         <p className="lede">
-          {exceptionLabel} đang mở / đang xử lý / leo thang cần controller xem xét.
-          Mở {billLabel} khi có liên kết.
+          {exceptionLabel} đang mở / đang xử lý / leo thang cần controller xem
+          xét. Xử lý · leo thang · đóng tại đây. Mở {billLabel} khi có liên kết.
         </p>
 
         <div className="search-bar" role="group" aria-label="Bộ lọc hàng đợi">
@@ -59,7 +60,10 @@ export default async function ExceptionQueuePage({
               Hiện tất cả đang mở
             </Link>
           ) : (
-            <Link className="btn btn-ghost" href="/queues/exceptions?overdueOnly=1">
+            <Link
+              className="btn btn-ghost"
+              href="/queues/exceptions?overdueOnly=1"
+            >
               Chỉ {overdueTerm}
             </Link>
           )}
@@ -86,6 +90,7 @@ export default async function ExceptionQueuePage({
                   <th scope="col">{slaLabel}</th>
                   <th scope="col">Đối tượng</th>
                   <th scope="col">{billLabel}</th>
+                  <th scope="col">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -97,7 +102,9 @@ export default async function ExceptionQueuePage({
                       <td>
                         <div className="queue-title">{item.title}</div>
                         {item.ruleCode ? (
-                          <span className="muted small block">Quy tắc: {item.ruleCode}</span>
+                          <span className="muted small block">
+                            Quy tắc: {item.ruleCode}
+                          </span>
                         ) : null}
                       </td>
                       <td>
@@ -134,6 +141,13 @@ export default async function ExceptionQueuePage({
                         ) : (
                           <span className="muted">—</span>
                         )}
+                      </td>
+                      <td>
+                        <ExceptionActionButtons
+                          terms={terms}
+                          exceptionId={item.id}
+                          status={item.status}
+                        />
                       </td>
                     </tr>
                   );

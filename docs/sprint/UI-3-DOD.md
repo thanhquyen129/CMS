@@ -33,11 +33,11 @@ Controller sau login thấy **bảng điều khiển** (tóm tắt + hàng đợ
 - `apps/web/middleware.ts`, `apps/web/app/globals.css`
 
 ## Non-goals (deferred)
-Full P&L reporting, close wizard, SLA automation UI, approve/reject actions on queue (read-only U3).
+Full P&L reporting, close wizard, SLA automation UI. ~~approve/reject actions on queue~~ → Done (`UI-QUEUE-DECIDE-DOD.md`).
 
 ## Follow-ups
-- Deep-link Cost/Revenue/Document từ Approval `objectType`+`objectId` khi U4+ có màn chi tiết.
-- Decide Approval từ UI (API đã có Pass 2).
+- Deep-link Cost/Revenue từ Approval khi có màn chi tiết riêng.
+- ~~Decide Approval từ UI~~ → Done.
 - Variance queue / reconciliation queue UI (API `/api/queues/reconciliations` đã có).
 
 ## Verify

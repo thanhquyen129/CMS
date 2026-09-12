@@ -147,6 +147,9 @@ export function objectTypeLabel(
     RECONCILIATION: term(terms, "RECONCILIATION", "Đối soát"),
     FINANCIAL_DOCUMENT: term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính"),
     DOCUMENT: term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính"),
+    PAYMENT: term(terms, "PAYMENT", "Thanh toán"),
+    COLLECTION: term(terms, "COLLECTION", "Thu tiền"),
+    EXCEPTION: term(terms, "EXCEPTION", "Ngoại lệ"),
   };
   return map[key] ?? objectType;
 }
@@ -232,5 +235,23 @@ export function objectHrefFromApproval(item: ApprovalQueueItem): string | null {
   if (t === "financial_document" || t === "document") {
     return `/documents/${item.objectId}`;
   }
+  if (t === "payment") return `/settlements/payments/${item.objectId}`;
+  if (t === "collection") return `/settlements/collections/${item.objectId}`;
   return null;
+}
+
+/** Pending approval can still be decided from the queue. */
+export function isPendingApproval(status: string): boolean {
+  return status?.toLowerCase() === "pending";
+}
+
+/** Open-ish exception statuses still shown on the open queue. */
+export function canActOnException(status: string): boolean {
+  const s = status?.toLowerCase();
+  return (
+    s === "open" ||
+    s === "in_progress" ||
+    s === "escalated" ||
+    s === "resolved"
+  );
 }

@@ -1,13 +1,27 @@
-# Checklist còn thiếu vs PO (sau Pass 1/2 + UI U0–U5 + G1–G6 + UAT PASS)
+# Checklist còn thiếu vs PO (sau Pass 1/2 + UI + UAT PASS)
 
-**Cập nhật:** 2026-09-12  
-**Đã xong (không liệt kê lại):** Pass 1 S0–12 · Pass 2 S0–12 FULL · UI U0–U5 · Match · G1–G6 · demo seed · write-off/reverse · queue decide · recon + bank-feed manual · UAT UI-only Bill→Close PASS.
+**Cập nhật:** 2026-09-12 (P01–P06 Done)  
+**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P06**.
 
-**Cách dùng:** làm theo thứ tự P01→…; một item = một chat/agent; tick Done + DoD ngắn khi ship.
+**Cách dùng:** làm theo thứ tự; một item = một chat/agent; tick Done + DoD ngắn khi ship.
 
 ---
 
-## Go-live tài chính (ưu tiên trước)
+## Wave tiếp theo (làm ngay) — P07→P11
+
+| # | ID | Việc | Lát cắt MVP |
+|---|-----|------|-------------|
+| 1 | **P07** | Aging summary + dashboard tách quyền Cost≠Revenue | Màn bucket aging + export; dashboard chỉ hiện theo quyền |
+| 2 | **P08** | Auto Exposure từ chứng từ đã khớp | Sau match → đề xuất/tạo exposure (không invent Cost/Revenue) |
+| 3 | **P09** | Confirm match session + auto-suggest | Confirm phiên; tolerance suggest (vẫn review tay) |
+| 4 | **P10** | Reverse recognize AP/AR + sổ điều chỉnh | Reverse recognition + history (không silent overwrite) |
+| 5 | **P11** | Inbox Variance (+ escalate thủ công) | List/filter variance; CTA mở Exception (giữ tách lớp) |
+
+**Next kickoff:** **P07**.
+
+---
+
+## Go-live tài chính (đầy đủ)
 
 | ID | Tên | PO / ADR | Hiện trạng | Lát cắt MVP | Phụ thuộc |
 |----|-----|----------|------------|-------------|-----------|
@@ -22,7 +36,7 @@
 | **P09** | Confirm match session + auto-suggest | E08; ADR-0005 | Manual match Done · confirm/auto deferred | Confirm phiên; tolerance suggest (review tay) | P08 optional |
 | **P10** | Reverse recognize AP/AR + sổ điều chỉnh | E09; C-015 | Write-off Done · reverse recognize thiếu | Reverse recognition + history (không silent overwrite) | P03 nếu lớn |
 
-## Kiểm soát / vận hành
+## Kiểm soát / vận hành (sau P07–P11)
 
 | ID | Tên | PO / ADR | Hiện trạng | Lát cắt MVP | Phụ thuộc |
 |----|-----|----------|------------|-------------|-----------|
@@ -34,7 +48,7 @@
 | **P16** | Recognition policy engine | E07 | Version string stub | Rule tenant khi nào recognize (VI gate) | P08 hữu ích |
 | **P17** | Dated adjustments cho asOf profile | E13 | asOf live AdjustmentAmount | Events có ngày → profile trung thực | P02 / P10 |
 
-## Nền tảng / NFR (sau khi P01–P10 ổn)
+## Nền tảng / NFR (sau khi P07–P11 ổn)
 
 | ID | Tên | PO / ADR | Hiện trạng | Lát cắt MVP | Phụ thuộc |
 |----|-----|----------|------------|-------------|-----------|
@@ -48,14 +62,6 @@
 | **P25** | Load/soak + audit range PG pushdown | E16 | Timed smoke only | Soak money-path; filter audit native PG | P23 |
 
 ---
-
-## Top 5 làm ngay
-
-1. **P07** Aging summary + dashboard tách quyền tài chính.  
-2. **P08** Auto Exposure từ chứng từ đã khớp.  
-3. **P09** Confirm match session + auto-suggest.  
-4. **P10** Reverse recognize AP/AR + sổ điều chỉnh.  
-5. **P11** Inbox Variance (+ escalate thủ công).
 
 ## Không làm (trừ ADR mới)
 

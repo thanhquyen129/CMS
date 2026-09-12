@@ -57,6 +57,22 @@ export default async function DashboardPage() {
   const matchedLabel = term(terms, "MATCHED", "Đã khớp");
 
   const result = await getDashboardSummary();
+  const vis = result.ok
+    ? result.data.financialVisibility ?? {
+        canViewCost: true,
+        canViewRevenue: true,
+        canViewMargin: true,
+      }
+    : null;
+
+  function moneyOrHidden(
+    amount: number | null | undefined,
+    currency: string,
+    allowed: boolean
+  ): string {
+    if (!allowed || amount == null) return "—";
+    return formatMoney(amount, currency);
+  }
 
   return (
     <AppShell terms={terms} active="dashboard">
@@ -212,10 +228,15 @@ export default async function DashboardPage() {
             </h2>
             <p className="cluster-lede">
               Theo tiền tệ: Actual → Confirmed → Expected. Projection read-only —
-              không ghi lên {billLabel}.
+              không ghi lên {billLabel}. Xem chi phí ≠ xem doanh thu ≠ biên.
             </p>
 
-            {result.data.totalsByCurrency.length === 0 ? (
+            {vis && !vis.canViewCost && !vis.canViewRevenue ? (
+              <div className="empty-state" role="status">
+                Không có quyền xem {costLabel.toLowerCase()} /{" "}
+                {revenueLabel.toLowerCase()}. Số tiền đã ẩn.
+              </div>
+            ) : result.data.totalsByCurrency.length === 0 ? (
               <div className="empty-state" role="status">
                 Chưa có {costLabel}/{revenueLabel} để tổng hợp. Tạo dòng trên{" "}
                 {billLabel} rồi quay lại.
@@ -226,40 +247,60 @@ export default async function DashboardPage() {
                   <thead>
                     <tr>
                       <th scope="col">Tiền tệ</th>
-                      <th scope="col" className="num">
-                        {costLabel}
-                      </th>
-                      <th scope="col" className="num">
-                        {revenueLabel}
-                      </th>
-                      <th scope="col" className="num">
-                        {profitLabel}
-                      </th>
+                      {vis?.canViewCost ? (
+                        <th scope="col" className="num">
+                          {costLabel}
+                        </th>
+                      ) : null}
+                      {vis?.canViewRevenue ? (
+                        <th scope="col" className="num">
+                          {revenueLabel}
+                        </th>
+                      ) : null}
+                      {vis?.canViewMargin ? (
+                        <th scope="col" className="num">
+                          {profitLabel}
+                        </th>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody>
                     {result.data.totalsByCurrency.map((row) => (
                       <tr key={row.currencyCode}>
                         <td>{row.currencyCode}</td>
-                        <td className="num">
-                          {formatMoney(row.costBestAvailable, row.currencyCode)}
-                        </td>
-                        <td className="num">
-                          {formatMoney(
-                            row.revenueBestAvailable,
-                            row.currencyCode
-                          )}
-                        </td>
-                        <td
-                          className={
-                            row.profitBestAvailable < 0 ? "num neg" : "num"
-                          }
-                        >
-                          {formatMoney(
-                            row.profitBestAvailable,
-                            row.currencyCode
-                          )}
-                        </td>
+                        {vis?.canViewCost ? (
+                          <td className="num">
+                            {moneyOrHidden(
+                              row.costBestAvailable,
+                              row.currencyCode,
+                              true
+                            )}
+                          </td>
+                        ) : null}
+                        {vis?.canViewRevenue ? (
+                          <td className="num">
+                            {moneyOrHidden(
+                              row.revenueBestAvailable,
+                              row.currencyCode,
+                              true
+                            )}
+                          </td>
+                        ) : null}
+                        {vis?.canViewMargin ? (
+                          <td
+                            className={
+                              (row.profitBestAvailable ?? 0) < 0
+                                ? "num neg"
+                                : "num"
+                            }
+                          >
+                            {moneyOrHidden(
+                              row.profitBestAvailable,
+                              row.currencyCode,
+                              true
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                     ))}
                   </tbody>
@@ -267,7 +308,8 @@ export default async function DashboardPage() {
               </div>
             )}
 
-            {result.data.baseCurrencyRollUp ? (
+            {result.data.baseCurrencyRollUp &&
+            (vis?.canViewCost || vis?.canViewRevenue) ? (
               <>
                 <h3 className="section-title sm">{rollUpLabel}</h3>
                 <dl className="metric-grid">
@@ -275,41 +317,51 @@ export default async function DashboardPage() {
                     <dt>Tiền tệ cơ sở</dt>
                     <dd>{result.data.baseCurrencyRollUp.baseCurrency}</dd>
                   </div>
-                  <div>
-                    <dt>{costLabel}</dt>
-                    <dd>
-                      {formatMoney(
-                        result.data.baseCurrencyRollUp.costBestAvailableBase,
-                        result.data.baseCurrencyRollUp.baseCurrency
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{revenueLabel}</dt>
-                    <dd>
-                      {formatMoney(
-                        result.data.baseCurrencyRollUp
-                          .revenueBestAvailableBase,
-                        result.data.baseCurrencyRollUp.baseCurrency
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{profitLabel}</dt>
-                    <dd
-                      className={
-                        result.data.baseCurrencyRollUp
-                          .profitBestAvailableBase < 0
-                          ? "neg"
-                          : undefined
-                      }
-                    >
-                      {formatMoney(
-                        result.data.baseCurrencyRollUp.profitBestAvailableBase,
-                        result.data.baseCurrencyRollUp.baseCurrency
-                      )}
-                    </dd>
-                  </div>
+                  {vis?.canViewCost ? (
+                    <div>
+                      <dt>{costLabel}</dt>
+                      <dd>
+                        {moneyOrHidden(
+                          result.data.baseCurrencyRollUp.costBestAvailableBase,
+                          result.data.baseCurrencyRollUp.baseCurrency,
+                          true
+                        )}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {vis?.canViewRevenue ? (
+                    <div>
+                      <dt>{revenueLabel}</dt>
+                      <dd>
+                        {moneyOrHidden(
+                          result.data.baseCurrencyRollUp
+                            .revenueBestAvailableBase,
+                          result.data.baseCurrencyRollUp.baseCurrency,
+                          true
+                        )}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {vis?.canViewMargin ? (
+                    <div>
+                      <dt>{profitLabel}</dt>
+                      <dd
+                        className={
+                          (result.data.baseCurrencyRollUp
+                            .profitBestAvailableBase ?? 0) < 0
+                            ? "neg"
+                            : undefined
+                        }
+                      >
+                        {moneyOrHidden(
+                          result.data.baseCurrencyRollUp
+                            .profitBestAvailableBase,
+                          result.data.baseCurrencyRollUp.baseCurrency,
+                          true
+                        )}
+                      </dd>
+                    </div>
+                  ) : null}
                 </dl>
                 <p className="note">
                   {result.data.baseCurrencyRollUp.fxStubNote}
@@ -591,6 +643,9 @@ export default async function DashboardPage() {
               </li>
               <li>
                 <Link href="/ap-ar">Xem {apLabel} / {arLabel}</Link>
+              </li>
+              <li>
+                <Link href="/ap-ar/aging">Tóm tắt tuổi nợ</Link>
               </li>
               <li>
                 <Link href="/settlements">

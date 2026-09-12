@@ -1,5 +1,5 @@
-using LCMS.Application.Bills.Queries;
 using LCMS.Application.Dashboard.Queries;
+using LCMS.Application.Exposures.Aging;
 using LCMS.Application.Queues.Queries;
 using MediatR;
 
@@ -20,6 +20,38 @@ public static class DashboardReportingEndpoints
                 new GetDashboardSummaryQuery(includeBaseCurrencyRollUp ?? true),
                 ct);
             return Results.Ok(summary);
+        });
+
+        var aging = app.MapGroup("/api/aging").WithTags("Aging");
+        aging.MapGet("/summary", async (
+            DateOnly? asOf,
+            Guid? counterpartyId,
+            string? currencyCode,
+            bool? includeSettled,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var report = await sender.Send(
+                new GetAgingSummaryQuery(asOf, counterpartyId, currencyCode, includeSettled ?? false),
+                ct);
+            return Results.Ok(report);
+        });
+        aging.MapGet("/export", async (
+            string side,
+            DateOnly? asOf,
+            Guid? counterpartyId,
+            string? currencyCode,
+            bool? includeSettled,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var file = await sender.Send(
+                new ExportAgingCsvQuery(side, asOf, counterpartyId, currencyCode, includeSettled ?? false),
+                ct);
+            return Results.File(
+                System.Text.Encoding.UTF8.GetBytes(file.CsvContent),
+                "text/csv; charset=utf-8",
+                file.FileName);
         });
 
         var queues = app.MapGroup("/api/queues").WithTags("ControlQueues");

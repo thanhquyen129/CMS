@@ -79,4 +79,45 @@ public sealed class PermissionService : IPermissionService
 
         return DataScopes.Widen(scopes);
     }
+
+    public async Task<bool> HasPermissionAsync(
+        string actionCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            return false;
+        }
+
+        if (!_userContext.HasUser)
+        {
+            return true;
+        }
+
+        var tenantId = _tenantContext.TenantId!.Value;
+        var userId = _userContext.UserId!.Value;
+
+        var user = await _db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is not null && !user.IsActive)
+        {
+            return false;
+        }
+
+        var hasRoles = await _db.Roles.AnyAsync(r => r.TenantId == tenantId, cancellationToken);
+        if (!hasRoles)
+        {
+            return true;
+        }
+
+        return await (
+            from ur in _db.UserRoles
+            join rp in _db.RolePermissions on ur.RoleId equals rp.RoleId
+            join p in _db.Permissions on rp.PermissionId equals p.Id
+            where ur.TenantId == tenantId
+                  && ur.UserId == userId
+                  && rp.TenantId == tenantId
+                  && p.ActionCode == actionCode
+            select rp.Id).AnyAsync(cancellationToken);
+    }
 }

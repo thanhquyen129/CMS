@@ -28,7 +28,9 @@ Pass 1 deferred aging reports; Pass 2 Sprint 7 FULL exposes derived aging on API
 ## Consequences
 - Changing bucket boundaries later needs a new API version or additive codes.
 - No EF migration (computed fields only).
+- **P07:** Combined `GET /api/aging/summary` + CSV `GET /api/aging/export`; AP aging requires `cost.read`, AR requires `revenue.read`. Dashboard money totals omit Cost / Revenue / Margin when the actor lacks the matching permission (H View Cost ≠ Revenue).
 
 ## Alternatives rejected
 - Storing `aging_bucket` column — drifts vs clock/`asOf`.
 - UI-only aging — finance control needs API/query first.
+- Inferring Margin from Cost-only or Revenue-only — violates financial privilege separation.

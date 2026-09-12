@@ -20,4 +20,10 @@ public interface IPermissionService
         string actionCode,
         string vietnameseDeniedMessage,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Soft check (no throw). Bootstrap (no actor / no roles on tenant) ⇒ true.
+    /// Inactive user or missing action ⇒ false.
+    /// </summary>
+    Task<bool> HasPermissionAsync(string actionCode, CancellationToken cancellationToken = default);
 }

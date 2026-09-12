@@ -223,6 +223,9 @@ export default async function ApArPage({
         </p>
 
         <p className="cta-row" style={{ marginTop: 0 }}>
+          <Link className="btn" href="/ap-ar/aging">
+            Tóm tắt tuổi nợ
+          </Link>{" "}
           <Link className="btn btn-sm" href="/ap-ar/exposures/new?kind=payable">
             Tạo exposure phải trả
           </Link>{" "}

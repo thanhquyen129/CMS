@@ -7,6 +7,8 @@ public static class PermissionCodes
     public const string BillRead = "bill.read";
     public const string CostCreate = "cost.create";
     public const string CostRead = "cost.read";
+    /// <summary>View revenue — independent of cost.read (H View Cost ≠ Revenue).</summary>
+    public const string RevenueRead = "revenue.read";
     public const string MasterOrgManage = "master.org.manage";
     public const string MasterPartyManage = "master.party.manage";
     public const string MasterCurrencyManage = "master.currency.manage";
@@ -19,6 +21,7 @@ public static class PermissionCodes
         (BillRead, "Xem Bill"),
         (CostCreate, "Tạo chi phí"),
         (CostRead, "Xem chi phí"),
+        (RevenueRead, "Xem doanh thu"),
         (MasterOrgManage, "Quản lý tổ chức"),
         (MasterPartyManage, "Quản lý đối tác"),
         (MasterCurrencyManage, "Quản lý tiền tệ"),
@@ -32,6 +35,7 @@ public static class PermissionCodes
         BillRead,
         CostCreate,
         CostRead,
+        RevenueRead,
         MasterOrgManage,
         MasterPartyManage,
         MasterCurrencyManage,

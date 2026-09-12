@@ -7,17 +7,23 @@ import { term } from "./terminology";
 
 export type DashboardCurrencyTotals = {
   currencyCode: string;
-  costBestAvailable: number;
-  revenueBestAvailable: number;
-  profitBestAvailable: number;
+  costBestAvailable: number | null;
+  revenueBestAvailable: number | null;
+  profitBestAvailable: number | null;
 };
 
 export type DashboardBaseCurrencyRollUp = {
   baseCurrency: string;
-  costBestAvailableBase: number;
-  revenueBestAvailableBase: number;
-  profitBestAvailableBase: number;
+  costBestAvailableBase: number | null;
+  revenueBestAvailableBase: number | null;
+  profitBestAvailableBase: number | null;
   fxStubNote: string;
+};
+
+export type DashboardFinancialVisibility = {
+  canViewCost: boolean;
+  canViewRevenue: boolean;
+  canViewMargin: boolean;
 };
 
 export type DashboardDocumentCluster = {
@@ -65,6 +71,7 @@ export type DashboardSummary = {
   apAr: DashboardApArCluster | null;
   settlements: DashboardSettlementCluster | null;
   maturityPipeline: DashboardMaturityPipeline | null;
+  financialVisibility: DashboardFinancialVisibility | null;
 };
 
 export type ExceptionQueueItem = {

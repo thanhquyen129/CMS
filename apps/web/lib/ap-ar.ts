@@ -119,6 +119,39 @@ async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   }
 }
 
+export type AgingBucketSummary = {
+  bucket: string;
+  count: number;
+  outstanding: number;
+};
+
+export type AgingReport = {
+  asOf: string;
+  buckets: AgingBucketSummary[];
+  payableItems: AccountsPayableItem[] | null;
+  receivableItems: AccountsReceivableItem[] | null;
+};
+
+export type AgingSummary = {
+  asOf: string;
+  canViewPayable: boolean;
+  canViewReceivable: boolean;
+  payable: AgingReport | null;
+  receivable: AgingReport | null;
+  note: string;
+};
+
+export function getAgingSummary(opts?: {
+  asOf?: string;
+  includeSettled?: boolean;
+}): Promise<ApiResult<AgingSummary>> {
+  const params = new URLSearchParams();
+  if (opts?.asOf) params.set("asOf", opts.asOf);
+  if (opts?.includeSettled) params.set("includeSettled", "true");
+  const qs = params.toString() ? `?${params}` : "";
+  return apiGet<AgingSummary>(`/api/aging/summary${qs}`);
+}
+
 export function listAccountsPayable(opts?: {
   settlementStatus?: string;
 }): Promise<ApiResult<AccountsPayableItem[]>> {

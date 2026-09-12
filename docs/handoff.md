@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-12 — P07 Aging summary + dashboard financial visibility
+
+### User
+Next: P07 Aging summary + dashboard tách quyền tài chính.
+
+### Done
+- `revenue.read` catalog; HasPermissionAsync; dashboard omits Cost/Revenue/Margin without permission.
+- `GET /api/aging/summary` + CSV export; AP=`cost.read`, AR=`revenue.read`.
+- UI `/ap-ar/aging` + links; ADR-0006 note; tests SprintP07.
+
+### Files
+- PermissionCodes, PermissionService, GetDashboardSummaryQuery
+- AgingSummaryQueries, DashboardReportingEndpoints
+- `apps/web/app/ap-ar/aging`, bff/aging/export, dashboard/ap-ar pages
+- `docs/sprint/P07-DOD.md`
+
+### Verify
+- SprintP07 tests passed · `npm run build` OK
+
+### Next
+- P08 Auto Exposure từ chứng từ đã khớp
+
+### End-user
+**Tóm tắt tuổi nợ** (`/ap-ar/aging`): bucket + Xuất CSV. Dashboard chỉ hiện số CP/DT/biên đúng quyền.
+
+---
+
 ## 2026-09-12 — Next wave sau P01–P06: P07→P11
 
 ### User

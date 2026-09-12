@@ -3,6 +3,7 @@ using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using LCMS.Domain.Terminology;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -18,16 +19,22 @@ public sealed record GetDashboardSummaryQuery(bool IncludeBaseCurrencyRollUp = t
 
 public sealed record DashboardCurrencyTotalsDto(
     string CurrencyCode,
-    decimal CostBestAvailable,
-    decimal RevenueBestAvailable,
-    decimal ProfitBestAvailable);
+    decimal? CostBestAvailable,
+    decimal? RevenueBestAvailable,
+    decimal? ProfitBestAvailable);
 
 public sealed record DashboardBaseCurrencyRollUpDto(
     string BaseCurrency,
-    decimal CostBestAvailableBase,
-    decimal RevenueBestAvailableBase,
-    decimal ProfitBestAvailableBase,
+    decimal? CostBestAvailableBase,
+    decimal? RevenueBestAvailableBase,
+    decimal? ProfitBestAvailableBase,
     string FxStubNote);
+
+/// <summary>Financial visibility — View Cost ≠ View Revenue ≠ Margin (H-009 / ADR-0006 P07).</summary>
+public sealed record DashboardFinancialVisibilityDto(
+    bool CanViewCost,
+    bool CanViewRevenue,
+    bool CanViewMargin);
 
 /// <summary>Document intake pipeline — Received ≠ Accepted ≠ Matched.</summary>
 public sealed record DashboardDocumentClusterDto(
@@ -75,7 +82,8 @@ public sealed record DashboardSummaryDto(
     DashboardDocumentClusterDto? Documents = null,
     DashboardApArClusterDto? ApAr = null,
     DashboardSettlementClusterDto? Settlements = null,
-    DashboardMaturityPipelineDto? MaturityPipeline = null);
+    DashboardMaturityPipelineDto? MaturityPipeline = null,
+    DashboardFinancialVisibilityDto? FinancialVisibility = null);
 
 public sealed class GetDashboardSummaryQueryHandler
     : IRequestHandler<GetDashboardSummaryQuery, DashboardSummaryDto>
@@ -84,17 +92,20 @@ public sealed class GetDashboardSummaryQueryHandler
     private readonly ITenantContext _tenantContext;
     private readonly ICostFxStub _costFx;
     private readonly IRevenueFxStub _revenueFx;
+    private readonly IPermissionService _permissions;
 
     public GetDashboardSummaryQueryHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICostFxStub costFx,
-        IRevenueFxStub revenueFx)
+        IRevenueFxStub revenueFx,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _costFx = costFx;
         _revenueFx = revenueFx;
+        _permissions = permissions;
     }
 
     public async Task<DashboardSummaryDto> Handle(
@@ -108,6 +119,11 @@ public sealed class GetDashboardSummaryQueryHandler
 
         var asOf = DateTimeOffset.UtcNow;
         var asOfDate = DateOnly.FromDateTime(asOf.UtcDateTime);
+
+        var canViewCost = await _permissions.HasPermissionAsync(PermissionCodes.CostRead, cancellationToken);
+        var canViewRevenue = await _permissions.HasPermissionAsync(PermissionCodes.RevenueRead, cancellationToken);
+        var canViewMargin = canViewCost && canViewRevenue;
+        var visibility = new DashboardFinancialVisibilityDto(canViewCost, canViewRevenue, canViewMargin);
 
         var billCount = await _db.Bills.AsNoTracking().CountAsync(cancellationToken);
 
@@ -196,24 +212,28 @@ public sealed class GetDashboardSummaryQueryHandler
                 c => c.RecordStatus == "active" && c.Status == CollectionStatuses.Open,
                 cancellationToken);
 
-        // Economic cost = all active costs (direct + shared). Do not add allocation details (would double-count).
-        var costs = await _db.Costs.AsNoTracking()
-            .Where(c => c.RecordStatus == "active")
-            .Select(c => new { c.CurrencyCode, c.ExpectedAmount, c.ConfirmedAmount, c.ActualAmount })
-            .ToListAsync(cancellationToken);
+        // Economic cost/revenue — only load sides the actor may view (H View Cost ≠ Revenue).
+        var costs = canViewCost
+            ? await _db.Costs.AsNoTracking()
+                .Where(c => c.RecordStatus == "active")
+                .Select(c => new { c.CurrencyCode, c.ExpectedAmount, c.ConfirmedAmount, c.ActualAmount })
+                .ToListAsync(cancellationToken)
+            : [];
 
-        var revenues = await _db.Revenues.AsNoTracking()
-            .Where(r => r.RecordStatus == "active")
-            .Select(r => new { r.CurrencyCode, r.ExpectedAmount, r.ConfirmedAmount, r.ActualAmount })
-            .ToListAsync(cancellationToken);
+        var revenues = canViewRevenue
+            ? await _db.Revenues.AsNoTracking()
+                .Where(r => r.RecordStatus == "active")
+                .Select(r => new { r.CurrencyCode, r.ExpectedAmount, r.ConfirmedAmount, r.ActualAmount })
+                .ToListAsync(cancellationToken)
+            : [];
 
         var maturity = new DashboardMaturityPipelineDto(
-            costs.Count(c => !c.ConfirmedAmount.HasValue && !c.ActualAmount.HasValue),
-            costs.Count(c => c.ConfirmedAmount.HasValue && !c.ActualAmount.HasValue),
-            costs.Count(c => c.ActualAmount.HasValue),
-            revenues.Count(r => !r.ConfirmedAmount.HasValue && !r.ActualAmount.HasValue),
-            revenues.Count(r => r.ConfirmedAmount.HasValue && !r.ActualAmount.HasValue),
-            revenues.Count(r => r.ActualAmount.HasValue));
+            canViewCost ? costs.Count(c => !c.ConfirmedAmount.HasValue && !c.ActualAmount.HasValue) : 0,
+            canViewCost ? costs.Count(c => c.ConfirmedAmount.HasValue && !c.ActualAmount.HasValue) : 0,
+            canViewCost ? costs.Count(c => c.ActualAmount.HasValue) : 0,
+            canViewRevenue ? revenues.Count(r => !r.ConfirmedAmount.HasValue && !r.ActualAmount.HasValue) : 0,
+            canViewRevenue ? revenues.Count(r => r.ConfirmedAmount.HasValue && !r.ActualAmount.HasValue) : 0,
+            canViewRevenue ? revenues.Count(r => r.ActualAmount.HasValue) : 0);
 
         var documents = new DashboardDocumentClusterDto(
             awaitingAcceptanceCount,
@@ -221,12 +241,14 @@ public sealed class GetDashboardSummaryQueryHandler
             draftMatchCount);
 
         var apAr = new DashboardApArClusterDto(
-            openApCount,
-            openArCount,
-            openPayableExposureCount,
-            openReceivableExposureCount);
+            canViewCost ? openApCount : 0,
+            canViewRevenue ? openArCount : 0,
+            canViewCost ? openPayableExposureCount : 0,
+            canViewRevenue ? openReceivableExposureCount : 0);
 
-        var settlements = new DashboardSettlementClusterDto(openPaymentCount, openCollectionCount);
+        var settlements = new DashboardSettlementClusterDto(
+            canViewCost ? openPaymentCount : 0,
+            canViewRevenue ? openCollectionCount : 0);
 
         var currencyCodes = costs.Select(c => c.CurrencyCode)
             .Concat(revenues.Select(r => r.CurrencyCode))
@@ -239,43 +261,79 @@ public sealed class GetDashboardSummaryQueryHandler
         decimal revenueBase = 0m;
         foreach (var code in currencyCodes)
         {
-            var costTotal = costs
-                .Where(c => string.Equals(c.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
-                .Sum(c => BestAvailable(c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount));
-            var revenueTotal = revenues
-                .Where(r => string.Equals(r.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
-                .Sum(r => BestAvailable(r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount));
-            var profit = decimal.Round(revenueTotal - costTotal, 4, MidpointRounding.AwayFromZero);
+            decimal? costTotal = null;
+            decimal? revenueTotal = null;
+            if (canViewCost)
+            {
+                costTotal = decimal.Round(
+                    costs
+                        .Where(c => string.Equals(c.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
+                        .Sum(c => BestAvailable(c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount)),
+                    4,
+                    MidpointRounding.AwayFromZero);
+            }
+
+            if (canViewRevenue)
+            {
+                revenueTotal = decimal.Round(
+                    revenues
+                        .Where(r => string.Equals(r.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
+                        .Sum(r => BestAvailable(r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount)),
+                    4,
+                    MidpointRounding.AwayFromZero);
+            }
+
+            decimal? profit = canViewMargin
+                ? decimal.Round(revenueTotal!.Value - costTotal!.Value, 4, MidpointRounding.AwayFromZero)
+                : null;
 
             totals.Add(new DashboardCurrencyTotalsDto(
                 code.ToUpperInvariant(),
-                decimal.Round(costTotal, 4, MidpointRounding.AwayFromZero),
-                decimal.Round(revenueTotal, 4, MidpointRounding.AwayFromZero),
+                costTotal,
+                revenueTotal,
                 profit));
 
             if (request.IncludeBaseCurrencyRollUp)
             {
-                costBase += await _costFx.ToBaseAmountAsync(code, costTotal, asOfDate, cancellationToken);
-                revenueBase += await _revenueFx.ToBaseAmountAsync(code, revenueTotal, asOfDate, cancellationToken);
+                if (canViewCost && costTotal is decimal ct)
+                {
+                    costBase += await _costFx.ToBaseAmountAsync(code, ct, asOfDate, cancellationToken);
+                }
+
+                if (canViewRevenue && revenueTotal is decimal rt)
+                {
+                    revenueBase += await _revenueFx.ToBaseAmountAsync(code, rt, asOfDate, cancellationToken);
+                }
             }
         }
 
         DashboardBaseCurrencyRollUpDto? rollUp = null;
-        if (request.IncludeBaseCurrencyRollUp)
+        if (request.IncludeBaseCurrencyRollUp && (canViewCost || canViewRevenue))
         {
             var baseCurrency = _costFx.BaseCurrency;
             rollUp = new DashboardBaseCurrencyRollUpDto(
                 baseCurrency,
-                decimal.Round(costBase, 4, MidpointRounding.AwayFromZero),
-                decimal.Round(revenueBase, 4, MidpointRounding.AwayFromZero),
-                decimal.Round(revenueBase - costBase, 4, MidpointRounding.AwayFromZero),
+                canViewCost ? decimal.Round(costBase, 4, MidpointRounding.AwayFromZero) : null,
+                canViewRevenue ? decimal.Round(revenueBase, 4, MidpointRounding.AwayFromZero) : null,
+                canViewMargin
+                    ? decimal.Round(revenueBase - costBase, 4, MidpointRounding.AwayFromZero)
+                    : null,
                 $"{VietnameseUiTerms.Get("FX_STUB_RATE")}: roll-up theo fx_rates (ngày asOf) hoặc StubFxRatesToBase fallback (ADR-0004/0011).");
         }
 
         var mixed = totals.Count > 1;
+        var visibilityNote = !canViewCost && !canViewRevenue
+            ? " Không có quyền xem chi phí/doanh thu — đã ẩn số tiền."
+            : !canViewCost
+                ? " Không có quyền xem chi phí — đã ẩn CP và biên."
+                : !canViewRevenue
+                    ? " Không có quyền xem doanh thu — đã ẩn DT và biên."
+                    : !canViewMargin
+                        ? " Thiếu một trong hai quyền CP/DT — đã ẩn biên lợi nhuận."
+                        : "";
         var note = mixed
-            ? $"{VietnameseUiTerms.Get("DASHBOARD")}: Totals theo currency_code; roll-up base là stub FX. {VietnameseUiTerms.Get("BEST_AVAILABLE")} là projection, không SoT."
-            : $"{VietnameseUiTerms.Get("DASHBOARD")}: {VietnameseUiTerms.Get("BEST_AVAILABLE")} = Actual → Confirmed → Expected. Projection read-only.";
+            ? $"{VietnameseUiTerms.Get("DASHBOARD")}: Totals theo currency_code; roll-up base theo FX. {VietnameseUiTerms.Get("BEST_AVAILABLE")} là projection, không SoT.{visibilityNote}"
+            : $"{VietnameseUiTerms.Get("DASHBOARD")}: {VietnameseUiTerms.Get("BEST_AVAILABLE")} = Actual → Confirmed → Expected. Projection read-only.{visibilityNote}";
 
         return new DashboardSummaryDto(
             asOf,
@@ -294,7 +352,8 @@ public sealed class GetDashboardSummaryQueryHandler
             documents,
             apAr,
             settlements,
-            maturity);
+            maturity,
+            visibility);
     }
 
     private static decimal BestAvailable(decimal? actual, decimal? confirmed, decimal expected)

@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -256,11 +257,16 @@ public sealed class GetAccountsPayableAgingQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public GetAccountsPayableAgingQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetAccountsPayableAgingQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<ApArAgingReportDto> Handle(
@@ -271,6 +277,11 @@ public sealed class GetAccountsPayableAgingQueryHandler
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.CostRead,
+            "Bạn không có quyền xem tuổi nợ phải trả.",
+            cancellationToken);
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.AccountsPayable.AsNoTracking().AsQueryable();
@@ -311,11 +322,16 @@ public sealed class GetAccountsReceivableAgingQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public GetAccountsReceivableAgingQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetAccountsReceivableAgingQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<ApArAgingReportDto> Handle(
@@ -326,6 +342,11 @@ public sealed class GetAccountsReceivableAgingQueryHandler
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.RevenueRead,
+            "Bạn không có quyền xem tuổi nợ phải thu.",
+            cancellationToken);
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.AccountsReceivable.AsNoTracking().AsQueryable();

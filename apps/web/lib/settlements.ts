@@ -155,6 +155,16 @@ export function isDraftAllocation(status: string): boolean {
   return status?.toLowerCase() === "draft";
 }
 
+export function isFinalizedAllocation(status: string): boolean {
+  return status?.toLowerCase() === "finalized";
+}
+
+/** Draft or finalized — API accepts reverse with reason (not already reversed). */
+export function canReverseAllocation(status: string): boolean {
+  const s = status?.toLowerCase();
+  return s === "draft" || s === "finalized";
+}
+
 /** Link label for settlement ↔ Bill: prefer billNo (G6). */
 export function settlementBillLinkLabel(
   billId: string | null | undefined,

@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
-import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
+import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Kind = "payment" | "collection";
 
@@ -13,44 +13,58 @@ type Props = {
   allocationId: string;
   amount: number;
   currencyCode: string;
+  /** draft | finalized — copy differs slightly */
+  allocationStatus: string;
 };
 
-export function FinalizeAllocationButton({
+export function ReverseAllocationButton({
   terms,
   kind,
   allocationId,
   amount,
   currencyCode,
+  allocationStatus,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
   const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const finalizeLabel = term(terms, "ALLOCATION_FINALIZED", "Đã chốt phân bổ");
+  const reverseLabel = term(terms, "ALLOCATION_REVERSED", "Đã đảo phân bổ");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const target = kind === "payment" ? apLabel : arLabel;
+  const isDraft = allocationStatus?.toLowerCase() === "draft";
 
   const close = useCallback(() => {
     if (submitting) return;
     setOpen(false);
   }, [submitting]);
 
-  const runFinalize = useCallback(async () => {
+  const runReverse = useCallback(async () => {
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      setError("Nhập lý do đảo phân bổ.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const endpoint =
       kind === "payment"
-        ? `/bff/payment-allocations/${allocationId}/finalize`
-        : `/bff/collection-allocations/${allocationId}/finalize`;
+        ? `/bff/payment-allocations/${allocationId}/reverse`
+        : `/bff/collection-allocations/${allocationId}/reverse`;
 
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ reason: trimmed }),
       });
 
       if (res.status === 401) {
@@ -65,40 +79,41 @@ export function FinalizeAllocationButton({
         setError(
           body.message ||
             (res.status === 409
-              ? "Không chốt được (kỳ khóa / trạng thái lệch). Tải lại trang."
-              : "Chốt phân bổ thất bại.")
+              ? "Không đảo được (đã đảo / trạng thái lệch). Tải lại trang."
+              : "Đảo phân bổ thất bại.")
         );
         return;
       }
 
       setOpen(false);
+      setReason("");
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
       setSubmitting(false);
     }
-  }, [allocationId, kind, router]);
+  }, [allocationId, kind, reason, router]);
 
   return (
     <>
       <button
         type="button"
-        className="btn btn-sm"
+        className="btn btn-ghost btn-sm"
         onClick={() => {
           setError(null);
           setOpen(true);
         }}
         disabled={isPending}
       >
-        Chốt phân bổ
+        Đảo phân bổ
       </button>
 
       {error && !open ? (
         <div
           className="alert alert-error"
           role="alert"
-          style={{ marginTop: "0.5rem" }}
+          style={{ marginTop: "0.35rem" }}
         >
           {error}
         </div>
@@ -118,12 +133,35 @@ export function FinalizeAllocationButton({
             aria-modal="true"
             aria-labelledby={dialogTitleId}
           >
-            <h2 id={dialogTitleId}>Chốt phân bổ?</h2>
+            <h2 id={dialogTitleId}>Đảo phân bổ?</h2>
             <p>
-              {formatMoney(amount, currencyCode)} sẽ giảm outstanding {target}.
-              Trạng thái → <strong>{finalizeLabel}</strong>. Đảo phân bổ là
-              bước riêng (nút Đảo phân bổ).
+              {isDraft ? (
+                <>
+                  Hủy phân bổ nháp {formatMoney(amount, currencyCode)}. Không
+                  đụng outstanding {target}. Trạng thái →{" "}
+                  <strong>{reverseLabel}</strong>.
+                </>
+              ) : (
+                <>
+                  {formatMoney(amount, currencyCode)} sẽ trả lại outstanding{" "}
+                  {target}. Không xóa cứng; trạng thái →{" "}
+                  <strong>{reverseLabel}</strong>.
+                </>
+              )}
             </p>
+            <div className="field">
+              <label htmlFor={`rev-alloc-${allocationId}`}>Lý do đảo</label>
+              <input
+                id={`rev-alloc-${allocationId}`}
+                type="text"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                maxLength={1024}
+                disabled={submitting}
+                required
+                placeholder="Ví dụ: phân bổ nhầm đối tượng"
+              />
+            </div>
             {error ? (
               <div className="alert alert-error" role="alert">
                 {error}
@@ -141,10 +179,10 @@ export function FinalizeAllocationButton({
               <button
                 type="button"
                 className="btn"
-                onClick={runFinalize}
+                onClick={runReverse}
                 disabled={submitting}
               >
-                {submitting ? "Đang chốt…" : "Xác nhận chốt"}
+                {submitting ? "Đang đảo…" : "Xác nhận đảo"}
               </button>
             </div>
           </div>

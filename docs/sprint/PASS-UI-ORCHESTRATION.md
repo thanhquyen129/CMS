@@ -18,9 +18,10 @@
 | U5 | local | Done | Settlement + Close — `UI-5-DOD.md` |
 
 ## Follow-ups (not blocking)
-- Match UI, reverse allocation, write-off/recognize UI → **Match UI Done** (`UI-MATCH-DOD.md`); còn reverse allocation / write-off / recognize
+- ~~Match UI, reverse allocation, write-off~~ → Match Done; write-off + reverse allocation Done (`UI-WRITEOFF-REVERSE-DOD.md`); còn recognize thin từ AP/AR nếu cần
 - `billId` filter on document list DTO
 - Actions race → prefer serialize deploy / `--no-cache web` when UI drifts
+- Bank feed
 
 ## Vá lỗi theo sprint
 Resume agent trong bảng trên, hoặc New Chat + `PROMPT-UI-N.md`.

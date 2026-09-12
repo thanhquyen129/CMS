@@ -1,5 +1,31 @@
 # Handoff
 
+## 2026-09-12 — Write-off UI + đảo phân bổ
+
+### User
+Write-off UI + đảo phân bổ (follow-up ngoài G1–G6).
+
+### Done
+- BFF reverse: `payment-allocations|collection-allocations/{id}/reverse` `{ reason }`.
+- BFF write-off: `accounts-payable|accounts-receivable/{id}/write-off` `{ amount, reason }`.
+- UI: Đảo phân bổ trên chi tiết payment/collection (draft + finalized).
+- UI: Xóa nợ trên `/ap-ar` khi outstanding > 0 (trần stub 1000, ADR-0008).
+- DoD `docs/sprint/UI-WRITEOFF-REVERSE-DOD.md`.
+
+### Files
+- `apps/web/app/bff/payment-allocations/[id]/reverse`, `collection-allocations/.../reverse`
+- `apps/web/app/bff/accounts-payable/[id]/write-off`, `accounts-receivable/.../write-off`
+- `ReverseAllocationButton.tsx`, `WriteOffButton.tsx`
+- `settlements/payments|collections/[id]/page.tsx`, `ap-ar/page.tsx`, `lib/settlements.ts`
+
+### Verify
+- `npm run build` apps/web
+
+### Follow-ups
+- Bank feed · write-off approval · period close Strict stress
+
+---
+
 ## 2026-09-12 — UAT UI-only VPS re-run Bill → Close = PASS
 
 ### User
@@ -17,7 +43,7 @@ Chạy lại UAT UI-only trên VPS — một vòng không Postman (Bill → Clos
 - `/health` `/ready` OK; close `01a094e9-a71a-7408-b58b-11a68c461644` locked
 
 ### Follow-ups
-- Write-off UI · reverse allocation · bank feed
+- ~~Write-off UI · reverse allocation~~ → Done (`UI-WRITEOFF-REVERSE-DOD.md`) · bank feed
 
 ---
 
@@ -41,7 +67,7 @@ làm full G6
 - `npm run build` apps/web
 
 ### Follow-ups
-- Write-off UI · reverse allocation · bank feed (ngoài UAT gap)
+- ~~Write-off UI · reverse allocation~~ → Done · bank feed (ngoài UAT gap)
 
 ---
 

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AllocateCashForm } from "@/components/AllocateCashForm";
 import { FinalizeAllocationButton } from "@/components/FinalizeAllocationButton";
+import { ReverseAllocationButton } from "@/components/ReverseAllocationButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/lib/ap-ar";
 import {
   allocationStatusLabel,
+  canReverseAllocation,
   getPayment,
   isDraftAllocation,
   settlementBillLinkLabel,
@@ -96,8 +98,8 @@ export default async function PaymentDetailPage({
           {paymentLabel} · {formatMoney(payment.amount, payment.currencyCode)}
         </h1>
         <p className="lede">
-          {paymentLabel} ≠ {costLabel}. Hành động chính:{" "}
-          <strong>chốt phân bổ</strong> khi đã có dòng nháp.
+          {paymentLabel} ≠ {costLabel}. Chốt phân bổ nháp; đảo khi cần trả
+          outstanding.
         </p>
 
         <dl className="metric-grid">
@@ -170,17 +172,31 @@ export default async function PaymentDetailPage({
                       {allocationStatusLabel(terms, a.allocationStatus)}
                     </td>
                     <td>
-                      {isDraftAllocation(a.allocationStatus) ? (
-                        <FinalizeAllocationButton
-                          terms={terms}
-                          kind="payment"
-                          allocationId={a.id}
-                          amount={a.amount}
-                          currencyCode={a.currencyCode}
-                        />
-                      ) : (
-                        "—"
-                      )}
+                      <div className="row-actions">
+                        {isDraftAllocation(a.allocationStatus) ? (
+                          <FinalizeAllocationButton
+                            terms={terms}
+                            kind="payment"
+                            allocationId={a.id}
+                            amount={a.amount}
+                            currencyCode={a.currencyCode}
+                          />
+                        ) : null}
+                        {canReverseAllocation(a.allocationStatus) ? (
+                          <ReverseAllocationButton
+                            terms={terms}
+                            kind="payment"
+                            allocationId={a.id}
+                            amount={a.amount}
+                            currencyCode={a.currencyCode}
+                            allocationStatus={a.allocationStatus}
+                          />
+                        ) : null}
+                        {!isDraftAllocation(a.allocationStatus) &&
+                        !canReverseAllocation(a.allocationStatus)
+                          ? "—"
+                          : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

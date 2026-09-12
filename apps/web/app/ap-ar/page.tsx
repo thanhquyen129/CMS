@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { WriteOffButton } from "@/components/WriteOffButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -50,6 +51,7 @@ function statusFilterLabel(
 function ApArTable({
   terms,
   items,
+  kind,
   billLabel,
   outstandingLabel,
   agingLabel,
@@ -57,6 +59,7 @@ function ApArTable({
 }: {
   terms: TerminologyMap;
   items: (AccountsPayableItem | AccountsReceivableItem)[];
+  kind: "payable" | "receivable";
   billLabel: string;
   outstandingLabel: string;
   agingLabel: string;
@@ -82,6 +85,7 @@ function ApArTable({
             <th scope="col">Trạng thái tất toán</th>
             <th scope="col">Hạn</th>
             <th scope="col">{agingLabel}</th>
+            <th scope="col">Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -114,6 +118,19 @@ function ApArTable({
                 {row.daysPastDue != null && row.daysPastDue > 0
                   ? ` · ${row.daysPastDue} ngày`
                   : ""}
+              </td>
+              <td>
+                {row.outstanding > 0 ? (
+                  <WriteOffButton
+                    terms={terms}
+                    kind={kind}
+                    accountsId={row.id}
+                    outstanding={row.outstanding}
+                    currencyCode={row.currencyCode}
+                  />
+                ) : (
+                  "—"
+                )}
               </td>
             </tr>
           ))}
@@ -202,7 +219,7 @@ export default async function ApArPage({
           <Link className="row-link" href="/settlements">
             {paymentLabel} / thu tiền
           </Link>
-          .
+          . Xóa nợ phần dư nhỏ = điều chỉnh (không phải {paymentLabel}).
         </p>
 
         <p className="cta-row" style={{ marginTop: 0 }}>
@@ -317,6 +334,7 @@ export default async function ApArPage({
               <ApArTable
                 terms={terms}
                 items={apItems}
+                kind="payable"
                 billLabel={billLabel}
                 outstandingLabel={outstandingLabel}
                 agingLabel={agingLabel}
@@ -364,6 +382,7 @@ export default async function ApArPage({
               <ApArTable
                 terms={terms}
                 items={arItems}
+                kind="receivable"
                 billLabel={billLabel}
                 outstandingLabel={outstandingLabel}
                 agingLabel={agingLabel}

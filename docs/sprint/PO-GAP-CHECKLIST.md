@@ -12,7 +12,7 @@
 | ID | Tên | PO / ADR | Hiện trạng | Lát cắt MVP | Phụ thuộc |
 |----|-----|----------|------------|-------------|-----------|
 | **P01** | Phân bổ Shared cost → Bill (UI) | TD6 E05/E06; C-005/C-006 | **Done** (`P01-DOD.md`) | Basis equal/qty/manual → draft → finalize | — |
-| **P02** | Adjust Cost/Revenue + nhập số Confirm/Actual | TD6 E05/E07; C-009 | API sẵn · UI cứng số | Dialog số + lý do; list adjustments | — |
+| **P02** | Adjust Cost/Revenue + nhập số Confirm/Actual | TD6 E05/E07; C-009 | **Done** (`P02-DOD.md`) | Dialog số + lý do; list adjustments | — |
 | **P03** | Approval gate write-off > trần | ADR-0008; E10/E11; H-009 | Write-off UI Done · chưa vào Approval | Trên trần → Approval → apply khi approved | Queue decide Done |
 | **P04** | UAT Strict close + period lock stress | E12; ADR-0010; AC-008 | API Done · chưa stress VPS | Close `strict` + Locked chặn confirm/allocate | Close UI Done |
 | **P05** | Rate card / Rating / seed Expected (UI) | TD6 E04; C-011 | API FULL · **thiếu UI** | CRUD card → publish → rate Bill → seed Expected | — |
@@ -51,11 +51,11 @@
 
 ## Top 5 làm ngay
 
-1. **P02** Adjust + số maturity — finance cần sửa số có lý do.  
-2. **P03** Write-off → Approval — audit khi vượt trần.  
-3. **P04** Strict + period lock UAT — chứng minh AC-008 trên VPS.  
-4. **P05** Rate card UI — Expected không phụ thuộc seed/API tay.  
-5. **P06** `fx_rates` theo ngày — bỏ stub config.
+1. **P03** Write-off → Approval — audit khi vượt trần.  
+2. **P04** Strict + period lock UAT — chứng minh AC-008 trên VPS.  
+3. **P05** Rate card UI — Expected không phụ thuộc seed/API tay.  
+4. **P06** `fx_rates` theo ngày — bỏ stub config.  
+5. **P07** Aging summary + dashboard tách quyền tài chính.
 
 ## Không làm (trừ ADR mới)
 

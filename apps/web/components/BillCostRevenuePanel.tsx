@@ -12,6 +12,7 @@ import {
   type RevenueListItem,
 } from "@/lib/costs-revenues";
 import { formatMoney } from "@/lib/money";
+import { AdjustCostRevenueButton } from "@/components/AdjustCostRevenueButton";
 
 type Kind = "cost" | "revenue";
 type Action = "confirm" | "actualize";
@@ -194,7 +195,8 @@ export function BillCostRevenuePanel({
       </h2>
       <p className="muted small">
         Một thao tác mỗi dòng: xác nhận ({expected} → {confirmed}) hoặc ghi nhận{" "}
-        {actual} ({confirmed} → {actual}). Không ghi đè lớp trưởng thành trước đó.
+        {actual} ({confirmed} → {actual}) — dialog cho phép nhập số lớp đích.
+        Điều chỉnh (delta + lý do) ghi lịch sử, không silent overwrite.
       </p>
       <p className="cta-row" style={{ marginTop: 0 }}>
         <Link className="btn btn-sm" href={`/bills/${billId}/costs/new`}>
@@ -321,6 +323,22 @@ export function BillCostRevenuePanel({
                           <span className="muted small">—</span>
                         )}
                         {c.recordStatus === "active" ? (
+                          <AdjustCostRevenueButton
+                            terms={terms}
+                            kind="cost"
+                            lineId={c.id}
+                            currentAmount={c.amount}
+                            currencyCode={c.currencyCode}
+                            financialMaturity={c.financialMaturity}
+                          />
+                        ) : null}
+                        <Link
+                          className="btn btn-ghost btn-sm"
+                          href={`/costs/${c.id}`}
+                        >
+                          Lịch sử
+                        </Link>
+                        {c.recordStatus === "active" ? (
                           <Link
                             className="btn btn-ghost btn-sm"
                             href={`/ap-ar/exposures/new?kind=payable&billId=${encodeURIComponent(billId)}&costId=${encodeURIComponent(c.id)}&amount=${encodeURIComponent(String(c.amount))}&currency=${encodeURIComponent(c.currencyCode)}`}
@@ -431,6 +449,22 @@ export function BillCostRevenuePanel({
                         ) : (
                           <span className="muted small">—</span>
                         )}
+                        {r.recordStatus === "active" ? (
+                          <AdjustCostRevenueButton
+                            terms={terms}
+                            kind="revenue"
+                            lineId={r.id}
+                            currentAmount={r.amount}
+                            currencyCode={r.currencyCode}
+                            financialMaturity={r.financialMaturity}
+                          />
+                        ) : null}
+                        <Link
+                          className="btn btn-ghost btn-sm"
+                          href={`/revenues/${r.id}`}
+                        >
+                          Lịch sử
+                        </Link>
                         {r.recordStatus === "active" ? (
                           <Link
                             className="btn btn-ghost btn-sm"

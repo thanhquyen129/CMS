@@ -35,6 +35,30 @@ export type CostAllocation = {
   details: CostAllocationDetail[];
 };
 
+export type CostAdjustmentItem = {
+  id: string;
+  adjustmentType: string;
+  deltaAmount: number;
+  currencyCode: string;
+  reason: string;
+  effectiveDate: string;
+  appliedToMaturity: string;
+  amountBefore: number;
+  amountAfter: number;
+  createdAt: string;
+};
+
+export type RevenueListItem = {
+  id: string;
+  billId: string;
+  financialMaturity: string;
+  amount: number;
+  currencyCode: string;
+  revenueTypeCode: string | null;
+  recordStatus: string;
+  effectiveDate: string;
+};
+
 export type CostDto = CostListItem & {
   expectedAmount: number;
   confirmedAmount: number | null;
@@ -47,10 +71,38 @@ export type CostDto = CostListItem & {
   approvalStatus: string;
   confirmedAt: string | null;
   actualizedAt: string | null;
+  adjustments: CostAdjustmentItem[];
   allocations: CostAllocation[];
 };
 
+export type RevenueDto = RevenueListItem & {
+  expectedAmount: number;
+  confirmedAmount: number | null;
+  actualAmount: number | null;
+  baseAmount: number | null;
+  fxRateId: string | null;
+  customerPartyId: string | null;
+  sourceType: string | null;
+  sourceId: string | null;
+  recognitionPolicyVersion: string | null;
+  approvalStatus: string;
+  confirmedAt: string | null;
+  actualizedAt: string | null;
+  adjustments: CostAdjustmentItem[];
+};
+
 export type AllocationBasis = "equal" | "quantity" | "manual_ratio";
+
+export function adjustmentTypeLabel(type: string): string {
+  switch (type?.toLowerCase()) {
+    case "adjustment":
+      return "Điều chỉnh";
+    case "reversal":
+      return "Đảo / hoàn";
+    default:
+      return type;
+  }
+}
 
 export function allocationBasisLabel(basis: string): string {
   switch (basis?.toLowerCase()) {
@@ -81,17 +133,6 @@ export function allocationStatusLabel(status: string): string {
 export function isSharedCost(attributionType: string): boolean {
   return attributionType?.toLowerCase() === "shared";
 }
-
-export type RevenueListItem = {
-  id: string;
-  billId: string;
-  financialMaturity: string;
-  amount: number;
-  currencyCode: string;
-  revenueTypeCode: string | null;
-  recordStatus: string;
-  effectiveDate: string;
-};
 
 export function maturityLabelKey(maturity: string): string {
   switch (maturity?.toLowerCase()) {

@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-09-12 — P02 Adjust Cost/Revenue + số Confirm/Actual
+
+### User
+P02 Adjust Cost/Revenue + nhập số Confirm/Actual
+
+### Done
+- Confirm/Actual dialog: nhập số lớp đích (Bill + detail pages).
+- Adjust dialog: adjustment|reversal + delta + lý do bắt buộc → API adjustments.
+- Lịch sử trên `/costs/[id]`, `/revenues/[id]`, shared cost detail; link từ Bill panel.
+- BFF `POST /bff/costs|revenues/{id}/adjustments`.
+
+### Files
+- `AdjustCostRevenueButton`, `MaturityTransitionButton`, `AdjustmentHistoryTable`
+- `apps/web/app/costs/[id]`, `revenues/[id]`, `costs/shared/[id]` (adjust+history)
+- `BillCostRevenuePanel`, BFF adjustments routes, `costs-revenues*.ts`
+- `docs/sprint/P02-DOD.md`
+
+### Verify
+- `npm run build` apps/web OK
+
+### Next
+- P03 Approval gate write-off > trần
+
+### End-user
+Trên Bill: Xác nhận/Ghi nhận Thực tế → nhập số; **Điều chỉnh** → delta + lý do; **Lịch sử** xem sổ điều chỉnh.
+
+---
+
 ## 2026-09-12 — P01 Shared allocation UI
 
 ### User

@@ -2,8 +2,11 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { AdjustCostRevenueButton } from "@/components/AdjustCostRevenueButton";
+import { AdjustmentHistoryTable } from "@/components/AdjustmentHistoryTable";
 import { AllocateSharedCostForm } from "@/components/AllocateSharedCostForm";
 import { FinalizeCostAllocationButton } from "@/components/FinalizeCostAllocationButton";
+import { MaturityTransitionButton } from "@/components/MaturityTransitionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listBills } from "@/lib/bills";
@@ -11,6 +14,8 @@ import { getCost } from "@/lib/costs-revenues-server";
 import {
   allocationBasisLabel,
   allocationStatusLabel,
+  canActualize,
+  canConfirm,
   isSharedCost,
   maturityLabelKey,
 } from "@/lib/costs-revenues";
@@ -37,6 +42,7 @@ export default async function SharedCostDetailPage({
   const expected = term(terms, "EXPECTED", "Dự kiến");
   const confirmed = term(terms, "CONFIRMED", "Đã xác nhận");
   const actual = term(terms, "ACTUAL", "Thực tế");
+  const adjLabel = term(terms, "ADJUSTMENT", "Điều chỉnh");
 
   const [costRes, billsRes] = await Promise.all([getCost(id), listBills()]);
 
@@ -149,6 +155,47 @@ export default async function SharedCostDetailPage({
             <dd>{cost.effectiveDate}</dd>
           </div>
         </dl>
+
+        {cost.recordStatus === "active" ? (
+          <p className="cta-row">
+            {canConfirm(cost.financialMaturity, cost.recordStatus) ? (
+              <MaturityTransitionButton
+                terms={terms}
+                kind="cost"
+                action="confirm"
+                lineId={cost.id}
+                currentAmount={cost.amount}
+                currencyCode={cost.currencyCode}
+              />
+            ) : null}
+            {canActualize(cost.financialMaturity, cost.recordStatus) ? (
+              <MaturityTransitionButton
+                terms={terms}
+                kind="cost"
+                action="actualize"
+                lineId={cost.id}
+                currentAmount={cost.amount}
+                currencyCode={cost.currencyCode}
+              />
+            ) : null}
+            <AdjustCostRevenueButton
+              terms={terms}
+              kind="cost"
+              lineId={cost.id}
+              currentAmount={cost.amount}
+              currencyCode={cost.currencyCode}
+              financialMaturity={cost.financialMaturity}
+              buttonClassName="btn btn-sm"
+            />
+          </p>
+        ) : null}
+
+        <h2>{adjLabel} — lịch sử</h2>
+        <AdjustmentHistoryTable
+          terms={terms}
+          adjustments={cost.adjustments ?? []}
+          currencyCode={cost.currencyCode}
+        />
 
         <h2>{allocLabel}</h2>
         {!billsRes.ok ? (

@@ -19,7 +19,7 @@ Pass 2 Sprint 12 FULL final: audit FULL + integration recovery/outbox stub + NFR
 - DoD: `docs/sprint/SPRINT-12-FULL-DOD.md`, `PROMPT-SPRINT-12-FULL.md`
 
 ### Verify
-- `dotnet test Cms.sln -c Release` (Sprint12Full 4 passed; full suite)
+- `dotnet test Cms.sln -c Release` → **93 passed** (Sprint12Full +4)
 
 ### Next
 - Merge S12 FULL → Pass 2 board all Done. If S11 FULL still open, merge S11 first then rebase S12. Pass UI continues (U2+).

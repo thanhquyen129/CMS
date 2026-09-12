@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-12 — Full-width content panels
+
+### User
+phần nội dung hiển thị tràn ngang full page
+
+### Done
+- Bỏ `max-width` trên `.panel` / `.panel-wide` / `.main` — nội dung full ngang viewport (giữ padding cạnh).
+
+### Files
+- `apps/web/app/globals.css`
+
+---
+
 ## 2026-09-12 — Invoika-inspired themes + Settings
 
 ### User

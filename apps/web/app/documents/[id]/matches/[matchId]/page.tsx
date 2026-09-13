@@ -8,6 +8,7 @@ import {
   type MatchTargetOption,
 } from "@/components/AddMatchDetailForm";
 import { CancelDocumentMatchButton } from "@/components/CancelDocumentMatchButton";
+import { CreateExposuresFromMatchButton } from "@/components/CreateExposuresFromMatchButton";
 import { ReverseMatchDetailButton } from "@/components/ReverseMatchDetailButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -318,6 +319,8 @@ export default async function DocumentMatchSessionPage({
             </table>
           </div>
         )}
+
+        <CreateExposuresFromMatchButton matchId={match.id} documentId={doc.id} />
 
         {draft ? (
           <>

@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-09-13 — P08 Auto Exposure từ chứng từ đã khớp
+
+### User
+Next: P08 Auto Exposure từ chứng từ đã khớp.
+
+### Done
+- Propose + create exposure từ match detail active; gắn Cost/Revenue sẵn có (C-003/C-004).
+- Idempotent: `SourceType=document_match_detail` + `SourceId=detail.Id`.
+- Skip `line_to_line` / hướng chứng từ sai / đã tạo.
+- UI CTA trên trang phiên khớp + BFF.
+
+### Files
+- `CreateExposuresFromMatchCommand.cs` (propose + create)
+- `FinancialDocumentEndpoints` `/exposure-proposals`, `/create-exposures`
+- `CreateExposuresFromMatchButton.tsx`, match page, BFF routes
+- `SprintP08AutoExposureFromMatchTests.cs`, `docs/sprint/P08-DOD.md`
+
+### Verify
+- `dotnet test` filter SprintP08 — 2 passed
+
+### Next
+- P09 Confirm match session + auto-suggest
+
+### End-user
+Trên phiên khớp chứng từ: **Xem đề xuất** → **Tạo exposure**. Không tạo chi phí/doanh thu mới. Received ≠ Accepted ≠ Matched ≠ Recognized.
+
+---
+
 ## 2026-09-12 — P07 Aging summary + dashboard financial visibility
 
 ### User

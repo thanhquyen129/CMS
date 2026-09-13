@@ -194,6 +194,18 @@ public static class FinancialDocumentEndpoints
             return Results.NoContent();
         });
 
+        matches.MapGet("/{id:guid}/exposure-proposals", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ProposeExposuresFromMatchQuery(id), ct);
+            return Results.Ok(list);
+        });
+
+        matches.MapPost("/{id:guid}/create-exposures", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new CreateExposuresFromMatchCommand(id), ct);
+            return Results.Ok(result);
+        });
+
         return app;
     }
 }

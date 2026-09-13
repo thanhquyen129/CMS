@@ -1,19 +1,26 @@
 # Checklist còn thiếu vs PO (sau Pass 1/2 + UI + UAT PASS)
 
-**Cập nhật:** 2026-09-13 (P01–P25 Done)  
+**Cập nhật:** 2026-09-13 — **P01–P25 đóng**; wave tiếp = UAT go-live nghiệp vụ  
 **Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P25**.
 
-**Cách dùng:** làm theo thứ tự; một item = một chat/agent; tick Done + DoD ngắn khi ship.
+**Cách dùng (lịch sử):** P-series đã xong — **không** mở item P mới. Wave hiện tại: `UAT-GO-LIVE-FINANCIAL.md`.
 
 ---
 
-## Wave tiếp theo
+## Wave hiện tại — UAT go-live tài chính đủ
 
-Checklist P01–P25 **Done**. Follow-up ngoài checklist: OIDC IdP thật, OTLP exporter, soak CI gate, broker ngoài process.
+| Tài liệu | Vai trò |
+|----------|---------|
+| `UAT-GO-LIVE-FINANCIAL.md` | Kịch bản S1–S14 cho người nghiệp vụ trên VPS |
+| `UAT-GO-LIVE-FINANCIAL-RESULT.md` | Phiếu kết quả phiên (PASS/FAIL + gap) |
+| `PROMPT-UAT-GO-LIVE.md` | Kickoff chat hỗ trợ / chạy hộ UAT |
 
-**Next kickoff:** vận hành go-live / UAT tài chính đủ · hoặc ADR mới nếu PO mở scope.
+**Host:** `http://194.233.89.26` · Preflight health/ready OK (2026-09-13).  
+**Residual ngoài UAT (cần ADR):** OIDC IdP thật · OTLP exporter · soak CI gate · broker ngoài process.
 
 ---
+
+## Lịch sử P01–P25 (đóng — chỉ tham chiếu)
 
 ## Go-live tài chính (đầy đủ)
 

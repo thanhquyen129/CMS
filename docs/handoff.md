@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-13 — Mở wave UAT go-live tài chính đủ (người nghiệp vụ)
+
+### User
+Tiếp theo: UAT go-live tài chính đủ với người nghiệp vụ trên VPS — không còn checklist P-series.
+
+### Done
+- Gói UAT nghiệp vụ: `docs/sprint/UAT-GO-LIVE-FINANCIAL.md` (S1 bắt buộc Bill→Close + S2–S14 kiểm soát).
+- Phiếu kết quả: `UAT-GO-LIVE-FINANCIAL-RESULT.md`.
+- Kickoff chat: `PROMPT-UAT-GO-LIVE.md`.
+- Board: `PO-GAP-CHECKLIST.md` + `README-AGENTS.md` — P01–P25 đóng; wave hiện tại = UAT go-live.
+- Preflight VPS: `/health` `/ready` `/` = 200; `/login` UI OK (VI). Host: bootstrap `ops@cms.local`, `Demo__SeedOnStartup=true` (password chỉ `infra/.env`).
+
+### Files
+- `docs/sprint/UAT-GO-LIVE-FINANCIAL.md`
+- `docs/sprint/UAT-GO-LIVE-FINANCIAL-RESULT.md`
+- `docs/sprint/PROMPT-UAT-GO-LIVE.md`
+- `docs/sprint/PO-GAP-CHECKLIST.md`, `docs/sprint/README-AGENTS.md`
+
+### Next
+- Chạy phiên với người nghiệp vụ: paste `PROMPT-UAT-GO-LIVE.md` hoặc điền RESULT theo S1→S14.
+- Agent có thể chạy hộ S1 UI-only nếu PO nhờ (không Postman).
+
+### End-user
+- URL: `http://194.233.89.26` — đăng nhập tài khoản vận hành đã cấp; làm theo kịch bản UAT-GO-LIVE (không dùng mã Pxx).
+
+---
+
 ## 2026-09-13 — PO gap checklist P01–P25 **COMPLETE**
 
 ### User

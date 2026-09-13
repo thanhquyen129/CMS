@@ -11,7 +11,8 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 
 **Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: COMPLETE.** **PO gap P01–P25: COMPLETE.**
 
-**Backlog đóng** (`PO-GAP-CHECKLIST.md`). Residual (ADR nếu làm): OIDC IdP thật · OTLP · soak CI gate · broker ngoài process.
+**Wave hiện tại:** UAT go-live tài chính đủ với người nghiệp vụ — `UAT-GO-LIVE-FINANCIAL.md` · kickoff `PROMPT-UAT-GO-LIVE.md`.  
+**Không** mở lại P-series. Residual (ADR nếu làm): OIDC IdP thật · OTLP · soak CI gate · broker ngoài process.
 
 ## Status Pass 2
 | Sprint | Status |

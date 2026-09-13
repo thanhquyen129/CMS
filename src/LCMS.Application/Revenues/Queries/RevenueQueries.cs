@@ -1,5 +1,8 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Identity;
+using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -56,11 +59,22 @@ public sealed class GetRevenueByIdQueryHandler : IRequestHandler<GetRevenueByIdQ
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public GetRevenueByIdQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetRevenueByIdQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<RevenueDto> Handle(GetRevenueByIdQuery request, CancellationToken cancellationToken)
@@ -70,9 +84,20 @@ public sealed class GetRevenueByIdQueryHandler : IRequestHandler<GetRevenueByIdQ
             throw new TenantRequiredAppException();
         }
 
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.RevenueRead, "Bạn không có quyền xem doanh thu.", cancellationToken);
+
         var revenue = await _db.Revenues.AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");
+
+        var billOrgId = await DataScopeFilter.BillOrganizationIdAsync(_db, revenue.BillId, cancellationToken);
+        if (!DataScopeFilter.AllowsViaBillOrg(
+                scope, _userContext.UserId, orgSubtree, revenue.CreatedBy, billOrgId))
+        {
+            throw new NotFoundAppException("Không tìm thấy doanh thu.");
+        }
 
         var adjustments = await _db.RevenueAdjustments.AsNoTracking()
             .Where(a => a.RevenueId == revenue.Id)
@@ -122,11 +147,22 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public ListRevenuesQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public ListRevenuesQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<IReadOnlyList<RevenueListItemDto>> Handle(
@@ -138,6 +174,10 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
             throw new TenantRequiredAppException();
         }
 
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.RevenueRead, "Bạn không có quyền xem doanh thu.", cancellationToken);
+
         var query = _db.Revenues.AsNoTracking().AsQueryable();
         if (request.BillId.HasValue)
         {
@@ -148,6 +188,26 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
         {
             var maturity = request.FinancialMaturity.Trim().ToLowerInvariant();
             query = query.Where(r => r.FinancialMaturity == maturity);
+        }
+
+        if (scope == DataScopes.Own)
+        {
+            if (!_userContext.HasUser)
+            {
+                return [];
+            }
+
+            query = query.Where(r => r.CreatedBy == _userContext.UserId);
+        }
+        else if (scope == DataScopes.Organization)
+        {
+            var billIds = await DataScopeFilter.BillIdsInOrgSubtreeAsync(_db, orgSubtree, cancellationToken);
+            if (billIds.Count == 0)
+            {
+                return [];
+            }
+
+            query = query.Where(r => billIds.Contains(r.BillId));
         }
 
         return await query

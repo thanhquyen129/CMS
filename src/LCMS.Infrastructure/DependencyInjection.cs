@@ -1,6 +1,7 @@
 using LCMS.Application.Abstractions;
 using LCMS.Infrastructure.Audit;
 using LCMS.Infrastructure.Identity;
+using LCMS.Infrastructure.Integrations;
 using LCMS.Infrastructure.Persistence;
 using LCMS.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,9 @@ public static class DependencyInjection
         });
 
         services.AddScoped<ILcmsDbContext>(sp => sp.GetRequiredService<LcmsDbContext>());
+
+        services.Configure<OutboxWorkerOptions>(configuration.GetSection(OutboxWorkerOptions.SectionName));
+        services.AddHostedService<OutboxProcessorHostedService>();
 
         return services;
     }

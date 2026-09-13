@@ -1,5 +1,8 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Identity;
+using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -56,11 +59,22 @@ public sealed class GetFinancialDocumentByIdQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public GetFinancialDocumentByIdQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetFinancialDocumentByIdQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<FinancialDocumentDto> Handle(
@@ -72,9 +86,20 @@ public sealed class GetFinancialDocumentByIdQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.BillRead, "Bạn không có quyền xem chứng từ tài chính.", cancellationToken);
+
         var document = await _db.FinancialDocuments.AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chứng từ tài chính.");
+
+        var billOrgId = await DataScopeFilter.BillOrganizationIdAsync(_db, document.BillId, cancellationToken);
+        if (!DataScopeFilter.AllowsViaBillOrg(
+                scope, _userContext.UserId, orgSubtree, document.CreatedBy, billOrgId))
+        {
+            throw new NotFoundAppException("Không tìm thấy chứng từ tài chính.");
+        }
 
         var lines = await _db.FinancialDocumentLines.AsNoTracking()
             .Where(l => l.DocumentId == document.Id)
@@ -125,11 +150,22 @@ public sealed class ListFinancialDocumentsQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public ListFinancialDocumentsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public ListFinancialDocumentsQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<IReadOnlyList<FinancialDocumentListItemDto>> Handle(
@@ -140,6 +176,10 @@ public sealed class ListFinancialDocumentsQueryHandler
         {
             throw new TenantRequiredAppException();
         }
+
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.BillRead, "Bạn không có quyền xem chứng từ tài chính.", cancellationToken);
 
         var query = _db.FinancialDocuments.AsNoTracking().AsQueryable();
 
@@ -174,6 +214,29 @@ public sealed class ListFinancialDocumentsQueryHandler
             query = query.Where(d =>
                 d.BillId == billId
                 || _db.FinancialDocumentLines.Any(l => l.DocumentId == d.Id && l.BillId == billId));
+        }
+
+        if (scope == DataScopes.Own)
+        {
+            if (!_userContext.HasUser)
+            {
+                return [];
+            }
+
+            query = query.Where(d => d.CreatedBy == _userContext.UserId);
+        }
+        else if (scope == DataScopes.Organization)
+        {
+            var billIds = await DataScopeFilter.BillIdsInOrgSubtreeAsync(_db, orgSubtree, cancellationToken);
+            if (billIds.Count == 0)
+            {
+                return [];
+            }
+
+            query = query.Where(d =>
+                (d.BillId != null && billIds.Contains(d.BillId.Value))
+                || _db.FinancialDocumentLines.Any(l =>
+                    l.DocumentId == d.Id && l.BillId != null && billIds.Contains(l.BillId.Value)));
         }
 
         return await query

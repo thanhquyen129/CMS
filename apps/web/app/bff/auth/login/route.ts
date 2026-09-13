@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE, cookieSecure, getApiInternalUrl } from "@/lib/auth";
+import {
+  AUTH_COOKIE,
+  REFRESH_COOKIE,
+  cookieSecure,
+  getApiInternalUrl,
+} from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   let body: { email?: string; password?: string };
@@ -41,7 +46,9 @@ export async function POST(req: NextRequest) {
   }
 
   const accessToken = payload.accessToken as string | undefined;
+  const refreshToken = payload.refreshToken as string | undefined;
   const expiresIn = Number(payload.expiresIn ?? 3600);
+  const refreshExpiresIn = Number(payload.refreshExpiresIn ?? 14 * 24 * 3600);
   if (!accessToken) {
     return NextResponse.json(
       { code: "login_failed", message: "Máy chủ không trả về token." },
@@ -59,5 +66,16 @@ export async function POST(req: NextRequest) {
     path: "/",
     maxAge: Math.max(60, expiresIn),
   });
+  if (refreshToken) {
+    res.cookies.set({
+      name: REFRESH_COOKIE,
+      value: refreshToken,
+      httpOnly: true,
+      secure: cookieSecure(),
+      sameSite: "lax",
+      path: "/",
+      maxAge: Math.max(60, refreshExpiresIn),
+    });
+  }
   return res;
 }

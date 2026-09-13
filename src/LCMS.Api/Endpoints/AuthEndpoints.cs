@@ -15,7 +15,7 @@ public static class AuthEndpoints
                 [FromBody] LoginRequest? body,
                 LcmsDbContext db,
                 IPasswordHasherService passwordHasher,
-                JwtTokenIssuer issuer,
+                AuthTokenService tokens,
                 CancellationToken ct) =>
             {
                 if (body is null
@@ -30,7 +30,6 @@ public static class AuthEndpoints
                 }
 
                 var email = body.Email.Trim().ToLowerInvariant();
-                // Login is pre-tenant: ignore tenant filter; still exclude soft-deleted.
                 var candidates = await db.Users
                     .IgnoreQueryFilters()
                     .Where(u => u.Email == email && u.IsActive && u.DeletedAt == null)
@@ -48,12 +47,14 @@ public static class AuthEndpoints
                     }, statusCode: StatusCodes.Status401Unauthorized);
                 }
 
-                var (accessToken, expiresIn) = issuer.Issue(matched.TenantId, matched.Id);
+                var pair = await tokens.IssuePairAsync(matched.TenantId, matched.Id, ct);
                 return Results.Ok(new
                 {
-                    accessToken,
+                    accessToken = pair.AccessToken,
+                    refreshToken = pair.RefreshToken,
                     tokenType = "Bearer",
-                    expiresIn,
+                    expiresIn = pair.ExpiresInSeconds,
+                    refreshExpiresIn = pair.RefreshExpiresInSeconds,
                     user = new
                     {
                         id = matched.Id,
@@ -64,10 +65,49 @@ public static class AuthEndpoints
                 });
             })
             .AllowAnonymous()
-            .WithSummary("Email/password login → JWT (tenant_id + sub)");
+            .WithSummary("Email/password login → JWT + refresh (tenant_id + sub)");
+
+        group.MapPost("/refresh", async (
+                [FromBody] RefreshRequest? body,
+                AuthTokenService tokens,
+                CancellationToken ct) =>
+            {
+                var pair = await tokens.RefreshAsync(body?.RefreshToken ?? string.Empty, ct);
+                if (pair is null)
+                {
+                    return Results.Json(new
+                    {
+                        code = "invalid_refresh",
+                        message = "Refresh token không hợp lệ hoặc đã hết hạn."
+                    }, statusCode: StatusCodes.Status401Unauthorized);
+                }
+
+                return Results.Ok(new
+                {
+                    accessToken = pair.AccessToken,
+                    refreshToken = pair.RefreshToken,
+                    tokenType = "Bearer",
+                    expiresIn = pair.ExpiresInSeconds,
+                    refreshExpiresIn = pair.RefreshExpiresInSeconds
+                });
+            })
+            .AllowAnonymous()
+            .WithSummary("Rotate refresh token → new access + refresh");
+
+        group.MapPost("/logout", async (
+                [FromBody] RefreshRequest? body,
+                AuthTokenService tokens,
+                CancellationToken ct) =>
+            {
+                await tokens.RevokeAsync(body?.RefreshToken, ct);
+                return Results.Ok(new { ok = true });
+            })
+            .AllowAnonymous()
+            .WithSummary("Revoke refresh token (P22)");
 
         return app;
     }
 }
 
 public sealed record LoginRequest(string Email, string Password);
+public sealed record RefreshRequest(string? RefreshToken);

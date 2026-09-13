@@ -6,6 +6,7 @@ using LCMS.Application.Costs;
 using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,6 +41,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     private readonly ICostApprovalGate _approvalGate;
     private readonly ICriticalExceptionConfirmGate _criticalExceptionGate;
     private readonly IPeriodLockGate _periodLockGate;
+    private readonly IPermissionService _permissions;
 
     public ConfirmCostCommandHandler(
         ILcmsDbContext db,
@@ -49,7 +51,8 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         ICostFxStub fx,
         ICostApprovalGate approvalGate,
         ICriticalExceptionConfirmGate criticalExceptionGate,
-        IPeriodLockGate periodLockGate)
+        IPeriodLockGate periodLockGate,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -59,6 +62,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         _approvalGate = approvalGate;
         _criticalExceptionGate = criticalExceptionGate;
         _periodLockGate = periodLockGate;
+        _permissions = permissions;
     }
 
     public async Task Handle(ConfirmCostCommand request, CancellationToken cancellationToken)
@@ -67,6 +71,11 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.CostConfirm,
+            "Bạn không có quyền xác nhận chi phí.",
+            cancellationToken);
 
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == request.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
@@ -188,17 +197,20 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly ICostFxStub _fx;
+    private readonly IPermissionService _permissions;
 
     public ActualizeCostCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        ICostFxStub fx)
+        ICostFxStub fx,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _fx = fx;
+        _permissions = permissions;
     }
 
     public async Task Handle(ActualizeCostCommand request, CancellationToken cancellationToken)
@@ -207,6 +219,11 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.CostActualize,
+            "Bạn không có quyền thực tế hóa chi phí.",
+            cancellationToken);
 
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == request.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");

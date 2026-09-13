@@ -1,4 +1,5 @@
 export const AUTH_COOKIE = "lcms_at";
+export const REFRESH_COOKIE = "lcms_rt";
 
 export function getApiInternalUrl(): string {
   return (

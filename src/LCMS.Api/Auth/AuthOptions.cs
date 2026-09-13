@@ -35,4 +35,7 @@ public sealed class JwtOptions
     public string SigningKey { get; set; } = string.Empty;
 
     public int ExpiryMinutes { get; set; } = 60;
+
+    /// <summary>Opaque refresh token lifetime (P22). Default 14 days.</summary>
+    public int RefreshExpiryDays { get; set; } = 14;
 }

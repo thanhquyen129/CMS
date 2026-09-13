@@ -1592,6 +1592,23 @@ internal sealed class OutboxMessageConfiguration : IEntityTypeConfiguration<Outb
     }
 }
 
+internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
+{
+    public void Configure(EntityTypeBuilder<RefreshToken> builder)
+    {
+        builder.ToTable("refresh_tokens");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.UserId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.TokenHash).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ExpiresAt).IsRequired();
+        builder.Property(e => e.ReplacedByTokenHash).HasMaxLength(64);
+
+        builder.HasIndex(e => new { e.TenantId, e.TokenHash }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.UserId, e.ExpiresAt });
+    }
+}
+
 internal sealed class BankFeedLineConfiguration : IEntityTypeConfiguration<BankFeedLine>
 {
     public void Configure(EntityTypeBuilder<BankFeedLine> builder)

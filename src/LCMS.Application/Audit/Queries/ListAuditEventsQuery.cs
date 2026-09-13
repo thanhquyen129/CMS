@@ -73,13 +73,46 @@ public sealed class ListAuditEventsQueryHandler
             query = query.Where(e => e.CorrelationId == correlationId);
         }
 
-        // SQLite cannot translate DateTimeOffset comparisons (same as ORDER BY limitation).
-        // Apply From/To in memory after materializing; Postgres path remains correct.
+        var isNpgsql = _db is DbContext ef
+            && ef.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+
+        // P25: push From/To to SQL on PostgreSQL; SQLite keeps in-memory filter (DateTimeOffset translate).
+        if (isNpgsql)
+        {
+            if (request.From.HasValue)
+            {
+                var from = request.From.Value;
+                query = query.Where(e => e.OccurredAt >= from);
+            }
+
+            if (request.To.HasValue)
+            {
+                var to = request.To.Value;
+                query = query.Where(e => e.OccurredAt <= to);
+            }
+
+            return await query
+                .OrderByDescending(e => e.OccurredAt)
+                .ThenByDescending(e => e.Id)
+                .Take(take)
+                .Select(e => new AuditEventDto(
+                    e.Id,
+                    e.ActorId,
+                    e.Action,
+                    e.ObjectType,
+                    e.ObjectId,
+                    e.BeforeJson,
+                    e.AfterJson,
+                    e.Reason,
+                    e.CorrelationId,
+                    e.OccurredAt))
+                .ToListAsync(cancellationToken);
+        }
+
         var hasDateFilter = request.From.HasValue || request.To.HasValue;
         var fetchTake = hasDateFilter ? Math.Min(2000, Math.Max(take * 20, 200)) : take;
 
         var rows = await query
-            // Order by Id (UUIDv7 time-sortable) — SQLite rejects DateTimeOffset in ORDER BY.
             .OrderByDescending(e => e.Id)
             .Take(fetchTake)
             .Select(e => new AuditEventDto(

@@ -1,21 +1,17 @@
 # Checklist còn thiếu vs PO (sau Pass 1/2 + UI + UAT PASS)
 
-**Cập nhật:** 2026-09-13 (P01–P20 Done)  
-**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P20**.
+**Cập nhật:** 2026-09-13 (P01–P25 Done)  
+**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P25**.
 
 **Cách dùng:** làm theo thứ tự; một item = một chat/agent; tick Done + DoD ngắn khi ship.
 
 ---
 
-## Wave tiếp theo (làm ngay) — P21+
+## Wave tiếp theo
 
-| # | ID | Việc | Lát cắt MVP |
-|---|-----|------|-------------|
-| 1 | **P21** | Data Scope Revenue / Documents / AP·AR | Enforce `all`/`own`(+org) list còn lại |
-| 2 | **P22** | OIDC / refresh / revocation | External IdP; giữ `tenant_id`+`sub` |
-| 3 | **P23** | Outbox broker + Redis rate-limit + OTel | Broker hoặc worker; export metrics |
+Checklist P01–P25 **Done**. Follow-up ngoài checklist: OIDC IdP thật, OTLP exporter, soak CI gate, broker ngoài process.
 
-**Next kickoff:** **P21**.
+**Next kickoff:** vận hành go-live / UAT tài chính đủ · hoặc ADR mới nếu PO mở scope.
 
 ---
 
@@ -53,11 +49,11 @@
 | **P18** | Admin master data UI (party/role/org/currency) | E01/E02 | **Done** (`P18-DOD.md`) | CRUD tối thiểu tenant ops | — |
 | **P19** | Tenant settings API + `settings.manage` | ADR-0014; CP5 | **Done** (`P19-DOD.md`) | `tenant_settings` + quyền | — |
 | **P20** | Ngưỡng/SLA/FX theo tenant | ADR-0004/0009/0010 | **Done** (`P20-DOD.md`) | Override confirm/write-off (SLA deferred) | P06, P12, P19 |
-| **P21** | Data Scope Revenue / Documents / AP·AR | ADR-0003; H-009 | Scope Bill/Cost partial | Enforce `all`/`own`(+org) list còn lại | — |
-| **P22** | OIDC / refresh / revocation | ADR-0002; E14 | JWT+BFF Done · IdP deferred | External IdP; giữ `tenant_id`+`sub` | — |
-| **P23** | Outbox broker + Redis rate-limit + OTel | E14–E16 | Stub / in-process | Broker hoặc worker; Redis; export | P14 trước scale |
-| **P24** | Permission fine-grained (`cost.confirm`…) | H-009 | 403 runtime · catalog mỏng | Seed + enforce confirm/actualize/write-off | P03/P12 |
-| **P25** | Load/soak + audit range PG pushdown | E16 | Timed smoke only | Soak money-path; filter audit native PG | P23 |
+| **P21** | Data Scope Revenue / Documents / AP·AR | ADR-0003; H-009 | **Done** (`P21-DOD.md`) | Enforce `all`/`own`(+org) list còn lại | — |
+| **P22** | OIDC / refresh / revocation | ADR-0002; ADR-0015; E14 | **Done** (`P22-DOD.md`) | Refresh+revoke; OIDC deferred | — |
+| **P23** | Outbox broker + Redis rate-limit + OTel | E14–E16 | **Done** (`P23-DOD.md`) | Worker + Redis RL; Prometheus export | P14 |
+| **P24** | Permission fine-grained (`cost.confirm`…) | H-009 | **Done** (`P24-DOD.md`) | Seed + enforce confirm/actualize/write-off | P03/P12 |
+| **P25** | Load/soak + audit range PG pushdown | E16 | **Done** (`P25-DOD.md`) | Soak script; audit From/To on PG | P23 |
 
 ---
 

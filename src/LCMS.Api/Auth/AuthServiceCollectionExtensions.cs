@@ -62,6 +62,7 @@ public static class AuthServiceCollectionExtensions
         });
 
         services.AddSingleton<JwtTokenIssuer>();
+        services.AddScoped<AuthTokenService>();
         services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
 
         var keyBytes = Encoding.UTF8.GetBytes(signingKey);

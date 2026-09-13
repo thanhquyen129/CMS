@@ -1,23 +1,30 @@
 using System.Collections.Concurrent;
 using System.Threading.RateLimiting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace LCMS.Api.Middleware;
 
 /// <summary>
-/// Fixed-window rate limit for /api/* only (health/ready/metrics exempt). Config: RateLimiting section.
-/// Money paths can use a stricter permit limit (Pass 2 Sprint 12 FULL).
+/// Fixed-window rate limit for /api/* (health/ready/metrics exempt).
+/// Uses Redis when RateLimiting:RedisConnection / ConnectionStrings:Redis is set (P23); else in-process.
 /// </summary>
 public sealed class RateLimitingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly RateLimitingOptions _options;
     private readonly ConcurrentDictionary<string, FixedWindowRateLimiter> _limiters = new();
+    private readonly IConnectionMultiplexer? _redis;
 
-    public RateLimitingMiddleware(RequestDelegate next, IOptions<RateLimitingOptions> options)
+    public RateLimitingMiddleware(
+        RequestDelegate next,
+        IOptions<RateLimitingOptions> options,
+        IServiceProvider services)
     {
         _next = next;
         _options = options.Value;
+        _redis = services.GetService<IConnectionMultiplexer>();
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -30,10 +37,12 @@ public sealed class RateLimitingMiddleware
 
         var moneyPath = IsMoneyPath(context.Request.Path);
         var key = $"{ResolvePartitionKey(context)}:{(moneyPath ? "money" : "api")}";
-        var limiter = _limiters.GetOrAdd(key, _ => CreateLimiter(moneyPath));
 
-        using var lease = await limiter.AcquireAsync(1, context.RequestAborted);
-        if (!lease.IsAcquired)
+        var allowed = _redis is not null
+            ? await TryAcquireRedisAsync(key, moneyPath, context.RequestAborted)
+            : await TryAcquireLocalAsync(key, moneyPath, context.RequestAborted);
+
+        if (!allowed)
         {
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
             context.Response.Headers["Retry-After"] = Math.Max(1, (int)_options.Window.TotalSeconds).ToString();
@@ -46,6 +55,37 @@ public sealed class RateLimitingMiddleware
         }
 
         await _next(context);
+    }
+
+    private async Task<bool> TryAcquireLocalAsync(string key, bool moneyPath, CancellationToken ct)
+    {
+        var limiter = _limiters.GetOrAdd(key, _ => CreateLimiter(moneyPath));
+        using var lease = await limiter.AcquireAsync(1, ct);
+        return lease.IsAcquired;
+    }
+
+    private async Task<bool> TryAcquireRedisAsync(string key, bool moneyPath, CancellationToken ct)
+    {
+        try
+        {
+            var db = _redis!.GetDatabase();
+            var permit = moneyPath
+                ? Math.Max(1, _options.MoneyPathPermitLimit)
+                : Math.Max(1, _options.PermitLimit);
+            var windowSec = Math.Max(1, (int)_options.Window.TotalSeconds);
+            var redisKey = $"rl:{key}:{DateTimeOffset.UtcNow.ToUnixTimeSeconds() / windowSec}";
+            var count = await db.StringIncrementAsync(redisKey);
+            if (count == 1)
+            {
+                await db.KeyExpireAsync(redisKey, TimeSpan.FromSeconds(windowSec + 1));
+            }
+
+            return count <= permit;
+        }
+        catch
+        {
+            return await TryAcquireLocalAsync(key, moneyPath, ct);
+        }
     }
 
     private FixedWindowRateLimiter CreateLimiter(bool moneyPath)
@@ -107,14 +147,8 @@ public sealed class RateLimitingOptions
     public const string SectionName = "RateLimiting";
 
     public bool Enabled { get; set; } = true;
-
-    /// <summary>Max requests per window per partition (tenant or IP) for general /api/*.</summary>
     public int PermitLimit { get; set; } = 300;
-
-    /// <summary>Stricter max for money-critical paths (costs, settlements, close, …).</summary>
     public int MoneyPathPermitLimit { get; set; } = 60;
-
-    /// <summary>Path prefixes treated as money paths (case-insensitive StartsWithSegments).</summary>
     public string[] MoneyPathPrefixes { get; set; } =
     [
         "/api/costs",
@@ -131,7 +165,6 @@ public sealed class RateLimitingOptions
         "/api/financial-documents",
         "/api/document-matches"
     ];
-
-    /// <summary>Fixed window length (e.g. 00:01:00).</summary>
     public TimeSpan Window { get; set; } = TimeSpan.FromMinutes(1);
+    public string? RedisConnection { get; set; }
 }

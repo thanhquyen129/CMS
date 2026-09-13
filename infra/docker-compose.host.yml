@@ -17,6 +17,13 @@ services:
       retries: 10
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: cms-redis
+    expose:
+      - "6379"
+    restart: unless-stopped
+
   api:
     build:
       context: ..
@@ -27,16 +34,22 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Database__MigrateOnStartup: "true"
       ConnectionStrings__LcmsDb: "Host=db;Port=5432;Database=lcms;Username=lcms;Password=${LCMS_DB_PASSWORD:-lcms}"
+      ConnectionStrings__Redis: "redis:6379"
+      RateLimiting__RedisConnection: "redis:6379"
+      OutboxWorker__Enabled: "true"
       Auth__RequireJwt: "true"
       Auth__AllowHeaderBootstrap: "false"
       Auth__Jwt__Issuer: "lcms-api"
       Auth__Jwt__Audience: "lcms-api"
       Auth__Jwt__SigningKey: "${Auth__Jwt__SigningKey:?set Auth__Jwt__SigningKey in infra/.env}"
       Auth__Jwt__ExpiryMinutes: "60"
+      Auth__Jwt__RefreshExpiryDays: "14"
       Auth__Bootstrap__Email: "${Auth__Bootstrap__Email:-}"
       Auth__Bootstrap__Password: "${Auth__Bootstrap__Password:-}"
       Auth__Bootstrap__DisplayName: "${Auth__Bootstrap__DisplayName:-Operator}"

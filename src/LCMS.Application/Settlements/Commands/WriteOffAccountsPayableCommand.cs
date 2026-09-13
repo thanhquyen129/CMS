@@ -5,6 +5,7 @@ using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -48,6 +49,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
     private readonly SettlementOptions _options;
     private readonly ApprovalMatrixOptions _matrix;
     private readonly TenantFinancialOptionsResolver _financial;
+    private readonly IPermissionService _permissions;
 
     public WriteOffAccountsPayableCommandHandler(
         ILcmsDbContext db,
@@ -56,7 +58,8 @@ public sealed class WriteOffAccountsPayableCommandHandler
         IAuditWriter audit,
         IOptions<SettlementOptions> options,
         IOptions<ApprovalMatrixOptions> matrix,
-        TenantFinancialOptionsResolver financial)
+        TenantFinancialOptionsResolver financial,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -65,6 +68,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
         _options = options.Value;
         _matrix = matrix.Value;
         _financial = financial;
+        _permissions = permissions;
     }
 
     public async Task<WriteOffResult> Handle(
@@ -75,6 +79,11 @@ public sealed class WriteOffAccountsPayableCommandHandler
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.ApWriteOff,
+            "Bạn không có quyền xóa nợ phải trả.",
+            cancellationToken);
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
         var reason = request.Reason.Trim();

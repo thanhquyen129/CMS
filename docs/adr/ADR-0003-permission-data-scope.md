@@ -20,7 +20,7 @@ Multi-tenant finance control needs **Action permission** and **Data Scope** as i
 ## Consequences
 - Creates must stamp `CreatedBy` (DbContext) and preferably `OrganizationId`.
 - Admin seed remains `data_scope=all`.
-- Expanding scope enforcement to Revenue/Documents is a later FULL sprint (same contract).
+- **P21 (2026-09-13):** same contract enforced on Revenue (`revenue.read`), Financial Documents (`bill.read`), AP (`cost.read`), AR (`revenue.read`). Org scope joins via `Bill.OrganizationId` when the row has no direct org column.
 
 ## Alternatives rejected
 - Infer scope from role name — violates independent dimensions.

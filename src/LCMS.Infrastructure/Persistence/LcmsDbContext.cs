@@ -81,6 +81,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<IntegrationRecord> IntegrationRecords => Set<IntegrationRecord>();
     public DbSet<IntegrationError> IntegrationErrors => Set<IntegrationError>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

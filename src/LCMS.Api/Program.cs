@@ -35,6 +35,17 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.Configure<RateLimitingOptions>(
         builder.Configuration.GetSection(RateLimitingOptions.SectionName));
+
+    // P23: optional Redis for distributed rate limit.
+    var redisCs = builder.Configuration["RateLimiting:RedisConnection"]
+        ?? builder.Configuration.GetConnectionString("Redis");
+    if (!string.IsNullOrWhiteSpace(redisCs))
+    {
+        builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
+            _ => StackExchange.Redis.ConnectionMultiplexer.Connect(redisCs));
+    }
+
+    // P23 metrics export: Prometheus /metrics (OTLP deferred — OTel exporter advisory).
     builder.Services.AddLcmsAuth(builder.Configuration, builder.Environment);
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();

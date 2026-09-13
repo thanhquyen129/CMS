@@ -1,5 +1,36 @@
 # Handoff
 
+## 2026-09-13 — P21→P25 data scope, refresh tokens, outbox/Redis, fine perms, soak
+
+### User
+Làm P21 đến P25.
+
+### Done
+- **P21:** Data scope on Revenue / Documents / AP / AR (own + Bill org).
+- **P22:** Refresh token store + rotate/revoke; BFF `lcms_rt`; ADR-0015.
+- **P23:** Outbox hosted worker; Redis optional rate-limit; Prometheus metrics (OTLP deferred).
+- **P24:** Fine-grained `cost|revenue.confirm|actualize`, `ap|ar.write_off`.
+- **P25:** Audit From/To PG pushdown; soak script.
+
+### Files
+- Queries: Revenue/FinancialDocument/ApAr + `DataScopeFilter`
+- Auth: `AuthTokenService`, `refresh_tokens` migration `P21_P25_RefreshTokensAndScope`
+- `OutboxProcessorHostedService`, Redis in `docker-compose.host.yml`
+- PermissionCodes + maturity/write-off EnsureAsync
+- `ListAuditEventsQuery`, `scripts/soak/money-path-soak.ps1`
+- DoD P21–P25
+
+### Verify
+- `dotnet test` filter SprintP21P25 — 2 passed
+
+### Next
+- Checklist complete; optional OIDC IdP / OTLP / soak CI
+
+### End-user
+- Logout revoke refresh; settings/admin unchanged. Role catalog có thêm quyền xác nhận/xóa nợ.
+
+---
+
 ## 2026-09-13 — P14→P20 integration recovery, bank CSV, tenant settings
 
 ### User

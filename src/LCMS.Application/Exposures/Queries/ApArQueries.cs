@@ -1,5 +1,7 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Identity;
+using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -84,11 +86,22 @@ public sealed class ListAccountsPayableQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public ListAccountsPayableQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public ListAccountsPayableQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<IReadOnlyList<AccountsPayableDto>> Handle(
@@ -100,6 +113,10 @@ public sealed class ListAccountsPayableQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.CostRead, "Bạn không có quyền xem khoản phải trả.", cancellationToken);
+
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.AccountsPayable.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(request.SettlementStatus))
@@ -108,7 +125,26 @@ public sealed class ListAccountsPayableQueryHandler
             query = query.Where(a => a.SettlementStatus == status);
         }
 
-        // Order by Id (UUIDv7 time-sortable) — SQLite rejects DateTimeOffset in ORDER BY.
+        if (scope == DataScopes.Own)
+        {
+            if (!_userContext.HasUser)
+            {
+                return [];
+            }
+
+            query = query.Where(a => a.CreatedBy == _userContext.UserId);
+        }
+        else if (scope == DataScopes.Organization)
+        {
+            var billIds = await DataScopeFilter.BillIdsInOrgSubtreeAsync(_db, orgSubtree, cancellationToken);
+            if (billIds.Count == 0)
+            {
+                return [];
+            }
+
+            query = query.Where(a => a.BillId != null && billIds.Contains(a.BillId.Value));
+        }
+
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
         return rows.Select(a => MapAp(a, asOf)).ToList();
     }
@@ -141,11 +177,22 @@ public sealed class GetAccountsPayableByIdQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public GetAccountsPayableByIdQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetAccountsPayableByIdQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<AccountsPayableDto> Handle(
@@ -157,9 +204,20 @@ public sealed class GetAccountsPayableByIdQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.CostRead, "Bạn không có quyền xem khoản phải trả.", cancellationToken);
+
         var a = await _db.AccountsPayable.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+
+        var billOrgId = await DataScopeFilter.BillOrganizationIdAsync(_db, a.BillId, cancellationToken);
+        if (!DataScopeFilter.AllowsViaBillOrg(
+                scope, _userContext.UserId, orgSubtree, a.CreatedBy, billOrgId))
+        {
+            throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+        }
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         return ListAccountsPayableQueryHandler.MapAp(a, asOf);
@@ -171,11 +229,22 @@ public sealed class ListAccountsReceivableQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public ListAccountsReceivableQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public ListAccountsReceivableQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<IReadOnlyList<AccountsReceivableDto>> Handle(
@@ -187,12 +256,36 @@ public sealed class ListAccountsReceivableQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.RevenueRead, "Bạn không có quyền xem khoản phải thu.", cancellationToken);
+
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.AccountsReceivable.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(request.SettlementStatus))
         {
             var status = request.SettlementStatus.Trim().ToLowerInvariant();
             query = query.Where(a => a.SettlementStatus == status);
+        }
+
+        if (scope == DataScopes.Own)
+        {
+            if (!_userContext.HasUser)
+            {
+                return [];
+            }
+
+            query = query.Where(a => a.CreatedBy == _userContext.UserId);
+        }
+        else if (scope == DataScopes.Organization)
+        {
+            var billIds = await DataScopeFilter.BillIdsInOrgSubtreeAsync(_db, orgSubtree, cancellationToken);
+            if (billIds.Count == 0)
+            {
+                return [];
+            }
+
+            query = query.Where(a => a.BillId != null && billIds.Contains(a.BillId.Value));
         }
 
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
@@ -227,11 +320,22 @@ public sealed class GetAccountsReceivableByIdQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _userContext;
+    private readonly IPermissionService _permissions;
+    private readonly IOrganizationHierarchyService _orgHierarchy;
 
-    public GetAccountsReceivableByIdQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetAccountsReceivableByIdQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext userContext,
+        IPermissionService permissions,
+        IOrganizationHierarchyService orgHierarchy)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _userContext = userContext;
+        _permissions = permissions;
+        _orgHierarchy = orgHierarchy;
     }
 
     public async Task<AccountsReceivableDto> Handle(
@@ -243,9 +347,20 @@ public sealed class GetAccountsReceivableByIdQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
+            _permissions, _userContext, _db, _orgHierarchy,
+            PermissionCodes.RevenueRead, "Bạn không có quyền xem khoản phải thu.", cancellationToken);
+
         var a = await _db.AccountsReceivable.AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
+
+        var billOrgId = await DataScopeFilter.BillOrganizationIdAsync(_db, a.BillId, cancellationToken);
+        if (!DataScopeFilter.AllowsViaBillOrg(
+                scope, _userContext.UserId, orgSubtree, a.CreatedBy, billOrgId))
+        {
+            throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
+        }
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
         return ListAccountsReceivableQueryHandler.MapAr(a, asOf);

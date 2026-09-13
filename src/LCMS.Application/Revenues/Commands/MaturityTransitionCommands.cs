@@ -5,6 +5,7 @@ using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,6 +39,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
     private readonly IRevenueApprovalGate _approvalGate;
     private readonly ICriticalExceptionConfirmGate _criticalExceptionGate;
     private readonly IPeriodLockGate _periodLockGate;
+    private readonly IPermissionService _permissions;
 
     public ConfirmRevenueCommandHandler(
         ILcmsDbContext db,
@@ -46,7 +48,8 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         IRevenueFxStub fx,
         IRevenueApprovalGate approvalGate,
         ICriticalExceptionConfirmGate criticalExceptionGate,
-        IPeriodLockGate periodLockGate)
+        IPeriodLockGate periodLockGate,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -55,6 +58,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         _approvalGate = approvalGate;
         _criticalExceptionGate = criticalExceptionGate;
         _periodLockGate = periodLockGate;
+        _permissions = permissions;
     }
 
     public async Task Handle(ConfirmRevenueCommand request, CancellationToken cancellationToken)
@@ -63,6 +67,11 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.RevenueConfirm,
+            "Bạn không có quyền xác nhận doanh thu.",
+            cancellationToken);
 
         var revenue = await _db.Revenues.FirstOrDefaultAsync(r => r.Id == request.RevenueId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");
@@ -136,17 +145,20 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IRevenueFxStub _fx;
+    private readonly IPermissionService _permissions;
 
     public ActualizeRevenueCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IRevenueFxStub fx)
+        IRevenueFxStub fx,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _fx = fx;
+        _permissions = permissions;
     }
 
     public async Task Handle(ActualizeRevenueCommand request, CancellationToken cancellationToken)
@@ -155,6 +167,11 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.RevenueActualize,
+            "Bạn không có quyền thực tế hóa doanh thu.",
+            cancellationToken);
 
         var revenue = await _db.Revenues.FirstOrDefaultAsync(r => r.Id == request.RevenueId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");

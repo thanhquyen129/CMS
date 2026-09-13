@@ -1106,11 +1106,16 @@ html[data-layout="horizontal"][data-theme="soft-purple"][data-nav-labels="1"] .n
 
 /* ——— Horizontal layout (Invoika-inspired) ——— */
 html[data-layout="horizontal"] .shell {
+  display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "nav"
+    "main";
 }
 
 html[data-layout="horizontal"] .sidebar {
+  grid-area: nav;
   position: relative;
   height: auto;
   overflow: visible;
@@ -1125,6 +1130,11 @@ html[data-layout="horizontal"] .sidebar {
   color: var(--topbar-ink);
   box-shadow: var(--shadow);
   z-index: 20;
+}
+
+html[data-layout="horizontal"] .main {
+  grid-area: main;
+  min-width: 0;
 }
 
 html[data-layout="horizontal"] .brand {
@@ -1304,9 +1314,29 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
   }
 
   /* Desktop horizontal puts sidebar first; on mobile drawer is last — never grow/gap. */
+  .shell > .mobile-bar {
+    order: 0;
+  }
+
+  .shell > .main {
+    order: 1;
+  }
+
+  .shell > .sidebar {
+    order: 2;
+  }
+
+  .shell > .nav-backdrop {
+    order: 3;
+  }
+
   .shell > .nav-backdrop,
   .shell > .sidebar {
-    flex: 0 0 auto;
+    flex: 0 0 0;
+    width: 0;
+    height: 0;
+    min-height: 0;
+    overflow: visible;
     align-self: flex-start;
   }
 

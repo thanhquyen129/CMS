@@ -60,6 +60,14 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
         </div>
       </header>
 
+      <aside className="sidebar" id={sidebarId}>
+        <div className="brand sidebar-brand">{brand}</div>
+        {nav}
+        <div className="shell-header-actions sidebar-logout">
+          <LogoutButton />
+        </div>
+      </aside>
+
       <div className="main">
         {topbarRight ? (
           <div className="topbar">
@@ -76,14 +84,6 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
         tabIndex={navOpen ? 0 : -1}
         onClick={() => setNavOpen(false)}
       />
-
-      <aside className="sidebar" id={sidebarId}>
-        <div className="brand sidebar-brand">{brand}</div>
-        {nav}
-        <div className="shell-header-actions sidebar-logout">
-          <LogoutButton />
-        </div>
-      </aside>
     </div>
   );
 }

@@ -1,5 +1,23 @@
 # Handoff
 
+## 2026-09-13 — Restore desktop nav on top
+
+### User
+sao bây giờ menu rớt xuống dưới hết rồi
+
+### Cause
+Đổi DOM `main` trước `sidebar` để vá mobile → desktop horizontal hiện nav dưới nội dung.
+
+### Fix
+- DOM lại: mobile-bar → sidebar → main → backdrop.
+- Horizontal: `grid-template-areas` nav/main khóa vị trí.
+- Mobile: `order` + sidebar/backdrop `flex:0` / fixed (sticky override giữ).
+
+### Files
+- `apps/web/components/ShellChrome.tsx`, `apps/web/app/globals.css`
+
+---
+
 ## 2026-09-13 — Mobile gap: sticky-nav override
 
 ### User

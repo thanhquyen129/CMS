@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-13 — Fix CI: Sprint12 Admin actor + Sprint7 AP adjust Created
+
+### User
+(CI đỏ sau commit Move logout… — screenshot Actions test fail)
+
+### Cause
+Không liên quan UI logout. 3 API tests lệch runtime:
+- Sprint12 audit: `X-User-Id` random → 403 `cost.confirm` (tenant seed Admin role).
+- Sprint7: AP `/adjust` trả `Created` (P10) nhưng test còn expect `NoContent`.
+
+### Fix
+- Sprint12(+FULL): tạo user + gán Admin trước mutation có actor.
+- Sprint7: assert `Created`.
+
+### Verify
+- 3 test fail trước → pass; full suite chạy trước push.
+
+---
+
 ## 2026-09-13 — Shell logout + AP/AR toolbar
 
 ### User

@@ -42,7 +42,7 @@ public sealed class Sprint12FullHardeningUatTests : IAsyncLifetime
     {
         var tenantId = await CreateTenantAsync("TN-E14F-AUD", "Audit FULL Tenant");
         var billId = await CreateBillAsync(tenantId, "BL-E14F-1", "freight");
-        var userId = Guid.NewGuid();
+        var userId = await CreateAdminUserAsync(tenantId, "audit.full@example.com");
         var correlationId = $"corr-full-{Guid.NewGuid():N}";
         var from = DateTimeOffset.UtcNow.AddMinutes(-5);
 
@@ -709,7 +709,32 @@ public sealed class Sprint12FullHardeningUatTests : IAsyncLifetime
         return (await response.Content.ReadFromJsonAsync<List<AuditEventDto>>(JsonOptions))!;
     }
 
+    private async Task<Guid> CreateAdminUserAsync(Guid tenantId, string email)
+    {
+        using var createUser = new HttpRequestMessage(HttpMethod.Post, "/api/users")
+        {
+            Content = JsonContent.Create(new { email, displayName = "Audit FULL Actor" })
+        };
+        createUser.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var user = (await (await _client.SendAsync(createUser)).Content
+            .ReadFromJsonAsync<IdResponse>(JsonOptions))!;
+
+        using var listRoles = new HttpRequestMessage(HttpMethod.Get, "/api/roles");
+        listRoles.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var roles = await (await _client.SendAsync(listRoles)).Content
+            .ReadFromJsonAsync<List<RoleResponse>>(JsonOptions);
+        var adminRole = Assert.Single(roles!, r => r.Code == "Admin");
+
+        using var assign = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"/api/users/{user.Id}/roles/{adminRole.Id}");
+        assign.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(assign)).StatusCode);
+        return user.Id;
+    }
+
     private sealed record IdResponse(Guid Id);
+    private sealed record RoleResponse(Guid Id, string Code, string Name, bool IsSystem);
     private sealed record ErrorResponse(string CorrelationId, string Code, string Message);
 
     private sealed record AuditEventDto(

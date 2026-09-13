@@ -97,7 +97,7 @@ public sealed class Sprint7ExposureApArTests : IAsyncLifetime
         })
         {
             adjust.Headers.Add("X-Tenant-Id", tenantId.ToString());
-            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(adjust)).StatusCode);
+            Assert.Equal(HttpStatusCode.Created, (await _client.SendAsync(adjust)).StatusCode);
         }
 
         var afterAdjust = await GetAccountsPayableAsync(tenantId, ap1);

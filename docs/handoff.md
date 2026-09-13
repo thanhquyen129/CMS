@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-13 — Mobile drawer z-index + empty gap
+
+### User
+- Click menu → lớp phủ mờ, không click menu con
+- Khoảng trống phía trên nội dung mobile
+
+### Cause
+1. `html[data-layout=horizontal] .sidebar { z-index:20 }` thắng mobile z-50 → backdrop z-45 che menu.
+2. Backdrop `display:block` luôn trong grid `auto 1fr` → chiếm hàng 1fr (khoảng trống).
+
+### Fix
+- Mobile: flex column; backdrop chỉ `display` khi `.nav-open`; sidebar/backdrop `fixed`; z-index bar 70 > drawer 60 > backdrop 55.
+- Override horizontal sidebar z-index trên mobile.
+
+### Files
+- `apps/web/app/globals.css`
+
+---
+
 ## 2026-09-13 — Fix deploy 502: stale nginx upstream
 
 ### User

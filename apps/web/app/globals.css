@@ -1290,9 +1290,17 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
 }
 
 @media (max-width: 800px) {
+  /* Flex column: only mobile-bar + main in flow. Drawer/backdrop are fixed. */
   .shell {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    grid-template-rows: none;
+  }
+
+  html[data-layout="horizontal"] .shell {
+    grid-template-columns: none;
+    grid-template-rows: none;
   }
 
   .mobile-bar {
@@ -1301,7 +1309,8 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     gap: 0.65rem;
     position: sticky;
     top: 0;
-    z-index: 40;
+    z-index: 70;
+    flex: 0 0 auto;
     padding: 0.65rem 0.85rem;
     background: var(--surface);
     border-bottom: 1px solid var(--line);
@@ -1440,27 +1449,28 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     transform: rotate(-45deg);
   }
 
+  /* Backdrop only when open — never a flex/grid flow child that eats space */
   .nav-backdrop {
-    display: block;
+    display: none;
     position: fixed;
     inset: 0;
-    z-index: 45;
+    z-index: 55;
     border: 0;
     padding: 0;
     margin: 0;
+    width: auto;
+    height: auto;
     background: rgba(26, 35, 50, 0.45);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .shell.nav-open .nav-backdrop {
-    opacity: 1;
-    pointer-events: auto;
+    display: block;
   }
 
-  .sidebar {
+  .sidebar,
+  html[data-layout="horizontal"] .sidebar {
     position: fixed;
     top: 0;
     left: 0;
@@ -1468,7 +1478,7 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     width: min(20rem, 88vw);
     max-width: 100%;
     height: 100dvh;
-    z-index: 50;
+    z-index: 60;
     margin: 0;
     padding: 1rem 0.85rem 1.25rem;
     border-right: 1px solid var(--line);
@@ -1481,21 +1491,16 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     overflow-y: auto;
     overscroll-behavior: contain;
     flex-direction: column;
-    align-items: stretch;
-    text-align: left;
-  }
-
-  .shell.nav-open .sidebar {
-    transform: translateX(0);
-  }
-
-  html[data-layout="horizontal"] .sidebar {
-    flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
-    background: var(--surface);
-    color: var(--ink);
-    box-shadow: var(--shadow-md);
+    text-align: left;
+    pointer-events: none;
+  }
+
+  .shell.nav-open .sidebar,
+  html[data-layout="horizontal"] .shell.nav-open .sidebar {
+    transform: translateX(0);
+    pointer-events: auto;
   }
 
   html[data-layout="horizontal"] .sidebar .brand,
@@ -1582,8 +1587,14 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
   }
 
   .main {
-    padding: 0.85rem 0.85rem 1.5rem;
+    flex: 1 1 auto;
     min-width: 0;
+    width: 100%;
+    padding: 0.85rem 0.85rem 1.5rem;
+  }
+
+  html[data-layout="horizontal"] .main {
+    padding-top: 0.85rem;
   }
 
   .topbar {

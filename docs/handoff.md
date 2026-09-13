@@ -1,5 +1,23 @@
 # Handoff
 
+## 2026-09-13 — Fix deploy 502: stale nginx upstream
+
+### User
+(CI deploy fail / 502 Bad Gateway sau health check)
+
+### Cause
+`cms-api`/`cms-web` recreate đổi IP; `cms-proxy` giữ upstream IP cũ → connection refused → 502.
+
+### Fix (now)
+- Recreate proxy trên VPS; `/health` `/ready` OK.
+- `infra/nginx.conf`: Docker DNS resolver + `proxy_pass` biến (re-resolve 10s).
+- CI: force-recreate proxy sau `compose up`.
+
+### Files
+- `infra/nginx.conf`, `.github/workflows/ci.yml`
+
+---
+
 ## 2026-09-13 — Mobile shell drawer + contrast
 
 ### User

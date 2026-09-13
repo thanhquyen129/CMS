@@ -127,10 +127,13 @@ jobs:
             'set -euo pipefail
              cd /opt/cms
              if [ -f infra/.env ]; then
-               docker compose -f infra/docker-compose.host.yml --env-file infra/.env up -d --build
+               COMPOSE=(docker compose -f infra/docker-compose.host.yml --env-file infra/.env)
              else
-               docker compose -f infra/docker-compose.host.yml up -d --build
-             fi'
+               COMPOSE=(docker compose -f infra/docker-compose.host.yml)
+             fi
+             "${COMPOSE[@]}" up -d --build
+             # Proxy keeps stale upstream IPs unless recreated / Docker DNS re-resolve.
+             "${COMPOSE[@]}" up -d --force-recreate --no-deps proxy'
 
       - name: Health check
         run: |

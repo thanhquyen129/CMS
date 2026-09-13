@@ -172,6 +172,62 @@ export function listApprovalQueue(): Promise<ApiResult<ApprovalQueueItem[]>> {
   return apiGet<ApprovalQueueItem[]>("/api/queues/approvals");
 }
 
+export type VarianceItem = {
+  id: string;
+  reconciliationId: string | null;
+  reconciliationDetailId: string | null;
+  varianceType: string;
+  amount: number;
+  currencyCode: string;
+  sourceType: string;
+  sourceId: string;
+  targetType: string | null;
+  targetId: string | null;
+  status: string;
+  severity: string;
+  explanation: string | null;
+  exceptionId: string | null;
+};
+
+export function listVariances(opts?: {
+  status?: string;
+}): Promise<ApiResult<VarianceItem[]>> {
+  const status = opts?.status?.trim() || "open";
+  const qs = `?status=${encodeURIComponent(status)}`;
+  return apiGet<VarianceItem[]>(`/api/variances${qs}`);
+}
+
+export function varianceStatusLabel(
+  terms: TerminologyMap,
+  status: string
+): string {
+  switch (status.toLowerCase()) {
+    case "open":
+      return term(terms, "VARIANCE_OPEN", "Chênh lệch đang mở");
+    case "accepted":
+      return "Đã chấp nhận";
+    case "written_off":
+      return "Đã xóa nợ chênh lệch";
+    case "cleared":
+      return "Đã xóa / khớp";
+    default:
+      return status;
+  }
+}
+
+export function varianceTypeLabel(varianceType: string): string {
+  switch (varianceType.toLowerCase()) {
+    case "amount":
+      return "Số tiền";
+    case "quantity":
+      return "Số lượng";
+    case "rate":
+      return "Đơn giá";
+    default:
+      return varianceType || "—";
+  }
+}
+
 /** Resolve object type CodeKey → Vietnamese UI term (CP6.5). */
 export function objectTypeLabel(
   terms: TerminologyMap,

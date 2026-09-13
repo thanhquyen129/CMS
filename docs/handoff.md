@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-13 — P11 Variance inbox + P12 write-off wizard + P13 audit panel
+
+### User
+Implement P11, P12 UI polish, and P13. Backend APIs largely exist.
+
+### Done
+- **P11:** `/queues/variances` list (`status` filter, default open); `listVariances`; `EscalateVarianceButton` → POST `/bff/exceptions` (`variance.manual_escalate`); nav + ui-prefs + dashboard `openVarianceCount` → variances.
+- **P12:** `WriteOffButton` multi-step (preview + estimated cấp 1/2; reason confirm); show `requiredLevel` from 202 if present; API 202 includes `requiredLevel`.
+- **P13:** `AuditTrailPanel` + BFF GET `/bff/audit-events`; mounted on cost detail + financial close (latest snapshot).
+
+### Files
+- `apps/web/app/queues/variances/{page,loading}.tsx`
+- `EscalateVarianceButton.tsx`, `AuditTrailPanel.tsx`, `WriteOffButton.tsx`
+- `bff/exceptions/route.ts`, `bff/audit-events/route.ts`
+- `control-desk.ts`, `AppShell.tsx`, `ui-preferences.ts`, `dashboard/page.tsx`
+- `costs/[id]/page.tsx`, `financial-closes/[id]/page.tsx`
+- `ExposureApArEndpoints.cs` (requiredLevel on 202)
+
+### Verify
+- Manual: open `/queues/variances`, escalate → exceptions queue; write-off wizard steps; audit on cost/close.
+
+### Next
+- P14 UI recovery tích hợp (retry / dead-letter)
+
+### End-user
+Hàng đợi **Chênh lệch** tách ngoại lệ; CTA **Mở ngoại lệ**. Xóa nợ 2 bước (ước tính cấp phê duyệt). Nhật ký kiểm toán trên Chi phí / Bản chốt.
+
+---
+
 ## 2026-09-13 — P09 Confirm match session + auto-suggest
 
 ### User

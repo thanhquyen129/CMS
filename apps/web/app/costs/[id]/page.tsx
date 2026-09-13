@@ -7,6 +7,7 @@ import {
   AdjustmentHistoryTable,
   LineDetailBackLink,
 } from "@/components/AdjustmentHistoryTable";
+import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { MaturityTransitionButton } from "@/components/MaturityTransitionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -159,6 +160,12 @@ export default async function CostDetailPage({ params }: { params: Params }) {
           terms={terms}
           adjustments={adjustments}
           currencyCode={cost.currencyCode}
+        />
+
+        <AuditTrailPanel
+          terms={terms}
+          objectType="cost"
+          objectId={cost.id}
         />
       </section>
     </AppShell>

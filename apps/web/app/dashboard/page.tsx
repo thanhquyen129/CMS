@@ -173,14 +173,14 @@ export default async function DashboardPage() {
               </Link>
               <Link
                 className="stat-card"
-                href="/queues/reconciliations"
+                href="/queues/variances"
                 role="listitem"
               >
                 <span className="stat-label">{openVarianceLabel}</span>
                 <span className="stat-value">
                   {result.data.openVarianceCount}
                 </span>
-                <span className="stat-hint">Xem phiên đối soát</span>
+                <span className="stat-hint">Mở hàng đợi chênh lệch</span>
               </Link>
               <Link
                 className="stat-card"
@@ -663,6 +663,9 @@ export default async function DashboardPage() {
               </li>
               <li>
                 <Link href="/queues/approvals">{approvalQueueLabel}</Link>
+              </li>
+              <li>
+                <Link href="/queues/variances">{openVarianceLabel}</Link>
               </li>
             </ul>
           </section>

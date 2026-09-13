@@ -13,6 +13,7 @@ type NavKey =
   | "settlements"
   | "financial-closes"
   | "exceptions"
+  | "variances"
   | "approvals"
   | "reconciliations"
   | "bank-feed"
@@ -37,6 +38,7 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
   const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
   const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
   const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
+  const varianceLabel = term(terms, "VARIANCE", "Chênh lệch");
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
   const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
@@ -111,6 +113,12 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
               href="/queues/exceptions"
             >
               {exceptionQueueLabel}
+            </Link>
+            <Link
+              className={active === "variances" ? "active" : undefined}
+              href="/queues/variances"
+            >
+              Hàng đợi {varianceLabel.toLowerCase()}
             </Link>
             <Link
               className={active === "approvals" ? "active" : undefined}

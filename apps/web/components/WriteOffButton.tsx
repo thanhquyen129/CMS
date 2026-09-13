@@ -11,6 +11,9 @@ type Kind = "payable" | "receivable";
 /** Matches Settlement:MaxWriteOffAmount — apply immediately under this; above → Approval (P03). */
 export const MAX_WRITE_OFF_IMMEDIATE = 1000;
 
+/** Matches ApprovalMatrix MinAmount 10000 → cấp 2 (appsettings). */
+export const APPROVAL_LEVEL2_MIN_AMOUNT = 10000;
+
 type Props = {
   terms: TerminologyMap;
   kind: Kind;
@@ -18,6 +21,10 @@ type Props = {
   outstanding: number;
   currencyCode: string;
 };
+
+function estimateApprovalLevel(amount: number): 1 | 2 {
+  return amount >= APPROVAL_LEVEL2_MIN_AMOUNT ? 2 : 1;
+}
 
 export function WriteOffButton({
   terms,
@@ -29,6 +36,7 @@ export function WriteOffButton({
   const router = useRouter();
   const dialogTitleId = useId();
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
   const [amount, setAmount] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +54,35 @@ export function WriteOffButton({
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
 
   const defaultAmount = Math.min(outstanding, MAX_WRITE_OFF_IMMEDIATE);
+  const parsedPreview = Number(String(amount).replace(",", "."));
+  const previewOk = Number.isFinite(parsedPreview) && parsedPreview > 0;
+  const needsApproval =
+    previewOk && parsedPreview > MAX_WRITE_OFF_IMMEDIATE;
+  const estimatedLevel = previewOk
+    ? estimateApprovalLevel(parsedPreview)
+    : null;
 
   const close = useCallback(() => {
     if (submitting) return;
     setOpen(false);
+    setStep(1);
   }, [submitting]);
+
+  const goStep2 = useCallback(() => {
+    const parsed = Number(String(amount).replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setError("Số tiền xóa nợ phải lớn hơn 0.");
+      return;
+    }
+    if (parsed > outstanding + 0.0000001) {
+      setError(
+        `Số tiền xóa nợ vượt số dư còn lại (${formatMoney(outstanding, currencyCode)}).`
+      );
+      return;
+    }
+    setError(null);
+    setStep(2);
+  }, [amount, currencyCode, outstanding]);
 
   const runWriteOff = useCallback(async () => {
     const parsed = Number(String(amount).replace(",", "."));
@@ -97,13 +129,20 @@ export function WriteOffButton({
         const body = (await res.json().catch(() => ({}))) as {
           message?: string;
           approvalId?: string;
+          requiredLevel?: number;
         };
+        const levelNote =
+          body.requiredLevel != null
+            ? ` Cấp phê duyệt yêu cầu: ${body.requiredLevel}.`
+            : "";
         setOpen(false);
+        setStep(1);
         setAmount("");
         setReason("");
         setInfo(
-          body.message ||
-            `Đã gửi phê duyệt xóa nợ (vượt trần ${formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)}). Số dư chưa đổi cho đến khi duyệt.`
+          (body.message ||
+            `Đã gửi phê duyệt xóa nợ (vượt trần ${formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)}). Số dư chưa đổi cho đến khi duyệt.`) +
+            levelNote
         );
         startTransition(() => router.refresh());
         return;
@@ -123,6 +162,7 @@ export function WriteOffButton({
       }
 
       setOpen(false);
+      setStep(1);
       setAmount("");
       setReason("");
       setInfo(null);
@@ -145,6 +185,8 @@ export function WriteOffButton({
           setError(null);
           setInfo(null);
           setAmount(String(defaultAmount));
+          setReason("");
+          setStep(1);
           setOpen(true);
         }}
         disabled={isPending}
@@ -189,66 +231,131 @@ export function WriteOffButton({
             aria-modal="true"
             aria-labelledby={dialogTitleId}
           >
-            <h2 id={dialogTitleId}>{writeOffLabel}?</h2>
-            <p>
-              Giảm nghĩa vụ {target} bằng điều chỉnh (không tạo {cashLabel},
-              không giả tất toán tiền mặt). Số dư:{" "}
-              {formatMoney(outstanding, currencyCode)}. Trần áp dụng ngay:{" "}
-              {formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)} — vượt trần
-              sẽ gửi {approvalQueueLabel.toLowerCase()}, chỉ ghi nợ khi được
-              duyệt.
-            </p>
-            <div className="field">
-              <label htmlFor={`wo-amt-${accountsId}`}>Số tiền xóa nợ</label>
-              <input
-                id={`wo-amt-${accountsId}`}
-                type="number"
-                inputMode="decimal"
-                step="any"
-                min="0"
-                max={outstanding}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                disabled={submitting}
-                required
-              />
-            </div>
-            <div className="field">
-              <label htmlFor={`wo-reason-${accountsId}`}>Lý do</label>
-              <input
-                id={`wo-reason-${accountsId}`}
-                type="text"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                maxLength={1024}
-                disabled={submitting}
-                required
-                placeholder="Ví dụ: chênh lệch làm tròn / miễn thỏa thuận"
-              />
-            </div>
-            {error ? (
-              <div className="alert alert-error" role="alert">
-                {error}
-              </div>
-            ) : null}
-            <div className="dialog-actions">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={close}
-                disabled={submitting}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={runWriteOff}
-                disabled={submitting}
-              >
-                {submitting ? "Đang gửi…" : "Xác nhận xóa nợ"}
-              </button>
-            </div>
+            <h2 id={dialogTitleId}>
+              {writeOffLabel}
+              {step === 1 ? " — Bước 1/2" : " — Bước 2/2"}
+            </h2>
+
+            {step === 1 ? (
+              <>
+                <p>
+                  Giảm nghĩa vụ {target} bằng điều chỉnh (không tạo {cashLabel},
+                  không giả tất toán tiền mặt). Số dư:{" "}
+                  {formatMoney(outstanding, currencyCode)}.
+                </p>
+                <div className="field">
+                  <label htmlFor={`wo-amt-${accountsId}`}>Số tiền xóa nợ</label>
+                  <input
+                    id={`wo-amt-${accountsId}`}
+                    type="number"
+                    inputMode="decimal"
+                    step="any"
+                    min="0"
+                    max={outstanding}
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    disabled={submitting}
+                    required
+                  />
+                </div>
+                {previewOk ? (
+                  <div className="alert alert-info" role="status">
+                    {needsApproval ? (
+                      <>
+                        Số tiền vượt trần áp dụng ngay (
+                        {formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)}) —
+                        sẽ gửi {approvalQueueLabel.toLowerCase()}. Ước tính cấp
+                        phê duyệt: <strong>cấp {estimatedLevel}</strong>
+                        {estimatedLevel === 2
+                          ? ` (≥ ${formatMoney(APPROVAL_LEVEL2_MIN_AMOUNT, currencyCode)}).`
+                          : "."}
+                      </>
+                    ) : (
+                      <>
+                        Trong trần{" "}
+                        {formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)} —
+                        áp dụng ngay sau xác nhận (không qua phê duyệt).
+                      </>
+                    )}
+                  </div>
+                ) : null}
+                {error ? (
+                  <div className="alert alert-error" role="alert">
+                    {error}
+                  </div>
+                ) : null}
+                <div className="dialog-actions">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={close}
+                    disabled={submitting}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={goStep2}
+                    disabled={submitting}
+                  >
+                    Tiếp theo
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  Xác nhận xóa nợ{" "}
+                  <strong>
+                    {formatMoney(parsedPreview, currencyCode)}
+                  </strong>
+                  {needsApproval
+                    ? ` → phê duyệt (ước tính cấp ${estimatedLevel}).`
+                    : " → áp dụng ngay."}{" "}
+                  Số dư chưa đổi nếu chờ duyệt.
+                </p>
+                <div className="field">
+                  <label htmlFor={`wo-reason-${accountsId}`}>Lý do</label>
+                  <input
+                    id={`wo-reason-${accountsId}`}
+                    type="text"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    maxLength={1024}
+                    disabled={submitting}
+                    required
+                    placeholder="Ví dụ: chênh lệch làm tròn / miễn thỏa thuận"
+                  />
+                </div>
+                {error ? (
+                  <div className="alert alert-error" role="alert">
+                    {error}
+                  </div>
+                ) : null}
+                <div className="dialog-actions">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setError(null);
+                      setStep(1);
+                    }}
+                    disabled={submitting}
+                  >
+                    Quay lại
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={runWriteOff}
+                    disabled={submitting}
+                  >
+                    {submitting ? "Đang gửi…" : "Xác nhận xóa nợ"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : null}

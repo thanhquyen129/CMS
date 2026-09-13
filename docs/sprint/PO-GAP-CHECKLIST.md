@@ -1,21 +1,22 @@
 # Checklist còn thiếu vs PO (sau Pass 1/2 + UI + UAT PASS)
 
-**Cập nhật:** 2026-09-13 (P01–P09 Done)  
-**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P09**.
+**Cập nhật:** 2026-09-13 (P01–P09 Done · P11–P13 UI Done)  
+**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P09** · **P11–P13 UI**.
 
 **Cách dùng:** làm theo thứ tự; một item = một chat/agent; tick Done + DoD ngắn khi ship.
 
 ---
 
-## Wave tiếp theo (làm ngay) — P10→P12
+## Wave tiếp theo (làm ngay) — P10→P14
 
 | # | ID | Việc | Lát cắt MVP |
 |---|-----|------|-------------|
 | 1 | **P10** | Reverse recognize AP/AR + sổ điều chỉnh | Reverse recognition + history (không silent overwrite) |
-| 2 | **P11** | Inbox Variance (+ escalate thủ công) | List/filter variance; CTA mở Exception (giữ tách lớp) |
-| 3 | **P12** | Ma trận approver / wizard multi-step | Config theo object/amount + wizard |
+| 2 | **P11** | Inbox Variance (+ escalate thủ công) | **Done** List/filter + CTA mở Exception |
+| 3 | **P12** | Ma trận approver / wizard multi-step | **Done** Wizard + ước tính cấp |
+| 4 | **P13** | UI Audit trail đối tượng tiền | **Done** Panel Cost + Close snapshot |
 
-**Next kickoff:** **P10**.
+**Next kickoff:** **P14** (hoặc P10 nếu backend còn mở).
 
 ---
 
@@ -38,9 +39,9 @@
 
 | ID | Tên | PO / ADR | Hiện trạng | Lát cắt MVP | Phụ thuộc |
 |----|-----|----------|------------|-------------|-----------|
-| **P11** | Inbox Variance (+ escalate thủ công) | E11; ADR-0009 | API Done · **thiếu UI** | List/filter; CTA mở Exception (giữ tách lớp) | Recon Done |
-| **P12** | Ma trận approver / wizard multi-step | E11; H-009 | Level 1\|2 stub | Config theo object/amount + wizard | P03 |
-| **P13** | UI Audit trail đối tượng tiền | E14/E16 | API Done · **thiếu UI** | Panel lịch sử Bill/Cost/Payment/Close | — |
+| **P11** | Inbox Variance (+ escalate thủ công) | E11; ADR-0009 | **Done** (UI inbox + escalate) | List/filter; CTA mở Exception (giữ tách lớp) | Recon Done |
+| **P12** | Ma trận approver / wizard multi-step | E11; H-009 | **Done** (wizard + matrix estimate) | Config theo object/amount + wizard | P03 |
+| **P13** | UI Audit trail đối tượng tiền | E14/E16 | **Done** (panel Cost + Close snapshot) | Panel lịch sử Bill/Cost/Payment/Close | — |
 | **P14** | UI recovery tích hợp (retry / dead-letter) | E15; H-010 | API stub Done · thiếu UI | List errors → mark-retried / dead-letter | — |
 | **P15** | Bank feed CSV / sync | ADR-0013 | Manual feed Done · CSV chưa | Import CSV → `bank_feed_lines` | Bank-feed thin Done |
 | **P16** | Recognition policy engine | E07 | Version string stub | Rule tenant khi nào recognize (VI gate) | P08 hữu ích |

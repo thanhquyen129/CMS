@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { CloseSnapshotButton } from "@/components/CloseSnapshotButton";
 import { ReopenCloseButton } from "@/components/ReopenCloseButton";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -60,6 +61,11 @@ export default async function FinancialCloseDetailPage({
   const close = closeRes.data;
   const hasSnapshot = (close.snapshots?.length ?? 0) > 0;
   const pnlRes = hasSnapshot ? await getFinancialClosePnl(id) : null;
+  const latestSnapshot = hasSnapshot
+    ? [...close.snapshots].sort(
+        (a, b) => b.snapshotVersion - a.snapshotVersion
+      )[0]
+    : null;
 
   return (
     <AppShell terms={terms} active="financial-closes">
@@ -230,6 +236,15 @@ export default async function FinancialCloseDetailPage({
               </div>
             </dl>
           </>
+        ) : null}
+
+        {latestSnapshot ? (
+          <AuditTrailPanel
+            terms={terms}
+            objectType="financial_close_snapshot"
+            objectId={latestSnapshot.id}
+            title={`${term(terms, "AUDIT_TRAIL", "Nhật ký kiểm toán")} · ${snapshotLabel} v${latestSnapshot.snapshotVersion}`}
+          />
         ) : null}
       </section>
     </AppShell>

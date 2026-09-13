@@ -14,6 +14,7 @@ export type UiHomePath =
   | "/settlements"
   | "/bank-feed"
   | "/queues/exceptions"
+  | "/queues/variances"
   | "/queues/approvals"
   | "/queues/reconciliations"
   | "/settings";
@@ -50,6 +51,7 @@ export const UI_HOME_OPTIONS: ReadonlyArray<{ id: UiHomePath; label: string }> =
   { id: "/settlements", label: "Thanh toán / Thu tiền" },
   { id: "/bank-feed", label: "Sao kê ngân hàng" },
   { id: "/queues/exceptions", label: "Hàng đợi ngoại lệ" },
+  { id: "/queues/variances", label: "Hàng đợi chênh lệch" },
   { id: "/queues/approvals", label: "Hàng đợi phê duyệt" },
   { id: "/queues/reconciliations", label: "Hàng đợi đối soát" },
   { id: "/settings", label: "Cài đặt" },

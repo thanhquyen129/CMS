@@ -60,6 +60,15 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
         </div>
       </header>
 
+      <div className="main">
+        {topbarRight ? (
+          <div className="topbar">
+            <div className="topbar-actions">{topbarRight}</div>
+          </div>
+        ) : null}
+        {children}
+      </div>
+
       <button
         type="button"
         className="nav-backdrop"
@@ -75,15 +84,6 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
           <LogoutButton />
         </div>
       </aside>
-
-      <div className="main">
-        {topbarRight ? (
-          <div className="topbar">
-            <div className="topbar-actions">{topbarRight}</div>
-          </div>
-        ) : null}
-        {children}
-      </div>
     </div>
   );
 }

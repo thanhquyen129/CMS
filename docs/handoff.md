@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-09-13 — Mobile gap: sticky-nav override
+
+### User
+giao diện mobile vẫn còn bị 1 khoảng trống lớn phía trên
+
+### Cause
+`html[data-sticky-nav=1][data-layout=horizontal] .sidebar { position: sticky }` (specificity cao hơn mobile `fixed`) → sidebar nav vẫn in-flow, tạo khoảng trống lớn.
+
+### Fix
+- Mobile: override sticky-nav → `position: fixed` + `visibility` khi đóng.
+- `ShellChrome`: thứ tự DOM `mobile-bar` → `main` → backdrop/sidebar (drawer không chen trước nội dung).
+
+### Files
+- `apps/web/app/globals.css`, `apps/web/components/ShellChrome.tsx`
+
+---
+
 ## 2026-09-13 — Mobile drawer z-index + empty gap
 
 ### User

@@ -1303,6 +1303,13 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     grid-template-rows: none;
   }
 
+  /* Desktop horizontal puts sidebar first; on mobile drawer is last — never grow/gap. */
+  .shell > .nav-backdrop,
+  .shell > .sidebar {
+    flex: 0 0 auto;
+    align-self: flex-start;
+  }
+
   .mobile-bar {
     display: flex;
     align-items: center;
@@ -1469,8 +1476,12 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     display: block;
   }
 
+  /* Sticky-nav rules (higher specificity) must not leave sidebar in-flow on mobile. */
   .sidebar,
-  html[data-layout="horizontal"] .sidebar {
+  html[data-layout="horizontal"] .sidebar,
+  html[data-sticky-nav="1"][data-layout="horizontal"] .sidebar,
+  html[data-sticky-nav="1"][data-layout="vertical"] .sidebar,
+  html[data-sticky-nav="0"][data-layout="vertical"] .sidebar {
     position: fixed;
     top: 0;
     left: 0;
@@ -1478,6 +1489,7 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     width: min(20rem, 88vw);
     max-width: 100%;
     height: 100dvh;
+    max-height: 100dvh;
     z-index: 60;
     margin: 0;
     padding: 1rem 0.85rem 1.25rem;
@@ -1488,6 +1500,7 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     color: var(--ink);
     transform: translateX(-105%);
     transition: transform 0.22s ease;
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
     flex-direction: column;
@@ -1495,12 +1508,16 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-gh
     align-items: stretch;
     text-align: left;
     pointer-events: none;
+    visibility: hidden;
   }
 
   .shell.nav-open .sidebar,
-  html[data-layout="horizontal"] .shell.nav-open .sidebar {
+  html[data-layout="horizontal"] .shell.nav-open .sidebar,
+  html[data-sticky-nav="1"][data-layout="horizontal"] .shell.nav-open .sidebar,
+  html[data-sticky-nav="1"][data-layout="vertical"] .shell.nav-open .sidebar {
     transform: translateX(0);
     pointer-events: auto;
+    visibility: visible;
   }
 
   html[data-layout="horizontal"] .sidebar .brand,

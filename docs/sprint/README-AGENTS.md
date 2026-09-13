@@ -11,7 +11,7 @@ Rule: **một sprint = một chat/agent riêng**. Không nhúng Task subagent v�
 
 **Pass 1: COMPLETE.** **Pass 2: COMPLETE.** **Pass UI: COMPLETE (U0–U5 + G1–G6 + UAT PASS).**
 
-**Post-UAT backlog tuần tự:** `PO-GAP-CHECKLIST.md` (P01→P25). Next: **P10 Reverse recognize AP/AR + sổ điều chỉnh**.
+**Post-UAT backlog tuần tự:** `PO-GAP-CHECKLIST.md` (P01→P25). Next: **P14 UI recovery tích hợp (retry / dead-letter)**.
 
 ## Status Pass 2
 | Sprint | Status |

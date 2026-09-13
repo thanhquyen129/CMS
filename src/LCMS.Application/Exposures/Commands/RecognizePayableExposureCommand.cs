@@ -72,9 +72,9 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
 
-        // SoT for recognized_amount = sum of AP recognition slices (cache kept in sync).
+        // SoT for recognized_amount = sum of active AP recognition slices (cache kept in sync).
         var recognizedSum = await _db.AccountsPayable
-            .Where(a => a.PayableExposureId == exposure.Id)
+            .Where(a => a.PayableExposureId == exposure.Id && a.RecordStatus == ApArRecordStatuses.Active)
             .Select(a => a.RecognizedAmount)
             .ToListAsync(cancellationToken);
         var alreadyRecognized = decimal.Round(recognizedSum.Sum(), 4, MidpointRounding.AwayFromZero);

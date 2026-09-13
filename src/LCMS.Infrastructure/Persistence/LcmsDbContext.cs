@@ -60,7 +60,9 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<PayableExposure> PayableExposures => Set<PayableExposure>();
     public DbSet<ReceivableExposure> ReceivableExposures => Set<ReceivableExposure>();
     public DbSet<AccountsPayable> AccountsPayable => Set<AccountsPayable>();
+    public DbSet<AccountsPayableAdjustment> AccountsPayableAdjustments => Set<AccountsPayableAdjustment>();
     public DbSet<AccountsReceivable> AccountsReceivable => Set<AccountsReceivable>();
+    public DbSet<AccountsReceivableAdjustment> AccountsReceivableAdjustments => Set<AccountsReceivableAdjustment>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<Collection> Collections => Set<Collection>();
     public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();

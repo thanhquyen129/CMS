@@ -1,18 +1,16 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Exposures.Commands;
 
-/// <summary>
-/// Adjust recognized AR. Outstanding remains derived (C-015) — never user-entered SoT.
-/// </summary>
 public sealed record AdjustAccountsReceivableCommand(
     Guid AccountsReceivableId,
     decimal DeltaAmount,
-    string Reason) : IRequest;
+    string Reason) : IRequest<Guid>;
 
 public sealed class AdjustAccountsReceivableCommandValidator
     : AbstractValidator<AdjustAccountsReceivableCommand>
@@ -28,7 +26,7 @@ public sealed class AdjustAccountsReceivableCommandValidator
     }
 }
 
-public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<AdjustAccountsReceivableCommand>
+public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<AdjustAccountsReceivableCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -44,7 +42,7 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
         _user = user;
     }
 
-    public async Task Handle(AdjustAccountsReceivableCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(AdjustAccountsReceivableCommand request, CancellationToken cancellationToken)
     {
         if (!_tenantContext.HasTenant)
         {
@@ -55,26 +53,44 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
             .FirstOrDefaultAsync(a => a.Id == request.AccountsReceivableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
 
-        if (ar.RecordStatus != "active")
+        if (ar.RecordStatus != ApArRecordStatuses.Active)
         {
             throw new ConflictAppException("Chỉ được điều chỉnh khoản phải thu đang hiệu lực.");
         }
 
         var delta = decimal.Round(request.DeltaAmount, 4, MidpointRounding.AwayFromZero);
-        var nextOutstanding = ar.RecognizedAmount + ar.AdjustmentAmount + delta - ar.FinalizedSettledAmount;
-        if (nextOutstanding < 0)
+        var outstandingBefore = ar.DeriveOutstanding();
+        if (outstandingBefore + delta < 0)
         {
             throw new ConflictAppException("Số dư còn lại (outstanding) sau điều chỉnh không được âm.");
         }
 
+        var adjBefore = ar.AdjustmentAmount;
         ar.AdjustmentAmount = decimal.Round(ar.AdjustmentAmount + delta, 4, MidpointRounding.AwayFromZero);
         ar.UpdatedAt = DateTimeOffset.UtcNow;
         ar.UpdatedBy = _user.UserId;
-        var reasonLine = $"[điều chỉnh {delta}] {request.Reason.Trim()}";
+        var reason = request.Reason.Trim();
+        var reasonLine = $"[điều chỉnh {delta}] {reason}";
         ar.Notes = string.IsNullOrWhiteSpace(ar.Notes)
             ? reasonLine
             : $"{ar.Notes}\n{reasonLine}";
 
+        var row = new AccountsReceivableAdjustment
+        {
+            TenantId = _tenantContext.TenantId!.Value,
+            AccountsReceivableId = ar.Id,
+            AdjustmentType = ApArAdjustmentTypes.Adjustment,
+            DeltaAmount = delta,
+            CurrencyCode = ar.CurrencyCode,
+            Reason = reason,
+            EffectiveDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            AdjustmentAmountBefore = adjBefore,
+            AdjustmentAmountAfter = ar.AdjustmentAmount,
+            OutstandingBefore = outstandingBefore,
+            OutstandingAfter = ar.DeriveOutstanding()
+        };
+        _db.AccountsReceivableAdjustments.Add(row);
         await _db.SaveChangesAsync(cancellationToken);
+        return row.Id;
     }
 }

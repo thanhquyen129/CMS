@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ReverseRecognizeButton } from "@/components/ReverseRecognizeButton";
 import { WriteOffButton } from "@/components/WriteOffButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -120,17 +121,30 @@ function ApArTable({
                   : ""}
               </td>
               <td>
-                {row.outstanding > 0 ? (
-                  <WriteOffButton
+                <div className="cta-row" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
+                  {row.outstanding > 0 ? (
+                    <WriteOffButton
+                      terms={terms}
+                      kind={kind}
+                      accountsId={row.id}
+                      outstanding={row.outstanding}
+                      currencyCode={row.currencyCode}
+                    />
+                  ) : null}
+                  <ReverseRecognizeButton
                     terms={terms}
                     kind={kind}
                     accountsId={row.id}
                     outstanding={row.outstanding}
                     currencyCode={row.currencyCode}
+                    settledAmount={row.finalizedSettledAmount}
+                    recordStatus={row.recordStatus}
                   />
-                ) : (
-                  "—"
-                )}
+                  {row.outstanding <= 0 &&
+                  row.recordStatus?.toLowerCase() !== "active" ? (
+                    <span className="muted small">—</span>
+                  ) : null}
+                </div>
               </td>
             </tr>
           ))}

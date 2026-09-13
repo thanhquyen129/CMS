@@ -1090,6 +1090,60 @@ internal sealed class AccountsReceivableConfiguration : IEntityTypeConfiguration
     }
 }
 
+internal sealed class AccountsPayableAdjustmentConfiguration : IEntityTypeConfiguration<AccountsPayableAdjustment>
+{
+    public void Configure(EntityTypeBuilder<AccountsPayableAdjustment> builder)
+    {
+        builder.ToTable("accounts_payable_adjustments");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.AccountsPayableId).IsRequired();
+        builder.Property(e => e.AdjustmentType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.DeltaAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Reason).HasMaxLength(1024).IsRequired();
+        builder.Property(e => e.EffectiveDate).IsRequired();
+        builder.Property(e => e.AdjustmentAmountBefore).HasPrecision(18, 4);
+        builder.Property(e => e.AdjustmentAmountAfter).HasPrecision(18, 4);
+        builder.Property(e => e.OutstandingBefore).HasPrecision(18, 4);
+        builder.Property(e => e.OutstandingAfter).HasPrecision(18, 4);
+
+        builder.HasIndex(e => new { e.TenantId, e.AccountsPayableId, e.CreatedAt });
+
+        builder.HasOne(e => e.AccountsPayable)
+            .WithMany()
+            .HasForeignKey(e => e.AccountsPayableId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class AccountsReceivableAdjustmentConfiguration : IEntityTypeConfiguration<AccountsReceivableAdjustment>
+{
+    public void Configure(EntityTypeBuilder<AccountsReceivableAdjustment> builder)
+    {
+        builder.ToTable("accounts_receivable_adjustments");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.AccountsReceivableId).IsRequired();
+        builder.Property(e => e.AdjustmentType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.DeltaAmount).HasPrecision(18, 4);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Reason).HasMaxLength(1024).IsRequired();
+        builder.Property(e => e.EffectiveDate).IsRequired();
+        builder.Property(e => e.AdjustmentAmountBefore).HasPrecision(18, 4);
+        builder.Property(e => e.AdjustmentAmountAfter).HasPrecision(18, 4);
+        builder.Property(e => e.OutstandingBefore).HasPrecision(18, 4);
+        builder.Property(e => e.OutstandingAfter).HasPrecision(18, 4);
+
+        builder.HasIndex(e => new { e.TenantId, e.AccountsReceivableId, e.CreatedAt });
+
+        builder.HasOne(e => e.AccountsReceivable)
+            .WithMany()
+            .HasForeignKey(e => e.AccountsReceivableId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 {
     public void Configure(EntityTypeBuilder<Payment> builder)

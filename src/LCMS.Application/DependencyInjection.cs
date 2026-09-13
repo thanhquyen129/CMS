@@ -1,4 +1,5 @@
 using FluentValidation;
+using LCMS.Application.Approvals;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
 using LCMS.Application.Demo;
@@ -32,6 +33,7 @@ public static class DependencyInjection
             services.Configure<RevenueOptions>(configuration.GetSection(RevenueOptions.SectionName));
             services.Configure<DocumentOptions>(configuration.GetSection(DocumentOptions.SectionName));
             services.Configure<SettlementOptions>(configuration.GetSection(SettlementOptions.SectionName));
+            services.Configure<ApprovalMatrixOptions>(configuration.GetSection(ApprovalMatrixOptions.SectionName));
             services.Configure<FinancialControlOptions>(configuration.GetSection(FinancialControlOptions.SectionName));
             services.Configure<FinancialCloseOptions>(configuration.GetSection(FinancialCloseOptions.SectionName));
             services.Configure<DemoOptions>(configuration.GetSection(DemoOptions.SectionName));

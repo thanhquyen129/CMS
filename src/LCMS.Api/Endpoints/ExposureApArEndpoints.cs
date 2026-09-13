@@ -155,7 +155,23 @@ public static class ExposureApArEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new AdjustAccountsPayableCommand(id, body.DeltaAmount, body.Reason), ct);
+            var adjId = await sender.Send(new AdjustAccountsPayableCommand(id, body.DeltaAmount, body.Reason), ct);
+            return Results.Created($"/api/accounts-payable/{id}/adjustments/{adjId}", new { id = adjId });
+        });
+
+        ap.MapGet("/{id:guid}/adjustments", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListAccountsPayableAdjustmentsQuery(id), ct);
+            return Results.Ok(list);
+        });
+
+        ap.MapPost("/{id:guid}/reverse-recognize", async (
+            Guid id,
+            ReverseRecognizeRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new ReverseRecognizeAccountsPayableCommand(id, body.Reason), ct);
             return Results.NoContent();
         });
 
@@ -176,6 +192,7 @@ public static class ExposureApArEndpoints
                     {
                         requiresApproval = true,
                         approvalId = result.ApprovalId,
+                        requiredLevel = result.RequiredLevel,
                         message = "Số xóa nợ vượt trần áp dụng ngay; đã gửi yêu cầu phê duyệt. Xóa nợ chỉ ghi khi được duyệt."
                     },
                     statusCode: StatusCodes.Status202Accepted);
@@ -218,7 +235,23 @@ public static class ExposureApArEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new AdjustAccountsReceivableCommand(id, body.DeltaAmount, body.Reason), ct);
+            var adjId = await sender.Send(new AdjustAccountsReceivableCommand(id, body.DeltaAmount, body.Reason), ct);
+            return Results.Created($"/api/accounts-receivable/{id}/adjustments/{adjId}", new { id = adjId });
+        });
+
+        ar.MapGet("/{id:guid}/adjustments", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListAccountsReceivableAdjustmentsQuery(id), ct);
+            return Results.Ok(list);
+        });
+
+        ar.MapPost("/{id:guid}/reverse-recognize", async (
+            Guid id,
+            ReverseRecognizeRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new ReverseRecognizeAccountsReceivableCommand(id, body.Reason), ct);
             return Results.NoContent();
         });
 
@@ -239,6 +272,7 @@ public static class ExposureApArEndpoints
                     {
                         requiresApproval = true,
                         approvalId = result.ApprovalId,
+                        requiredLevel = result.RequiredLevel,
                         message = "Số xóa nợ vượt trần áp dụng ngay; đã gửi yêu cầu phê duyệt. Xóa nợ chỉ ghi khi được duyệt."
                     },
                     statusCode: StatusCodes.Status202Accepted);
@@ -284,6 +318,8 @@ public sealed record RecognizeExposureRequest(
     string? Notes);
 
 public sealed record AdjustApArRequest(decimal DeltaAmount, string Reason);
+
+public sealed record ReverseRecognizeRequest(string Reason);
 
 public sealed record WriteOffRequest(decimal Amount, string Reason);
 

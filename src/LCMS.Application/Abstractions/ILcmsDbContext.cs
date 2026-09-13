@@ -45,7 +45,9 @@ public interface ILcmsDbContext
     DbSet<PayableExposure> PayableExposures { get; }
     DbSet<ReceivableExposure> ReceivableExposures { get; }
     DbSet<AccountsPayable> AccountsPayable { get; }
+    DbSet<AccountsPayableAdjustment> AccountsPayableAdjustments { get; }
     DbSet<AccountsReceivable> AccountsReceivable { get; }
+    DbSet<AccountsReceivableAdjustment> AccountsReceivableAdjustments { get; }
     DbSet<Payment> Payments { get; }
     DbSet<Collection> Collections { get; }
     DbSet<PaymentAllocation> PaymentAllocations { get; }

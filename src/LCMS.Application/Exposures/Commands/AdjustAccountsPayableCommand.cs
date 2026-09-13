@@ -1,18 +1,19 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Exposures.Commands;
 
 /// <summary>
-/// Adjust recognized AP. Outstanding remains derived (C-015) — never user-entered SoT.
+/// Adjust recognized AP with ledger row. Outstanding remains derived (C-015).
 /// </summary>
 public sealed record AdjustAccountsPayableCommand(
     Guid AccountsPayableId,
     decimal DeltaAmount,
-    string Reason) : IRequest;
+    string Reason) : IRequest<Guid>;
 
 public sealed class AdjustAccountsPayableCommandValidator : AbstractValidator<AdjustAccountsPayableCommand>
 {
@@ -27,7 +28,7 @@ public sealed class AdjustAccountsPayableCommandValidator : AbstractValidator<Ad
     }
 }
 
-public sealed class AdjustAccountsPayableCommandHandler : IRequestHandler<AdjustAccountsPayableCommand>
+public sealed class AdjustAccountsPayableCommandHandler : IRequestHandler<AdjustAccountsPayableCommand, Guid>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -43,7 +44,7 @@ public sealed class AdjustAccountsPayableCommandHandler : IRequestHandler<Adjust
         _user = user;
     }
 
-    public async Task Handle(AdjustAccountsPayableCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(AdjustAccountsPayableCommand request, CancellationToken cancellationToken)
     {
         if (!_tenantContext.HasTenant)
         {
@@ -54,27 +55,45 @@ public sealed class AdjustAccountsPayableCommandHandler : IRequestHandler<Adjust
             .FirstOrDefaultAsync(a => a.Id == request.AccountsPayableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
 
-        if (ap.RecordStatus != "active")
+        if (ap.RecordStatus != ApArRecordStatuses.Active)
         {
             throw new ConflictAppException("Chỉ được điều chỉnh khoản phải trả đang hiệu lực.");
         }
 
         var delta = decimal.Round(request.DeltaAmount, 4, MidpointRounding.AwayFromZero);
-        var nextOutstanding = ap.RecognizedAmount + ap.AdjustmentAmount + delta - ap.FinalizedSettledAmount;
+        var outstandingBefore = ap.DeriveOutstanding();
+        var nextOutstanding = outstandingBefore + delta;
         if (nextOutstanding < 0)
         {
             throw new ConflictAppException("Số dư còn lại (outstanding) sau điều chỉnh không được âm.");
         }
 
+        var adjBefore = ap.AdjustmentAmount;
         ap.AdjustmentAmount = decimal.Round(ap.AdjustmentAmount + delta, 4, MidpointRounding.AwayFromZero);
         ap.UpdatedAt = DateTimeOffset.UtcNow;
         ap.UpdatedBy = _user.UserId;
-        // Notes append reason for Pass 1 audit trail (dedicated AP adjustment table deferred).
-        var reasonLine = $"[điều chỉnh {delta}] {request.Reason.Trim()}";
+        var reason = request.Reason.Trim();
+        var reasonLine = $"[điều chỉnh {delta}] {reason}";
         ap.Notes = string.IsNullOrWhiteSpace(ap.Notes)
             ? reasonLine
             : $"{ap.Notes}\n{reasonLine}";
 
+        var row = new AccountsPayableAdjustment
+        {
+            TenantId = _tenantContext.TenantId!.Value,
+            AccountsPayableId = ap.Id,
+            AdjustmentType = ApArAdjustmentTypes.Adjustment,
+            DeltaAmount = delta,
+            CurrencyCode = ap.CurrencyCode,
+            Reason = reason,
+            EffectiveDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            AdjustmentAmountBefore = adjBefore,
+            AdjustmentAmountAfter = ap.AdjustmentAmount,
+            OutstandingBefore = outstandingBefore,
+            OutstandingAfter = ap.DeriveOutstanding()
+        };
+        _db.AccountsPayableAdjustments.Add(row);
         await _db.SaveChangesAsync(cancellationToken);
+        return row.Id;
     }
 }

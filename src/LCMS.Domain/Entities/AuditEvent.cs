@@ -44,6 +44,8 @@ public static class AuditActions
     public const string AccountsReceivableWriteOff = "accounts_receivable.write_off";
     public const string AccountsPayableRecognize = "accounts_payable.recognize";
     public const string AccountsReceivableRecognize = "accounts_receivable.recognize";
+    public const string AccountsPayableReverseRecognize = "accounts_payable.reverse_recognize";
+    public const string AccountsReceivableReverseRecognize = "accounts_receivable.reverse_recognize";
     public const string FinancialDocumentAccept = "financial_document.accept";
     public const string FinancialDocumentLineAdd = "financial_document_line.add";
     public const string FinancialDocumentLineUpdate = "financial_document_line.update";

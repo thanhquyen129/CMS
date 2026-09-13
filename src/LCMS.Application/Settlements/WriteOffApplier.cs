@@ -103,6 +103,7 @@ public static class WriteOffApplier
             currency = ap.CurrencyCode
         });
 
+        var adjBefore = ap.AdjustmentAmount;
         ap.AdjustmentAmount = decimal.Round(ap.AdjustmentAmount - amount, 4, MidpointRounding.AwayFromZero);
         ap.SettlementStatus = SettlementHelpers.DeriveApArSettlementStatus(
             ap.RecognizedAmount, ap.AdjustmentAmount, ap.FinalizedSettledAmount);
@@ -113,6 +114,21 @@ public static class WriteOffApplier
         ap.Notes = string.IsNullOrWhiteSpace(ap.Notes)
             ? reasonLine
             : $"{ap.Notes}\n{reasonLine}";
+
+        db.AccountsPayableAdjustments.Add(new AccountsPayableAdjustment
+        {
+            TenantId = ap.TenantId,
+            AccountsPayableId = ap.Id,
+            AdjustmentType = ApArAdjustmentTypes.WriteOff,
+            DeltaAmount = decimal.Round(-amount, 4, MidpointRounding.AwayFromZero),
+            CurrencyCode = ap.CurrencyCode,
+            Reason = reason,
+            EffectiveDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            AdjustmentAmountBefore = adjBefore,
+            AdjustmentAmountAfter = ap.AdjustmentAmount,
+            OutstandingBefore = outstanding,
+            OutstandingAfter = ap.DeriveOutstanding()
+        });
 
         audit.Append(
             AuditActions.AccountsPayableWriteOff,
@@ -188,6 +204,7 @@ public static class WriteOffApplier
             currency = ar.CurrencyCode
         });
 
+        var adjBefore = ar.AdjustmentAmount;
         ar.AdjustmentAmount = decimal.Round(ar.AdjustmentAmount - amount, 4, MidpointRounding.AwayFromZero);
         ar.SettlementStatus = SettlementHelpers.DeriveApArSettlementStatus(
             ar.RecognizedAmount, ar.AdjustmentAmount, ar.FinalizedSettledAmount);
@@ -198,6 +215,21 @@ public static class WriteOffApplier
         ar.Notes = string.IsNullOrWhiteSpace(ar.Notes)
             ? reasonLine
             : $"{ar.Notes}\n{reasonLine}";
+
+        db.AccountsReceivableAdjustments.Add(new AccountsReceivableAdjustment
+        {
+            TenantId = ar.TenantId,
+            AccountsReceivableId = ar.Id,
+            AdjustmentType = ApArAdjustmentTypes.WriteOff,
+            DeltaAmount = decimal.Round(-amount, 4, MidpointRounding.AwayFromZero),
+            CurrencyCode = ar.CurrencyCode,
+            Reason = reason,
+            EffectiveDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            AdjustmentAmountBefore = adjBefore,
+            AdjustmentAmountAfter = ar.AdjustmentAmount,
+            OutstandingBefore = outstanding,
+            OutstandingAfter = ar.DeriveOutstanding()
+        });
 
         audit.Append(
             AuditActions.AccountsReceivableWriteOff,

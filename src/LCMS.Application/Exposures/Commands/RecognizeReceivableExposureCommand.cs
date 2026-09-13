@@ -76,7 +76,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
 
         // SoT for recognized_amount = sum of AR recognition slices (cache kept in sync).
         var recognizedSum = await _db.AccountsReceivable
-            .Where(a => a.ReceivableExposureId == exposure.Id)
+            .Where(a => a.ReceivableExposureId == exposure.Id && a.RecordStatus == ApArRecordStatuses.Active)
             .Select(a => a.RecognizedAmount)
             .ToListAsync(cancellationToken);
         var alreadyRecognized = decimal.Round(recognizedSum.Sum(), 4, MidpointRounding.AwayFromZero);

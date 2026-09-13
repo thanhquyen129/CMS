@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Approvals;
 using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
@@ -10,8 +11,7 @@ using Microsoft.Extensions.Options;
 namespace LCMS.Application.Settlements.Commands;
 
 /// <summary>
-/// AR write-off: ≤ MaxWriteOffAmount apply immediately; above → Approval then apply on approve.
-/// Never invents Revenue; does not fake collection cash.
+/// AR write-off: ≤ MaxWriteOffAmount apply immediately; above → Approval (matrix level) then apply on approve.
 /// </summary>
 public sealed record WriteOffAccountsReceivableCommand(
     Guid AccountsReceivableId,
@@ -40,19 +40,22 @@ public sealed class WriteOffAccountsReceivableCommandHandler
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
     private readonly SettlementOptions _options;
+    private readonly ApprovalMatrixOptions _matrix;
 
     public WriteOffAccountsReceivableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IAuditWriter audit,
-        IOptions<SettlementOptions> options)
+        IOptions<SettlementOptions> options,
+        IOptions<ApprovalMatrixOptions> matrix)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
         _options = options.Value;
+        _matrix = matrix.Value;
     }
 
     public async Task<WriteOffResult> Handle(
@@ -67,6 +70,8 @@ public sealed class WriteOffAccountsReceivableCommandHandler
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
         var reason = request.Reason.Trim();
         var maxImmediate = _options.MaxWriteOffAmount;
+        var requiredLevel = ApprovalMatrixResolver.ResolveRequiredLevel(
+            _matrix, ApprovalObjectTypes.AccountsReceivable, amount);
 
         var ar = await _db.AccountsReceivable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsReceivableId, cancellationToken)
@@ -116,15 +121,16 @@ public sealed class WriteOffAccountsReceivableCommandHandler
             ObjectType = objectType,
             ObjectId = ar.Id,
             Status = ApprovalStatuses.Pending,
-            RequiredLevel = 1,
+            RequiredLevel = requiredLevel,
             CurrentLevel = 0,
             RequestedBy = _user.UserId,
             RequestedAt = DateTimeOffset.UtcNow,
-            RequestReason = $"Xóa nợ {amount} {ar.CurrencyCode} (vượt trần {maxImmediate}): {reason}",
+            RequestReason =
+                $"Xóa nợ {amount} {ar.CurrencyCode} (vượt trần {maxImmediate}; cấp {requiredLevel}): {reason}",
             Notes = WriteOffApplier.EncodePendingNotes(payload)
         };
         _db.Approvals.Add(approval);
         await _db.SaveChangesAsync(cancellationToken);
-        return new WriteOffResult(false, approval.Id);
+        return new WriteOffResult(false, approval.Id, requiredLevel);
     }
 }

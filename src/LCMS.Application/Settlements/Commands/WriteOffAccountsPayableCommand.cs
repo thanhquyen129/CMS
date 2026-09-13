@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Approvals;
 using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
@@ -12,7 +13,7 @@ namespace LCMS.Application.Settlements.Commands;
 /// <summary>
 /// Result of write-off request: applied now, or queued for approval when over threshold (P03 / ADR-0008).
 /// </summary>
-public sealed record WriteOffResult(bool AppliedImmediately, Guid? ApprovalId);
+public sealed record WriteOffResult(bool AppliedImmediately, Guid? ApprovalId, int? RequiredLevel = null);
 
 /// <summary>
 /// AP write-off: ≤ MaxWriteOffAmount apply immediately; above → Approval then apply on approve.
@@ -44,19 +45,22 @@ public sealed class WriteOffAccountsPayableCommandHandler
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
     private readonly SettlementOptions _options;
+    private readonly ApprovalMatrixOptions _matrix;
 
     public WriteOffAccountsPayableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IAuditWriter audit,
-        IOptions<SettlementOptions> options)
+        IOptions<SettlementOptions> options,
+        IOptions<ApprovalMatrixOptions> matrix)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
         _options = options.Value;
+        _matrix = matrix.Value;
     }
 
     public async Task<WriteOffResult> Handle(
@@ -71,6 +75,8 @@ public sealed class WriteOffAccountsPayableCommandHandler
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
         var reason = request.Reason.Trim();
         var maxImmediate = _options.MaxWriteOffAmount;
+        var requiredLevel = ApprovalMatrixResolver.ResolveRequiredLevel(
+            _matrix, ApprovalObjectTypes.AccountsPayable, amount);
 
         var ap = await _db.AccountsPayable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsPayableId, cancellationToken)
@@ -121,15 +127,16 @@ public sealed class WriteOffAccountsPayableCommandHandler
             ObjectType = objectType,
             ObjectId = ap.Id,
             Status = ApprovalStatuses.Pending,
-            RequiredLevel = 1,
+            RequiredLevel = requiredLevel,
             CurrentLevel = 0,
             RequestedBy = _user.UserId,
             RequestedAt = DateTimeOffset.UtcNow,
-            RequestReason = $"Xóa nợ {amount} {ap.CurrencyCode} (vượt trần {maxImmediate}): {reason}",
+            RequestReason =
+                $"Xóa nợ {amount} {ap.CurrencyCode} (vượt trần {maxImmediate}; cấp {requiredLevel}): {reason}",
             Notes = WriteOffApplier.EncodePendingNotes(payload)
         };
         _db.Approvals.Add(approval);
         await _db.SaveChangesAsync(cancellationToken);
-        return new WriteOffResult(false, approval.Id);
+        return new WriteOffResult(false, approval.Id, requiredLevel);
     }
 }

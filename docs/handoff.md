@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-13 — P10 reverse recognize + P12 matrix backend (complete P10–P13)
+
+### User
+Làm tiếp P10, P11, P12, P13.
+
+### Done
+- **P10:** AP/AR adjustment ledger; reverse-recognize API/UI; restore exposure; tests.
+- **P11–P13 UI:** already on `a730ffe` (variance inbox, write-off wizard, audit panel).
+- **P12 backend:** `ApprovalMatrix` config → write-off RequiredLevel.
+
+### Files
+- Entities + migration `P10_P12_ApArAdjustmentsAndMatrix`
+- ReverseRecognize* commands; ApArAdjustmentQueries; WriteOff matrix
+- `ReverseRecognizeButton`, BFF reverse-recognize
+- DoD P10–P13
+
+### Verify
+- SprintP10 — 2 passed
+
+### Next
+- P14 UI recovery tích hợp
+
+### End-user
+`/ap-ar`: **Đảo ghi nhận** (khi chưa tất toán). Xóa nợ lớn → phê duyệt cấp theo ma trận.
+
+---
+
 ## 2026-09-13 — P11 Variance inbox + P12 write-off wizard + P13 audit panel
 
 ### User

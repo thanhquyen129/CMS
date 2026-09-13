@@ -1,5 +1,25 @@
 # Handoff
 
+## 2026-09-13 — UAT go-live S1 UI-only VPS = **PASS**
+
+### User
+Cần agent chạy hộ S1 UI-only trên VPS.
+
+### Done
+- Browser + BFF cookie trên `194.233.89.26` (không Postman/JWT).
+- Bill `UAT-GL-20260913-1515` (`01a099d4-18da-7706-a93a-1a685c8f7983`): Cost confirm 1.1M → Revenue 2.5M → doc accept+match → AP/AR recognize → payment/collection finalize → close **locked** P&L **1.4M** (AP/AR dư 0).
+- RESULT: `docs/sprint/UAT-GO-LIVE-FINANCIAL-RESULT.md` — S1 PASS; S2–S14 SKIP (phiên sau).
+- Gap minor: nút Chấp nhận chứng từ bị sidebar đè trên viewport hẹp.
+
+### Next
+- Phiên người nghiệp vụ thật: S2–S14 (shared, write-off, Strict, aging/quyền, bank feed…).
+- Optional UX: fix overlap sidebar/accept CTA.
+
+### End-user
+- Bill UAT-GL trên VPS đã khóa chốt; đọc P&L trên `/financial-closes/01a099da-3e2d-7720-9407-5f5630bc7a79`.
+
+---
+
 ## 2026-09-13 — Mở wave UAT go-live tài chính đủ (người nghiệp vụ)
 
 ### User

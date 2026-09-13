@@ -16,7 +16,8 @@
 | `PROMPT-UAT-GO-LIVE.md` | Kickoff chat hỗ trợ / chạy hộ UAT |
 
 **Host:** `http://194.233.89.26` · Preflight health/ready OK (2026-09-13).  
-**Residual ngoài UAT (cần ADR):** OIDC IdP thật · OTLP exporter · soak CI gate · broker ngoài process.
+**S1 agent UI-only (2026-09-13):** **PASS** — Bill `UAT-GL-20260913-1515` → Close locked P&L 1.4M (`UAT-GO-LIVE-FINANCIAL-RESULT.md`).  
+**Còn lại:** phiên người nghiệp vụ cho S2–S14 · residual ADR (OIDC / OTLP / soak CI / broker).  
 
 ---
 

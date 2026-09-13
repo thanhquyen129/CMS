@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Approvals;
 using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ using Microsoft.Extensions.Options;
 namespace LCMS.Application.Settlements.Commands;
 
 /// <summary>
-/// AR write-off: ≤ MaxWriteOffAmount apply immediately; above → Approval (matrix level) then apply on approve.
+/// AR write-off: ≤ MaxWriteOffAmount (tenant override) apply immediately; above → Approval matrix.
 /// </summary>
 public sealed record WriteOffAccountsReceivableCommand(
     Guid AccountsReceivableId,
@@ -39,23 +40,23 @@ public sealed class WriteOffAccountsReceivableCommandHandler
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
-    private readonly SettlementOptions _options;
     private readonly ApprovalMatrixOptions _matrix;
+    private readonly TenantFinancialOptionsResolver _financial;
 
     public WriteOffAccountsReceivableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IAuditWriter audit,
-        IOptions<SettlementOptions> options,
-        IOptions<ApprovalMatrixOptions> matrix)
+        IOptions<ApprovalMatrixOptions> matrix,
+        TenantFinancialOptionsResolver financial)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
-        _options = options.Value;
         _matrix = matrix.Value;
+        _financial = financial;
     }
 
     public async Task<WriteOffResult> Handle(
@@ -69,7 +70,7 @@ public sealed class WriteOffAccountsReceivableCommandHandler
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
         var reason = request.Reason.Trim();
-        var maxImmediate = _options.MaxWriteOffAmount;
+        var maxImmediate = await _financial.GetMaxWriteOffAmountAsync(cancellationToken);
         var requiredLevel = ApprovalMatrixResolver.ResolveRequiredLevel(
             _matrix, ApprovalObjectTypes.AccountsReceivable, amount);
 

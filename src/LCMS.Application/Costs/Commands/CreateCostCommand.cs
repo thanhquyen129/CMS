@@ -172,7 +172,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         }
 
         await _fx.ApplyToCostAsync(cost, amount, cancellationToken);
-        _approvalGate.RefreshPendingFlag(cost);
+        await _approvalGate.RefreshPendingFlagAsync(cost, cancellationToken);
 
         _db.Costs.Add(cost);
         _audit.Append(

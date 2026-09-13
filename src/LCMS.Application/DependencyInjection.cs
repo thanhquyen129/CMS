@@ -11,6 +11,7 @@ using LCMS.Application.Identity;
 using LCMS.Application.Reconciliations;
 using LCMS.Application.Revenues;
 using LCMS.Application.Settlements;
+using LCMS.Application.Tenancy;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,8 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddScoped<IOrganizationHierarchyService, OrganizationHierarchyService>();
+        services.AddScoped<ITenantSettingsService, TenantSettingsService>();
+        services.AddScoped<TenantFinancialOptionsResolver>();
 
         if (configuration is not null)
         {
@@ -44,6 +47,7 @@ public static class DependencyInjection
             services.AddOptions<RevenueOptions>();
             services.AddOptions<DocumentOptions>();
             services.AddOptions<SettlementOptions>();
+            services.AddOptions<ApprovalMatrixOptions>();
             services.AddOptions<FinancialControlOptions>();
             services.AddOptions<FinancialCloseOptions>();
             services.AddOptions<DemoOptions>();

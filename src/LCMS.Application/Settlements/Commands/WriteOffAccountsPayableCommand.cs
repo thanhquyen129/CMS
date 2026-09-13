@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Approvals;
 using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +47,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
     private readonly IAuditWriter _audit;
     private readonly SettlementOptions _options;
     private readonly ApprovalMatrixOptions _matrix;
+    private readonly TenantFinancialOptionsResolver _financial;
 
     public WriteOffAccountsPayableCommandHandler(
         ILcmsDbContext db,
@@ -53,7 +55,8 @@ public sealed class WriteOffAccountsPayableCommandHandler
         ICurrentUserContext user,
         IAuditWriter audit,
         IOptions<SettlementOptions> options,
-        IOptions<ApprovalMatrixOptions> matrix)
+        IOptions<ApprovalMatrixOptions> matrix,
+        TenantFinancialOptionsResolver financial)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -61,6 +64,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
         _audit = audit;
         _options = options.Value;
         _matrix = matrix.Value;
+        _financial = financial;
     }
 
     public async Task<WriteOffResult> Handle(
@@ -74,7 +78,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
         var reason = request.Reason.Trim();
-        var maxImmediate = _options.MaxWriteOffAmount;
+        var maxImmediate = await _financial.GetMaxWriteOffAmountAsync(cancellationToken);
         var requiredLevel = ApprovalMatrixResolver.ResolveRequiredLevel(
             _matrix, ApprovalObjectTypes.AccountsPayable, amount);
 

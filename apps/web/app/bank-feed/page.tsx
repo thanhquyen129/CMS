@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { CreateBankFeedLineForm } from "@/components/CreateBankFeedLineForm";
+import { ImportBankFeedCsvForm } from "@/components/ImportBankFeedCsvForm";
 import { IgnoreBankFeedLineButton } from "@/components/IgnoreBankFeedLineButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -128,6 +129,9 @@ export default async function BankFeedPage({
             </table>
           </div>
         )}
+
+        <h2 className="section-title">Nhập CSV</h2>
+        <ImportBankFeedCsvForm terms={terms} />
 
         <h2 className="section-title">Thêm {lineLabel.toLowerCase()}</h2>
         <CreateBankFeedLineForm terms={terms} />

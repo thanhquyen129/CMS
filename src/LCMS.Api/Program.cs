@@ -121,6 +121,7 @@ try
     app.MapTenantBillEndpoints();
     app.MapIdentityEndpoints();
     app.MapMasterDataEndpoints();
+    app.MapTenantSettingsEndpoints();
     app.MapOperationalReferenceEndpoints();
     app.MapRatePricingEndpoints();
     app.MapCostEndpoints();

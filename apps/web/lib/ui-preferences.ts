@@ -17,6 +17,8 @@ export type UiHomePath =
   | "/queues/variances"
   | "/queues/approvals"
   | "/queues/reconciliations"
+  | "/integration-errors"
+  | "/admin"
   | "/settings";
 
 export type UiPreferences = {
@@ -54,6 +56,8 @@ export const UI_HOME_OPTIONS: ReadonlyArray<{ id: UiHomePath; label: string }> =
   { id: "/queues/variances", label: "Hàng đợi chênh lệch" },
   { id: "/queues/approvals", label: "Hàng đợi phê duyệt" },
   { id: "/queues/reconciliations", label: "Hàng đợi đối soát" },
+  { id: "/integration-errors", label: "Lỗi tích hợp" },
+  { id: "/admin", label: "Danh mục" },
   { id: "/settings", label: "Cài đặt" },
 ];
 

@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -35,17 +36,20 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly TenantFinancialOptionsResolver _financial;
 
     public RecognizePayableExposureCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        TenantFinancialOptionsResolver financial)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _financial = financial;
     }
 
     public async Task<Guid> Handle(RecognizePayableExposureCommand request, CancellationToken cancellationToken)
@@ -68,6 +72,15 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         if (exposure.Status == ExposureStatuses.FullyRecognized)
         {
             throw new ConflictAppException("Exposure phải trả đã được ghi nhận đủ.");
+        }
+
+        var (policyMode, policyVersion) = await _financial.GetRecognitionPolicyAsync(cancellationToken);
+        if (policyMode == RecognitionPolicyModes.RequireDocumentLink
+            && !exposure.FinancialDocumentId.HasValue)
+        {
+            throw new ConflictAppException(
+                "Chính sách ghi nhận yêu cầu exposure đã liên kết chứng từ (require_document_link). " +
+                $"Phiên bản chính sách: {policyVersion}.");
         }
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);

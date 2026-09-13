@@ -157,6 +157,42 @@ public sealed class GetBillFinancialProfileQueryHandler
                 .Where(c => arIds.Contains(c.AccountsReceivableId))
                 .ToListAsync(cancellationToken);
 
+        var apAdjs = apIds.Count == 0
+            ? []
+            : await _db.AccountsPayableAdjustments.AsNoTracking()
+                .Where(a => apIds.Contains(a.AccountsPayableId))
+                .Select(a => new { a.AccountsPayableId, a.DeltaAmount, a.EffectiveDate })
+                .ToListAsync(cancellationToken);
+        var arAdjs = arIds.Count == 0
+            ? []
+            : await _db.AccountsReceivableAdjustments.AsNoTracking()
+                .Where(a => arIds.Contains(a.AccountsReceivableId))
+                .Select(a => new { a.AccountsReceivableId, a.DeltaAmount, a.EffectiveDate })
+                .ToListAsync(cancellationToken);
+
+        decimal AdjustmentAtAsOf(
+            Guid accountsId,
+            decimal liveAdjustment,
+            bool payable)
+        {
+            if (!asOf.HasValue)
+            {
+                return liveAdjustment;
+            }
+
+            var asOfDate = asOf.Value;
+            if (payable)
+            {
+                return apAdjs
+                    .Where(a => a.AccountsPayableId == accountsId && a.EffectiveDate <= asOfDate)
+                    .Sum(a => a.DeltaAmount);
+            }
+
+            return arAdjs
+                .Where(a => a.AccountsReceivableId == accountsId && a.EffectiveDate <= asOfDate)
+                .Sum(a => a.DeltaAmount);
+        }
+
         var currencyCodes = revenues.Select(r => r.CurrencyCode)
             .Concat(directCosts.Select(c => c.CurrencyCode))
             .Concat(allocatedList.Select(a => a.CurrencyCode))
@@ -233,7 +269,7 @@ public sealed class GetBillFinancialProfileQueryHandler
                     .Sum(a => asOf.HasValue
                         ? OutstandingAtAsOf(
                             a.RecognizedAmount,
-                            a.AdjustmentAmount,
+                            AdjustmentAtAsOf(a.Id, a.AdjustmentAmount, payable: true),
                             paymentAllocs.Where(p => p.AccountsPayableId == a.Id)
                                 .Select(p => new SettlementAllocSlice(
                                     p.Amount, p.AllocationStatus, p.FinalizedAt, p.ReversedAt)),
@@ -244,7 +280,7 @@ public sealed class GetBillFinancialProfileQueryHandler
                     .Sum(a => asOf.HasValue
                         ? OutstandingAtAsOf(
                             a.RecognizedAmount,
-                            a.AdjustmentAmount,
+                            AdjustmentAtAsOf(a.Id, a.AdjustmentAmount, payable: false),
                             collectionAllocs.Where(c => c.AccountsReceivableId == a.Id)
                                 .Select(c => new SettlementAllocSlice(
                                     c.Amount, c.AllocationStatus, c.FinalizedAt, c.ReversedAt)),
@@ -283,9 +319,8 @@ public sealed class GetBillFinancialProfileQueryHandler
         {
             asOfLimitation =
                 "asOf: reconstruct maturity qua ConfirmedAt/ActualizedAt; allocation theo FinalizedAt; " +
-                "AP/AR outstanding theo RecognizedAt + phân bổ tất toán đã chốt tại asOf. " +
-                "Giới hạn còn lại: điều chỉnh (AdjustmentAmount) và layer thiếu timestamp dùng trạng thái hiện tại; " +
-                "không có sổ ledger dòng-thời-gian đầy đủ.";
+                "AP/AR outstanding theo RecognizedAt + điều chỉnh ledger (EffectiveDate ≤ asOf) + phân bổ đã chốt tại asOf. " +
+                "Giới hạn còn lại: Cost/Revenue adjustment layer replay chưa đầy đủ; AP đã reverse_recognize sau asOf có thể thiếu trên profile.";
         }
 
         return new BillFinancialProfileDto(

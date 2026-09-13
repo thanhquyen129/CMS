@@ -1,42 +1,44 @@
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
-using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.Costs;
 
 /// <summary>
 /// Optional approval threshold before Expected→Confirmed.
 /// When threshold configured and BaseAmount exceeds it, ApprovalStatus must be approved.
+/// Tenant override via TenantFinancialOptionsResolver (P20).
 /// </summary>
 public interface ICostApprovalGate
 {
     /// <summary>Sets ApprovalStatus pending when over threshold on create/adjust; else not_required if still default.</summary>
-    void RefreshPendingFlag(Cost cost);
+    Task RefreshPendingFlagAsync(Cost cost, CancellationToken cancellationToken = default);
 
     /// <summary>Throws Conflict with VI message when confirm blocked by threshold.</summary>
-    void EnsureConfirmAllowed(Cost cost);
+    Task EnsureConfirmAllowedAsync(Cost cost, CancellationToken cancellationToken = default);
 }
 
 public sealed class CostApprovalGate : ICostApprovalGate
 {
-    private readonly CostOptions _options;
+    private readonly TenantFinancialOptionsResolver _financial;
     private readonly ICostFxStub _fx;
 
-    public CostApprovalGate(IOptions<CostOptions> options, ICostFxStub fx)
+    public CostApprovalGate(TenantFinancialOptionsResolver financial, ICostFxStub fx)
     {
-        _options = options.Value;
+        _financial = financial;
         _fx = fx;
     }
 
-    public void RefreshPendingFlag(Cost cost)
+    public async Task RefreshPendingFlagAsync(Cost cost, CancellationToken cancellationToken = default)
     {
-        if (_options.ConfirmApprovalThresholdBase is not decimal threshold)
+        var threshold = await _financial.GetConfirmApprovalThresholdBaseAsync(cancellationToken);
+        if (threshold is not decimal t)
         {
             return;
         }
 
         var baseAmount = cost.BaseAmount ?? _fx.ToBaseAmount(cost.CurrencyCode, cost.Amount);
-        if (baseAmount > threshold)
+        if (baseAmount > t)
         {
             if (string.Equals(cost.ApprovalStatus, "not_required", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(cost.ApprovalStatus, "rejected", StringComparison.OrdinalIgnoreCase))
@@ -46,20 +48,20 @@ public sealed class CostApprovalGate : ICostApprovalGate
         }
         else if (string.Equals(cost.ApprovalStatus, "pending", StringComparison.OrdinalIgnoreCase))
         {
-            // Dropped under threshold without an approval decision — clear gate.
             cost.ApprovalStatus = "not_required";
         }
     }
 
-    public void EnsureConfirmAllowed(Cost cost)
+    public async Task EnsureConfirmAllowedAsync(Cost cost, CancellationToken cancellationToken = default)
     {
-        if (_options.ConfirmApprovalThresholdBase is not decimal threshold)
+        var threshold = await _financial.GetConfirmApprovalThresholdBaseAsync(cancellationToken);
+        if (threshold is not decimal t)
         {
             return;
         }
 
         var baseAmount = cost.BaseAmount ?? _fx.ToBaseAmount(cost.CurrencyCode, cost.Amount);
-        if (baseAmount <= threshold)
+        if (baseAmount <= t)
         {
             return;
         }

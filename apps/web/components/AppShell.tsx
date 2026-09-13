@@ -17,6 +17,8 @@ type NavKey =
   | "approvals"
   | "reconciliations"
   | "bank-feed"
+  | "integration-errors"
+  | "admin"
   | "settings";
 
 type AppShellProps = {
@@ -135,6 +137,18 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
           </div>
           <div className="nav-section">
             <div className="nav-section-label">Hệ thống</div>
+            <Link
+              className={active === "admin" ? "active" : undefined}
+              href="/admin"
+            >
+              Danh mục
+            </Link>
+            <Link
+              className={active === "integration-errors" ? "active" : undefined}
+              href="/integration-errors"
+            >
+              Lỗi tích hợp
+            </Link>
             <Link
               className={active === "settings" ? "active" : undefined}
               href="/settings"

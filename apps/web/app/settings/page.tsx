@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { SettingsForm } from "@/components/SettingsForm";
+import { TenantFinancialSettingsForm } from "@/components/TenantFinancialSettingsForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 
@@ -23,9 +24,11 @@ export default async function SettingsPage() {
         </p>
         <h1>Cài đặt</h1>
         <p className="lede">
-          Giao diện, điều hướng, theme và tiện ích vận hành cho shell quản trị. Thay đổi áp dụng ngay trên trình duyệt — không ảnh hưởng số liệu tài chính.
+          Giao diện (cookie) và cài đặt tài chính thuê bao (P19/P20). Ngưỡng
+          ghi đè node khi đã lưu.
         </p>
         <SettingsForm />
+        <TenantFinancialSettingsForm />
       </div>
     </AppShell>
   );

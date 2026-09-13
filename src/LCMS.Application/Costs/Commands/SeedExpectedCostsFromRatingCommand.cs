@@ -105,7 +105,7 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                 EffectiveDate = effective
             };
             await _fx.ApplyToCostAsync(cost, amount, cancellationToken);
-            _approvalGate.RefreshPendingFlag(cost);
+            await _approvalGate.RefreshPendingFlagAsync(cost, cancellationToken);
             _db.Costs.Add(cost);
             costIds.Add(cost.Id);
             created++;

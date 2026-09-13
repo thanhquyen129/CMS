@@ -76,6 +76,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<FinancialClose> FinancialCloses => Set<FinancialClose>();
     public DbSet<FinancialCloseSnapshot> FinancialCloseSnapshots => Set<FinancialCloseSnapshot>();
     public DbSet<FinancialCloseSnapshotDetail> FinancialCloseSnapshotDetails => Set<FinancialCloseSnapshotDetail>();
+    public DbSet<TenantSetting> TenantSettings => Set<TenantSetting>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<IntegrationRecord> IntegrationRecords => Set<IntegrationRecord>();
     public DbSet<IntegrationError> IntegrationErrors => Set<IntegrationError>();

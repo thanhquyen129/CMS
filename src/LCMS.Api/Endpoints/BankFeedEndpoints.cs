@@ -25,6 +25,12 @@ public static class BankFeedEndpoints
             return Results.Created($"/api/bank-feed/lines/{id}", new { id });
         });
 
+        group.MapPost("/import-csv", async (ImportBankFeedCsvRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ImportBankFeedCsvCommand(body.Csv), ct);
+            return Results.Ok(result);
+        });
+
         group.MapGet("/", async (string? status, ISender sender, CancellationToken ct) =>
         {
             var list = await sender.Send(new ListBankFeedLinesQuery(status), ct);
@@ -59,5 +65,7 @@ public sealed record CreateBankFeedLineRequest(
     string? BankReference,
     string? CounterpartyName,
     string? Description);
+
+public sealed record ImportBankFeedCsvRequest(string Csv);
 
 public sealed record IgnoreBankFeedLineRequest(string? IgnoreReason);

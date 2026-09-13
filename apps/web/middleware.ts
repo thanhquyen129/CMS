@@ -28,6 +28,10 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/bank-feed/") ||
     pathname === "/settings" ||
     pathname.startsWith("/settings/") ||
+    pathname === "/integration-errors" ||
+    pathname.startsWith("/integration-errors/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
     pathname.startsWith("/queues/");
 
   if (!token && needsAuth) {
@@ -61,6 +65,10 @@ export const config = {
     "/bank-feed/:path*",
     "/settings",
     "/settings/:path*",
+    "/integration-errors",
+    "/integration-errors/:path*",
+    "/admin",
+    "/admin/:path*",
     "/queues/:path*",
   ],
 };

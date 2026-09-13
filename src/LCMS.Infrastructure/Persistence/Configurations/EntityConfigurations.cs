@@ -1144,6 +1144,19 @@ internal sealed class AccountsReceivableAdjustmentConfiguration : IEntityTypeCon
     }
 }
 
+internal sealed class TenantSettingConfiguration : IEntityTypeConfiguration<TenantSetting>
+{
+    public void Configure(EntityTypeBuilder<TenantSetting> builder)
+    {
+        builder.ToTable("tenant_settings");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.UiJson).HasColumnType("text");
+        builder.Property(e => e.FinancialJson).HasColumnType("text");
+        builder.HasIndex(e => e.TenantId).IsUnique();
+    }
+}
+
 internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
 {
     public void Configure(EntityTypeBuilder<Payment> builder)

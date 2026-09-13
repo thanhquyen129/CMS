@@ -14,6 +14,7 @@ public static class PermissionCodes
     public const string MasterCurrencyManage = "master.currency.manage";
     public const string UserManage = "user.manage";
     public const string RoleManage = "role.manage";
+    public const string SettingsManage = "settings.manage";
 
     public static readonly IReadOnlyList<(string Code, string Name)> CoreCatalog =
     [
@@ -26,7 +27,8 @@ public static class PermissionCodes
         (MasterPartyManage, "Quản lý đối tác"),
         (MasterCurrencyManage, "Quản lý tiền tệ"),
         (UserManage, "Quản lý người dùng"),
-        (RoleManage, "Quản lý vai trò")
+        (RoleManage, "Quản lý vai trò"),
+        (SettingsManage, "Quản lý cài đặt thuê bao")
     ];
 
     public static readonly string[] CoreActionCodes =
@@ -40,6 +42,7 @@ public static class PermissionCodes
         MasterPartyManage,
         MasterCurrencyManage,
         UserManage,
-        RoleManage
+        RoleManage,
+        SettingsManage
     ];
 }

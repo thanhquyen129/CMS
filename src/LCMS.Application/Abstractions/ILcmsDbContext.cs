@@ -61,6 +61,7 @@ public interface ILcmsDbContext
     DbSet<FinancialClose> FinancialCloses { get; }
     DbSet<FinancialCloseSnapshot> FinancialCloseSnapshots { get; }
     DbSet<FinancialCloseSnapshotDetail> FinancialCloseSnapshotDetails { get; }
+    DbSet<TenantSetting> TenantSettings { get; }
     DbSet<AuditEvent> AuditEvents { get; }
     DbSet<IntegrationRecord> IntegrationRecords { get; }
     DbSet<IntegrationError> IntegrationErrors { get; }

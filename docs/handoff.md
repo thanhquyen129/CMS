@@ -1,5 +1,39 @@
 # Handoff
 
+## 2026-09-13 — P14→P20 integration recovery, bank CSV, tenant settings
+
+### User
+Làm P14 đến P20.
+
+### Done
+- **P14:** `/integration-errors` + mark-retried / dead-letter UI + BFF.
+- **P15:** `POST /api/bank-feed/lines/import-csv`; `ImportBankFeedCsvForm` trên `/bank-feed`.
+- **P16:** Recognition policy `require_document_link` gate trên recognize AP/AR.
+- **P17:** Bill financial profile `asOf` dùng AP/AR adjustment ledger dated.
+- **P18:** `/admin` hub — parties, orgs, currencies (create + list).
+- **P19:** `tenant_settings` table + `GET/PUT /api/tenant-settings`; `settings.manage`.
+- **P20:** Tenant override `maxWriteOffAmount`, `confirmApprovalThresholdBase`, recognition policy.
+
+### Files
+- Backend: `ImportBankFeedCsvCommand`, `TenantSetting`, `TenantSettingsService`, `TenantFinancialOptionsResolver`, `TenantSettingsEndpoints`, `CostApprovalGate` (async tenant threshold), migration `P14_P20_TenantSettingsBankFeedCsv`
+- Web: `integration-errors/*`, `admin/*`, `TenantFinancialSettingsForm`, `ImportBankFeedCsvForm`, BFF routes
+- Tests: `SprintP14P20SliceTests.cs`
+- DoD: `P14-DOD.md` … `P20-DOD.md`
+
+### Verify
+- `dotnet test` filter `SprintP14P20|SprintP10|SprintP08` — 6 passed
+
+### Next
+- **P21** data scope Revenue / Documents / AP·AR
+
+### End-user
+- **Lỗi tích hợp:** menu → lọc trạng thái → thử lại / dead-letter.
+- **Bank feed:** tab import CSV trên `/bank-feed`.
+- **Cài đặt:** `/settings` — ngưỡng xóa nợ, ngưỡng phê duyệt chi phí, chính sách ghi nhận.
+- **Quản trị:** `/admin` — đối tác, tổ chức, tiền tệ.
+
+---
+
 ## 2026-09-13 — P10 reverse recognize + P12 matrix backend (complete P10–P13)
 
 ### User

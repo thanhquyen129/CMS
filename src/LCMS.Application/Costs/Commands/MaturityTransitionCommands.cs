@@ -96,7 +96,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
 
         try
         {
-            _approvalGate.EnsureConfirmAllowed(cost);
+            await _approvalGate.EnsureConfirmAllowedAsync(cost, cancellationToken);
         }
         catch (ConflictAppException)
         {

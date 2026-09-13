@@ -1,9 +1,9 @@
 # Checklist còn thiếu vs PO (sau Pass 1/2 + UI + UAT PASS)
 
-**Cập nhật:** 2026-09-13 — **P01–P25 đóng**; wave tiếp = UAT go-live nghiệp vụ  
-**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P25**.
+**Cập nhật:** 2026-09-13 — **P01–P25 đóng**; **UAT S1–S14 PASS** (`UAT-GO-LIVE-FINANCIAL-RESULT.md`)  
+**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P25** · **UAT go-live S1–S14**.
 
-**Cách dùng (lịch sử):** P-series đã xong — **không** mở item P mới. Wave hiện tại: `UAT-GO-LIVE-FINANCIAL.md`.
+**Cách dùng:** P-series đóng. UAT go-live **PASS**. Residual (ADR nếu làm): OIDC IdP · OTLP · soak CI · broker ngoài process.
 
 ---
 
@@ -16,8 +16,8 @@
 | `PROMPT-UAT-GO-LIVE.md` | Kickoff chat hỗ trợ / chạy hộ UAT |
 
 **Host:** `http://194.233.89.26` · Preflight health/ready OK (2026-09-13).  
-**S1 agent UI-only (2026-09-13):** **PASS** — Bill `UAT-GL-20260913-1515` → Close locked P&L 1.4M (`UAT-GO-LIVE-FINANCIAL-RESULT.md`).  
-**Còn lại:** phiên người nghiệp vụ cho S2–S14 · residual ADR (OIDC / OTLP / soak CI / broker).  
+**UAT go-live (2026-09-13):** **S1–S14 PASS** — RESULT `UAT-GO-LIVE-FINANCIAL-RESULT.md` · JSON `UAT-GO-LIVE-S2-S14-RESULT.json`.  
+**Residual (ADR):** OIDC IdP · OTLP · soak CI · broker ngoài process.  
 
 ---
 

@@ -1,5 +1,37 @@
 # Handoff
 
+## 2026-09-13 — UAT go-live S1–S14 = **PASS** (redeploy host)
+
+### User
+làm lần lượt từ S1 đến S14
+
+### Done
+- **S1** giữ PASS (Bill `UAT-GL-20260913-1515`, close locked, P&L 1.4M) — verify lại UI.
+- **S2** UI: shared `UAT-S2-SHARED` → chốt phân bổ 250k+250k DEMO-02-SHARE-A/B.
+- **S3–S14** PASS (S9: aging OK; dual-user Cost≠Revenue SKIP một Admin).
+- **Gap deploy:** VPS API cũ thiếu `reverse-recognize` / `tenant-settings` / `import-csv` → fallback tar sync + `docker compose up -d --build api` + restart proxy; migrate P10/P14–P25 áp dụng.
+- Sau vá: S6 reverse 204; S11 import-csv imported=1; S13 tenant-settings GET/PUT OK.
+- RESULT: `docs/sprint/UAT-GO-LIVE-FINANCIAL-RESULT.md` + `UAT-GO-LIVE-S2-S14-RESULT.json`.
+
+### Next
+- Theo dõi CI deploy luôn sync đủ source (tránh host chậm lại).
+- Optional: UAT người thật Cost-only vs Revenue-only (S9). Residual ADR: OIDC/OTLP/soak/broker.
+
+### End-user
+- VPS đã có đủ API P10–P25; go-live tài chính đủ theo RESULT PASS.
+
+---
+
+## 2026-09-13 — UAT S2–S14 mid (trước redeploy — superseded)
+
+### User
+Finish UAT S2–S14 with correct API shapes; S2 parent UI on DEMO-02-SHARE-A/B.
+
+### Done
+- S2 PASS UI; khi đó S6/S13 FAIL vì host thiếu endpoint — **đã vá ở mục trên**.
+
+---
+
 ## 2026-09-13 — UAT go-live S1 UI-only VPS = **PASS**
 
 ### User

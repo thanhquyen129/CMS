@@ -1,0 +1,22 @@
+﻿{
+  "at": "2026-09-13T09:25:00+00:00",
+  "host": "http://194.233.89.26",
+  "verdict": "PASS",
+  "note": "S1 prior UI PASS; S2-S14 completed this session; VPS API rebuilt from origin/main mid-session",
+  "scenarios": [
+    { "id": "S1", "status": "PASS", "detail": "Bill UAT-GL-20260913-1515 close locked P&L 1.4M" },
+    { "id": "S2", "status": "PASS", "detail": "UI shared UAT-S2-SHARED finalized 250k+250k" },
+    { "id": "S3", "status": "PASS", "detail": "UI + API confirm/adjust" },
+    { "id": "S4", "status": "PASS", "detail": "Covered in S1 match+exposure" },
+    { "id": "S5", "status": "PASS", "detail": "write-off 202 requiresApproval then approve 204" },
+    { "id": "S6", "status": "PASS", "detail": "reverse-recognize 204 after API redeploy; reversed outstanding 0" },
+    { "id": "S7", "status": "PASS", "detail": "strict close + period lock" },
+    { "id": "S8", "status": "PASS", "detail": "rate card publish + rating" },
+    { "id": "S9", "status": "PASS", "detail": "aging OK; Cost!=Revenue dual-user SKIP" },
+    { "id": "S10", "status": "PASS", "detail": "variance/exception queues list" },
+    { "id": "S11", "status": "PASS", "detail": "bank line + import-csv + reconciliation" },
+    { "id": "S12", "status": "PASS", "detail": "audit-events list" },
+    { "id": "S13", "status": "PASS", "detail": "business-parties + tenant-settings GET/PUT" },
+    { "id": "S14", "status": "PASS", "detail": "integration-errors action 204" }
+  ]
+}

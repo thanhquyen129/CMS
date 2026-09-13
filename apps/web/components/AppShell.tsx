@@ -157,20 +157,16 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
             </Link>
           </div>
         </nav>
-        <div className="sidebar-footer">
+        <div className="shell-header-actions">
           <LogoutButton />
         </div>
       </aside>
       <div className="main">
-        <div className="topbar">
-          <div className="muted topbar-status">Đã đăng nhập</div>
-          <div className="topbar-actions">
-            {topbarRight}
-            <span className="topbar-logout">
-              <LogoutButton />
-            </span>
+        {topbarRight ? (
+          <div className="topbar">
+            <div className="topbar-actions">{topbarRight}</div>
           </div>
-        </div>
+        ) : null}
         {children}
       </div>
     </div>

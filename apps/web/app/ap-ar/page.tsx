@@ -236,20 +236,20 @@ export default async function ApArPage({
           . Xóa nợ phần dư nhỏ = điều chỉnh (không phải {paymentLabel}).
         </p>
 
-        <p className="cta-row" style={{ marginTop: 0 }}>
-          <Link className="btn" href="/ap-ar/aging">
+        <div className="toolbar-row" role="group" aria-label="Thao tác AP/AR">
+          <Link className="btn btn-sm" href="/ap-ar/aging">
             Tóm tắt tuổi nợ
-          </Link>{" "}
+          </Link>
           <Link className="btn btn-sm" href="/ap-ar/exposures/new?kind=payable">
             Tạo exposure phải trả
-          </Link>{" "}
+          </Link>
           <Link
             className="btn btn-sm"
             href="/ap-ar/exposures/new?kind=receivable"
           >
             Tạo exposure phải thu
           </Link>
-        </p>
+        </div>
 
         <div className="search-bar" role="tablist" aria-label="Chọn sổ">
           <Link

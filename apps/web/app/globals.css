@@ -232,14 +232,32 @@ button, input, select, textarea { font: inherit; }
   color: #fff;
 }
 
-.sidebar-footer {
+
+.shell-header-actions {
   margin-top: auto;
   padding: 0.5rem 0.35rem 0;
   border-top: 1px solid var(--line);
   padding-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.topbar-logout { display: none; }
+.toolbar-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.85rem 0 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+}
+
+.toolbar-row .btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 
 .main {
   padding: 1.25rem 1.25rem 2rem;
@@ -1159,12 +1177,34 @@ html[data-layout="horizontal"][data-theme="soft-purple"] .nav a:hover {
   color: var(--accent);
 }
 
-html[data-layout="horizontal"] .sidebar-footer {
-  display: none;
+html[data-layout="horizontal"] .shell-header-actions {
+  margin-top: 0;
+  margin-left: auto;
+  padding: 0;
+  border-top: none;
+  flex: 0 0 auto;
 }
 
-html[data-layout="horizontal"] .topbar-logout {
-  display: inline-flex;
+html[data-layout="horizontal"] .shell-header-actions .btn-ghost {
+  color: var(--topbar-ink);
+  border-color: color-mix(in srgb, var(--topbar-ink) 35%, transparent);
+  background: color-mix(in srgb, var(--topbar-ink) 8%, transparent);
+}
+
+html[data-layout="horizontal"] .shell-header-actions .btn-ghost:hover {
+  background: color-mix(in srgb, var(--topbar-ink) 16%, transparent);
+  color: var(--topbar-ink);
+}
+
+html[data-layout="horizontal"][data-theme="soft-purple"] .shell-header-actions .btn-ghost {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--surface);
+}
+
+html[data-layout="horizontal"][data-theme="soft-purple"] .shell-header-actions .btn-ghost:hover {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
 }
 
 html[data-layout="horizontal"] .topbar {
@@ -1173,6 +1213,7 @@ html[data-layout="horizontal"] .topbar {
   box-shadow: none;
   padding: 0 0 0.85rem;
   margin-bottom: 0.5rem;
+  justify-content: flex-end;
 }
 
 html[data-layout="horizontal"] .main {
@@ -1219,8 +1260,13 @@ html[data-theme="classic"][data-layout="vertical"] .nav .active {
   box-shadow: none;
 }
 
-html[data-theme="classic"][data-layout="vertical"] .sidebar-footer {
+html[data-theme="classic"][data-layout="vertical"] .shell-header-actions {
   border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-ghost {
+  color: #e8eef3;
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 @media (max-width: 800px) {

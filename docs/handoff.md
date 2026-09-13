@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-13 — Shell logout + AP/AR toolbar
+
+### User
+- Bỏ chữ Đã đăng nhập
+- Đưa nút đăng xuất lên góc trên bên phải
+- sắp xếp lại các nút: Tóm tắt tuổi nợ, Tạo Exposure... thẳng hàng.
+
+### Done
+- Xóa «Đã đăng nhập»; Đăng xuất vào `.shell-header-actions` (horizontal: góc phải header; vertical: đáy sidebar).
+- Topbar chỉ hiện khi có `topbarRight`.
+- AP/AR: hàng `.toolbar-row` nowrap — Tóm tắt tuổi nợ + 2 nút tạo exposure cùng size `btn-sm`.
+
+### Files
+- `apps/web/components/AppShell.tsx`
+- `apps/web/app/globals.css`
+- `apps/web/app/ap-ar/page.tsx`
+
+---
+
 ## 2026-09-13 — UAT go-live S1–S14 = **PASS** (redeploy host)
 
 ### User

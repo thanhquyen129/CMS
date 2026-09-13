@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-13 — PO gap checklist P01–P25 **COMPLETE**
+
+### User
+đã làm xong P0-P25
+
+### Done
+- Board: Pass 1 · Pass 2 · Pass UI · **P01–P25** đóng (`PO-GAP-CHECKLIST.md`, README).
+- Residual ngoài checklist (không bắt buộc): OIDC IdP thật, OTLP exporter, soak CI gate, broker ngoài process — cần ADR nếu làm.
+
+### Next
+- Vận hành go-live tài chính đủ trên VPS (người nghiệp vụ) · hoặc PO mở scope mới qua ADR.
+
+---
+
 ## 2026-09-13 — P21→P25 data scope, refresh tokens, outbox/Redis, fine perms, soak
 
 ### User

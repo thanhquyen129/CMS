@@ -5,6 +5,8 @@ import type { ApiResult } from "./bills";
 import type { TerminologyMap } from "./terminology";
 import { term } from "./terminology";
 
+export { severityLabel } from "./severity";
+
 export type DashboardCurrencyTotals = {
   currencyCode: string;
   costBestAvailable: number | null;
@@ -285,22 +287,6 @@ export function approvalStatusLabel(
       return term(terms, "APPROVAL_REJECTED", "Từ chối phê duyệt");
     default:
       return status;
-  }
-}
-
-/** Severity is CodeKey — map to Vietnamese; avoid leaking English enums. */
-export function severityLabel(severity: string): string {
-  switch (severity.toLowerCase()) {
-    case "critical":
-      return "Nghiêm trọng";
-    case "high":
-      return "Cao";
-    case "medium":
-      return "Trung bình";
-    case "low":
-      return "Thấp";
-    default:
-      return severity;
   }
 }
 

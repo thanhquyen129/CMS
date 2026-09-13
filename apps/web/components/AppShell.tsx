@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { LogoutButton } from "./LogoutButton";
+import { ShellChrome } from "./ShellChrome";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type NavKey =
@@ -46,129 +46,123 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const settingsLabel = term(terms, "SETTINGS", "Cài đặt");
 
-  return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          <div>
-            CMS
-            <small>Kiểm soát chi phí &amp; lợi nhuận</small>
-          </div>
-        </div>
-        <nav className="nav" aria-label="Điều hướng chính">
-          <div className="nav-section">
-            <div className="nav-section-label">Chính</div>
-            <Link
-              className={active === "dashboard" ? "active" : undefined}
-              href="/dashboard"
-            >
-              {dashboardLabel}
-            </Link>
-            <Link className={active === "bills" ? "active" : undefined} href="/bills">
-              {billLabel}
-            </Link>
-            <Link
-              className={active === "costs" ? "active" : undefined}
-              href="/costs/shared"
-            >
-              {costLabel} {sharedLabel.toLowerCase()}
-            </Link>
-            <Link
-              className={active === "rate-cards" ? "active" : undefined}
-              href="/rate-cards"
-            >
-              Bảng giá
-            </Link>
-            <Link
-              className={active === "documents" ? "active" : undefined}
-              href="/documents"
-            >
-              {docLabel}
-            </Link>
-            <Link className={active === "ap-ar" ? "active" : undefined} href="/ap-ar">
-              {apLabel} / {arLabel}
-            </Link>
-            <Link
-              className={active === "settlements" ? "active" : undefined}
-              href="/settlements"
-            >
-              {paymentLabel} / {collectionLabel}
-            </Link>
-            <Link
-              className={active === "bank-feed" ? "active" : undefined}
-              href="/bank-feed"
-            >
-              {bankFeedLabel}
-            </Link>
-            <Link
-              className={active === "financial-closes" ? "active" : undefined}
-              href="/financial-closes"
-            >
-              {closeLabel}
-            </Link>
-          </div>
-          <div className="nav-section nav-section-queues">
-            <div className="nav-section-label">Hàng đợi</div>
-            <Link
-              className={active === "exceptions" ? "active" : undefined}
-              href="/queues/exceptions"
-            >
-              {exceptionQueueLabel}
-            </Link>
-            <Link
-              className={active === "variances" ? "active" : undefined}
-              href="/queues/variances"
-            >
-              Hàng đợi {varianceLabel.toLowerCase()}
-            </Link>
-            <Link
-              className={active === "approvals" ? "active" : undefined}
-              href="/queues/approvals"
-            >
-              {approvalQueueLabel}
-            </Link>
-            <Link
-              className={active === "reconciliations" ? "active" : undefined}
-              href="/queues/reconciliations"
-            >
-              {reconQueueLabel}
-            </Link>
-          </div>
-          <div className="nav-section">
-            <div className="nav-section-label">Hệ thống</div>
-            <Link
-              className={active === "admin" ? "active" : undefined}
-              href="/admin"
-            >
-              Danh mục
-            </Link>
-            <Link
-              className={active === "integration-errors" ? "active" : undefined}
-              href="/integration-errors"
-            >
-              Lỗi tích hợp
-            </Link>
-            <Link
-              className={active === "settings" ? "active" : undefined}
-              href="/settings"
-            >
-              {settingsLabel}
-            </Link>
-          </div>
-        </nav>
-        <div className="shell-header-actions">
-          <LogoutButton />
-        </div>
-      </aside>
-      <div className="main">
-        {topbarRight ? (
-          <div className="topbar">
-            <div className="topbar-actions">{topbarRight}</div>
-          </div>
-        ) : null}
-        {children}
+  const brand = (
+    <>
+      <span className="brand-mark" aria-hidden="true" />
+      <div>
+        CMS
+        <small>Kiểm soát chi phí &amp; lợi nhuận</small>
       </div>
-    </div>
+    </>
+  );
+
+  const nav = (
+    <nav className="nav" aria-label="Điều hướng chính">
+      <div className="nav-section">
+        <div className="nav-section-label">Chính</div>
+        <Link
+          className={active === "dashboard" ? "active" : undefined}
+          href="/dashboard"
+        >
+          {dashboardLabel}
+        </Link>
+        <Link className={active === "bills" ? "active" : undefined} href="/bills">
+          {billLabel}
+        </Link>
+        <Link
+          className={active === "costs" ? "active" : undefined}
+          href="/costs/shared"
+        >
+          {costLabel} {sharedLabel.toLowerCase()}
+        </Link>
+        <Link
+          className={active === "rate-cards" ? "active" : undefined}
+          href="/rate-cards"
+        >
+          Bảng giá
+        </Link>
+        <Link
+          className={active === "documents" ? "active" : undefined}
+          href="/documents"
+        >
+          {docLabel}
+        </Link>
+        <Link className={active === "ap-ar" ? "active" : undefined} href="/ap-ar">
+          {apLabel} / {arLabel}
+        </Link>
+        <Link
+          className={active === "settlements" ? "active" : undefined}
+          href="/settlements"
+        >
+          {paymentLabel} / {collectionLabel}
+        </Link>
+        <Link
+          className={active === "bank-feed" ? "active" : undefined}
+          href="/bank-feed"
+        >
+          {bankFeedLabel}
+        </Link>
+        <Link
+          className={active === "financial-closes" ? "active" : undefined}
+          href="/financial-closes"
+        >
+          {closeLabel}
+        </Link>
+      </div>
+      <div className="nav-section nav-section-queues">
+        <div className="nav-section-label">Hàng đợi</div>
+        <Link
+          className={active === "exceptions" ? "active" : undefined}
+          href="/queues/exceptions"
+        >
+          {exceptionQueueLabel}
+        </Link>
+        <Link
+          className={active === "variances" ? "active" : undefined}
+          href="/queues/variances"
+        >
+          Hàng đợi {varianceLabel.toLowerCase()}
+        </Link>
+        <Link
+          className={active === "approvals" ? "active" : undefined}
+          href="/queues/approvals"
+        >
+          {approvalQueueLabel}
+        </Link>
+        <Link
+          className={active === "reconciliations" ? "active" : undefined}
+          href="/queues/reconciliations"
+        >
+          {reconQueueLabel}
+        </Link>
+      </div>
+      <div className="nav-section">
+        <div className="nav-section-label">Hệ thống</div>
+        <Link
+          className={active === "admin" ? "active" : undefined}
+          href="/admin"
+        >
+          Danh mục
+        </Link>
+        <Link
+          className={active === "integration-errors" ? "active" : undefined}
+          href="/integration-errors"
+        >
+          Lỗi tích hợp
+        </Link>
+        <Link
+          className={active === "settings" ? "active" : undefined}
+          href="/settings"
+        >
+          {settingsLabel}
+        </Link>
+      </div>
+    </nav>
+  );
+
+  return (
+    <ShellChrome brand={brand} nav={nav} topbarRight={topbarRight}>
+      {children}
+    </ShellChrome>
   );
 }

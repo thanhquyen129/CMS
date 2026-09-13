@@ -4,12 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
 import { formatMoney } from "@/lib/money";
-import { severityLabel, type VarianceItem } from "@/lib/control-desk";
+import { severityLabel } from "@/lib/severity";
 import { term, type TerminologyMap } from "@/lib/terminology";
+
+export type EscalateVariance = {
+  id: string;
+  reconciliationId: string | null;
+  amount: number;
+  currencyCode: string;
+  status: string;
+  severity: string;
+  explanation: string | null;
+  exceptionId: string | null;
+};
 
 type Props = {
   terms: TerminologyMap;
-  variance: VarianceItem;
+  variance: EscalateVariance;
 };
 
 export function EscalateVarianceButton({ terms, variance }: Props) {

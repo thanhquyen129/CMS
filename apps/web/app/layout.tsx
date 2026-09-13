@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import { DEFAULT_UI_PREFERENCES, uiPreferencesBootScript } from "@/lib/ui-preferences";
 import "./globals.css";
@@ -13,6 +13,12 @@ const beVietnam = Be_Vietnam_Pro({
 export const metadata: Metadata = {
   title: "CMS — Kiểm soát chi phí",
   description: "Cost Management System — lớp kiểm soát tài chính logistics",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

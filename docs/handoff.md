@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-09-13 — Mobile shell drawer + contrast
+
+### User
+giao diện mobile chưa ổn, fix lại cho chuẩn toàn bộ giúp mình nhé
+
+### Done
+- Mobile ≤800px: hamburger + drawer off-canvas (trái), backdrop, Escape/đóng khi đổi route; top bar sticky (logo + Đăng xuất).
+- Nav căn trái; mục active chữ trắng trên accent (sửa contrast soft-purple).
+- Nội dung: panel/table/toolbar/form/stat-grid co hẹp; viewport meta.
+- Client `ShellChrome`; tách `severityLabel` khỏi server module (build client).
+
+### Files
+- `apps/web/components/ShellChrome.tsx`, `AppShell.tsx`
+- `apps/web/app/globals.css`, `layout.tsx`
+- `apps/web/lib/severity.ts`, `control-desk.ts`, `EscalateVarianceButton.tsx`
+
+### Verify
+- `npm run build` apps/web OK
+
+---
+
 ## 2026-09-13 — Fix CI: Sprint12 Admin actor + Sprint7 AP adjust Created
 
 ### User

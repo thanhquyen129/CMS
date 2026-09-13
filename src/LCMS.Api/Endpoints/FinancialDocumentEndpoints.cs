@@ -155,6 +155,12 @@ public static class FinancialDocumentEndpoints
             return Results.Ok(match);
         });
 
+        matches.MapPost("/{id:guid}/confirm", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new ConfirmDocumentMatchCommand(id), ct);
+            return Results.NoContent();
+        });
+
         matches.MapPost("/{id:guid}/cancel", async (
             Guid id,
             CancelDocumentMatchRequest body,
@@ -163,6 +169,12 @@ public static class FinancialDocumentEndpoints
         {
             await sender.Send(new CancelDocumentMatchCommand(id, body.Reason), ct);
             return Results.NoContent();
+        });
+
+        matches.MapGet("/{id:guid}/suggestions", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new SuggestMatchCandidatesQuery(id), ct);
+            return Results.Ok(list);
         });
 
         matches.MapPost("/{id:guid}/details", async (

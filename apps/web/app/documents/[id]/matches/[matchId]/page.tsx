@@ -8,7 +8,9 @@ import {
   type MatchTargetOption,
 } from "@/components/AddMatchDetailForm";
 import { CancelDocumentMatchButton } from "@/components/CancelDocumentMatchButton";
+import { ConfirmDocumentMatchButton } from "@/components/ConfirmDocumentMatchButton";
 import { CreateExposuresFromMatchButton } from "@/components/CreateExposuresFromMatchButton";
+import { MatchSuggestionsPanel } from "@/components/MatchSuggestionsPanel";
 import { ReverseMatchDetailButton } from "@/components/ReverseMatchDetailButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -214,7 +216,12 @@ export default async function DocumentMatchSessionPage({
   const activeDetailCount = match.details.filter((d) =>
     isActiveDetail(d.detailStatus)
   ).length;
-  const canCancel = draft && activeDetailCount === 0;
+  const confirmed =
+    match.matchStatus?.toLowerCase() === "confirmed";
+  const canConfirm = draft && activeDetailCount > 0;
+  const canReverseDetail = draft || confirmed;
+  const canCancel =
+    (draft || confirmed) && activeDetailCount === 0;
   const lineById = new Map(doc.lines.map((l) => [l.id, l]));
 
   return (
@@ -300,7 +307,7 @@ export default async function DocumentMatchSessionPage({
                         ) : null}
                       </td>
                       <td>
-                        {draft && isActiveDetail(d.detailStatus) ? (
+                        {canReverseDetail && isActiveDetail(d.detailStatus) ? (
                           <ReverseMatchDetailButton
                             terms={terms}
                             matchId={match.id}
@@ -319,6 +326,8 @@ export default async function DocumentMatchSessionPage({
             </table>
           </div>
         )}
+
+        <MatchSuggestionsPanel matchId={match.id} draft={draft} />
 
         <CreateExposuresFromMatchButton matchId={match.id} documentId={doc.id} />
 
@@ -377,12 +386,20 @@ export default async function DocumentMatchSessionPage({
           </>
         ) : (
           <p className="note">
-            Phiên không còn nháp — không thêm/đảo chi tiết từ UI này.
+            Phiên không còn nháp — không thêm chi tiết từ UI này.
+            {confirmed
+              ? " Có thể đảo chi tiết rồi hủy phiên nếu cần."
+              : null}
             {match.cancelReason ? ` Lý do hủy: ${match.cancelReason}.` : null}
           </p>
         )}
 
         <div className="cta-row" style={{ marginTop: "1.25rem" }}>
+          <ConfirmDocumentMatchButton
+            terms={terms}
+            matchId={match.id}
+            canConfirm={canConfirm}
+          />
           <CancelDocumentMatchButton
             terms={terms}
             matchId={match.id}

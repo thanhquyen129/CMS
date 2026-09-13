@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-13 — P09 Confirm match session + auto-suggest
+
+### User
+Next: P09 Confirm match session + auto-suggest.
+
+### Done
+- Confirm phiên khớp: draft → confirmed (≥1 active detail); khóa thêm chi tiết; audit.
+- Suggestions trong dung sai (read-only); review tay qua Add detail.
+- UI: Xác nhận phiên + Xem đề xuất; reverse/cancel sau confirm.
+- ADR-0005 amended (confirm + suggest).
+
+### Files
+- `ConfirmDocumentMatchCommand.cs`, `SuggestMatchCandidatesQuery.cs`
+- Endpoints confirm + suggestions; BFF; `ConfirmDocumentMatchButton`, `MatchSuggestionsPanel`
+- `SprintP09ConfirmMatchSuggestTests.cs`, `P09-DOD.md`
+
+### Verify
+- `dotnet test` filter SprintP09 — 3 passed
+
+### Next
+- P10 Reverse recognize AP/AR + sổ điều chỉnh
+
+### End-user
+Phiên khớp nháp: thêm chi tiết → **Xác nhận phiên khớp**. **Xem đề xuất** trong dung sai rồi thêm thủ công. Không auto-apply.
+
+---
+
 ## 2026-09-13 — P08 Auto Exposure từ chứng từ đã khớp
 
 ### User

@@ -49,6 +49,7 @@ public static class AuditActions
     public const string FinancialDocumentLineUpdate = "financial_document_line.update";
     public const string FinancialDocumentLineDelete = "financial_document_line.delete";
     public const string DocumentMatchDetailAdd = "document_match.detail_add";
+    public const string DocumentMatchConfirm = "document_match.confirm";
     public const string FinancialCloseSnapshotCreate = "financial_close_snapshot.create";
 }
 

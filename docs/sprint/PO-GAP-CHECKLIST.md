@@ -1,22 +1,21 @@
 # Checklist còn thiếu vs PO (sau Pass 1/2 + UI + UAT PASS)
 
-**Cập nhật:** 2026-09-13 (P01–P08 Done)  
-**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P08**.
+**Cập nhật:** 2026-09-13 (P01–P09 Done)  
+**Đã xong:** Pass 1/2 · UI U0–U5 · Match · G1–G6 · seed · write-off/reverse · queue decide · recon/bank-feed · UAT UI-only · **P01–P09**.
 
 **Cách dùng:** làm theo thứ tự; một item = một chat/agent; tick Done + DoD ngắn khi ship.
 
 ---
 
-## Wave tiếp theo (làm ngay) — P09→P12
+## Wave tiếp theo (làm ngay) — P10→P12
 
 | # | ID | Việc | Lát cắt MVP |
 |---|-----|------|-------------|
-| 1 | **P09** | Confirm match session + auto-suggest | Confirm phiên; tolerance suggest (vẫn review tay) |
-| 2 | **P10** | Reverse recognize AP/AR + sổ điều chỉnh | Reverse recognition + history (không silent overwrite) |
-| 3 | **P11** | Inbox Variance (+ escalate thủ công) | List/filter variance; CTA mở Exception (giữ tách lớp) |
-| 4 | **P12** | Ma trận approver / wizard multi-step | Config theo object/amount + wizard |
+| 1 | **P10** | Reverse recognize AP/AR + sổ điều chỉnh | Reverse recognition + history (không silent overwrite) |
+| 2 | **P11** | Inbox Variance (+ escalate thủ công) | List/filter variance; CTA mở Exception (giữ tách lớp) |
+| 3 | **P12** | Ma trận approver / wizard multi-step | Config theo object/amount + wizard |
 
-**Next kickoff:** **P09**.
+**Next kickoff:** **P10**.
 
 ---
 
@@ -32,7 +31,7 @@
 | **P06** | Bảng `fx_rates` theo ngày | TD1 D02; ADR-0004/0008/0011 | **Done** (`P06-DOD.md`) | Entity dated rates + gắn Cost/Revenue/Settlement | — |
 | **P07** | Aging summary + dashboard tách quyền tài chính | E09; ADR-0006; H View Cost≠Revenue | **Done** (`P07-DOD.md`) | Màn bucket + export; dashboard theo quyền | — |
 | **P08** | Auto Exposure từ chứng từ đã khớp | E09; Received≠…≠Recognized | **Done** (`P08-DOD.md`) | Sau match → đề xuất/tạo exposure (không invent C/R) | Match Done |
-| **P09** | Confirm match session + auto-suggest | E08; ADR-0005 | Manual match Done · confirm/auto deferred | Confirm phiên; tolerance suggest (review tay) | P08 optional |
+| **P09** | Confirm match session + auto-suggest | E08; ADR-0005 | **Done** (`P09-DOD.md`) | Confirm phiên; tolerance suggest (review tay) | P08 optional |
 | **P10** | Reverse recognize AP/AR + sổ điều chỉnh | E09; C-015 | Write-off Done · reverse recognize thiếu | Reverse recognition + history (không silent overwrite) | P03 nếu lớn |
 
 ## Kiểm soát / vận hành (sau P07–P11)

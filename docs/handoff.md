@@ -9,6 +9,7 @@ tạo các account tương ứng cho các role, mật khẩu mặc định là: 
 - Seeder `RoleDemoUserSeeder` (startup): 7 email → 7 system role, tenant `ops`.
 - Bật: `Auth__RoleDemoUsers__Enabled=true` + `Auth__RoleDemoUsers__Password` (Dev appsettings; prod qua `infra/.env`).
 - Emails: `admin@cms.local`, `controller@cms.local`, `cost@cms.local`, `revenue@cms.local`, `ops.user@cms.local`, `master@cms.local`, `viewer@cms.local`.
+- VPS: env đã bật; fallback tar+compose (Actions chậm) — verify login `cost@cms.local` 200.
 
 ### Files
 - `src/LCMS.Api/Auth/RoleDemoUserSeeder.cs`, `AuthOptions.cs`, `Program.cs`

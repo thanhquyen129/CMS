@@ -55,9 +55,14 @@ public sealed class PermissionService : IPermissionService
             throw new ForbiddenAppException("Tài khoản không còn hiệu lực.");
         }
 
-        // Soft bootstrap: tenant has no roles seeded ⇒ allow.
-        var hasRoles = await _db.Roles.AnyAsync(r => r.TenantId == tenantId, cancellationToken);
-        if (!hasRoles)
+        // Soft bootstrap while tenant has no user↔role assignments yet:
+        // - no actor (Dev header) ⇒ allow
+        // - JWT/header actor not yet a Users row ⇒ allow (first-operator chicken-egg)
+        // Known Users row without a role still fails below once assignments exist elsewhere,
+        // and when none exist yet a known user without roles is denied (not an operator JWT).
+        var hasAssignments = await _db.UserRoles.AsNoTracking()
+            .AnyAsync(ur => ur.TenantId == tenantId, cancellationToken);
+        if (!hasAssignments && user is null)
         {
             return DataScopes.All;
         }
@@ -104,8 +109,9 @@ public sealed class PermissionService : IPermissionService
             return false;
         }
 
-        var hasRoles = await _db.Roles.AnyAsync(r => r.TenantId == tenantId, cancellationToken);
-        if (!hasRoles)
+        var hasAssignments = await _db.UserRoles.AsNoTracking()
+            .AnyAsync(ur => ur.TenantId == tenantId, cancellationToken);
+        if (!hasAssignments && user is null)
         {
             return true;
         }

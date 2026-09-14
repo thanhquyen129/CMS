@@ -1,5 +1,25 @@
 # Handoff
 
+## 2026-09-14 — CI: soft bootstrap permission (first operator)
+
+### User
+build bị lỗi hoài nè (CI #143 / header commits)
+
+### Cause
+`PermissionService` bootstrap theo «tenant chưa có Roles» — sau `CreateTenant` đã seed role hệ thống → JWT first-operator `POST /api/users` = **403**.
+
+### Fix
+Bootstrap khi **chưa có UserRoles** trên tenant **và** actor **chưa có** row trong `Users` (JWT chicken-egg). User đã tồn tại không role → vẫn 403.
+
+### Verify
+`Production_WithValidJwt_*` + `CreateBill_WithoutPermission_*` + Sprint0/1 identity (16) PASS.
+
+### Files
+- `src/LCMS.Infrastructure/Identity/PermissionService.cs`
+- `src/LCMS.Application/Abstractions/IPermissionService.cs`
+
+---
+
 ## 2026-09-14 — Horizontal header: logo | nav | logout top-right
 
 ### User

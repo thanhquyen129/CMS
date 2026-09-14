@@ -5,10 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Identity;
 
-/// <summary>Seeds global permission catalog and tenant Admin role (Sprint 1).</summary>
+/// <summary>Seeds global permission catalog and tenant system roles (ADR-0016).</summary>
 public static class TenantAccessSeeder
 {
-    public const string AdminRoleCode = "Admin";
+    public const string AdminRoleCode = SystemRoleCatalog.Admin;
 
     public static async Task EnsurePermissionCatalogAsync(ILcmsDbContext db, CancellationToken cancellationToken)
     {
@@ -30,51 +30,96 @@ public static class TenantAccessSeeder
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public static async Task SeedAdminRoleAsync(ILcmsDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    /// <summary>Backward-compatible entry: seeds Admin + other system roles.</summary>
+    public static Task SeedAdminRoleAsync(ILcmsDbContext db, Guid tenantId, CancellationToken cancellationToken) =>
+        SeedSystemRolesAsync(db, tenantId, cancellationToken);
+
+    public static async Task SeedSystemRolesAsync(ILcmsDbContext db, Guid tenantId, CancellationToken cancellationToken)
     {
         await EnsurePermissionCatalogAsync(db, cancellationToken);
 
-        var admin = await db.Roles
-            .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.Code == AdminRoleCode, cancellationToken);
+        var permissions = await db.Permissions
+            .Where(p => PermissionCodes.CoreActionCodes.Contains(p.ActionCode))
+            .ToDictionaryAsync(p => p.ActionCode, p => p.Id, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
-        if (admin is null)
+        foreach (var def in SystemRoleCatalog.All)
         {
-            admin = new Role
+            var role = await db.Roles
+                .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.Code == def.Code, cancellationToken);
+
+            var isNew = role is null;
+            if (role is null)
             {
-                TenantId = tenantId,
-                Code = AdminRoleCode,
-                Name = "Quản trị",
-                IsSystem = true
-            };
-            db.Roles.Add(admin);
-            await db.SaveChangesAsync(cancellationToken);
+                role = new Role
+                {
+                    TenantId = tenantId,
+                    Code = def.Code,
+                    Name = def.Name,
+                    IsSystem = true
+                };
+                db.Roles.Add(role);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            else if (!role.IsSystem)
+            {
+                role.IsSystem = true;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            // Admin: always grant new catalog actions. Other roles: defaults only on first create.
+            if (def.Code == SystemRoleCatalog.Admin || isNew)
+            {
+                await EnsureRolePermissionsAsync(
+                    db, tenantId, role.Id, def.Permissions, permissions, cancellationToken);
+            }
         }
+    }
 
-        var coreCodes = PermissionCodes.CoreActionCodes;
-        var permissionIds = await db.Permissions
-            .Where(p => coreCodes.Contains(p.ActionCode))
-            .Select(p => p.Id)
-            .ToListAsync(cancellationToken);
-
-        var existingPermIds = await db.RolePermissions
-            .Where(rp => rp.TenantId == tenantId && rp.RoleId == admin.Id)
-            .Select(rp => rp.PermissionId)
-            .ToListAsync(cancellationToken);
-        var existingSet = existingPermIds.ToHashSet();
-
-        foreach (var permissionId in permissionIds)
+    public static async Task SeedSystemRolesForAllTenantsAsync(
+        ILcmsDbContext db,
+        CancellationToken cancellationToken)
+    {
+        await EnsurePermissionCatalogAsync(db, cancellationToken);
+        var tenantIds = await db.Tenants.Select(t => t.Id).ToListAsync(cancellationToken);
+        foreach (var tenantId in tenantIds)
         {
-            if (existingSet.Contains(permissionId))
+            await SeedSystemRolesAsync(db, tenantId, cancellationToken);
+        }
+    }
+
+    private static async Task EnsureRolePermissionsAsync(
+        ILcmsDbContext db,
+        Guid tenantId,
+        Guid roleId,
+        IReadOnlyList<(string ActionCode, string DataScope)> grants,
+        IReadOnlyDictionary<string, Guid> permissions,
+        CancellationToken cancellationToken)
+    {
+        var existingRows = await db.RolePermissions
+            .IgnoreQueryFilters()
+            .Where(rp => rp.TenantId == tenantId && rp.RoleId == roleId)
+            .ToListAsync(cancellationToken);
+        var byPermissionId = existingRows.ToDictionary(rp => rp.PermissionId);
+
+        foreach (var (actionCode, dataScope) in grants)
+        {
+            if (!permissions.TryGetValue(actionCode, out var permissionId))
             {
+                continue;
+            }
+
+            if (byPermissionId.ContainsKey(permissionId))
+            {
+                // Keep Admin soft-revokes; only insert missing catalog rows.
                 continue;
             }
 
             db.RolePermissions.Add(new RolePermission
             {
                 TenantId = tenantId,
-                RoleId = admin.Id,
+                RoleId = roleId,
                 PermissionId = permissionId,
-                DataScope = DataScopes.All
+                DataScope = dataScope
             });
         }
 

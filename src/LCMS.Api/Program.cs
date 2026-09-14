@@ -4,6 +4,7 @@ using LCMS.Api.Middleware;
 using LCMS.Application;
 using LCMS.Application.Currencies;
 using LCMS.Application.Demo;
+using LCMS.Application.Identity;
 using LCMS.Infrastructure;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -171,6 +172,7 @@ static async Task MigrateDatabaseAsync(WebApplication app)
     var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
     await db.Database.MigrateAsync();
     await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
+    await TenantAccessSeeder.SeedSystemRolesForAllTenantsAsync(db, CancellationToken.None);
 }
 
 static async Task SeedDemoIfEnabledAsync(WebApplication app)

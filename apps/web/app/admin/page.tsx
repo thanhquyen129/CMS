@@ -16,6 +16,11 @@ export default async function AdminHubPage() {
 
   const links = [
     {
+      href: "/admin/access",
+      title: "Phân quyền",
+      desc: "Vai trò hệ thống, gán thành viên, bật/tắt quyền hành động.",
+    },
+    {
       href: "/admin/parties",
       title: "Đối tác kinh doanh",
       desc: "Mã và tên đối tác dùng trên chứng từ, AP/AR, thanh toán.",
@@ -42,8 +47,8 @@ export default async function AdminHubPage() {
         </p>
         <h1>Danh mục</h1>
         <p className="lede">
-          Quản trị master data tối thiểu: xem danh sách và thêm mới. Không xóa
-          tại đây — vô hiệu hoá qua API khi cần.
+          Phân quyền thành viên và master data tối thiểu. Không xóa danh mục tại
+          đây — vô hiệu hoá qua API khi cần.
         </p>
 
         <div className="form-grid" style={{ marginTop: "1.25rem" }}>

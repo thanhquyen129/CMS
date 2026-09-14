@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-09-14 — Phân quyền: 7 role hệ thống + Admin on/off
+
+### User
+phân tích và triển khai chức năng phân quyền… Administrator on/off quyền cho thành viên
+
+### Answer
+- **7 role:** Admin, FinancialController, CostAccountant, RevenueAccountant, Ops, MasterData, Viewer (ADR-0016).
+- Model: User → Role → Permission(Action) × DataScope; Cost ≠ Revenue; Permission ≠ Approval.
+- Admin UI: `/admin/access` — gán/gỡ role + bật/tắt ma trận quyền.
+- API: `PUT /api/roles/{id}/permissions`, `DELETE /api/users/{u}/roles/{r}`, `GET …/permission-matrix`, enforce `user.manage` / `role.manage`.
+- Seed 7 role khi tạo tenant / migrate / bootstrap.
+
+### Files
+- `src/LCMS.Domain/Identity/SystemRoleCatalog.cs`, `PermissionCodes.cs` (catalog)
+- `src/LCMS.Application/Identity/TenantAccessSeeder.cs`, `Roles/*`, `Users/*`
+- `src/LCMS.Api/Endpoints/IdentityEndpoints.cs`, `Program.cs`
+- `apps/web/app/admin/access/`, `components/RolePermissionToggleMatrix.tsx`, `UserRoleAssignPanel.tsx`
+- `docs/adr/ADR-0016-system-role-catalog.md`
+- `tests/LCMS.Api.Tests/SystemRoleCatalogAccessTests.cs`
+
+---
+
 ## 2026-09-13 — Restore desktop nav on top
 
 ### User

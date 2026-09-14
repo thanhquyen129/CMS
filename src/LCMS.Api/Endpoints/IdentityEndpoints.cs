@@ -39,6 +39,11 @@ public static class IdentityEndpoints
                 ct);
             return Results.NoContent();
         });
+        users.MapGet("/{userId:guid}/roles", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListUserRolesQuery(userId), ct);
+            return Results.Ok(list);
+        });
         users.MapPost("/{userId:guid}/roles/{roleId:guid}", async (
             Guid userId,
             Guid roleId,
@@ -46,6 +51,15 @@ public static class IdentityEndpoints
             CancellationToken ct) =>
         {
             await sender.Send(new AssignUserRoleCommand(userId, roleId), ct);
+            return Results.NoContent();
+        });
+        users.MapDelete("/{userId:guid}/roles/{roleId:guid}", async (
+            Guid userId,
+            Guid roleId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UnassignUserRoleCommand(userId, roleId), ct);
             return Results.NoContent();
         });
 
@@ -70,6 +84,11 @@ public static class IdentityEndpoints
             var list = await sender.Send(new ListRolePermissionsQuery(id), ct);
             return Results.Ok(list);
         });
+        roles.MapGet("/{id:guid}/permission-matrix", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new GetRolePermissionMatrixQuery(id), ct);
+            return Results.Ok(list);
+        });
         roles.MapPost("/{id:guid}/permissions", async (
             Guid id,
             AssignRolePermissionRequest body,
@@ -81,6 +100,23 @@ public static class IdentityEndpoints
                 ct);
             return Results.Created($"/api/roles/{id}/permissions/{permissionId}", new { id = permissionId });
         });
+        roles.MapPut("/{id:guid}/permissions", async (
+            Guid id,
+            SetRolePermissionRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new SetRolePermissionCommand(id, body.ActionCode, body.Enabled, body.DataScope),
+                ct);
+            return Results.NoContent();
+        });
+
+        app.MapGet("/api/permissions", async (ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListPermissionCatalogQuery(), ct);
+            return Results.Ok(list);
+        }).WithTags("Permissions");
 
         return app;
     }
@@ -90,3 +126,4 @@ public sealed record CreateUserRequest(string Email, string DisplayName, Guid? O
 public sealed record UpdateUserRequest(string DisplayName, bool IsActive, Guid? OrganizationId);
 public sealed record CreateRoleRequest(string Code, string Name);
 public sealed record AssignRolePermissionRequest(string ActionCode, string DataScope);
+public sealed record SetRolePermissionRequest(string ActionCode, bool Enabled, string? DataScope = null);

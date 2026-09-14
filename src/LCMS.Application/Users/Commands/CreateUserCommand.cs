@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,11 +29,16 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public CreateUserCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreateUserCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(CreateUserCommand request, CancellationToken cancellationToken)
@@ -41,6 +47,11 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.UserManage,
+            "Bạn không có quyền tạo người dùng.",
+            cancellationToken);
 
         var tenantId = _tenantContext.TenantId!.Value;
         var email = request.Email.Trim().ToLowerInvariant();
@@ -106,11 +117,16 @@ public sealed class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public UpdateUserCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public UpdateUserCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task Handle(UpdateUserCommand request, CancellationToken cancellationToken)
@@ -119,6 +135,11 @@ public sealed class UpdateUserCommandHandler : IRequestHandler<UpdateUserCommand
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.UserManage,
+            "Bạn không có quyền cập nhật người dùng.",
+            cancellationToken);
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy người dùng.");

@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-09-14 — Seed 7 role demo logins
+
+### User
+tạo các account tương ứng cho các role, mật khẩu mặc định là: abc123
+
+### Answer
+- Seeder `RoleDemoUserSeeder` (startup): 7 email → 7 system role, tenant `ops`.
+- Bật: `Auth__RoleDemoUsers__Enabled=true` + `Auth__RoleDemoUsers__Password` (Dev appsettings; prod qua `infra/.env`).
+- Emails: `admin@cms.local`, `controller@cms.local`, `cost@cms.local`, `revenue@cms.local`, `ops.user@cms.local`, `master@cms.local`, `viewer@cms.local`.
+
+### Files
+- `src/LCMS.Api/Auth/RoleDemoUserSeeder.cs`, `AuthOptions.cs`, `Program.cs`
+- `apps` N/A · `infra/docker-compose.host.yml`, `infra/.env.example`
+- `tests/LCMS.Api.Tests/RoleDemoUserSeederTests.cs`
+
+---
+
 ## 2026-09-14 — Phân quyền: 7 role hệ thống + Admin on/off
 
 ### User

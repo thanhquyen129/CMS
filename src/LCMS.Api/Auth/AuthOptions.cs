@@ -14,6 +14,9 @@ public sealed class AuthOptions
 
     /// <summary>Optional operator bootstrap user (env on host — never commit secrets).</summary>
     public BootstrapOptions Bootstrap { get; set; } = new();
+
+    /// <summary>UAT/demo users — one account per system role (ADR-0016).</summary>
+    public RoleDemoUsersOptions RoleDemoUsers { get; set; } = new();
 }
 
 public sealed class BootstrapOptions
@@ -24,6 +27,17 @@ public sealed class BootstrapOptions
     public Guid? TenantId { get; set; }
     public string TenantCode { get; set; } = "ops";
     public string TenantName { get; set; } = "Vận hành";
+}
+
+/// <summary>Creates login users for each system role. Password via env in production.</summary>
+public sealed class RoleDemoUsersOptions
+{
+    public bool Enabled { get; set; }
+
+    /// <summary>Shared password for all role demo accounts. Production: Auth__RoleDemoUsers__Password.</summary>
+    public string? Password { get; set; }
+
+    public string TenantCode { get; set; } = "ops";
 }
 
 public sealed class JwtOptions

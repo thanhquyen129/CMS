@@ -71,6 +71,7 @@ try
 
     await MigrateDatabaseAsync(app);
     await BootstrapUserSeeder.EnsureAsync(app.Services);
+    await RoleDemoUserSeeder.EnsureAsync(app.Services);
     await SeedDemoIfEnabledAsync(app);
 
     app.MapGet("/health", () => Results.Ok(new

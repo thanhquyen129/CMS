@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-14 — Horizontal header: logo | nav | logout top-right
+
+### User
+Chỉnh đầu trang: Đăng xuất góc trên phải; Logo, menu, Đăng xuất cùng 1 hàng.
+
+### Done
+- Header ngang nowrap: Brand | Nav (wrap trong cột giữa) | Đăng xuất top-right (`align-self: flex-start`).
+
+### Files
+- `apps/web/app/globals.css` (commit `6c2354e`)
+
+---
+
 ## 2026-09-14 — Seed 7 role demo logins
 
 ### User

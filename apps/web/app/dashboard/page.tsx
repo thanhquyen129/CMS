@@ -2,10 +2,54 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import {
+  FinColors,
+  FunnelSteps,
+  GroupedBarChart,
+  HorizontalBarChart,
+  StackedCompositionBar,
+} from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import {
+  agingBucketLabel,
+  getAgingSummary,
+  type AgingBucketSummary,
+} from "@/lib/ap-ar";
 import { getDashboardSummary } from "@/lib/control-desk";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
+
+const AGING_BUCKET_ORDER = [
+  "current",
+  "1_30",
+  "31_60",
+  "61_90",
+  "90_plus",
+  "no_due_date",
+] as const;
+
+function agingColor(bucket: string): string {
+  switch (bucket.toLowerCase()) {
+    case "current":
+      return FinColors.agingCurrent;
+    case "1_30":
+      return FinColors.agingMid;
+    case "31_60":
+      return FinColors.agingMid;
+    case "61_90":
+    case "90_plus":
+      return FinColors.agingLate;
+    default:
+      return FinColors.agingNone;
+  }
+}
+
+function orderedBuckets(buckets: AgingBucketSummary[] | undefined) {
+  const map = new Map((buckets ?? []).map((b) => [b.bucket.toLowerCase(), b]));
+  return AGING_BUCKET_ORDER.map((key) => map.get(key)).filter(
+    (b): b is AgingBucketSummary => Boolean(b)
+  );
+}
 
 export default async function DashboardPage() {
   const jar = await cookies();
@@ -56,7 +100,10 @@ export default async function DashboardPage() {
   const acceptedLabel = term(terms, "ACCEPTED", "Đã chấp nhận");
   const matchedLabel = term(terms, "MATCHED", "Đã khớp");
 
-  const result = await getDashboardSummary();
+  const [result, agingRes] = await Promise.all([
+    getDashboardSummary(),
+    getAgingSummary(),
+  ]);
   const vis = result.ok
     ? result.data.financialVisibility ?? {
         canViewCost: true,
@@ -64,6 +111,7 @@ export default async function DashboardPage() {
         canViewMargin: true,
       }
     : null;
+  const agingLabel = term(terms, "AGING", "Tuổi nợ");
 
   function moneyOrHidden(
     amount: number | null | undefined,
@@ -370,6 +418,314 @@ export default async function DashboardPage() {
             ) : null}
 
             <p className="note">{result.data.note}</p>
+          </section>
+
+          {/* —— 2b. Biểu đồ kiểm soát —— */}
+          <section
+            className="panel panel-wide dash-cluster dash-span-2"
+            aria-labelledby="dash-charts"
+          >
+            <h2 id="dash-charts" className="cluster-title">
+              Biểu đồ kiểm soát
+            </h2>
+            <p className="cluster-lede">
+              P&amp;L Best Available, độ chín dòng, hàng đợi việc, phễu chứng từ và{" "}
+              {agingLabel.toLowerCase()} AP/AR — cùng nguồn API, không SoT.
+            </p>
+
+            <div className="fin-chart-grid">
+              {(vis?.canViewCost || vis?.canViewRevenue) &&
+              (result.data.baseCurrencyRollUp ||
+                result.data.totalsByCurrency[0]) ? (
+                <GroupedBarChart
+                  caption={`${bestAvailableLabel} (${
+                    result.data.baseCurrencyRollUp?.baseCurrency ??
+                    result.data.totalsByCurrency[0]?.currencyCode ??
+                    ""
+                  })`}
+                  series={[
+                    ...(vis?.canViewCost
+                      ? [
+                          {
+                            key: "cost",
+                            label: costLabel,
+                            value: Number(
+                              result.data.baseCurrencyRollUp
+                                ?.costBestAvailableBase ??
+                                result.data.totalsByCurrency[0]
+                                  ?.costBestAvailable ??
+                                0
+                            ),
+                            color: FinColors.cost,
+                          },
+                        ]
+                      : []),
+                    ...(vis?.canViewRevenue
+                      ? [
+                          {
+                            key: "rev",
+                            label: revenueLabel,
+                            value: Number(
+                              result.data.baseCurrencyRollUp
+                                ?.revenueBestAvailableBase ??
+                                result.data.totalsByCurrency[0]
+                                  ?.revenueBestAvailable ??
+                                0
+                            ),
+                            color: FinColors.revenue,
+                          },
+                        ]
+                      : []),
+                    ...(vis?.canViewMargin
+                      ? [
+                          {
+                            key: "pnl",
+                            label: profitLabel,
+                            value: Number(
+                              result.data.baseCurrencyRollUp
+                                ?.profitBestAvailableBase ??
+                                result.data.totalsByCurrency[0]
+                                  ?.profitBestAvailable ??
+                                0
+                            ),
+                            color:
+                              Number(
+                                result.data.baseCurrencyRollUp
+                                  ?.profitBestAvailableBase ??
+                                  result.data.totalsByCurrency[0]
+                                    ?.profitBestAvailable ??
+                                  0
+                              ) < 0
+                                ? FinColors.profitNeg
+                                : FinColors.profit,
+                          },
+                        ]
+                      : []),
+                  ]}
+                  valueFormatter={(n) => {
+                    const abs = Math.abs(n);
+                    const sign = n < 0 ? "−" : "";
+                    if (abs >= 1_000_000_000)
+                      return `${sign}${(abs / 1_000_000_000).toFixed(1)}B`;
+                    if (abs >= 1_000_000)
+                      return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
+                    if (abs >= 1_000)
+                      return `${sign}${(abs / 1_000).toFixed(0)}k`;
+                    return formatMoney(
+                      n,
+                      result.data.baseCurrencyRollUp?.baseCurrency ??
+                        result.data.totalsByCurrency[0]?.currencyCode ??
+                        "VND"
+                    );
+                  }}
+                />
+              ) : (
+                <div className="fin-chart">
+                  <p className="fin-chart-caption">
+                    {bestAvailableLabel} · P&amp;L
+                  </p>
+                  <p className="fin-chart-empty" role="status">
+                    Không có số tiền để vẽ (thiếu quyền hoặc chưa có dòng CP/DT).
+                  </p>
+                </div>
+              )}
+
+              {result.data.maturityPipeline && vis?.canViewCost ? (
+                <StackedCompositionBar
+                  caption={`${maturityLabel} · ${costLabel} (số dòng)`}
+                  segments={[
+                    {
+                      key: "e",
+                      label: expectedLabel,
+                      value:
+                        result.data.maturityPipeline.costExpectedOnlyCount,
+                      color: FinColors.expected,
+                    },
+                    {
+                      key: "c",
+                      label: confirmedLabel,
+                      value:
+                        result.data.maturityPipeline.costConfirmedOnlyCount,
+                      color: FinColors.confirmed,
+                    },
+                    {
+                      key: "a",
+                      label: actualLabel,
+                      value: result.data.maturityPipeline.costActualCount,
+                      color: FinColors.actual,
+                    },
+                  ]}
+                />
+              ) : null}
+
+              {result.data.maturityPipeline && vis?.canViewRevenue ? (
+                <StackedCompositionBar
+                  caption={`${maturityLabel} · ${revenueLabel} (số dòng)`}
+                  segments={[
+                    {
+                      key: "e",
+                      label: expectedLabel,
+                      value:
+                        result.data.maturityPipeline
+                          .revenueExpectedOnlyCount,
+                      color: FinColors.expected,
+                    },
+                    {
+                      key: "c",
+                      label: confirmedLabel,
+                      value:
+                        result.data.maturityPipeline
+                          .revenueConfirmedOnlyCount,
+                      color: FinColors.confirmed,
+                    },
+                    {
+                      key: "a",
+                      label: actualLabel,
+                      value: result.data.maturityPipeline.revenueActualCount,
+                      color: FinColors.actual,
+                    },
+                  ]}
+                />
+              ) : null}
+
+              <HorizontalBarChart
+                caption="Cơ cấu hàng đợi việc"
+                series={[
+                  {
+                    key: "ex",
+                    label: exceptionQueueLabel,
+                    value: result.data.openExceptionCount,
+                    color: FinColors.work,
+                  },
+                  {
+                    key: "od",
+                    label: overdueLabel,
+                    value: result.data.overdueExceptionCount,
+                    color: FinColors.workDanger,
+                  },
+                  {
+                    key: "appr",
+                    label: approvalQueueLabel,
+                    value: result.data.pendingApprovalCount,
+                    color: FinColors.workMuted,
+                  },
+                  {
+                    key: "var",
+                    label: openVarianceLabel,
+                    value: result.data.openVarianceCount,
+                    color: FinColors.workWarn,
+                  },
+                  {
+                    key: "recon",
+                    label: reconQueueLabel,
+                    value: result.data.openReconciliationCount,
+                    color: FinColors.work,
+                  },
+                  {
+                    key: "bank",
+                    label: `${bankFeedLabel} · ${bankUnmatchedLabel}`,
+                    value: result.data.unmatchedBankFeedCount,
+                    color: FinColors.workWarn,
+                  },
+                ]}
+              />
+
+              {result.data.documents ? (
+                <FunnelSteps
+                  caption={`Phễu ${docLabel.toLowerCase()}`}
+                  steps={[
+                    {
+                      key: "recv",
+                      label: `${receivedLabel}, chờ chấp nhận`,
+                      value: result.data.documents.awaitingAcceptanceCount,
+                      color: FinColors.doc1,
+                    },
+                    {
+                      key: "acc",
+                      label: `${acceptedLabel}, chưa khớp đủ`,
+                      value: result.data.documents.acceptedUnmatchedCount,
+                      color: FinColors.doc2,
+                    },
+                    {
+                      key: "draft",
+                      label: `${matchLabel} nháp`,
+                      value: result.data.documents.draftMatchCount,
+                      color: FinColors.doc3,
+                    },
+                  ]}
+                />
+              ) : null}
+
+              {agingRes.ok &&
+              (agingRes.data.canViewPayable ||
+                agingRes.data.canViewReceivable) ? (
+                <>
+                  {agingRes.data.canViewPayable && agingRes.data.payable ? (
+                    <HorizontalBarChart
+                      caption={`${agingLabel} · ${apLabel} (dư nợ)`}
+                      series={orderedBuckets(agingRes.data.payable.buckets).map(
+                        (b) => ({
+                          key: b.bucket,
+                          label: agingBucketLabel(b.bucket),
+                          value: b.outstanding,
+                          color: agingColor(b.bucket),
+                        })
+                      )}
+                      valueFormatter={(n) =>
+                        formatMoney(
+                          n,
+                          agingRes.data.payable?.payableItems?.[0]
+                            ?.currencyCode || "VND"
+                        )
+                      }
+                      emptyLabel="Không có dư nợ AP trong phạm vi."
+                    />
+                  ) : null}
+                  {agingRes.data.canViewReceivable &&
+                  agingRes.data.receivable ? (
+                    <HorizontalBarChart
+                      caption={`${agingLabel} · ${arLabel} (dư nợ)`}
+                      series={orderedBuckets(
+                        agingRes.data.receivable.buckets
+                      ).map((b) => ({
+                        key: b.bucket,
+                        label: agingBucketLabel(b.bucket),
+                        value: b.outstanding,
+                        color: agingColor(b.bucket),
+                      }))}
+                      valueFormatter={(n) =>
+                        formatMoney(
+                          n,
+                          agingRes.data.receivable?.receivableItems?.[0]
+                            ?.currencyCode || "VND"
+                        )
+                      }
+                      emptyLabel="Không có dư nợ AR trong phạm vi."
+                    />
+                  ) : null}
+                </>
+              ) : agingRes.ok ? (
+                <div className="fin-chart">
+                  <p className="fin-chart-caption">{agingLabel} AP/AR</p>
+                  <p className="fin-chart-empty" role="status">
+                    {agingRes.data.note}
+                  </p>
+                </div>
+              ) : (
+                <div className="fin-chart">
+                  <p className="fin-chart-caption">{agingLabel} AP/AR</p>
+                  <p className="fin-chart-empty" role="status">
+                    {agingRes.message}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="cta-row">
+              <Link className="btn btn-ghost" href="/ap-ar/aging">
+                Chi tiết {agingLabel.toLowerCase()}
+              </Link>
+            </p>
           </section>
 
           {/* —— 3. Độ chín —— */}

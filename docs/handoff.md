@@ -1,5 +1,28 @@
 # Handoff
 
+## 2026-09-15 — Dashboard: biểu đồ kiểm soát tài chính B2B
+
+### User
+thêm vài biểu đồ chuẩn hệ thống tài chính B2B vào dashboard cho chuyên nghiệp nào
+
+### Done
+- Cụm **Biểu đồ kiểm soát** trên `/dashboard` (SVG nhẹ, không thêm chart lib):
+  1. P&L Best Available (CP / DT / LN) — grouped bar
+  2. Độ chín dòng CP & DT — stacked composition
+  3. Cơ cấu hàng đợi việc — horizontal bars
+  4. Phễu chứng từ (nhận → chấp nhận → khớp nháp)
+  5. Tuổi nợ AP/AR theo bucket — từ `GET /api/aging/summary`
+- Tôn trọng quyền View Cost ≠ Revenue ≠ Margin; empty/error states trung thực.
+
+### Files
+- `apps/web/components/charts/FinanceCharts.tsx`
+- `apps/web/app/dashboard/page.tsx`, `apps/web/app/globals.css`
+
+### Verify
+- `npx tsc --noEmit` apps/web pass
+
+---
+
 ## 2026-09-15 — Theme Harbor Dawn (creative)
 
 ### User

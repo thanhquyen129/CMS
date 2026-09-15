@@ -31,14 +31,15 @@ Bộ theme gốc cho **Cost Management System**: lớp kiểm soát tài chính 
 |-------|---------|---------|
 | Ink | `#15202b` | Chữ chính, số tiền |
 | Muted | `#5c6b7a` | Nhãn phụ |
-| BG | `#eef2f5` | Nền giấy làm việc |
-| Surface | `#ffffff` | Panel / bảng |
-| Line | `#d3dbe3` | Viền sổ |
-| Accent | `#0d5c4d` | CTA / link chính |
-| Nav | `#1a2b3c` | Chrome điều hướng |
+| BG | `#f4f6f8` | Nền giấy làm việc |
+| Surface / chrome | `#ffffff` | Panel + nav sáng (không header tối) |
+| Line | `#d8dee6` | Viền sổ |
+| Accent | `#0f6b58` | CTA / link / active |
 | Danger | `#a61b1b` | Ngoại lệ / âm |
 | Warning | `#9a5b12` | Chờ / lệch |
 | Radius | `8px` | Chuyên nghiệp, không “toy UI” |
+
+**Ghi chú (2026-09-15):** chrome nav đổi từ slate tối `#1a2b3c` sang trắng — header tối làm cả viewport “nặng”, lệch cảm giác bàn kiểm soát tài chính sáng.
 
 ## Non-goals
 

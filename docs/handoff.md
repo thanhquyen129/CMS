@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-15 — Lighten CMS Ledger chrome
+
+### User
+tông màu có vẻ tối nhỉ?
+
+### Done
+- Ledger: bỏ nav slate tối; chrome trắng + jade CTA `#0f6b58`.
+- Vertical sidebar cũng sáng (viền nhẹ), active vẫn jade.
+
+### Files
+- `apps/web/app/globals.css`, `lib/ui-preferences.ts`, `docs/design/CMS-LEDGER-THEME.md`
+
+---
+
 ## 2026-09-15 — Fix Ui0AuthLoginTests (CI deploy skip)
 
 ### User

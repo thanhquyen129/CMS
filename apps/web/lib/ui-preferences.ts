@@ -70,8 +70,8 @@ export const UI_THEME_OPTIONS: ReadonlyArray<{
   {
     id: "ledger",
     label: "CMS Ledger",
-    description: "Chuẩn sản phẩm: sổ kiểm soát tài chính — jade + slate, sidebar dọc.",
-    swatches: ["#0d5c4d", "#1a2b3c", "#eef2f5"],
+    description: "Chuẩn sản phẩm: bàn làm việc sáng — jade CTA, chrome trắng.",
+    swatches: ["#0f6b58", "#ffffff", "#f4f6f8"],
   },
   {
     id: "invoika",

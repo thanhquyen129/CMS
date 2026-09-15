@@ -40,6 +40,13 @@ ssh -i ~/.ssh/id_ed25519_a1 deploy@194.233.89.26 \
 
 5. Verify `http://194.233.89.26/health` and `/ready`.
 
+## Hardening checklist (host)
+- Public host ports: **80/443 only** (+ SSH 22). Never publish Postgres/Redis/Ollama.
+- Every Compose service: `mem_limit` (prefer `cpus` / `pids_limit`).
+- Nginx: rate-limit + block known Next.js bypass header `x-middleware-subrequest`.
+- `/metrics` must not be public without auth/allowlist.
+- Details: `.cursor/rules/08-vps-selfhost-hardening.mdc`.
+
 ## Never
 - Deploy CMS onto `a1logex-sg-01` / `/opt/alogex`
 - Commit secrets or overwrite host `infra/.env` blindly

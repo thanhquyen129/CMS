@@ -1,9 +1,25 @@
 # Handoff
 
-## 2026-09-15 � VPS self-host hardening rules (from note.txt)
+## 2026-09-15 — Compact multi-col + fieldset layout
 
 ### User
-Doc note.txt (Ollama/Next.js CVE/bot scan lessons) ? b? sung v�o Cursor rules.
+bố cục lại các giao diện… 2–3 cột, fieldset nhóm liên quan, rà hết giao diện
+
+### Answer
+- CSS: `layout-cols-2/3`, `card-grid`, `fieldset.group-box`, `perm-group-grid`, denser `form-grid`, dashboard 2-col clusters.
+- Phân quyền: ma trận nhóm Bill/Cost/Revenue/AP·AR/Danh mục/Hệ thống; thành viên dạng card.
+- Admin danh mục: list + form cạnh nhau; Settings + create forms: fieldset 2 cột.
+
+### Files
+- `apps/web/app/globals.css`, `admin/**`, `login/page.tsx`
+- `RolePermissionToggleMatrix`, `UserRoleAssignPanel`, `SettingsForm`, Create*/Receive* forms
+
+---
+
+## 2026-09-15 — VPS self-host hardening rules (from note.txt)
+
+### User
+Doc note.txt (Ollama/Next.js CVE/bot scan lessons) ? b? sung v�o Cursor rules.
 
 ### Done
 - New always-apply rule `.cursor/rules/08-vps-selfhost-hardening.mdc` (public ports, container limits, edge rate-limit, CVE hygiene).

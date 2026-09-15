@@ -33,6 +33,79 @@ html[data-theme="ledger"] {
   --topbar-ink: #15202b;
 }
 
+html[data-theme="harbor-dawn"] {
+  /* Harbor Dawn — port fog + brass signal (creative preset) */
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --ink: #1c2a3a;
+  --muted: #667484;
+  --line: #d5dce4;
+  --accent: #c47a2a;
+  --accent-hover: #a86622;
+  --accent-soft: #f7efe4;
+  --accent-ring: rgba(196, 122, 42, 0.3);
+  --accent-shadow: rgba(196, 122, 42, 0.22);
+  --success: #2d8a6e;
+  --success-bg: #e5f3ee;
+  --success-ink: #1f6b55;
+  --warning: #c47a2a;
+  --warning-bg: #f7efe4;
+  --warning-ink: #8a5418;
+  --danger: #b83232;
+  --danger-bg: #f8e6e6;
+  --danger-ink: #8f2424;
+  --sidebar-w: 268px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 999px;
+  --font: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --shadow: 0 2px 6px rgba(28, 42, 58, 0.05), 0 1px 2px rgba(196, 122, 42, 0.04);
+  --shadow-md: 0 12px 28px rgba(28, 42, 58, 0.08);
+  --nav-active-radius: 999px;
+  --topbar-bg: #ffffff;
+  --topbar-ink: #1c2a3a;
+}
+
+html[data-theme="harbor-dawn"] .brand-mark {
+  background: linear-gradient(145deg, #e0a15a 0%, #c47a2a 55%, #1c2a3a 130%);
+  box-shadow: 0 4px 14px rgba(196, 122, 42, 0.35);
+}
+
+html[data-theme="harbor-dawn"] .panel {
+  border-color: color-mix(in srgb, var(--line) 70%, #c47a2a 8%);
+}
+
+html[data-theme="harbor-dawn"] .nav .active {
+  box-shadow: 0 4px 14px rgba(196, 122, 42, 0.28);
+}
+
+html[data-theme="harbor-dawn"] .stat-card,
+html[data-theme="harbor-dawn"] .dash-cluster {
+  border-top: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+html[data-theme="harbor-dawn"] .login-page {
+  background:
+    radial-gradient(1000px 480px at 8% -12%, #f3e2c8 0%, transparent 52%),
+    radial-gradient(800px 420px at 92% 108%, #d5e0ea 0%, transparent 48%),
+    linear-gradient(180deg, #f5f2ec 0%, var(--bg) 45%);
+}
+
+html[data-theme="harbor-dawn"][data-layout="vertical"] .sidebar {
+  background:
+    linear-gradient(180deg, #fffdf9 0%, #ffffff 28%),
+    var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+html[data-theme="harbor-dawn"][data-layout="horizontal"] .sidebar {
+  background:
+    linear-gradient(90deg, #fffdf9 0%, #ffffff 40%),
+    var(--topbar-bg);
+  border-bottom: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
 html[data-theme="invoika"] {
   --bg: #f3f6f9;
   --surface: #ffffff;

@@ -1,7 +1,7 @@
 export const UI_PREFS_COOKIE = "lcms_ui";
 export const UI_PREFS_STORAGE_KEY = "lcms_ui";
 
-export type UiThemeId = "ledger" | "soft-purple" | "invoika" | "classic";
+export type UiThemeId = "ledger" | "harbor-dawn" | "soft-purple" | "invoika" | "classic";
 export type UiLayoutId = "vertical" | "horizontal";
 export type UiDensityId = "comfortable" | "compact";
 
@@ -74,6 +74,12 @@ export const UI_THEME_OPTIONS: ReadonlyArray<{
     swatches: ["#0f6b58", "#ffffff", "#f4f6f8"],
   },
   {
+    id: "harbor-dawn",
+    label: "Cảng Bình Minh",
+    description: "Sương cảng + tín hiệu đồng thau — ấm, rõ CTA, không đụng jade/tím.",
+    swatches: ["#c47a2a", "#1c2a3a", "#eef1f4"],
+  },
+  {
     id: "invoika",
     label: "Invoika Soft",
     description: "Teal admin, bố cục ngang — phong cách dashboard hóa đơn (tham khảo).",
@@ -94,7 +100,13 @@ export const UI_THEME_OPTIONS: ReadonlyArray<{
 ];
 
 export function isUiThemeId(v: unknown): v is UiThemeId {
-  return v === "ledger" || v === "soft-purple" || v === "invoika" || v === "classic";
+  return (
+    v === "ledger" ||
+    v === "harbor-dawn" ||
+    v === "soft-purple" ||
+    v === "invoika" ||
+    v === "classic"
+  );
 }
 
 export function isUiLayoutId(v: unknown): v is UiLayoutId {

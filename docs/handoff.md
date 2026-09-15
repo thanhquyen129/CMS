@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-15 — Theme Harbor Dawn (creative)
+
+### User
+tạo thêm 1 bộ theme mới, tự do sáng tạo không ràng buộc với những gì đã có.
+
+### Done
+- Theme **`harbor-dawn` / Cảng Bình Minh**: brass CTA `#c47a2a` + sương cảng, chrome sáng.
+- Settings picker; layout dọc gợi ý. Ledger vẫn mặc định sản phẩm.
+- `docs/design/THEME-HARBOR-DAWN.md`
+
+### Files
+- `apps/web/app/globals.css`, `lib/ui-preferences.ts`, `SettingsForm.tsx`
+
+---
+
 ## 2026-09-15 — Full Business Partner master (Đối tác kinh doanh)
 
 ### User

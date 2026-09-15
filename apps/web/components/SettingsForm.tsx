@@ -280,7 +280,12 @@ export function SettingsForm() {
                 onClick={() => {
                   const next: Partial<UiPreferences> = { theme: opt.id as UiThemeId };
                   if (opt.id === "invoika") next.layout = "horizontal";
-                  if (opt.id === "ledger" || opt.id === "soft-purple" || opt.id === "classic") {
+                  if (
+                    opt.id === "ledger" ||
+                    opt.id === "harbor-dawn" ||
+                    opt.id === "soft-purple" ||
+                    opt.id === "classic"
+                  ) {
                     next.layout = "vertical";
                   }
                   update(next);

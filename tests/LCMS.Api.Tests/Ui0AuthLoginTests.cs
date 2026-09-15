@@ -3,8 +3,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using LCMS.Api.Auth;
+using LCMS.Application.Identity;
 using LCMS.Domain.Entities;
 using LCMS.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LCMS.Api.Tests;
@@ -49,6 +51,9 @@ public sealed class Ui0AuthLoginTests
             user.PasswordHash = hasher.HashPassword(user, password);
             db.Users.Add(user);
             await db.SaveChangesAsync();
+
+            await TenantAccessSeeder.SeedAdminRoleAsync(db, tenantId, CancellationToken.None);
+            await AssignAdminRoleAsync(db, tenantId, userId);
         }
 
         using var client = factory.CreateClient();
@@ -133,6 +138,9 @@ public sealed class Ui0AuthLoginTests
             user.PasswordHash = hasher.HashPassword(user, password);
             db.Users.Add(user);
             await db.SaveChangesAsync();
+
+            await TenantAccessSeeder.SeedAdminRoleAsync(db, tenantId, CancellationToken.None);
+            await AssignAdminRoleAsync(db, tenantId, user.Id);
         }
 
         using var client = factory.CreateClient();
@@ -148,6 +156,19 @@ public sealed class Ui0AuthLoginTests
         usersReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", body!.AccessToken);
         var usersRes = await client.SendAsync(usersReq);
         Assert.Equal(HttpStatusCode.OK, usersRes.StatusCode);
+    }
+
+    private static async Task AssignAdminRoleAsync(LcmsDbContext db, Guid tenantId, Guid userId)
+    {
+        var adminRole = await db.Roles.FirstAsync(
+            r => r.TenantId == tenantId && r.Code == TenantAccessSeeder.AdminRoleCode);
+        db.UserRoles.Add(new UserRole
+        {
+            TenantId = tenantId,
+            UserId = userId,
+            RoleId = adminRole.Id
+        });
+        await db.SaveChangesAsync();
     }
 
     private sealed record LoginOk(

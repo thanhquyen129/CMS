@@ -1,5 +1,23 @@
 # Handoff
 
+## 2026-09-15 — Fix Ui0AuthLoginTests (CI deploy skip)
+
+### User
+sao deploy hay bị lỗi skip vậy nhỉ
+
+### Answer
+- Deploy **không lỗi** — bị **skip** vì `deploy.needs: test` và job `test` đỏ.
+- Root cause: `Ui0AuthLoginTests` login OK rồi gọi `/api/bills` / `/api/users` → **403** (user fixture không có Admin role sau khi authz siết).
+- Không liên quan commit theme Ledger.
+
+### Fix
+- Seed Admin + `UserRole` trong `Ui0AuthLoginTests`.
+
+### Verify
+- `dotnet test --filter Ui0AuthLoginTests` pass
+
+---
+
 ## 2026-09-15 — CMS Ledger theme (product default)
 
 ### User

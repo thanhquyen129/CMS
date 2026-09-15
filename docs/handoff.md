@@ -1,5 +1,25 @@
 # Handoff
 
+## 2026-09-15 — Party address (VN merger) + VietQR bank picker
+
+### User
+Trong module đối tác: địa chỉ theo sáp nhập VN (mới/cũ); TKNH dropdown logo + tên viết tắt + tên đầy đủ; chi nhánh select nếu được.
+
+### Done
+- Địa chỉ: toggle **Địa chỉ mới** (Phường/Xã → Tỉnh/TP) / **Địa chỉ cũ** (+ Quận/Huyện). Bỏ tách “Thành phố” riêng; `city` đồng bộ `province` khi lưu.
+- Ngân hàng: catalog VietQR v2 (65) snapshot — autocomplete Logo | shortName | full name.
+- Chi nhánh: datalist gợi ý Hội sở + Chi nhánh theo 34 tỉnh/TP + nhập tự do (không có API chi nhánh công khai đầy đủ).
+
+### Files
+- `VnAddressFields`, `VnBankAutocomplete`, `VnBankBranchField`
+- `lib/vn-admin.ts`, `lib/vn-banks.ts`, `lib/data/vietqr-banks.json`
+- `EditBusinessPartyForm`, `PartyBankAccountsPanel`, `globals.css`
+
+### Verify
+- `npm run build` apps/web pass; push `8407b6e`
+
+---
+
 ## 2026-09-15 — Dashboard: biểu đồ kiểm soát tài chính B2B
 
 ### User

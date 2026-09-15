@@ -3,7 +3,10 @@ import { getApiInternalUrl } from "@/lib/auth";
 import { getSessionToken } from "@/lib/api";
 import { forwardApiMutation } from "@/lib/bff-api";
 
-export async function GET(req: NextRequest) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_req: NextRequest, ctx: Ctx) {
+  const { id } = await ctx.params;
   const token = await getSessionToken();
   if (!token) {
     return NextResponse.json(
@@ -12,18 +15,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const q = req.nextUrl.searchParams.toString();
   try {
-    const res = await fetch(
-      `${getApiInternalUrl()}/api/business-parties${q ? `?${q}` : ""}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      }
-    );
+    const res = await fetch(`${getApiInternalUrl()}/api/business-parties/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
     const text = await res.text();
     return new NextResponse(text, {
       status: res.status,
@@ -37,7 +36,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function PUT(req: NextRequest, ctx: Ctx) {
+  const { id } = await ctx.params;
   let body: unknown = {};
   try {
     const text = await req.text();
@@ -45,5 +45,10 @@ export async function POST(req: NextRequest) {
   } catch {
     body = {};
   }
-  return forwardApiMutation("POST", "/api/business-parties", body);
+  return forwardApiMutation("PUT", `/api/business-parties/${id}`, body);
+}
+
+export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  const { id } = await ctx.params;
+  return forwardApiMutation("DELETE", `/api/business-parties/${id}`);
 }

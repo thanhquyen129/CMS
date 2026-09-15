@@ -110,7 +110,28 @@ internal sealed class BusinessPartyConfiguration : IEntityTypeConfiguration<Busi
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.LegalName).HasMaxLength(256);
+        builder.Property(e => e.TaxId).HasMaxLength(32);
+        builder.Property(e => e.Phone).HasMaxLength(64);
+        builder.Property(e => e.Email).HasMaxLength(256);
+        builder.Property(e => e.Website).HasMaxLength(256);
+        builder.Property(e => e.AddressLine1).HasMaxLength(256);
+        builder.Property(e => e.AddressLine2).HasMaxLength(256);
+        builder.Property(e => e.Ward).HasMaxLength(128);
+        builder.Property(e => e.District).HasMaxLength(128);
+        builder.Property(e => e.City).HasMaxLength(128);
+        builder.Property(e => e.Province).HasMaxLength(128);
+        builder.Property(e => e.CountryCode).HasMaxLength(2);
+        builder.Property(e => e.PostalCode).HasMaxLength(32);
+        builder.Property(e => e.DefaultCurrencyCode).HasMaxLength(3);
+        builder.Property(e => e.CreditLimit).HasPrecision(18, 4);
+        builder.Property(e => e.CreditLimitCurrencyCode).HasMaxLength(3);
+        builder.Property(e => e.Notes).HasMaxLength(2000);
         builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.TaxId })
+            .IsUnique()
+            .HasFilter("tax_id IS NOT NULL AND deleted_at IS NULL");
+        builder.HasIndex(e => new { e.TenantId, e.IsActive });
     }
 }
 
@@ -126,6 +147,44 @@ internal sealed class PartyRoleConfiguration : IEntityTypeConfiguration<PartyRol
         builder.Property(e => e.IsActive).IsRequired();
         builder.HasIndex(e => new { e.TenantId, e.PartyId, e.RoleCode }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.RoleCode });
+    }
+}
+
+internal sealed class PartyBankAccountConfiguration : IEntityTypeConfiguration<PartyBankAccount>
+{
+    public void Configure(EntityTypeBuilder<PartyBankAccount> builder)
+    {
+        builder.ToTable("party_bank_accounts");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PartyId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.BankName).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.BankBranch).HasMaxLength(256);
+        builder.Property(e => e.AccountNumber).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.AccountName).HasMaxLength(256);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.Note).HasMaxLength(512);
+        builder.HasIndex(e => new { e.TenantId, e.PartyId });
+        builder.HasIndex(e => new { e.TenantId, e.PartyId, e.AccountNumber })
+            .IsUnique()
+            .HasFilter("deleted_at IS NULL");
+    }
+}
+
+internal sealed class PartyContactConfiguration : IEntityTypeConfiguration<PartyContact>
+{
+    public void Configure(EntityTypeBuilder<PartyContact> builder)
+    {
+        builder.ToTable("party_contacts");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PartyId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.FullName).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.Title).HasMaxLength(128);
+        builder.Property(e => e.Phone).HasMaxLength(64);
+        builder.Property(e => e.Email).HasMaxLength(256);
+        builder.Property(e => e.Note).HasMaxLength(512);
+        builder.HasIndex(e => new { e.TenantId, e.PartyId });
     }
 }
 

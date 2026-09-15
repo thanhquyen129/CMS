@@ -3,7 +3,10 @@ import { getApiInternalUrl } from "@/lib/auth";
 import { getSessionToken } from "@/lib/api";
 import { forwardApiMutation } from "@/lib/bff-api";
 
-export async function GET(req: NextRequest) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_req: NextRequest, ctx: Ctx) {
+  const { id } = await ctx.params;
   const token = await getSessionToken();
   if (!token) {
     return NextResponse.json(
@@ -12,10 +15,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const q = req.nextUrl.searchParams.toString();
   try {
     const res = await fetch(
-      `${getApiInternalUrl()}/api/business-parties${q ? `?${q}` : ""}`,
+      `${getApiInternalUrl()}/api/business-parties/${id}/bank-accounts`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -37,7 +39,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, ctx: Ctx) {
+  const { id } = await ctx.params;
   let body: unknown = {};
   try {
     const text = await req.text();
@@ -45,5 +48,9 @@ export async function POST(req: NextRequest) {
   } catch {
     body = {};
   }
-  return forwardApiMutation("POST", "/api/business-parties", body);
+  return forwardApiMutation(
+    "POST",
+    `/api/business-parties/${id}/bank-accounts`,
+    body
+  );
 }

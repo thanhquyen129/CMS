@@ -60,8 +60,28 @@ public sealed class DemoDataSeeder
         var org = new Organization { TenantId = tid, Code = "DEMO-ORG", Name = "Chi nhánh Demo HCM", IsActive = true };
         _db.Organizations.Add(org);
 
-        var vendor = Party(tid, "DEMO-VND", "Nhà xe Demo Vận Tải");
-        var customer = Party(tid, "DEMO-CUS", "Khách hàng Demo Logistics");
+        var vendor = Party(
+            tid,
+            "DEMO-VND",
+            "Nhà xe Demo Vận Tải",
+            legalName: "Công ty TNHH Demo Vận Tải",
+            taxId: "0312345678",
+            phone: "02812345678",
+            email: "vendor@demo.local",
+            defaultCurrency: "VND",
+            paymentTermDays: 15,
+            creditLimit: 500_000_000m);
+        var customer = Party(
+            tid,
+            "DEMO-CUS",
+            "Khách hàng Demo Logistics",
+            legalName: "Công ty CP Demo Logistics",
+            taxId: "0109876543",
+            phone: "02498765432",
+            email: "customer@demo.local",
+            defaultCurrency: "VND",
+            paymentTermDays: 30,
+            creditLimit: 1_000_000_000m);
         var inactive = Party(tid, "DEMO-OLD", "Đối tác ngừng (demo)", active: false);
         _db.BusinessParties.AddRange(vendor, customer, inactive);
         await _db.SaveChangesAsync(cancellationToken);
@@ -71,6 +91,56 @@ public sealed class DemoDataSeeder
             Role(tid, vendor.Id, PartyRoleCodes.Payee),
             Role(tid, customer.Id, PartyRoleCodes.Customer),
             Role(tid, customer.Id, PartyRoleCodes.Payer));
+
+        _db.PartyBankAccounts.AddRange(
+            new PartyBankAccount
+            {
+                TenantId = tid,
+                PartyId = vendor.Id,
+                BankName = "Vietcombank",
+                BankBranch = "HCM",
+                AccountNumber = "0071000123456",
+                AccountName = "CTY TNHH DEMO VAN TAI",
+                CurrencyCode = "VND",
+                IsDefault = true,
+                IsActive = true
+            },
+            new PartyBankAccount
+            {
+                TenantId = tid,
+                PartyId = customer.Id,
+                BankName = "Techcombank",
+                BankBranch = "HN",
+                AccountNumber = "19001234567890",
+                AccountName = "CTY CP DEMO LOGISTICS",
+                CurrencyCode = "VND",
+                IsDefault = true,
+                IsActive = true
+            });
+
+        _db.PartyContacts.AddRange(
+            new PartyContact
+            {
+                TenantId = tid,
+                PartyId = vendor.Id,
+                FullName = "Nguyễn Văn A",
+                Title = "Kế toán công nợ",
+                Phone = "0901000001",
+                Email = "ap@demo.local",
+                IsPrimary = true,
+                IsActive = true
+            },
+            new PartyContact
+            {
+                TenantId = tid,
+                PartyId = customer.Id,
+                FullName = "Trần Thị B",
+                Title = "Thanh toán",
+                Phone = "0902000002",
+                Email = "ar@demo.local",
+                IsPrimary = true,
+                IsActive = true
+            });
 
         // --- Bills (anchors) ---
         var marker = Bill(tid, MarkerBillNo, org.Id, "Đánh dấu seed demo — không xóa");
@@ -633,11 +703,31 @@ public sealed class DemoDataSeeder
         OrganizationId = orgId
     };
 
-    private static BusinessParty Party(Guid tid, string code, string name, bool active = true) => new()
+    private static BusinessParty Party(
+        Guid tid,
+        string code,
+        string name,
+        bool active = true,
+        string? legalName = null,
+        string? taxId = null,
+        string? phone = null,
+        string? email = null,
+        string? defaultCurrency = null,
+        int? paymentTermDays = null,
+        decimal? creditLimit = null) => new()
     {
         TenantId = tid,
         Code = code,
         Name = name,
+        LegalName = legalName,
+        TaxId = taxId,
+        Phone = phone,
+        Email = email,
+        CountryCode = "VN",
+        DefaultCurrencyCode = defaultCurrency,
+        PaymentTermDays = paymentTermDays,
+        CreditLimit = creditLimit,
+        CreditLimitCurrencyCode = creditLimit.HasValue ? "VND" : null,
         IsActive = active
     };
 

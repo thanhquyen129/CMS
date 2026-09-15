@@ -1,5 +1,35 @@
 # Handoff
 
+## 2026-09-15 — Full Business Partner master (Đối tác kinh doanh)
+
+### User
+Tài liệu BA chỉ là tham khảo, hãy làm full module đối tác kinh doanh đầy đủ nhất theo chuẩn hệ thống quản trị tài chính.
+
+### Done
+- Canonical `BusinessParty` + roles (không tách Customer/Vendor entity).
+- Hồ sơ đầy đủ: MST (unique/tenant), tên pháp lý, địa chỉ VN, liên hệ, tiền tệ mặc định, điều khoản TT (ngày), hạn mức công nợ (tham chiếu — chưa chặn chứng từ), ghi chú.
+- Child: `party_bank_accounts`, `party_contacts`; API nest dưới `/api/business-parties/{id}/…`.
+- Quyền `master.party.manage` trên create/update/delete + bank/contact.
+- UI: list lọc (q/role/status) + tạo; detail `/admin/parties/[id]` sửa hồ sơ, vai trò, TKNH, liên hệ.
+- Migration `P26_BusinessPartyMasterFull`; demo seed MST/bank/contact.
+- Tests: `BusinessPartyMasterFullTests` (2).
+
+### Files
+- Domain/API: `BusinessParty`, `PartyBankAccount`, `PartyContact`, commands/queries, `MasterDataEndpoints`
+- Web: `admin/parties`, `admin/parties/[id]`, BFF nested, forms/panels
+- `docs/handoff.md`
+
+### Follow-up
+- Hard credit-limit block trên AP/AR → cần ADR.
+- Enforce role vendor/customer khi ghi Cost/Revenue.
+- Audit trail UI cho thay đổi hồ sơ đối tác.
+
+### Verify
+- `dotnet test --filter BusinessPartyMasterFull` pass
+- `npm run build` apps/web pass
+
+---
+
 ## 2026-09-15 — Lighten CMS Ledger chrome
 
 ### User

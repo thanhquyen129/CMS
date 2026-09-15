@@ -11,6 +11,8 @@ public interface ILcmsDbContext
     DbSet<User> Users { get; }
     DbSet<BusinessParty> BusinessParties { get; }
     DbSet<PartyRole> PartyRoles { get; }
+    DbSet<PartyBankAccount> PartyBankAccounts { get; }
+    DbSet<PartyContact> PartyContacts { get; }
     DbSet<Role> Roles { get; }
     DbSet<Permission> Permissions { get; }
     DbSet<RolePermission> RolePermissions { get; }

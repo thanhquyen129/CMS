@@ -6,6 +6,10 @@ using LCMS.Application.Fx.Commands;
 using LCMS.Application.Fx.Queries;
 using LCMS.Application.Organizations.Commands;
 using LCMS.Application.Organizations.Queries;
+using LCMS.Application.PartyBankAccounts.Commands;
+using LCMS.Application.PartyBankAccounts.Queries;
+using LCMS.Application.PartyContacts.Commands;
+using LCMS.Application.PartyContacts.Queries;
 using LCMS.Application.PartyRoles.Commands;
 using LCMS.Application.PartyRoles.Queries;
 using MediatR;
@@ -64,12 +68,40 @@ public static class MasterDataEndpoints
         var parties = app.MapGroup("/api/business-parties").WithTags("BusinessParties");
         parties.MapPost("/", async (CreateBusinessPartyRequest body, ISender sender, CancellationToken ct) =>
         {
-            var id = await sender.Send(new CreateBusinessPartyCommand(body.Code, body.Name), ct);
+            var id = await sender.Send(
+                new CreateBusinessPartyCommand(
+                    body.Code,
+                    body.Name,
+                    body.LegalName,
+                    body.TaxId,
+                    body.Phone,
+                    body.Email,
+                    body.Website,
+                    body.AddressLine1,
+                    body.AddressLine2,
+                    body.Ward,
+                    body.District,
+                    body.City,
+                    body.Province,
+                    body.CountryCode,
+                    body.PostalCode,
+                    body.DefaultCurrencyCode,
+                    body.PaymentTermDays,
+                    body.CreditLimit,
+                    body.CreditLimitCurrencyCode,
+                    body.Notes,
+                    body.RoleCodes),
+                ct);
             return Results.Created($"/api/business-parties/{id}", new { id });
         });
-        parties.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        parties.MapGet("/", async (
+            string? search,
+            string? roleCode,
+            bool? isActive,
+            ISender sender,
+            CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListBusinessPartiesQuery(), ct);
+            var list = await sender.Send(new ListBusinessPartiesQuery(search, roleCode, isActive), ct);
             return Results.Ok(list);
         });
         parties.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -83,7 +115,30 @@ public static class MasterDataEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new UpdateBusinessPartyCommand(id, body.Name, body.IsActive), ct);
+            await sender.Send(
+                new UpdateBusinessPartyCommand(
+                    id,
+                    body.Name,
+                    body.IsActive,
+                    body.LegalName,
+                    body.TaxId,
+                    body.Phone,
+                    body.Email,
+                    body.Website,
+                    body.AddressLine1,
+                    body.AddressLine2,
+                    body.Ward,
+                    body.District,
+                    body.City,
+                    body.Province,
+                    body.CountryCode,
+                    body.PostalCode,
+                    body.DefaultCurrencyCode,
+                    body.PaymentTermDays,
+                    body.CreditLimit,
+                    body.CreditLimitCurrencyCode,
+                    body.Notes),
+                ct);
             return Results.NoContent();
         });
         parties.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -112,6 +167,120 @@ public static class MasterDataEndpoints
             CancellationToken ct) =>
         {
             await sender.Send(new RevokePartyRoleCommand(id, roleCode), ct);
+            return Results.NoContent();
+        });
+
+        parties.MapGet("/{id:guid}/bank-accounts", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListPartyBankAccountsQuery(id), ct);
+            return Results.Ok(list);
+        });
+        parties.MapPost("/{id:guid}/bank-accounts", async (
+            Guid id,
+            UpsertPartyBankAccountRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var bankId = await sender.Send(
+                new UpsertPartyBankAccountCommand(
+                    id,
+                    null,
+                    body.BankName,
+                    body.BankBranch,
+                    body.AccountNumber,
+                    body.AccountName,
+                    body.CurrencyCode,
+                    body.IsDefault,
+                    body.IsActive,
+                    body.Note),
+                ct);
+            return Results.Created($"/api/business-parties/{id}/bank-accounts/{bankId}", new { id = bankId });
+        });
+        parties.MapPut("/{id:guid}/bank-accounts/{bankAccountId:guid}", async (
+            Guid id,
+            Guid bankAccountId,
+            UpsertPartyBankAccountRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new UpsertPartyBankAccountCommand(
+                    id,
+                    bankAccountId,
+                    body.BankName,
+                    body.BankBranch,
+                    body.AccountNumber,
+                    body.AccountName,
+                    body.CurrencyCode,
+                    body.IsDefault,
+                    body.IsActive,
+                    body.Note),
+                ct);
+            return Results.NoContent();
+        });
+        parties.MapDelete("/{id:guid}/bank-accounts/{bankAccountId:guid}", async (
+            Guid id,
+            Guid bankAccountId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new SoftDeletePartyBankAccountCommand(id, bankAccountId), ct);
+            return Results.NoContent();
+        });
+
+        parties.MapGet("/{id:guid}/contacts", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListPartyContactsQuery(id), ct);
+            return Results.Ok(list);
+        });
+        parties.MapPost("/{id:guid}/contacts", async (
+            Guid id,
+            UpsertPartyContactRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var contactId = await sender.Send(
+                new UpsertPartyContactCommand(
+                    id,
+                    null,
+                    body.FullName,
+                    body.Title,
+                    body.Phone,
+                    body.Email,
+                    body.IsPrimary,
+                    body.IsActive,
+                    body.Note),
+                ct);
+            return Results.Created($"/api/business-parties/{id}/contacts/{contactId}", new { id = contactId });
+        });
+        parties.MapPut("/{id:guid}/contacts/{contactId:guid}", async (
+            Guid id,
+            Guid contactId,
+            UpsertPartyContactRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new UpsertPartyContactCommand(
+                    id,
+                    contactId,
+                    body.FullName,
+                    body.Title,
+                    body.Phone,
+                    body.Email,
+                    body.IsPrimary,
+                    body.IsActive,
+                    body.Note),
+                ct);
+            return Results.NoContent();
+        });
+        parties.MapDelete("/{id:guid}/contacts/{contactId:guid}", async (
+            Guid id,
+            Guid contactId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new SoftDeletePartyContactCommand(id, contactId), ct);
             return Results.NoContent();
         });
 
@@ -195,7 +364,65 @@ public sealed record UpsertFxRateRequest(
 
 public sealed record CreateOrganizationRequest(string Code, string Name, Guid? ParentId);
 public sealed record UpdateOrganizationRequest(string Name, Guid? ParentId, bool IsActive);
-public sealed record CreateBusinessPartyRequest(string Code, string Name);
-public sealed record UpdateBusinessPartyRequest(string Name, bool IsActive);
+public sealed record CreateBusinessPartyRequest(
+    string Code,
+    string Name,
+    string? LegalName = null,
+    string? TaxId = null,
+    string? Phone = null,
+    string? Email = null,
+    string? Website = null,
+    string? AddressLine1 = null,
+    string? AddressLine2 = null,
+    string? Ward = null,
+    string? District = null,
+    string? City = null,
+    string? Province = null,
+    string? CountryCode = null,
+    string? PostalCode = null,
+    string? DefaultCurrencyCode = null,
+    int? PaymentTermDays = null,
+    decimal? CreditLimit = null,
+    string? CreditLimitCurrencyCode = null,
+    string? Notes = null,
+    IReadOnlyList<string>? RoleCodes = null);
+public sealed record UpdateBusinessPartyRequest(
+    string Name,
+    bool IsActive,
+    string? LegalName = null,
+    string? TaxId = null,
+    string? Phone = null,
+    string? Email = null,
+    string? Website = null,
+    string? AddressLine1 = null,
+    string? AddressLine2 = null,
+    string? Ward = null,
+    string? District = null,
+    string? City = null,
+    string? Province = null,
+    string? CountryCode = null,
+    string? PostalCode = null,
+    string? DefaultCurrencyCode = null,
+    int? PaymentTermDays = null,
+    decimal? CreditLimit = null,
+    string? CreditLimitCurrencyCode = null,
+    string? Notes = null);
 public sealed record AssignPartyRoleRequest(string RoleCode);
+public sealed record UpsertPartyBankAccountRequest(
+    string BankName,
+    string? BankBranch,
+    string AccountNumber,
+    string? AccountName,
+    string CurrencyCode,
+    bool IsDefault,
+    bool IsActive,
+    string? Note);
+public sealed record UpsertPartyContactRequest(
+    string FullName,
+    string? Title,
+    string? Phone,
+    string? Email,
+    bool IsPrimary,
+    bool IsActive,
+    string? Note);
 public sealed record UpsertCurrencyRequest(string Code, string Name, int DecimalPlaces, bool IsActive);

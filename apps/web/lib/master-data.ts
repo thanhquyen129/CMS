@@ -71,6 +71,15 @@ export function listCurrencies(): Promise<ApiResult<CurrencyItem[]>> {
   return apiGet<CurrencyItem[]>("/api/currencies");
 }
 
-export function listAdminParties(): Promise<ApiResult<BusinessParty[]>> {
-  return apiGet<BusinessParty[]>("/api/business-parties");
+export function listAdminParties(opts?: {
+  search?: string;
+  roleCode?: string;
+  isActive?: string;
+}): Promise<ApiResult<BusinessParty[]>> {
+  const sp = new URLSearchParams();
+  if (opts?.search) sp.set("search", opts.search);
+  if (opts?.roleCode) sp.set("roleCode", opts.roleCode);
+  if (opts?.isActive) sp.set("isActive", opts.isActive);
+  const q = sp.toString();
+  return apiGet<BusinessParty[]>(`/api/business-parties${q ? `?${q}` : ""}`);
 }

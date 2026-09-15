@@ -1,4 +1,37 @@
 :root,
+html[data-theme="ledger"] {
+  /* CMS Ledger — financial-control desk (see docs/design/CMS-LEDGER-THEME.md) */
+  --bg: #eef2f5;
+  --surface: #ffffff;
+  --ink: #15202b;
+  --muted: #5c6b7a;
+  --line: #d3dbe3;
+  --accent: #0d5c4d;
+  --accent-hover: #0a4a3e;
+  --accent-soft: #e4f0ec;
+  --accent-ring: rgba(13, 92, 77, 0.28);
+  --accent-shadow: rgba(13, 92, 77, 0.22);
+  --success: #1a7a5c;
+  --success-bg: #e4f0ec;
+  --success-ink: #0d5c4d;
+  --warning: #9a5b12;
+  --warning-bg: #f8efdf;
+  --warning-ink: #7a470e;
+  --danger: #a61b1b;
+  --danger-bg: #f8e8e8;
+  --danger-ink: #8a1515;
+  --sidebar-w: 260px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-pill: 6px;
+  --font: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --shadow: 0 1px 2px rgba(21, 32, 43, 0.06);
+  --shadow-md: 0 8px 20px rgba(21, 32, 43, 0.08);
+  --nav-active-radius: 6px;
+  --topbar-bg: #1a2b3c;
+  --topbar-ink: #e8eef3;
+}
+
 html[data-theme="invoika"] {
   --bg: #f3f6f9;
   --surface: #ffffff;
@@ -1499,6 +1532,55 @@ html[data-theme="classic"][data-layout="vertical"] .shell-header-actions {
 html[data-theme="classic"][data-layout="vertical"] .shell-header-actions .btn-ghost {
   color: #e8eef3;
   border-color: rgba(255, 255, 255, 0.28);
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .sidebar {
+  background: #1a2b3c;
+  color: #e8eef3;
+  border-right: none;
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .brand {
+  color: #e8eef3;
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .brand small {
+  color: #9db0c0;
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .nav-section-label {
+  color: #9db0c0;
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .nav a {
+  color: #c5d0da;
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .nav a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .nav .active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .shell-header-actions {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+html[data-theme="ledger"][data-layout="vertical"] .shell-header-actions .btn-ghost {
+  color: #e8eef3;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+html[data-theme="ledger"] .login-page {
+  background:
+    radial-gradient(900px 420px at 12% -8%, #d5e4df 0%, transparent 55%),
+    radial-gradient(700px 380px at 90% 110%, #d8e0ea 0%, transparent 50%),
+    var(--bg);
 }
 
 @media (max-width: 800px) {

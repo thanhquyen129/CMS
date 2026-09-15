@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-15 — CMS Ledger theme (product default)
+
+### User
+Thiết kế bộ theme phù hợp CMS + nêu tiêu chí (chuyên gia thiết kế).
+
+### Done
+- Theme **CMS Ledger** (`ledger`): jade `#0d5c4d` + slate nav `#1a2b3c` + giấy `#eef2f5`.
+- Mặc định: `ledger` + layout dọc. Invoika/Purple/Classic = preset phụ.
+- Brief: `docs/design/CMS-LEDGER-THEME.md`.
+
+### Files
+- `apps/web/app/globals.css`, `lib/ui-preferences.ts`, `SettingsForm.tsx`
+- `docs/design/CMS-LEDGER-THEME.md`
+
+### Verify
+- `npm run build` apps/web
+
+---
+
 ## 2026-09-15 — Compact multi-col + fieldset layout
 
 ### User

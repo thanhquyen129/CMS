@@ -1,7 +1,7 @@
 export const UI_PREFS_COOKIE = "lcms_ui";
 export const UI_PREFS_STORAGE_KEY = "lcms_ui";
 
-export type UiThemeId = "soft-purple" | "invoika" | "classic";
+export type UiThemeId = "ledger" | "soft-purple" | "invoika" | "classic";
 export type UiLayoutId = "vertical" | "horizontal";
 export type UiDensityId = "comfortable" | "compact";
 
@@ -34,8 +34,8 @@ export type UiPreferences = {
 };
 
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
-  theme: "invoika",
-  layout: "horizontal",
+  theme: "ledger",
+  layout: "vertical",
   density: "comfortable",
   homePath: "/dashboard",
   tableZebra: true,
@@ -68,27 +68,33 @@ export const UI_THEME_OPTIONS: ReadonlyArray<{
   swatches: readonly [string, string, string];
 }> = [
   {
+    id: "ledger",
+    label: "CMS Ledger",
+    description: "Chuẩn sản phẩm: sổ kiểm soát tài chính — jade + slate, sidebar dọc.",
+    swatches: ["#0d5c4d", "#1a2b3c", "#eef2f5"],
+  },
+  {
     id: "invoika",
     label: "Invoika Soft",
-    description: "Teal admin, bố cục ngang — phong cách dashboard hóa đơn.",
+    description: "Teal admin, bố cục ngang — phong cách dashboard hóa đơn (tham khảo).",
     swatches: ["#0ab39c", "#405189", "#f3f6f9"],
   },
   {
     id: "soft-purple",
     label: "Soft Purple",
-    description: "Tím soft-UI, sidebar dọc — phù hợp điều khiển tài chính.",
+    description: "Tím soft-UI — tùy chọn phụ, không phải chuẩn vận hành.",
     swatches: ["#5d5fef", "#efeffd", "#f8f9fb"],
   },
   {
     id: "classic",
     label: "Classic CMS",
-    description: "Navy / teal gốc CMS — trung tính, tương phản cao.",
+    description: "Navy / teal gốc scaffold — tương phản cao.",
     swatches: ["#0b5f4b", "#123047", "#f3f5f7"],
   },
 ];
 
 export function isUiThemeId(v: unknown): v is UiThemeId {
-  return v === "soft-purple" || v === "invoika" || v === "classic";
+  return v === "ledger" || v === "soft-purple" || v === "invoika" || v === "classic";
 }
 
 export function isUiLayoutId(v: unknown): v is UiLayoutId {

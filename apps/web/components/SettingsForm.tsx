@@ -145,7 +145,7 @@ export function SettingsForm() {
     clearUiPreferences();
     setPrefs(readUiPreferencesClient());
     setSavedAt(new Date().toLocaleTimeString("vi-VN"));
-    setUtilMsg("Đã khôi phục mặc định (Invoika Soft + menu ngang).");
+    setUtilMsg("Đã khôi phục mặc định (CMS Ledger + menu dọc).");
   }
 
   if (!ready) {
@@ -280,7 +280,9 @@ export function SettingsForm() {
                 onClick={() => {
                   const next: Partial<UiPreferences> = { theme: opt.id as UiThemeId };
                   if (opt.id === "invoika") next.layout = "horizontal";
-                  if (opt.id === "soft-purple" || opt.id === "classic") next.layout = "vertical";
+                  if (opt.id === "ledger" || opt.id === "soft-purple" || opt.id === "classic") {
+                    next.layout = "vertical";
+                  }
                   update(next);
                 }}
               >

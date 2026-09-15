@@ -30,43 +30,49 @@ export default async function AdminPartiesPage() {
         </p>
         <h1>Đối tác kinh doanh</h1>
         <p className="lede">
-          Danh sách đối tác trong thuê bao. Thêm mới bằng mã và tên — không có
-          loại đối tác riêng ở API hiện tại.
+          Danh sách đối tác trong thuê bao. Thêm mới bằng mã và tên.
         </p>
 
-        {!result.ok ? (
-          <div className="alert alert-error" role="alert">
-            {result.message}
-          </div>
-        ) : result.data.length === 0 ? (
-          <div className="empty-state" role="status">
-            Chưa có đối tác. Thêm bên dưới.
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Mã</th>
-                  <th scope="col">Tên</th>
-                  <th scope="col">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.data.map((p) => (
-                  <tr key={p.id}>
-                    <td className="mono-id">{p.code}</td>
-                    <td>{partyLabel(p)}</td>
-                    <td>{p.isActive ? "Đang dùng" : "Ngừng"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="layout-cols-2">
+          <fieldset className="group-box">
+            <legend>Danh sách</legend>
+            {!result.ok ? (
+              <div className="alert alert-error" role="alert">
+                {result.message}
+              </div>
+            ) : result.data.length === 0 ? (
+              <div className="empty-state" role="status">
+                Chưa có đối tác.
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Mã</th>
+                      <th scope="col">Tên</th>
+                      <th scope="col">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.data.map((p) => (
+                      <tr key={p.id}>
+                        <td className="mono-id">{p.code}</td>
+                        <td>{partyLabel(p)}</td>
+                        <td>{p.isActive ? "Đang dùng" : "Ngừng"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </fieldset>
 
-        <h2 className="section-title">Thêm đối tác</h2>
-        <CreateBusinessPartyForm />
+          <fieldset className="group-box">
+            <legend>Thêm đối tác</legend>
+            <CreateBusinessPartyForm />
+          </fieldset>
+        </div>
       </section>
     </AppShell>
   );

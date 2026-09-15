@@ -89,105 +89,96 @@ export function UserRoleAssignPanel({
   const loading = busy || isPending;
 
   return (
-    <div>
-      <h2 className="section-title">Thành viên &amp; vai trò</h2>
-      <p className="muted">
-        Gán một hoặc nhiều vai trò cho từng thành viên. Quyền thực tế = hợp
-        các quyền đã bật trên các vai trò đó.
-      </p>
+    <div className="layout-cols-2" style={{ marginTop: "0.5rem" }}>
+      <fieldset className="group-box">
+        <legend>Thành viên</legend>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Quyền thực tế = hợp các quyền đã bật trên vai trò được gán.
+        </p>
 
-      {error ? (
-        <div className="alert alert-error" role="alert">
-          {error}
-        </div>
-      ) : null}
-
-      {users.length === 0 ? (
-        <div className="empty-state" role="status">
-          Chưa có người dùng trong thuê bao.
-        </div>
-      ) : (
-        <div className="table-wrap" style={{ marginTop: "0.75rem" }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Thành viên</th>
-                <th scope="col">Vai trò</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => {
-                const assigned = userRolesByUserId[u.id] ?? [];
-                return (
-                  <tr key={u.id}>
-                    <td>
-                      <div>{u.displayName}</div>
-                      <div className="muted">{u.email}</div>
-                      <div className="muted">
-                        {u.isActive ? "Đang dùng" : "Ngừng"}
-                      </div>
-                    </td>
-                    <td>
-                      {assigned.length === 0 ? (
-                        <span className="muted">Chưa gán</span>
-                      ) : (
-                        <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
-                          {assigned.map((r) => (
-                            <li key={r.roleId}>
-                              {r.name}{" "}
-                              <button
-                                type="button"
-                                className="btn btn-ghost btn-sm"
-                                disabled={loading}
-                                onClick={() => void unassign(u.id, r.roleId)}
-                              >
-                                Gỡ
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <h3 className="section-title">Gán vai trò</h3>
-      <form className="receive-form" onSubmit={assign}>
-        <div className="form-grid">
-          <div className="field">
-            <label htmlFor="assignUser">Người dùng</label>
-            <select id="assignUser" name="userId" required disabled={loading}>
-              <option value="">— Chọn —</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.displayName} ({u.email})
-                </option>
-              ))}
-            </select>
+        {error ? (
+          <div className="alert alert-error" role="alert">
+            {error}
           </div>
-          <div className="field">
-            <label htmlFor="assignRole">Vai trò</label>
-            <select id="assignRole" name="roleId" required disabled={loading}>
-              <option value="">— Chọn —</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} ({r.code})
-                </option>
-              ))}
-            </select>
+        ) : null}
+
+        {users.length === 0 ? (
+          <div className="empty-state" role="status">
+            Chưa có người dùng trong thuê bao.
           </div>
-        </div>
-        <div className="cta-row">
-          <button type="submit" className="btn" disabled={loading}>
-            {loading ? "Đang lưu…" : "Gán vai trò"}
-          </button>
-        </div>
-      </form>
+        ) : (
+          <div className="member-card-grid">
+            {users.map((u) => {
+              const assigned = userRolesByUserId[u.id] ?? [];
+              return (
+                <div key={u.id} className="member-card">
+                  <p className="member-name">{u.displayName}</p>
+                  <div className="muted small">{u.email}</div>
+                  <div className="muted small">
+                    {u.isActive ? "Đang dùng" : "Ngừng"}
+                  </div>
+                  {assigned.length === 0 ? (
+                    <p className="muted" style={{ margin: "0.45rem 0 0" }}>
+                      Chưa gán vai trò
+                    </p>
+                  ) : (
+                    <ul>
+                      {assigned.map((r) => (
+                        <li key={r.roleId}>
+                          {r.name}{" "}
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            disabled={loading}
+                            onClick={() => void unassign(u.id, r.roleId)}
+                          >
+                            Gỡ
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </fieldset>
+
+      <fieldset className="group-box">
+        <legend>Gán vai trò</legend>
+        <form className="receive-form" onSubmit={assign} style={{ marginTop: 0 }}>
+          <div className="form-grid cols-1">
+            <div className="field">
+              <label htmlFor="assignUser">Người dùng</label>
+              <select id="assignUser" name="userId" required disabled={loading}>
+                <option value="">— Chọn —</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.displayName} ({u.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="assignRole">Vai trò</label>
+              <select id="assignRole" name="roleId" required disabled={loading}>
+                <option value="">— Chọn —</option>
+                {roles.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} ({r.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="cta-row">
+            <button type="submit" className="btn" disabled={loading}>
+              {loading ? "Đang lưu…" : "Gán vai trò"}
+            </button>
+          </div>
+        </form>
+      </fieldset>
     </div>
   );
 }

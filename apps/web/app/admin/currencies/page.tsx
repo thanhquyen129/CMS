@@ -29,45 +29,51 @@ export default async function AdminCurrenciesPage() {
         </p>
         <h1>Tiền tệ</h1>
         <p className="lede">
-          Danh mục tiền tệ dùng trên chi phí, doanh thu, thanh toán. Thêm mới
-          hoặc cập nhật qua upsert (PUT).
+          Danh mục tiền tệ dùng trên chi phí, doanh thu, thanh toán.
         </p>
 
-        {!result.ok ? (
-          <div className="alert alert-error" role="alert">
-            {result.message}
-          </div>
-        ) : result.data.length === 0 ? (
-          <div className="empty-state" role="status">
-            Chưa có tiền tệ. Thêm bên dưới.
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Mã</th>
-                  <th scope="col">Tên</th>
-                  <th scope="col">Số lẻ</th>
-                  <th scope="col">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.data.map((c) => (
-                  <tr key={c.id}>
-                    <td className="mono-id">{c.code}</td>
-                    <td>{c.name}</td>
-                    <td>{c.decimalPlaces}</td>
-                    <td>{c.isActive ? "Đang dùng" : "Ngừng"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="layout-cols-2">
+          <fieldset className="group-box">
+            <legend>Danh sách</legend>
+            {!result.ok ? (
+              <div className="alert alert-error" role="alert">
+                {result.message}
+              </div>
+            ) : result.data.length === 0 ? (
+              <div className="empty-state" role="status">
+                Chưa có tiền tệ.
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Mã</th>
+                      <th scope="col">Tên</th>
+                      <th scope="col">Số lẻ</th>
+                      <th scope="col">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.data.map((c) => (
+                      <tr key={c.id}>
+                        <td className="mono-id">{c.code}</td>
+                        <td>{c.name}</td>
+                        <td>{c.decimalPlaces}</td>
+                        <td>{c.isActive ? "Đang dùng" : "Ngừng"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </fieldset>
 
-        <h2 className="section-title">Thêm tiền tệ</h2>
-        <CreateCurrencyForm />
+          <fieldset className="group-box">
+            <legend>Thêm / cập nhật</legend>
+            <CreateCurrencyForm />
+          </fieldset>
+        </div>
       </section>
     </AppShell>
   );

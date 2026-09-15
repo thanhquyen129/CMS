@@ -73,31 +73,33 @@ export default function LoginPage() {
         ) : null}
 
         <form onSubmit={onSubmit} noValidate>
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={state === "loading"}
-              required
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="password">Mật khẩu</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={state === "loading"}
-              required
-            />
+          <div className="form-grid cols-2">
+            <div className="field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={state === "loading"}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="password">Mật khẩu</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={state === "loading"}
+                required
+              />
+            </div>
           </div>
           <button className="btn full-width" type="submit" disabled={state === "loading"}>
             {state === "loading" ? "Đang đăng nhập…" : "Đăng nhập"}

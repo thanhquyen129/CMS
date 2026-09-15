@@ -184,101 +184,111 @@ export function CreateExposureForm({
         </div>
       ) : null}
 
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="amount">Số tiền</label>
-          <input
-            id="amount"
-            name="amount"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="any"
-            required
-            disabled={busy}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="currencyCode">Tiền tệ</label>
-          <input
-            id="currencyCode"
-            name="currencyCode"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            maxLength={3}
-            required
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="effectiveDate">Ngày hiệu lực</label>
-          <input
-            id="effectiveDate"
-            name="effectiveDate"
-            type="date"
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="dueDate">Hạn</label>
-          <input id="dueDate" name="dueDate" type="date" disabled={busy} />
-        </div>
-        <div className="field">
-          <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
-          <input
-            id="billId"
-            name="billId"
-            defaultValue={defaultBillId ?? ""}
-            disabled={busy}
-            placeholder="Gắn Bill nếu có"
-            autoComplete="off"
-          />
-        </div>
-        {linkOptions.length > 0 ? (
-          <div className="field">
-            <label htmlFor="linkedId">
-              Gắn {linkLabel.toLowerCase()} (tuỳ chọn)
-            </label>
-            <select
-              id="linkedId"
-              name="linkedId"
-              disabled={busy}
-              value={linkedId}
-              onChange={(e) => onLinkChange(e.target.value)}
-            >
-              <option value="">— Không gắn —</option>
-              {linkOptions.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label} · {formatMoney(o.amount, o.currencyCode)}
-                </option>
-              ))}
-            </select>
+      <div className="form-sections cols-2">
+        <fieldset className="group-box">
+          <legend>Số tiền &amp; hạn</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="amount">Số tiền</label>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                required
+                disabled={busy}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="currencyCode">Tiền tệ</label>
+              <input
+                id="currencyCode"
+                name="currencyCode"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                maxLength={3}
+                required
+                disabled={busy}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="effectiveDate">Ngày hiệu lực</label>
+              <input
+                id="effectiveDate"
+                name="effectiveDate"
+                type="date"
+                disabled={busy}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="dueDate">Hạn</label>
+              <input id="dueDate" name="dueDate" type="date" disabled={busy} />
+            </div>
           </div>
-        ) : (
-          <div className="field">
-            <label htmlFor="linkedId">
-              Mã {linkLabel.toLowerCase()} (UUID, tuỳ chọn)
-            </label>
-            <input
-              id="linkedId"
-              name="linkedId"
-              defaultValue={
-                kind === "payable"
-                  ? defaultCostId ?? ""
-                  : defaultRevenueId ?? ""
-              }
-              disabled={busy}
-              autoComplete="off"
-              placeholder={`Gắn ${linkLabel.toLowerCase()} nếu biết UUID`}
-            />
+        </fieldset>
+        <fieldset className="group-box">
+          <legend>Liên kết</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
+              <input
+                id="billId"
+                name="billId"
+                defaultValue={defaultBillId ?? ""}
+                disabled={busy}
+                placeholder="Gắn Bill nếu có"
+                autoComplete="off"
+              />
+            </div>
+            {linkOptions.length > 0 ? (
+              <div className="field">
+                <label htmlFor="linkedId">
+                  Gắn {linkLabel.toLowerCase()} (tuỳ chọn)
+                </label>
+                <select
+                  id="linkedId"
+                  name="linkedId"
+                  disabled={busy}
+                  value={linkedId}
+                  onChange={(e) => onLinkChange(e.target.value)}
+                >
+                  <option value="">— Không gắn —</option>
+                  {linkOptions.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label} · {formatMoney(o.amount, o.currencyCode)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="field">
+                <label htmlFor="linkedId">
+                  Mã {linkLabel.toLowerCase()} (UUID, tuỳ chọn)
+                </label>
+                <input
+                  id="linkedId"
+                  name="linkedId"
+                  defaultValue={
+                    kind === "payable"
+                      ? defaultCostId ?? ""
+                      : defaultRevenueId ?? ""
+                  }
+                  disabled={busy}
+                  autoComplete="off"
+                  placeholder={`Gắn ${linkLabel.toLowerCase()} nếu biết UUID`}
+                />
+              </div>
+            )}
+            <div className="field field-span">
+              <label htmlFor="notes">Ghi chú</label>
+              <input id="notes" name="notes" maxLength={2048} disabled={busy} />
+            </div>
           </div>
-        )}
-        <div className="field field-span">
-          <label htmlFor="notes">Ghi chú</label>
-          <input id="notes" name="notes" maxLength={2048} disabled={busy} />
-        </div>
+        </fieldset>
       </div>
 
       <div className="cta-row">

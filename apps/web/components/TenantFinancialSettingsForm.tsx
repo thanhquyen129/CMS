@@ -109,75 +109,86 @@ export function TenantFinancialSettingsForm() {
 
   return (
     <div className="stack" style={{ marginTop: "1.5rem" }}>
-      <h2 className="section-title">Cài đặt tài chính thuê bao</h2>
-      <p className="note">
-        Ghi đè ngưỡng node (P19/P20). Để trống = dùng mặc định hệ thống. Chính
-        sách ghi nhận: manual hoặc require_document_link.
-      </p>
-      {error ? (
-        <div className="alert alert-error" role="alert">
-          {error}
+      <fieldset className="group-box">
+        <legend>Cài đặt tài chính thuê bao</legend>
+        <p className="note" style={{ marginTop: 0 }}>
+          Ghi đè ngưỡng node (P19/P20). Để trống = dùng mặc định hệ thống.
+        </p>
+        {error ? (
+          <div className="alert alert-error" role="alert">
+            {error}
+          </div>
+        ) : null}
+        {info ? (
+          <div className="alert alert-info" role="status">
+            {info}
+          </div>
+        ) : null}
+        <div className="form-sections cols-2">
+          <fieldset className="group-box">
+            <legend>Ngưỡng</legend>
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="max-wo">Trần xóa nợ áp dụng ngay</label>
+                <input
+                  id="max-wo"
+                  type="text"
+                  value={maxWriteOff}
+                  onChange={(e) => setMaxWriteOff(e.target.value)}
+                  placeholder="VD: 1000"
+                  disabled={busy}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="confirm-th">Ngưỡng phê duyệt confirm</label>
+                <input
+                  id="confirm-th"
+                  type="text"
+                  value={confirmThreshold}
+                  onChange={(e) => setConfirmThreshold(e.target.value)}
+                  placeholder="Để trống = tắt"
+                  disabled={busy}
+                />
+              </div>
+            </div>
+          </fieldset>
+          <fieldset className="group-box">
+            <legend>Chính sách ghi nhận</legend>
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="pol-mode">Chế độ AP/AR</label>
+                <select
+                  id="pol-mode"
+                  value={policyMode}
+                  onChange={(e) => setPolicyMode(e.target.value)}
+                  disabled={busy}
+                >
+                  <option value="manual">manual — ghi nhận tay</option>
+                  <option value="require_document_link">
+                    require_document_link — cần chứng từ gắn exposure
+                  </option>
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="pol-ver">Phiên bản chính sách</label>
+                <input
+                  id="pol-ver"
+                  type="text"
+                  value={policyVersion}
+                  onChange={(e) => setPolicyVersion(e.target.value)}
+                  maxLength={64}
+                  disabled={busy}
+                />
+              </div>
+            </div>
+          </fieldset>
         </div>
-      ) : null}
-      {info ? (
-        <div className="alert alert-info" role="status">
-          {info}
+        <div className="cta-row">
+          <button type="button" className="btn" disabled={busy} onClick={save}>
+            {busy ? "Đang lưu…" : "Lưu cài đặt thuê bao"}
+          </button>
         </div>
-      ) : null}
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="max-wo">Trần xóa nợ áp dụng ngay</label>
-          <input
-            id="max-wo"
-            type="text"
-            value={maxWriteOff}
-            onChange={(e) => setMaxWriteOff(e.target.value)}
-            placeholder="VD: 1000"
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="confirm-th">Ngưỡng phê duyệt confirm (base)</label>
-          <input
-            id="confirm-th"
-            type="text"
-            value={confirmThreshold}
-            onChange={(e) => setConfirmThreshold(e.target.value)}
-            placeholder="Để trống = tắt"
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="pol-mode">Chính sách ghi nhận AP/AR</label>
-          <select
-            id="pol-mode"
-            value={policyMode}
-            onChange={(e) => setPolicyMode(e.target.value)}
-            disabled={busy}
-          >
-            <option value="manual">manual — ghi nhận tay</option>
-            <option value="require_document_link">
-              require_document_link — cần chứng từ gắn exposure
-            </option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="pol-ver">Phiên bản chính sách</label>
-          <input
-            id="pol-ver"
-            type="text"
-            value={policyVersion}
-            onChange={(e) => setPolicyVersion(e.target.value)}
-            maxLength={64}
-            disabled={busy}
-          />
-        </div>
-      </div>
-      <div className="cta-row">
-        <button type="button" className="btn" disabled={busy} onClick={save}>
-          {busy ? "Đang lưu…" : "Lưu cài đặt thuê bao"}
-        </button>
-      </div>
+      </fieldset>
     </div>
   );
 }

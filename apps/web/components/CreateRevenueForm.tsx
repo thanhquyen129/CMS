@@ -111,53 +111,63 @@ export function CreateRevenueForm({
         </div>
       ) : null}
 
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="amount">Số tiền</label>
-          <input
-            id="amount"
-            name="amount"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="any"
-            required
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="currencyCode">Tiền tệ</label>
-          <input
-            id="currencyCode"
-            name="currencyCode"
-            defaultValue={defaultCurrency}
-            maxLength={3}
-            required
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="effectiveDate">Ngày hiệu lực</label>
-          <input
-            id="effectiveDate"
-            name="effectiveDate"
-            type="date"
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="revenueTypeCode">
-            Mã loại {revenueLabel.toLowerCase()}
-          </label>
-          <input
-            id="revenueTypeCode"
-            name="revenueTypeCode"
-            maxLength={64}
-            disabled={busy}
-            placeholder="VD: FREIGHT"
-            autoComplete="off"
-          />
-        </div>
+      <div className="form-sections cols-2">
+        <fieldset className="group-box">
+          <legend>Số tiền</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="amount">Số tiền</label>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                required
+                disabled={busy}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="currencyCode">Tiền tệ</label>
+              <input
+                id="currencyCode"
+                name="currencyCode"
+                defaultValue={defaultCurrency}
+                maxLength={3}
+                required
+                disabled={busy}
+              />
+            </div>
+          </div>
+        </fieldset>
+        <fieldset className="group-box">
+          <legend>Phân loại</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="effectiveDate">Ngày hiệu lực</label>
+              <input
+                id="effectiveDate"
+                name="effectiveDate"
+                type="date"
+                disabled={busy}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="revenueTypeCode">
+                Mã loại {revenueLabel.toLowerCase()}
+              </label>
+              <input
+                id="revenueTypeCode"
+                name="revenueTypeCode"
+                maxLength={64}
+                disabled={busy}
+                placeholder="VD: FREIGHT"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        </fieldset>
       </div>
 
       <div className="cta-row">

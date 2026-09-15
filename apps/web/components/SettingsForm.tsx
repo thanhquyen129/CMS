@@ -159,15 +159,14 @@ export function SettingsForm() {
 
   return (
     <div className="stack settings-form">
-      <section className="settings-section" aria-labelledby="settings-basic">
-        <h2 id="settings-basic" className="section-title sm">
-          Thiết lập cơ bản
-        </h2>
-        <p className="note">
-          Áp dụng ngay trên trình duyệt này. Không đổi số liệu tài chính hay quyền trên máy chủ.
+      <fieldset className="group-box" aria-labelledby="settings-basic">
+        <legend id="settings-basic">Thiết lập cơ bản</legend>
+        <p className="note" style={{ marginTop: 0 }}>
+          Áp dụng ngay trên trình duyệt này. Không đổi số liệu tài chính hay
+          quyền trên máy chủ.
         </p>
 
-        <div className="form-grid settings-grid">
+        <div className="form-grid settings-grid cols-2">
           <div className="field">
             <label htmlFor="ui-layout">Bố cục điều hướng</label>
             <select
@@ -215,13 +214,13 @@ export function SettingsForm() {
             <span className="muted small block">Khóa theo thuật ngữ vận hành.</span>
           </div>
         </div>
-      </section>
+      </fieldset>
 
-      <section className="settings-section" aria-labelledby="settings-display">
-        <h2 id="settings-display" className="section-title sm">
-          Hiển thị &amp; tiện nghi
-        </h2>
-        <p className="note">Bật/tắt hành vi shell. Thao tác tiền (xóa nợ, đảo phân bổ…) vẫn luôn yêu cầu xác nhận.</p>
+      <fieldset className="group-box" aria-labelledby="settings-display">
+        <legend id="settings-display">Hiển thị &amp; tiện nghi</legend>
+        <p className="note" style={{ marginTop: 0 }}>
+          Bật/tắt hành vi shell. Thao tác tiền vẫn luôn yêu cầu xác nhận.
+        </p>
 
         <div className="settings-toggles">
           <ToggleRow
@@ -260,14 +259,12 @@ export function SettingsForm() {
             onChange={(v) => update({ showQueues: v })}
           />
         </div>
-      </section>
+      </fieldset>
 
-      <section className="settings-section" aria-labelledby="settings-theme">
-        <h2 id="settings-theme" className="section-title sm">
-          Theme mặc định
-        </h2>
-        <p className="note">
-          Chọn bộ màu / cảm giác mặc định. Chọn theme sẽ gợi ý bố cục phù hợp (có thể đổi lại ở trên).
+      <fieldset className="group-box" aria-labelledby="settings-theme">
+        <legend id="settings-theme">Theme mặc định</legend>
+        <p className="note" style={{ marginTop: 0 }}>
+          Chọn bộ màu / cảm giác mặc định. Theme có thể gợi ý bố cục phù hợp.
         </p>
 
         <div className="theme-picker" role="radiogroup" aria-label="Theme mặc định">
@@ -299,93 +296,93 @@ export function SettingsForm() {
             );
           })}
         </div>
-      </section>
+      </fieldset>
 
-      <section className="settings-section" aria-labelledby="settings-shortcuts">
-        <h2 id="settings-shortcuts" className="section-title sm">
-          Lối tắt vận hành
-        </h2>
-        <p className="note">Đi thẳng tới màn làm việc thường dùng.</p>
-        <div className="settings-shortcuts">
-          {UI_HOME_OPTIONS.filter((o) => o.id !== "/settings").map((o) => (
-            <Link key={o.id} className="btn btn-ghost btn-sm" href={o.id}>
-              {o.label}
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="settings-section" aria-labelledby="settings-utils">
-        <h2 id="settings-utils" className="section-title sm">
-          Tiện ích quản trị
-        </h2>
-        <p className="note">
-          Chẩn đoán kết nối, xuất/nhập cấu hình UI, khôi phục mặc định. Không xóa dữ liệu Bill/AP-AR.
-        </p>
-
-        <div className="row-actions" style={{ marginBottom: "0.85rem" }}>
-          <button type="button" className="btn btn-sm" onClick={() => void runDiagnostics()}>
-            Kiểm tra hệ thống
-          </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={exportPrefs}>
-            Xuất cấu hình UI
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => fileRef.current?.click()}
-          >
-            Nhập cấu hình UI
-          </button>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={resetAll}>
-            Khôi phục mặc định
-          </button>
-          <input
-            id={importId}
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            className="sr-only"
-            onChange={(e) => {
-              onImportFile(e.target.files?.[0] ?? null);
-              e.target.value = "";
-            }}
-          />
-        </div>
-
-        {(probe.health !== "idle" || probe.ready !== "idle" || probe.session !== "idle") && (
-          <dl className="metric-grid settings-probe">
-            <div>
-              <dt>API /health</dt>
-              <dd data-state={probe.health}>
-                {probe.health === "loading" ? "…" : probe.health === "ok" ? "OK" : "Lỗi"}
-              </dd>
-            </div>
-            <div>
-              <dt>API /ready</dt>
-              <dd data-state={probe.ready}>
-                {probe.ready === "loading" ? "…" : probe.ready === "ok" ? "OK" : "Lỗi"}
-              </dd>
-            </div>
-            <div>
-              <dt>Phiên đăng nhập</dt>
-              <dd data-state={probe.session}>
-                {probe.session === "loading"
-                  ? "…"
-                  : probe.session === "ok"
-                    ? "Có cookie"
-                    : "Không hợp lệ"}
-              </dd>
-            </div>
-          </dl>
-        )}
-        {probe.detail ? <p className="muted small mono-id">{probe.detail}</p> : null}
-        {utilMsg ? (
-          <p className="alert alert-info" role="status">
-            {utilMsg}
+      <div className="layout-cols-2">
+        <fieldset className="group-box" aria-labelledby="settings-shortcuts">
+          <legend id="settings-shortcuts">Lối tắt vận hành</legend>
+          <p className="note" style={{ marginTop: 0 }}>
+            Đi thẳng tới màn làm việc thường dùng.
           </p>
-        ) : null}
-      </section>
+          <div className="settings-shortcuts">
+            {UI_HOME_OPTIONS.filter((o) => o.id !== "/settings").map((o) => (
+              <Link key={o.id} className="btn btn-ghost btn-sm" href={o.id}>
+                {o.label}
+              </Link>
+            ))}
+          </div>
+        </fieldset>
+
+        <fieldset className="group-box" aria-labelledby="settings-utils">
+          <legend id="settings-utils">Tiện ích quản trị</legend>
+          <p className="note" style={{ marginTop: 0 }}>
+            Chẩn đoán kết nối, xuất/nhập cấu hình UI. Không xóa dữ liệu tiền.
+          </p>
+
+          <div className="row-actions" style={{ marginBottom: "0.85rem" }}>
+            <button type="button" className="btn btn-sm" onClick={() => void runDiagnostics()}>
+              Kiểm tra hệ thống
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={exportPrefs}>
+              Xuất cấu hình UI
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => fileRef.current?.click()}
+            >
+              Nhập cấu hình UI
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={resetAll}>
+              Khôi phục mặc định
+            </button>
+            <input
+              id={importId}
+              ref={fileRef}
+              type="file"
+              accept="application/json,.json"
+              className="sr-only"
+              onChange={(e) => {
+                onImportFile(e.target.files?.[0] ?? null);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          {(probe.health !== "idle" || probe.ready !== "idle" || probe.session !== "idle") && (
+            <dl className="metric-grid settings-probe">
+              <div>
+                <dt>API /health</dt>
+                <dd data-state={probe.health}>
+                  {probe.health === "loading" ? "…" : probe.health === "ok" ? "OK" : "Lỗi"}
+                </dd>
+              </div>
+              <div>
+                <dt>API /ready</dt>
+                <dd data-state={probe.ready}>
+                  {probe.ready === "loading" ? "…" : probe.ready === "ok" ? "OK" : "Lỗi"}
+                </dd>
+              </div>
+              <div>
+                <dt>Phiên đăng nhập</dt>
+                <dd data-state={probe.session}>
+                  {probe.session === "loading"
+                    ? "…"
+                    : probe.session === "ok"
+                      ? "Có cookie"
+                      : "Không hợp lệ"}
+                </dd>
+              </div>
+            </dl>
+          )}
+          {probe.detail ? <p className="muted small mono-id">{probe.detail}</p> : null}
+          {utilMsg ? (
+            <p className="alert alert-info" role="status">
+              {utilMsg}
+            </p>
+          ) : null}
+        </fieldset>
+      </div>
 
       {savedAt ? (
         <p className="muted small" role="status">

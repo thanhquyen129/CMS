@@ -51,7 +51,7 @@ export default async function AdminHubPage() {
           đây — vô hiệu hoá qua API khi cần.
         </p>
 
-        <div className="form-grid" style={{ marginTop: "1.25rem" }}>
+        <div className="card-grid" style={{ marginTop: "1.25rem" }}>
           {links.map((item) => (
             <Link
               key={item.href}

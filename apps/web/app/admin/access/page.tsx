@@ -89,9 +89,8 @@ export default async function AdminAccessPage({
         </p>
         <h1>Phân quyền</h1>
         <p className="lede">
-          Bảy vai trò hệ thống cho kiểm soát tài chính logistics. Quản trị viên
-          gán vai trò cho thành viên và bật/tắt từng quyền. Chi phí và doanh thu
-          là hai quyền độc lập; phê duyệt không thay thế quyền.
+          Gán vai trò cho thành viên và bật/tắt quyền theo nhóm nghiệp vụ. Chi
+          phí và doanh thu độc lập; phê duyệt không thay thế quyền.
         </p>
 
         <UserRoleAssignPanel
@@ -100,33 +99,33 @@ export default async function AdminAccessPage({
           userRolesByUserId={userRolesByUserId}
         />
 
-        <h2 className="section-title" style={{ marginTop: "1.75rem" }}>
-          Vai trò hệ thống
-        </h2>
-        <div className="form-grid">
-          {roles.map((r) => (
-            <Link
-              key={r.id}
-              href={`/admin/access?role=${encodeURIComponent(r.code)}`}
-              className="panel"
-              style={{
-                textDecoration: "none",
-                display: "block",
-                outline:
-                  selected?.id === r.id ? "2px solid var(--accent, #1a5f4a)" : undefined,
-              }}
-            >
-              <h3 className="section-title" style={{ marginTop: 0 }}>
-                {r.name}
-              </h3>
-              <p className="mono-id muted">{r.code}</p>
-              <p className="muted">{r.summaryVi || "Vai trò tùy chỉnh."}</p>
-            </Link>
-          ))}
-        </div>
+        <fieldset className="group-box" style={{ marginTop: "1.25rem" }}>
+          <legend>Vai trò hệ thống</legend>
+          <div className="card-grid">
+            {roles.map((r) => (
+              <Link
+                key={r.id}
+                href={`/admin/access?role=${encodeURIComponent(r.code)}`}
+                className="panel"
+                style={{
+                  textDecoration: "none",
+                  display: "block",
+                  outline:
+                    selected?.id === r.id
+                      ? "2px solid var(--accent, #1a5f4a)"
+                      : undefined,
+                }}
+              >
+                <h3 className="section-title">{r.name}</h3>
+                <p className="mono-id muted">{r.code}</p>
+                <p className="muted">{r.summaryVi || "Vai trò tùy chỉnh."}</p>
+              </Link>
+            ))}
+          </div>
+        </fieldset>
 
         {selected && matrixResult?.ok ? (
-          <div style={{ marginTop: "1.5rem" }}>
+          <div style={{ marginTop: "1.25rem" }}>
             <RolePermissionToggleMatrix
               roleId={selected.id}
               roleName={selected.name}

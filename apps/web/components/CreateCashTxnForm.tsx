@@ -140,65 +140,75 @@ export function CreateCashTxnForm({
         </div>
       ) : null}
 
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="amount">Số tiền</label>
-          <input
-            id="amount"
-            name="amount"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            step="any"
-            required
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="currencyCode">Tiền tệ</label>
-          <input
-            id="currencyCode"
-            name="currencyCode"
-            defaultValue={defaultCurrency}
-            maxLength={3}
-            required
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="valueDate">Ngày giá trị</label>
-          <input
-            id="valueDate"
-            name="valueDate"
-            type="date"
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
-          <input
-            id="billId"
-            name="billId"
-            defaultValue={defaultBillId ?? ""}
-            disabled={busy}
-            placeholder="Gắn Bill nếu có"
-            autoComplete="off"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="referenceNo">Số tham chiếu</label>
-          <input
-            id="referenceNo"
-            name="referenceNo"
-            maxLength={128}
-            disabled={busy}
-            autoComplete="off"
-          />
-        </div>
-        <div className="field field-span">
-          <label htmlFor="notes">Ghi chú</label>
-          <input id="notes" name="notes" maxLength={2048} disabled={busy} />
-        </div>
+      <div className="form-sections cols-2">
+        <fieldset className="group-box">
+          <legend>Số tiền</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="amount">Số tiền</label>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                required
+                disabled={busy}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="currencyCode">Tiền tệ</label>
+              <input
+                id="currencyCode"
+                name="currencyCode"
+                defaultValue={defaultCurrency}
+                maxLength={3}
+                required
+                disabled={busy}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="valueDate">Ngày giá trị</label>
+              <input
+                id="valueDate"
+                name="valueDate"
+                type="date"
+                disabled={busy}
+              />
+            </div>
+          </div>
+        </fieldset>
+        <fieldset className="group-box">
+          <legend>Tham chiếu</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
+              <input
+                id="billId"
+                name="billId"
+                defaultValue={defaultBillId ?? ""}
+                disabled={busy}
+                placeholder="Gắn Bill nếu có"
+                autoComplete="off"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="referenceNo">Số tham chiếu</label>
+              <input
+                id="referenceNo"
+                name="referenceNo"
+                maxLength={128}
+                disabled={busy}
+                autoComplete="off"
+              />
+            </div>
+            <div className="field field-span">
+              <label htmlFor="notes">Ghi chú</label>
+              <input id="notes" name="notes" maxLength={2048} disabled={busy} />
+            </div>
+          </div>
+        </fieldset>
       </div>
 
       <div className="cta-row">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { PermissionMatrixItem } from "@/lib/access";
 
 const SCOPES = [
@@ -9,6 +9,43 @@ const SCOPES = [
   { value: "organization", label: "Theo tổ chức" },
   { value: "own", label: "Chỉ của mình" },
 ] as const;
+
+const GROUPS: { id: string; title: string; match: (code: string) => boolean }[] =
+  [
+    {
+      id: "bill",
+      title: "Bill",
+      match: (c) => c.startsWith("bill."),
+    },
+    {
+      id: "cost",
+      title: "Chi phí",
+      match: (c) => c.startsWith("cost."),
+    },
+    {
+      id: "revenue",
+      title: "Doanh thu",
+      match: (c) => c.startsWith("revenue."),
+    },
+    {
+      id: "settlement",
+      title: "AP / AR",
+      match: (c) => c.startsWith("ap.") || c.startsWith("ar."),
+    },
+    {
+      id: "master",
+      title: "Danh mục",
+      match: (c) => c.startsWith("master."),
+    },
+    {
+      id: "system",
+      title: "Hệ thống",
+      match: (c) =>
+        c.startsWith("user.") ||
+        c.startsWith("role.") ||
+        c.startsWith("settings."),
+    },
+  ];
 
 type Props = {
   roleId: string;
@@ -21,6 +58,24 @@ export function RolePermissionToggleMatrix({ roleId, roleName, items }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busyCode, setBusyCode] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const groups = useMemo(() => {
+    const used = new Set<string>();
+    const result: { id: string; title: string; items: PermissionMatrixItem[] }[] =
+      [];
+    for (const g of GROUPS) {
+      const slice = items.filter((i) => g.match(i.actionCode));
+      slice.forEach((i) => used.add(i.actionCode));
+      if (slice.length > 0) {
+        result.push({ id: g.id, title: g.title, items: slice });
+      }
+    }
+    const rest = items.filter((i) => !used.has(i.actionCode));
+    if (rest.length > 0) {
+      result.push({ id: "other", title: "Khác", items: rest });
+    }
+    return result;
+  }, [items]);
 
   async function setPermission(
     actionCode: string,
@@ -68,8 +123,8 @@ export function RolePermissionToggleMatrix({ roleId, roleName, items }: Props) {
     <div>
       <h2 className="section-title">Quyền — {roleName}</h2>
       <p className="muted">
-        Bật/tắt từng hành động. Phạm vi dữ liệu độc lập với quyền hành động
-        (toàn thuê bao / tổ chức / của mình).
+        Bật/tắt theo nhóm nghiệp vụ. Phạm vi dữ liệu độc lập với quyền hành
+        động.
       </p>
 
       {error ? (
@@ -78,26 +133,20 @@ export function RolePermissionToggleMatrix({ roleId, roleName, items }: Props) {
         </div>
       ) : null}
 
-      <div className="table-wrap" style={{ marginTop: "0.75rem" }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Hành động</th>
-              <th scope="col">Bật</th>
-              <th scope="col">Phạm vi dữ liệu</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => {
+      <div className="perm-group-grid">
+        {groups.map((group) => (
+          <fieldset key={group.id} className="group-box">
+            <legend>{group.title}</legend>
+            {group.items.map((item) => {
               const busy = busyCode === item.actionCode || isPending;
               return (
-                <tr key={item.actionCode}>
-                  <td>
+                <div key={item.actionCode} className="perm-item">
+                  <div className="perm-item-meta">
                     <div>{item.permissionName}</div>
                     <div className="mono-id muted">{item.actionCode}</div>
-                  </td>
-                  <td>
-                    <label className="field" style={{ margin: 0 }}>
+                  </div>
+                  <div className="perm-item-controls">
+                    <label>
                       <input
                         type="checkbox"
                         checked={item.enabled}
@@ -111,12 +160,11 @@ export function RolePermissionToggleMatrix({ roleId, roleName, items }: Props) {
                         }
                         aria-label={`Bật ${item.permissionName}`}
                       />
+                      Bật
                       {item.locked ? (
                         <span className="muted"> (khóa)</span>
                       ) : null}
                     </label>
-                  </td>
-                  <td>
                     <select
                       value={item.dataScope ?? "all"}
                       disabled={busy || !item.enabled || item.locked}
@@ -135,12 +183,12 @@ export function RolePermissionToggleMatrix({ roleId, roleName, items }: Props) {
                         </option>
                       ))}
                     </select>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
+          </fieldset>
+        ))}
       </div>
     </div>
   );

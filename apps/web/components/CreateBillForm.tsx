@@ -106,51 +106,61 @@ export function CreateBillForm({
         </div>
       ) : null}
 
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="billNo">Số {billLabel}</label>
-          <input
-            id="billNo"
-            name="billNo"
-            required
-            maxLength={64}
-            disabled={busy}
-            autoComplete="off"
-            placeholder="VD: BL-2026-001"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="billType">Loại</label>
-          <input
-            id="billType"
-            name="billType"
-            required
-            maxLength={64}
-            defaultValue={defaultBillType}
-            disabled={busy}
-            autoComplete="off"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="sourceSystem">Hệ thống nguồn (tuỳ chọn)</label>
-          <input
-            id="sourceSystem"
-            name="sourceSystem"
-            maxLength={64}
-            disabled={busy}
-            autoComplete="off"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="externalId">Mã ngoài (tuỳ chọn)</label>
-          <input
-            id="externalId"
-            name="externalId"
-            maxLength={128}
-            disabled={busy}
-            autoComplete="off"
-          />
-        </div>
+      <div className="form-sections cols-2">
+        <fieldset className="group-box">
+          <legend>Định danh</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="billNo">Số {billLabel}</label>
+              <input
+                id="billNo"
+                name="billNo"
+                required
+                maxLength={64}
+                disabled={busy}
+                autoComplete="off"
+                placeholder="VD: BL-2026-001"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="billType">Loại</label>
+              <input
+                id="billType"
+                name="billType"
+                required
+                maxLength={64}
+                defaultValue={defaultBillType}
+                disabled={busy}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        </fieldset>
+        <fieldset className="group-box">
+          <legend>Nguồn (tuỳ chọn)</legend>
+          <div className="form-grid">
+            <div className="field">
+              <label htmlFor="sourceSystem">Hệ thống nguồn</label>
+              <input
+                id="sourceSystem"
+                name="sourceSystem"
+                maxLength={64}
+                disabled={busy}
+                autoComplete="off"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="externalId">Mã ngoài</label>
+              <input
+                id="externalId"
+                name="externalId"
+                maxLength={128}
+                disabled={busy}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+        </fieldset>
       </div>
 
       <div className="cta-row">

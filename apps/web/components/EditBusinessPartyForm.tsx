@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { BusinessParty } from "@/lib/party";
+import { VnAddressFields } from "@/components/VnAddressFields";
 
 export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
   const router = useRouter();
@@ -29,6 +30,8 @@ export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
     const paymentRaw = String(fd.get("paymentTermDays") ?? "").trim();
     const creditRaw = String(fd.get("creditLimit") ?? "").trim();
 
+    const province = String(fd.get("province") ?? "").trim() || null;
+    const districtRaw = String(fd.get("district") ?? "").trim() || null;
     const body = {
       name,
       isActive: fd.get("isActive") === "on",
@@ -40,9 +43,10 @@ export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
       addressLine1: String(fd.get("addressLine1") ?? "").trim() || null,
       addressLine2: String(fd.get("addressLine2") ?? "").trim() || null,
       ward: String(fd.get("ward") ?? "").trim() || null,
-      district: String(fd.get("district") ?? "").trim() || null,
-      city: String(fd.get("city") ?? "").trim() || null,
-      province: String(fd.get("province") ?? "").trim() || null,
+      district: districtRaw,
+      // Đồng bộ city = tỉnh/TP (bỏ tách "thành phố" riêng sau sáp nhập).
+      city: province,
+      province,
       countryCode:
         String(fd.get("countryCode") ?? "").trim().toUpperCase() || null,
       postalCode: String(fd.get("postalCode") ?? "").trim() || null,
@@ -211,80 +215,20 @@ export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
               disabled={busy}
             />
           </div>
-          <div className="field">
-            <label htmlFor="editAddr1">Địa chỉ dòng 1</label>
-            <input
-              id="editAddr1"
-              name="addressLine1"
-              defaultValue={party.addressLine1 ?? ""}
-              disabled={busy}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="editAddr2">Địa chỉ dòng 2</label>
-            <input
-              id="editAddr2"
-              name="addressLine2"
-              defaultValue={party.addressLine2 ?? ""}
-              disabled={busy}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="editWard">Phường/Xã</label>
-            <input
-              id="editWard"
-              name="ward"
-              defaultValue={party.ward ?? ""}
-              disabled={busy}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="editDistrict">Quận/Huyện</label>
-            <input
-              id="editDistrict"
-              name="district"
-              defaultValue={party.district ?? ""}
-              disabled={busy}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="editCity">Thành phố</label>
-            <input
-              id="editCity"
-              name="city"
-              defaultValue={party.city ?? ""}
-              disabled={busy}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="editProvince">Tỉnh/TP</label>
-            <input
-              id="editProvince"
-              name="province"
-              defaultValue={party.province ?? ""}
-              disabled={busy}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="editCountry">Quốc gia</label>
-            <input
-              id="editCountry"
-              name="countryCode"
-              maxLength={2}
-              defaultValue={party.countryCode ?? "VN"}
-              disabled={busy}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="editPostal">Mã bưu chính</label>
-            <input
-              id="editPostal"
-              name="postalCode"
-              defaultValue={party.postalCode ?? ""}
-              disabled={busy}
-            />
-          </div>
         </div>
+        <VnAddressFields
+          disabled={busy}
+          defaults={{
+            addressLine1: party.addressLine1,
+            addressLine2: party.addressLine2,
+            ward: party.ward,
+            district: party.district,
+            city: party.city,
+            province: party.province,
+            countryCode: party.countryCode,
+            postalCode: party.postalCode,
+          }}
+        />
       </fieldset>
 
       <fieldset className="group-box">

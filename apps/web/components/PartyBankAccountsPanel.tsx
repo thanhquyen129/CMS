@@ -4,6 +4,9 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { PartyBankAccount } from "@/lib/party";
+import { findVnBank } from "@/lib/vn-banks";
+import { VnBankAutocomplete } from "@/components/VnBankAutocomplete";
+import { VnBankBranchField } from "@/components/VnBankBranchField";
 
 export function PartyBankAccountsPanel({
   partyId,
@@ -16,14 +19,18 @@ export function PartyBankAccountsPanel({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [bankShortName, setBankShortName] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     const fd = new FormData(e.currentTarget);
+    const rawBank = String(fd.get("bankName") ?? "").trim();
+    const matched = findVnBank(rawBank);
     const body = {
-      bankName: String(fd.get("bankName") ?? "").trim(),
+      bankName: matched?.shortName ?? rawBank,
       bankBranch: String(fd.get("bankBranch") ?? "").trim() || null,
       accountNumber: String(fd.get("accountNumber") ?? "").trim(),
       accountName: String(fd.get("accountName") ?? "").trim() || null,
@@ -31,10 +38,10 @@ export function PartyBankAccountsPanel({
         String(fd.get("currencyCode") ?? "VND").trim().toUpperCase() || "VND",
       isDefault: fd.get("isDefault") === "on",
       isActive: true,
-      note: String(fd.get("note") ?? "").trim() || null,
+      note: null as string | null,
     };
     if (!body.bankName || !body.accountNumber) {
-      setError("Nhập tên ngân hàng và số tài khoản.");
+      setError("Chọn ngân hàng và nhập số tài khoản.");
       setSubmitting(false);
       return;
     }
@@ -58,7 +65,8 @@ export function PartyBankAccountsPanel({
         setError(payload.message || "Thêm tài khoản thất bại.");
         return;
       }
-      (e.target as HTMLFormElement).reset();
+      setBankShortName(null);
+      setFormKey((k) => k + 1);
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
@@ -110,44 +118,66 @@ export function PartyBankAccountsPanel({
               </tr>
             </thead>
             <tbody>
-              {accounts.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    {a.bankName}
-                    {a.bankBranch ? (
-                      <span className="muted"> · {a.bankBranch}</span>
-                    ) : null}
-                  </td>
-                  <td className="mono-id">{a.accountNumber}</td>
-                  <td>{a.currencyCode}</td>
-                  <td>{a.isDefault ? "Có" : "—"}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      disabled={busy}
-                      onClick={() => onDelete(a.id)}
-                    >
-                      Xóa
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {accounts.map((a) => {
+                const bank = findVnBank(a.bankName);
+                return (
+                  <tr key={a.id}>
+                    <td>
+                      <span className="vn-bank-row">
+                        {bank ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={bank.logo} alt="" width={22} height={22} />
+                        ) : null}
+                        <span>
+                          <strong>{bank?.shortName ?? a.bankName}</strong>
+                          {a.bankBranch ? (
+                            <span className="muted"> · {a.bankBranch}</span>
+                          ) : null}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="mono-id">{a.accountNumber}</td>
+                    <td>{a.currencyCode}</td>
+                    <td>{a.isDefault ? "Có" : "—"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        disabled={busy}
+                        onClick={() => onDelete(a.id)}
+                      >
+                        Xóa
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      <form className="receive-form" onSubmit={onSubmit} style={{ marginTop: "0.75rem" }}>
+      <form
+        key={formKey}
+        className="receive-form"
+        onSubmit={onSubmit}
+        style={{ marginTop: "0.75rem" }}
+      >
         <div className="form-grid">
-          <div className="field">
-            <label htmlFor="bankName">Ngân hàng</label>
-            <input id="bankName" name="bankName" required disabled={busy} />
+          <div className="field field-span">
+            <label>Ngân hàng</label>
+            <VnBankAutocomplete
+              required
+              disabled={busy}
+              onChange={(bank, display) =>
+                setBankShortName(bank?.shortName ?? (display || null))
+              }
+            />
           </div>
-          <div className="field">
-            <label htmlFor="bankBranch">Chi nhánh</label>
-            <input id="bankBranch" name="bankBranch" disabled={busy} />
-          </div>
+          <VnBankBranchField
+            disabled={busy}
+            bankShortName={bankShortName}
+          />
           <div className="field">
             <label htmlFor="accountNumber">Số tài khoản</label>
             <input
@@ -172,7 +202,12 @@ export function PartyBankAccountsPanel({
             />
           </div>
           <label className="field checkbox-field">
-            <input type="checkbox" name="isDefault" defaultChecked disabled={busy} />{" "}
+            <input
+              type="checkbox"
+              name="isDefault"
+              defaultChecked
+              disabled={busy}
+            />{" "}
             Mặc định thanh toán
           </label>
         </div>

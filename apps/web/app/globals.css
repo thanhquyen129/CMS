@@ -1252,6 +1252,120 @@ fieldset.group-box .field:last-child {
   padding-top: 1.4rem;
 }
 
+.address-scheme {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.65rem 0 0.85rem;
+}
+
+.address-scheme-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.address-scheme-option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.address-scheme-option input {
+  margin-top: 0.2rem;
+}
+
+.vn-bank-ac {
+  position: relative;
+}
+
+.vn-bank-ac-selected {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  font-size: 0.9rem;
+}
+
+.vn-bank-ac-selected img,
+.vn-bank-ac-option img,
+.vn-bank-row img {
+  border-radius: 4px;
+  object-fit: contain;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.vn-bank-ac-list {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.vn-bank-ac-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.vn-bank-ac-option:hover,
+.vn-bank-ac-option:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.vn-bank-ac-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.vn-bank-ac-text .muted {
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vn-bank-ac-empty {
+  padding: 0.65rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.vn-bank-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .alert-success {
   background: var(--success-bg);
   color: var(--success-ink);

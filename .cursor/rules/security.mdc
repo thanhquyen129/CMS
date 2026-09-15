@@ -43,11 +43,21 @@ alwaysApply: false
 - Audit privileged and money-moving actions.
 - Audit hành động đặc quyền và liên quan tiền.
 
+## Self-host / VPS (CMS Contabo)
+- Treat “app runs” as incomplete until the public attack surface is reviewed. See `08-vps-selfhost-hardening.mdc`.
+- Coi “app chạy” là chưa xong nếu chưa review bề mặt public. Xem `08-vps-selfhost-hardening.mdc`.
+- Never expose unauthenticated services (DB, Redis, Ollama, internal admin, raw app ports) to the internet.
+- Không expose service không auth (DB, Redis, Ollama, admin nội bộ, port app thô) ra internet.
+- AuthZ at the app is necessary but not sufficient — edge rate-limit + closed ports stop most automated bots first.
+- AuthZ ở app là bắt buộc nhưng chưa đủ — rate-limit mép + đóng port chặn phần lớn bot tự động trước.
+- Middleware/edge auth frameworks (e.g. Next.js middleware) can have bypass CVEs; pin patched versions and block known bypass headers at the proxy.
+- Framework auth ở middleware/edge có thể có CVE bypass; pin bản đã vá và chặn header bypass đã biết ở proxy.
+
 ## Periodic security audit / Audit bảo mật định kỳ
 - Schedule recurring reviews — default **quarterly** for products with users/money (adjust by risk).
 - Lịch review định kỳ — mặc định **hàng quý** với sản phẩm có user/tiền (chỉnh theo rủi ro).
-- Each cycle covers at least: access & privilege review, secret/key rotation check, dependency CVEs, auth/session config, backup restore spot-check, top OWASP risks on changed surfaces.
-- Mỗi chu kỳ tối thiểu: review quyền truy cập, kiểm tra rotate secret/key, CVE dependency, cấu hình auth/session, spot-check restore backup, rủi ro OWASP hàng đầu trên bề mặt đã đổi.
+- Each cycle covers at least: access & privilege review, secret/key rotation check, dependency CVEs, auth/session config, published ports vs allowlist, container resource limits, backup restore spot-check, top OWASP risks on changed surfaces.
+- Mỗi chu kỳ tối thiểu: review quyền, rotate secret/key, CVE dependency, auth/session, port public vs allowlist, limit tài nguyên container, spot-check restore backup, rủi ro OWASP trên bề mặt đã đổi.
 - Record findings, owners, and due dates; verify remediations. Annual (or pre-major-launch) deeper review / pentest when warranted.
 - Ghi finding, owner, hạn xử lý; verify remediation. Hàng năm (hoặc trước launch lớn) review/pentest sâu hơn khi cần.
 - Continuous: CI dependency scan + secret scanning on every merge (`supply-chain-deps.mdc`, `delivery-ops.mdc`).

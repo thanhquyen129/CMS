@@ -20,6 +20,10 @@ alwaysApply: false
 - Ưu tiên image chính thức/có maintain và digest; tránh `latest` trên prod.
 - Generate/keep SBOM when releasing serious products; know what you ship.
 - Tạo/giữ SBOM khi release sản phẩm nghiêm túc; biết mình đang ship gì.
+- Watch public CVE feeds for **edge** frameworks first: Next.js (middleware/auth bypass), ASP.NET, Nginx, Postgres images.
+- Ưu tiên theo dõi CVE framework **mép**: Next.js (middleware/auth bypass), ASP.NET, Nginx, image Postgres.
+- After a critical edge CVE: patch → redeploy → verify proxy still strips known bypass headers (`08-vps-selfhost-hardening.mdc`).
+- Sau CVE mép critical: vá → redeploy → verify proxy vẫn strip header bypass đã biết (`08-vps-selfhost-hardening.mdc`).
 
 ## Secrets in the chain / Secret trong chuỗi
 - No credentials in package feeds committed to git. Use private feed auth via CI secrets.

@@ -32,11 +32,19 @@ alwaysApply: false
 - Connection string khác nhau từng env. Fail fast nếu thiếu config bắt buộc lúc startup.
 
 ## Process & networking / Process & mạng
-- Bind app to internal port; expose 80/443 only via proxy. Health: `/health` live + `/ready` (DB/deps).
-- App listen port nội bộ; chỉ mở 80/443 qua proxy. Health: `/health` live + `/ready` (DB/deps).
-- Run as non-root in containers. Set resource requests/limits. Graceful shutdown on SIGTERM.
-- Container chạy non-root. Có request/limit tài nguyên. Shutdown êm với SIGTERM.
+- Bind app to internal port; expose **80/443 only** via proxy. Health: `/health` live + `/ready` (DB/deps).
+- App listen port nội bộ; chỉ mở **80/443** qua proxy. Health: `/health` live + `/ready` (DB/deps).
+- Host Compose: Postgres/Redis/API/web use `expose` (or no host ports). Never `ports: "5432:5432"` / `"6379:6379"` / `"11434:11434"` on production.
+- Compose host: Postgres/Redis/API/web dùng `expose` (hoặc không map host). Cấm `ports: "5432:5432"` / `"6379:6379"` / `"11434:11434"` trên production.
+- Run as non-root in containers. **Required on prod:** `mem_limit` (and prefer `cpus` / `pids_limit`) per service so one container cannot OOM the host.
+- Container chạy non-root. **Bắt buộc trên prod:** `mem_limit` (nên có `cpus` / `pids_limit`) mỗi service — một container không được OOM cả máy.
+- Reverse proxy must rate-limit by IP and drop common scan/auth-bypass headers before traffic hits Next.js/API.
+- Reverse proxy phải rate-limit theo IP và drop header scan/bypass auth phổ biến trước khi tới Next.js/API.
+- Keep `/metrics` and debug routes off the public internet (auth or internal-only).
+- Giữ `/metrics` và route debug khỏi internet công khai (auth hoặc chỉ nội bộ).
 - Migrations: run as controlled release step, not raced by every replica on boot (unless locked migrator).
 - Migration: bước release có kiểm soát, không để mọi replica đua migrate lúc boot (trừ migrator có lock).
 - Prod change window + rollback owner named before risky deploys. Prefer forward-fix migrations.
 - Thay đổi prod: có cửa sổ + người rollback trước khi deploy rủi ro. Ưu tiên migration forward-fix.
+- Pre-deploy 30s check: published ports, container limits, secrets not in image/logs, known critical CVEs on edge frameworks.
+- Kiểm tra 30 giây trước deploy: port đã publish, limit container, secret không trong image/log, CVE critical đã biết trên framework mép.

@@ -28,3 +28,7 @@ agent-tools/
 ~$*
 *.tmp
 
+
+# Local scratch / articles
+infra/note.txt
+

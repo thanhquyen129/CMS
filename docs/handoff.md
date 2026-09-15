@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-15 — VPS self-host hardening rules (from note.txt)
+
+### User
+Doc note.txt (Ollama/Next.js CVE/bot scan lessons) ? b? sung vào Cursor rules.
+
+### Done
+- New always-apply rule `.cursor/rules/08-vps-selfhost-hardening.mdc` (public ports, container limits, edge rate-limit, CVE hygiene).
+- Extended `security.mdc`, `deployment.mdc`, `supply-chain-deps.mdc`, `06-ship-after-task.mdc`.
+- Host compose: stop publishing Postgres `5432`; add mem/cpu/pids limits; nginx rate-limit + block `x-middleware-subrequest`; `/metrics` allowlist-only.
+
+### Files
+- `.cursor/rules/08-vps-selfhost-hardening.mdc`
+- `infra/docker-compose.host.yml`, `infra/nginx.conf`
+
+---
 ## 2026-09-14 â€” CI: soft bootstrap permission (first operator)
 
 ### User

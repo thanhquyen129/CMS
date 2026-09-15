@@ -1,0 +1,43 @@
+---
+description: "VPS self-host hardening: no public DB/internal ports, container limits, edge rate-limit, CVE hygiene. Always apply on CMS host work."
+alwaysApply: true
+---
+
+# VPS Self-Host Hardening / Siết VPS self-host
+
+Bots scan the public internet 24/7. A working app is not a safe app. Security is part of every deploy — not “later”.
+Bot quét internet 24/7. App “chạy được” ≠ đủ an toàn. Security là một phần mỗi lần deploy — không để sau.
+
+## Public surface / Bề mặt public
+- Internet may see **only** 80/443 (and SSH key-only on 22 for operators). Nothing else.
+- Internet chỉ thấy **80/443** (và SSH key-only cổng 22 cho operator). Không mở gì thêm.
+- **Never** publish Postgres, Redis, Ollama, admin UIs, metrics scrapers, or internal tools on `0.0.0.0`. Use Docker `expose` + internal network only.
+- **Không** publish Postgres, Redis, Ollama, admin UI, metrics nội bộ ra `0.0.0.0`. Chỉ `expose` + mạng nội bộ.
+- Do not open a port “temporarily to test” on production. Bots find it within minutes.
+- Không mở port “test tạm” trên production. Bot tìm thấy trong vài phút.
+- Assume any public endpoint is already being probed for `.env`, `.git`, `.ssh`, CVEs, and auth bypasses.
+- Coi mọi endpoint public đã bị probe `.env`, `.git`, `.ssh`, CVE, và bypass auth.
+
+## Blast radius / Bán kính nổ
+- Every Compose service needs **memory (and preferably CPU/pids) limits**. One compromised or buggy container must not OOM-kill the whole VPS.
+- Mỗi service Compose cần **giới hạn memory** (nên có CPU/pids). Một container lỗi/bị tấn không được OOM-kill cả VPS.
+- Prefer one product stack per host when possible; shared hosts still require hard isolation via limits + separate networks.
+- Ưu tiên một product/stack mỗi máy; máy dùng chung vẫn phải cô lập bằng limit + network tách.
+
+## Edge defenses / Phòng thủ mép
+- Terminate TLS at reverse proxy; put **rate limits** and basic scan/UA/header blocks before the app (Nginx/Caddy). Not a full WAF substitute — still required minimum.
+- Terminate TLS ở reverse proxy; có **rate limit** và chặn scan/UA/header cơ bản trước app. Không thay WAF — vẫn là mức tối thiểu.
+- Strip or reject known Next.js middleware-bypass headers (e.g. `x-middleware-subrequest`) at the proxy.
+- Loại/reject header bypass middleware Next.js đã biết (vd `x-middleware-subrequest`) ở proxy.
+- Do not expose `/metrics` or debug endpoints to the public internet without auth or network allowlist.
+- Không public `/metrics` hoặc debug endpoint nếu chưa auth / allowlist mạng.
+
+## Dependencies & CVE / Dependency & CVE
+- Patch frameworks used on the public edge promptly (ASP.NET, Next.js, Nginx, Postgres images). Track CVEs for auth/middleware paths especially.
+- Vá framework ở mép public kịp thời. Theo dõi CVE đường auth/middleware đặc biệt.
+- “Ship fast” still requires a short security pass before production deploy (ports, limits, secrets, known CVEs).
+- “Ship nhanh” vẫn cần vòng security ngắn trước deploy prod (port, limit, secret, CVE đã biết).
+
+## Related / Liên quan
+- Details: `security.mdc`, `deployment.mdc`, `supply-chain-deps.mdc`.
+- Host path: `05-product-cms.mdc`, ship gate: `06-ship-after-task.mdc`.

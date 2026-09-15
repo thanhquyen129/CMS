@@ -32,6 +32,8 @@ alwaysApply: true
 - Production: `cms-sg-01`, thư mục `/opt/cms`.
 - **Never** deploy onto `a1logex-sg-01` / `/opt/alogex`.
 - **Không** deploy lên `a1logex-sg-01` / `/opt/alogex`.
+- Before/with deploy: enforce `08-vps-selfhost-hardening.mdc` — no public DB/Redis, container `mem_limit`, only 80/443, proxy rate-limit.
+- Trước/kèm deploy: tuân `08-vps-selfhost-hardening.mdc` — không public DB/Redis, có `mem_limit`, chỉ 80/443, proxy rate-limit.
 - **Normal path:** push `origin/main` and let GitHub Actions deploy. Tab: `https://github.com/thanhquyen129/CMS/actions`.
 - **Đường thường:** push `origin/main` rồi để Actions deploy. Tab Actions repo CMS.
 - Do not tar/scp from the operator machine unless the Actions `deploy` job failed or the runner is down.

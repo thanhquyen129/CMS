@@ -6,8 +6,9 @@ services:
       POSTGRES_DB: lcms
       POSTGRES_USER: lcms
       POSTGRES_PASSWORD: ${LCMS_DB_PASSWORD:-lcms}
-    ports:
-      - "5432:5432"
+    # Internal only — never publish 5432 to the host/internet (08-vps-selfhost-hardening).
+    expose:
+      - "5432"
     volumes:
       - cms_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +16,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    mem_limit: 1g
+    cpus: "1.0"
+    pids_limit: 512
     restart: unless-stopped
 
   redis:
@@ -22,6 +26,9 @@ services:
     container_name: cms-redis
     expose:
       - "6379"
+    mem_limit: 256m
+    cpus: "0.5"
+    pids_limit: 256
     restart: unless-stopped
 
   api:
@@ -61,6 +68,9 @@ services:
       Demo__SeedOnStartup: "${Demo__SeedOnStartup:-false}"
       Demo__AllowEndpoint: "${Demo__AllowEndpoint:-false}"
       Demo__TenantCode: "${Demo__TenantCode:-ops}"
+    mem_limit: 1g
+    cpus: "1.5"
+    pids_limit: 512
     restart: unless-stopped
 
   web:
@@ -75,6 +85,9 @@ services:
     environment:
       API_INTERNAL_URL: http://api:8080
       AUTH_COOKIE_SECURE: "${AUTH_COOKIE_SECURE:-false}"
+    mem_limit: 768m
+    cpus: "1.0"
+    pids_limit: 512
     restart: unless-stopped
 
   proxy:
@@ -87,6 +100,9 @@ services:
     depends_on:
       - web
       - api
+    mem_limit: 128m
+    cpus: "0.5"
+    pids_limit: 128
     restart: unless-stopped
 
 volumes:

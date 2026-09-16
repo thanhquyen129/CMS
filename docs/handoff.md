@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-16 — Checklist go-live tuần tự
+
+### User
+lên checklist làm tuần tự
+
+### Done
+- Thêm `docs/ops/go-live-checklist.md`: A UAT luồng tiền (A1–A12) → B fix P0 rồi pixel UI-09…14 → C nợ paging/filter → D ADR Order/Shipment → E DoD. Gợi ý lịch D1–D6.
+
+### Follow-up
+- Chạy checklist từ A1 trên prod; đánh dấu `[x]` / ghi P0 vào handoff từng ngày.
+
+---
+
 ## 2026-09-16 — Dashboard UI-01 pixel closer to PO mockup
 
 ### User

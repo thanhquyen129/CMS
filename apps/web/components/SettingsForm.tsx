@@ -14,7 +14,6 @@ import {
   type UiHomePath,
   type UiLayoutId,
   type UiPreferences,
-  type UiThemeId,
 } from "@/lib/ui-preferences";
 
 type ProbeState = "idle" | "loading" | "ok" | "fail";
@@ -145,7 +144,7 @@ export function SettingsForm() {
     clearUiPreferences();
     setPrefs(readUiPreferencesClient());
     setSavedAt(new Date().toLocaleTimeString("vi-VN"));
-    setUtilMsg("Đã khôi phục mặc định (CMS Ledger + menu dọc).");
+    setUtilMsg("Đã khôi phục mặc định (LCMS Designer + menu dọc).");
   }
 
   if (!ready) {
@@ -174,8 +173,8 @@ export function SettingsForm() {
               value={prefs.layout}
               onChange={(e) => update({ layout: e.target.value as UiLayoutId })}
             >
-              <option value="horizontal">Ngang (Invoika)</option>
-              <option value="vertical">Dọc (sidebar)</option>
+              <option value="vertical">Dọc (sidebar) — chuẩn designer</option>
+              <option value="horizontal">Ngang</option>
             </select>
           </div>
 
@@ -262,46 +261,23 @@ export function SettingsForm() {
       </fieldset>
 
       <fieldset className="group-box" aria-labelledby="settings-theme">
-        <legend id="settings-theme">Theme mặc định</legend>
+        <legend id="settings-theme">Giao diện sản phẩm</legend>
         <p className="note" style={{ marginTop: 0 }}>
-          Chọn bộ màu / cảm giác mặc định. Theme có thể gợi ý bố cục phù hợp.
+          Chỉ còn một skin chuẩn theo bộ mockup designer LCMS (sidebar navy + primary blue). Các theme cũ đã gỡ.
         </p>
-
-        <div className="theme-picker" role="radiogroup" aria-label="Theme mặc định">
-          {UI_THEME_OPTIONS.map((opt) => {
-            const selected = prefs.theme === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                className={`theme-card${selected ? " selected" : ""}`}
-                onClick={() => {
-                  const next: Partial<UiPreferences> = { theme: opt.id as UiThemeId };
-                  if (opt.id === "invoika") next.layout = "horizontal";
-                  if (
-                    opt.id === "ledger" ||
-                    opt.id === "harbor-dawn" ||
-                    opt.id === "soft-purple" ||
-                    opt.id === "classic"
-                  ) {
-                    next.layout = "vertical";
-                  }
-                  update(next);
-                }}
-              >
-                <div className="theme-swatches" aria-hidden="true">
-                  {opt.swatches.map((c) => (
-                    <span key={c} style={{ background: c }} />
-                  ))}
-                </div>
-                <strong>{opt.label}</strong>
-                <span className="muted small">{opt.description}</span>
-                {selected ? <span className="theme-badge">Đang dùng</span> : null}
-              </button>
-            );
-          })}
+        <div className="theme-picker" role="list" aria-label="Theme sản phẩm">
+          {UI_THEME_OPTIONS.map((opt) => (
+            <div key={opt.id} className="theme-card selected" role="listitem">
+              <div className="theme-swatches" aria-hidden="true">
+                {opt.swatches.map((c) => (
+                  <span key={c} style={{ background: c }} />
+                ))}
+              </div>
+              <strong>{opt.label}</strong>
+              <span className="muted small">{opt.description}</span>
+              <span className="theme-badge">Đang dùng</span>
+            </div>
+          ))}
         </div>
       </fieldset>
 

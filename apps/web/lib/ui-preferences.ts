@@ -1,7 +1,8 @@
 export const UI_PREFS_COOKIE = "lcms_ui";
 export const UI_PREFS_STORAGE_KEY = "lcms_ui";
 
-export type UiThemeId = "ledger" | "harbor-dawn" | "soft-purple" | "invoika" | "classic";
+/** Single product skin from designer mockups (UI-01…UI-15). */
+export type UiThemeId = "lcms";
 export type UiLayoutId = "vertical" | "horizontal";
 export type UiDensityId = "comfortable" | "compact";
 
@@ -40,7 +41,7 @@ export type UiPreferences = {
 };
 
 export const DEFAULT_UI_PREFERENCES: UiPreferences = {
-  theme: "ledger",
+  theme: "lcms",
   layout: "vertical",
   density: "comfortable",
   homePath: "/dashboard",
@@ -80,45 +81,15 @@ export const UI_THEME_OPTIONS: ReadonlyArray<{
   swatches: readonly [string, string, string];
 }> = [
   {
-    id: "ledger",
-    label: "CMS Ledger",
-    description: "Chuẩn sản phẩm PO: sidebar navy + jade CTA, chrome trắng.",
-    swatches: ["#0f6b58", "#123047", "#f4f6f8"],
-  },
-  {
-    id: "harbor-dawn",
-    label: "Cảng Bình Minh",
-    description: "Sương cảng + tín hiệu đồng thau — ấm, rõ CTA, không đụng jade/tím.",
-    swatches: ["#c47a2a", "#1c2a3a", "#eef1f4"],
-  },
-  {
-    id: "invoika",
-    label: "Invoika Soft",
-    description: "Teal admin, bố cục ngang — phong cách dashboard hóa đơn (tham khảo).",
-    swatches: ["#0ab39c", "#405189", "#f3f6f9"],
-  },
-  {
-    id: "soft-purple",
-    label: "Soft Purple",
-    description: "Tím soft-UI — tùy chọn phụ, không phải chuẩn vận hành.",
-    swatches: ["#5d5fef", "#efeffd", "#f8f9fb"],
-  },
-  {
-    id: "classic",
-    label: "Classic CMS",
-    description: "Navy / teal gốc scaffold — tương phản cao.",
-    swatches: ["#0b5f4b", "#123047", "#f3f5f7"],
+    id: "lcms",
+    label: "LCMS Designer",
+    description: "Chuẩn designer: sidebar navy #001529 + primary blue #1890ff, layout dọc.",
+    swatches: ["#1890ff", "#001529", "#f0f2f5"],
   },
 ];
 
 export function isUiThemeId(v: unknown): v is UiThemeId {
-  return (
-    v === "ledger" ||
-    v === "harbor-dawn" ||
-    v === "soft-purple" ||
-    v === "invoika" ||
-    v === "classic"
-  );
+  return v === "lcms";
 }
 
 export function isUiLayoutId(v: unknown): v is UiLayoutId {
@@ -145,7 +116,8 @@ export function parseUiPreferences(raw: string | null | undefined): UiPreference
   try {
     const parsed = JSON.parse(raw) as Partial<UiPreferences>;
     return {
-      theme: isUiThemeId(parsed.theme) ? parsed.theme : DEFAULT_UI_PREFERENCES.theme,
+      // Migrate any legacy theme id → single designer skin
+      theme: "lcms",
       layout: isUiLayoutId(parsed.layout) ? parsed.layout : DEFAULT_UI_PREFERENCES.layout,
       density: isUiDensityId(parsed.density) ? parsed.density : DEFAULT_UI_PREFERENCES.density,
       homePath: isUiHomePath(parsed.homePath) ? parsed.homePath : DEFAULT_UI_PREFERENCES.homePath,
@@ -163,7 +135,7 @@ export function parseUiPreferences(raw: string | null | undefined): UiPreference
 export function applyUiPreferencesToDocument(prefs: UiPreferences): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  root.setAttribute("data-theme", prefs.theme);
+  root.setAttribute("data-theme", "lcms");
   root.setAttribute("data-layout", prefs.layout);
   root.setAttribute("data-density", prefs.density);
   root.setAttribute("data-zebra", prefs.tableZebra ? "1" : "0");
@@ -174,7 +146,8 @@ export function applyUiPreferencesToDocument(prefs: UiPreferences): void {
 }
 
 export function persistUiPreferences(prefs: UiPreferences): void {
-  const payload = JSON.stringify(prefs);
+  const next = { ...prefs, theme: "lcms" as const };
+  const payload = JSON.stringify(next);
   try {
     localStorage.setItem(UI_PREFS_STORAGE_KEY, payload);
   } catch {
@@ -182,7 +155,7 @@ export function persistUiPreferences(prefs: UiPreferences): void {
   }
   const maxAge = 60 * 60 * 24 * 365;
   document.cookie = `${UI_PREFS_COOKIE}=${encodeURIComponent(payload)}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
-  applyUiPreferencesToDocument(prefs);
+  applyUiPreferencesToDocument(next);
 }
 
 export function clearUiPreferences(): void {
@@ -214,5 +187,5 @@ export function uiPreferencesBootScript(): string {
   const cookie = UI_PREFS_COOKIE;
   const storage = UI_PREFS_STORAGE_KEY;
   const def = JSON.stringify(DEFAULT_UI_PREFERENCES);
-  return `(function(){try{var d=${def},p=null;try{p=localStorage.getItem(${JSON.stringify(storage)});}catch(e){}if(!p){var m=document.cookie.match(/(?:^|; )${cookie}=([^;]*)/);if(m)p=decodeURIComponent(m[1]);}if(p){try{var o=JSON.parse(p);for(var k in o){if(Object.prototype.hasOwnProperty.call(d,k))d[k]=o[k];}}catch(e){}}var r=document.documentElement;r.setAttribute("data-theme",d.theme);r.setAttribute("data-layout",d.layout);r.setAttribute("data-density",d.density);r.setAttribute("data-zebra",d.tableZebra?"1":"0");r.setAttribute("data-sticky-nav",d.stickyNav?"1":"0");r.setAttribute("data-reduce-motion",d.reduceMotion?"1":"0");r.setAttribute("data-nav-labels",d.showNavLabels?"1":"0");r.setAttribute("data-show-queues",d.showQueues?"1":"0");}catch(e){}})();`;
+  return `(function(){try{var d=${def},p=null;try{p=localStorage.getItem(${JSON.stringify(storage)});}catch(e){}if(!p){var m=document.cookie.match(/(?:^|; )${cookie}=([^;]*)/);if(m)p=decodeURIComponent(m[1]);}if(p){try{var o=JSON.parse(p);for(var k in o){if(Object.prototype.hasOwnProperty.call(d,k)&&k!=="theme")d[k]=o[k];}}catch(e){}}d.theme="lcms";var r=document.documentElement;r.setAttribute("data-theme","lcms");r.setAttribute("data-layout",d.layout);r.setAttribute("data-density",d.density);r.setAttribute("data-zebra",d.tableZebra?"1":"0");r.setAttribute("data-sticky-nav",d.stickyNav?"1":"0");r.setAttribute("data-reduce-motion",d.reduceMotion?"1":"0");r.setAttribute("data-nav-labels",d.showNavLabels?"1":"0");r.setAttribute("data-show-queues",d.showQueues?"1":"0");}catch(e){}})();`;
 }

@@ -1,5 +1,25 @@
 # Handoff
 
+## 2026-09-16 — Single LCMS Designer theme (purge old skins)
+
+### User
+Đây là bộ theme designer gửi qua, hãy làm theo giống hệt 100%, có thể bỏ các theme cũ chỉ để lại 1 theme này.
+
+### Done
+- Skin duy nhất `lcms`: sidebar `#001529`, accent `#1890ff`, bg `#f0f2f5`.
+- Gỡ Ledger / Harbor Dawn / Invoika / Soft Purple / Classic.
+- Cookie/theme cũ migrate → `lcms`; Settings chỉ hiện skin chuẩn.
+- Status pill kiểu designer (nền nhạt + chữ màu).
+- Brief: `docs/design/LCMS-DESIGNER-THEME.md`
+
+### Files
+- `apps/web/app/globals.css`, `lib/ui-preferences.ts`, `SettingsForm.tsx`
+
+### Note
+Mockup còn chart/drawer/KPI giả — chưa clone widget trang trí; chỉ skin shell đúng designer.
+
+---
+
 ## 2026-09-16 — Triển khai checklist go-live (A→C)
 
 ### User

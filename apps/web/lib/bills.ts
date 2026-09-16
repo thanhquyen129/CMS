@@ -155,3 +155,72 @@ export function getProfitability(
     `/api/bills/${id}/profitability?view=${encodeURIComponent(view)}`
   );
 }
+
+/** Vietnamese labels for operational status — never show raw enum to end users. */
+export function operationalStatusLabel(status: string): string {
+  switch (status?.toLowerCase()) {
+    case "active":
+      return "Đang xử lý";
+    case "confirmed":
+      return "Đã xác nhận";
+    case "completed":
+    case "delivered":
+      return "Đã giao";
+    case "pending_document":
+    case "awaiting_document":
+      return "Chờ chứng từ";
+    case "pending_approval":
+      return "Chờ phê duyệt";
+    case "recognized":
+      return "Đã ghi nhận";
+    case "closed":
+      return "Đã đóng";
+    case "cancelled":
+    case "canceled":
+      return "Đã hủy";
+    default:
+      return status || "—";
+  }
+}
+
+export function billTypeLabel(billType: string): string {
+  switch (billType?.toLowerCase()) {
+    case "air":
+      return "Hàng không";
+    case "sea":
+    case "ocean":
+      return "Đường biển";
+    case "road":
+    case "truck":
+      return "Đường bộ";
+    case "rail":
+      return "Đường sắt";
+    case "multimodal":
+      return "Đa phương thức";
+    default:
+      return billType || "—";
+  }
+}
+
+/** Best-available rollup from a financial profile (first currency or null). */
+export function profileBestRollup(profile: BillFinancialProfile | null): {
+  currencyCode: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+  revenueExpected: number;
+  revenueConfirmed: number;
+  revenueActual: number;
+} | null {
+  const b = profile?.byCurrency?.[0];
+  if (!b) return null;
+  return {
+    currencyCode: b.currencyCode,
+    revenue: b.revenueBestAvailable,
+    cost: b.costBestAvailable,
+    profit: b.profitBestAvailable,
+    revenueExpected: b.revenueMaturity.expectedTotal,
+    revenueConfirmed: b.revenueMaturity.confirmedTotal,
+    revenueActual: b.revenueMaturity.actualTotal,
+  };
+}

@@ -50,8 +50,13 @@ export default async function SettlementsPage({
   return (
     <AppShell terms={terms} active="settlements">
       <section className="panel panel-wide">
+        <p className="breadcrumb">
+          <Link href="/dashboard">Trang chủ</Link>
+          {" / "}
+          {paymentLabel} &amp; {collectionLabel}
+        </p>
         <h1>
-          {paymentLabel} / {collectionLabel}
+          {paymentLabel} &amp; {collectionLabel}
         </h1>
         <p className="lede">
           {paymentLabel} ≠ {costLabel}; {collectionLabel} ≠ {revenueLabel}. Phân

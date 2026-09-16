@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-16 — UI-02 Bill list/detail + PO breadcrumbs (slice 2)
+
+### User
+tiếp tục bạn (baseline UI/UX PO)
+
+### Done
+- **UI-02 Danh sách Bill:** KPI doanh thu Dự kiến/Đã xác nhận/Thực tế; lọc trạng thái; cột DT/CP/LN (best available, tối đa 40 hồ sơ); nhãn VI cho loại/trạng thái.
+- **UI-02 Hồ sơ Bill:** tab Tổng quan / Chi phí / Doanh thu / Chứng từ / Tính giá / Lịch sử; hành động nhanh; breadcrumb PO.
+- **UI-01:** “Việc cần xử lý của bạn”; độ chín bằng thuật ngữ VI (không lộ Actual/Confirmed/Expected).
+- Breadcrumb/header: chứng từ, thanh toán & thu tiền, bảng giá, chốt tài chính.
+- `BillCostRevenuePanel` hỗ trợ `focus` theo tab.
+
+### Files
+- `app/bills/page.tsx`, `app/bills/[id]/page.tsx`, `lib/bills.ts`
+- `BillCostRevenuePanel.tsx`, `dashboard`, `documents`, `settlements`, `rate-cards`, `financial-closes`, `globals.css`
+
+### Verify
+- `npx tsc --noEmit` apps/web pass
+
+### Follow-up
+- List Bill API kèm financial summary (tránh N+1 profile); drawer master-detail; pixel-match UI-03…UI-14.
+
+---
+
 ## 2026-09-16 — PO UI/UX Baseline v1.0 (shell + nav + hub screens)
 
 ### User

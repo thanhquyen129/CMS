@@ -157,10 +157,11 @@ export default async function DashboardPage() {
           {/* —— 1. Việc cần xử lý —— */}
           <section className="panel panel-wide dash-cluster" aria-labelledby="dash-work">
             <h2 id="dash-work" className="cluster-title">
-              Việc cần xử lý
+              Việc cần xử lý của bạn
             </h2>
             <p className="cluster-lede">
-              Hàng đợi kiểm soát: ngoại lệ, phê duyệt, đối soát, chênh lệch.
+              Hàng đợi kiểm soát: ngoại lệ, phê duyệt, đối soát, chênh lệch, chốt —
+              bấm card để drill-down danh sách đã lọc.
             </p>
             <div className="stat-grid" role="list">
               <Link
@@ -274,8 +275,8 @@ export default async function DashboardPage() {
               {bestAvailableLabel} · {costLabel} / {revenueLabel} / {profitLabel}
             </h2>
             <p className="cluster-lede">
-              Theo tiền tệ: Actual → Confirmed → Expected. Projection read-only —
-              không ghi lên {billLabel}. Xem chi phí ≠ xem doanh thu ≠ biên.
+              Theo tiền tệ: {actualLabel} → {confirmedLabel} → {expectedLabel}. Projection
+              read-only — không ghi lên {billLabel}. Xem chi phí ≠ xem doanh thu ≠ biên.
             </p>
 
             {vis && !vis.canViewCost && !vis.canViewRevenue ? (

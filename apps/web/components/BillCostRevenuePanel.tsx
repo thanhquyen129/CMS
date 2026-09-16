@@ -33,6 +33,8 @@ type Props = {
   costsError: string | null;
   revenues: RevenueListItem[] | null;
   revenuesError: string | null;
+  /** When set, show only that section (Bill financial view tabs). */
+  focus?: "costs" | "revenues" | "all";
 };
 
 function attributionLabel(
@@ -68,6 +70,7 @@ export function BillCostRevenuePanel({
   costsError,
   revenues,
   revenuesError,
+  focus = "all",
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -77,6 +80,9 @@ export function BillCostRevenuePanel({
   const [blocked, setBlocked] = useState<Record<string, true>>({});
   const [isPending, startTransition] = useTransition();
   const [submitting, setSubmitting] = useState(false);
+
+  const showCosts = focus === "all" || focus === "costs";
+  const showRevenues = focus === "all" || focus === "revenues";
 
   const costLabel = term(terms, "COST", "Chi phí");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
@@ -191,7 +197,11 @@ export function BillCostRevenuePanel({
   return (
     <div className="maturity-actions">
       <h2 className="section-title">
-        Xác nhận {costLabel} / {revenueLabel}
+        {focus === "costs"
+          ? costLabel
+          : focus === "revenues"
+            ? revenueLabel
+            : `Xác nhận ${costLabel} / ${revenueLabel}`}
       </h2>
       <p className="muted small">
         Một thao tác mỗi dòng: xác nhận ({expected} → {confirmed}) hoặc ghi nhận{" "}
@@ -199,23 +209,31 @@ export function BillCostRevenuePanel({
         Điều chỉnh (delta + lý do) ghi lịch sử, không silent overwrite.
       </p>
       <p className="cta-row" style={{ marginTop: 0 }}>
-        <Link className="btn btn-sm" href={`/bills/${billId}/costs/new`}>
-          Tạo {costLabel.toLowerCase()}
-        </Link>{" "}
-        <Link className="btn btn-sm" href={`/bills/${billId}/revenues/new`}>
-          Tạo {revenueLabel.toLowerCase()}
-        </Link>{" "}
-        <Link className="btn btn-sm btn-ghost" href="/costs/shared">
-          {costLabel} {term(terms, "ATTRIBUTION_SHARED", "Chung").toLowerCase()}
-        </Link>
+        {showCosts ? (
+          <Link className="btn btn-sm" href={`/bills/${billId}/costs/new`}>
+            Tạo {costLabel.toLowerCase()}
+          </Link>
+        ) : null}{" "}
+        {showRevenues ? (
+          <Link className="btn btn-sm" href={`/bills/${billId}/revenues/new`}>
+            Tạo {revenueLabel.toLowerCase()}
+          </Link>
+        ) : null}{" "}
+        {showCosts ? (
+          <Link className="btn btn-sm btn-ghost" href="/costs/shared">
+            {costLabel} {term(terms, "ATTRIBUTION_SHARED", "Chung").toLowerCase()}
+          </Link>
+        ) : null}
       </p>
-      <p className="note">
-        {costLabel} trực tiếp gắn Bill này; {costLabel.toLowerCase()} chung phân bổ từ{" "}
-        <Link className="row-link" href="/costs/shared">
-          màn phân bổ
-        </Link>{" "}
-        (≥2 Bill → nháp → chốt). Phần phân bổ đã chốt hiện ở hồ sơ tài chính / lợi nhuận.
-      </p>
+      {showCosts ? (
+        <p className="note">
+          {costLabel} trực tiếp gắn Bill này; {costLabel.toLowerCase()} chung phân bổ từ{" "}
+          <Link className="row-link" href="/costs/shared">
+            màn phân bổ
+          </Link>{" "}
+          (≥2 Bill → nháp → chốt). Phần phân bổ đã chốt hiện ở hồ sơ tài chính / lợi nhuận.
+        </p>
+      ) : null}
 
       {error ? (
         <div className="alert alert-error" role="alert">
@@ -223,6 +241,8 @@ export function BillCostRevenuePanel({
         </div>
       ) : null}
 
+      {showCosts ? (
+        <>
       <h3 className="section-title sm">{costLabel}</h3>
       {costsError ? (
         <div className="alert alert-error" role="alert">
@@ -355,7 +375,11 @@ export function BillCostRevenuePanel({
           </table>
         </div>
       )}
+        </>
+      ) : null}
 
+      {showRevenues ? (
+        <>
       <h3 className="section-title sm">{revenueLabel}</h3>
       {revenuesError ? (
         <div className="alert alert-error" role="alert">
@@ -482,6 +506,8 @@ export function BillCostRevenuePanel({
           </table>
         </div>
       )}
+        </>
+      ) : null}
 
       {pending && dialogCopy ? (
         <div

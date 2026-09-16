@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
@@ -9,9 +10,11 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import {
+  billTypeLabel,
   getBill,
   getFinancialProfile,
   getProfitability,
+  operationalStatusLabel,
   type CurrencyFinancialBucket,
   type MaturityBreakdown,
 } from "@/lib/bills";
@@ -21,6 +24,28 @@ import { listFinancialDocuments } from "@/lib/documents";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Params = Promise<{ id: string }>;
+type SearchParams = Promise<{ tab?: string }>;
+
+type BillTab =
+  | "overview"
+  | "costs"
+  | "revenues"
+  | "documents"
+  | "rating"
+  | "history";
+
+function parseTab(raw: string | undefined): BillTab {
+  switch (raw) {
+    case "costs":
+    case "revenues":
+    case "documents":
+    case "rating":
+    case "history":
+      return raw;
+    default:
+      return "overview";
+  }
+}
 
 function MaturityRow({
   label,
@@ -66,7 +91,7 @@ function CurrencyProfileCard({
       <div className="table-wrap">
         <table className="data-table maturity-table">
           <caption className="sr-only">
-            Lớp trưởng thành {revenue} / {directCost} theo {bucket.currencyCode}
+            Chỉ số tài chính {revenue} / {directCost} theo {bucket.currencyCode}
           </caption>
           <thead>
             <tr>
@@ -131,7 +156,9 @@ function CurrencyProfileCard({
           </dd>
         </div>
         <div>
-          <dt>{variance} ({profit})</dt>
+          <dt>
+            {variance} ({profit})
+          </dt>
           <dd>{formatMoney(bucket.profitVarianceExpectedVsActual, bucket.currencyCode)}</dd>
         </div>
       </dl>
@@ -139,21 +166,33 @@ function CurrencyProfileCard({
   );
 }
 
-export default async function BillDetailPage({ params }: { params: Params }) {
+export default async function BillDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const jar = await cookies();
   if (!jar.get(AUTH_COOKIE)?.value) {
     redirect("/login");
   }
 
   const { id } = await params;
+  const { tab: tabRaw } = await searchParams;
+  const tab = parseTab(tabRaw);
+
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
   const profileLabel = term(terms, "BILL_FINANCIAL_PROFILE", "Hồ sơ tài chính Bill");
   const profitLabel = term(terms, "BILL_PROFITABILITY", "Lợi nhuận theo Bill");
   const settlementLabel = term(terms, "SETTLEMENT_OUTSTANDING", "Số dư tất toán còn lại");
-  const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
-  const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
+  const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Công nợ phải trả");
+  const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Công nợ phải thu");
   const best = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
+  const costLabel = term(terms, "COST", "Chi phí");
+  const revenueLabel = term(terms, "REVENUE", "Doanh thu");
+  const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ");
 
   const [billRes, profileRes, profitRes, costsRes, revenuesRes, apRes, arRes, docsRes] =
     await Promise.all([
@@ -198,6 +237,11 @@ export default async function BillDetailPage({ params }: { params: Params }) {
   }
 
   const bill = billRes.data;
+  const costCount = costsRes.ok ? costsRes.data.length : 0;
+  const revenueCount = revenuesRes.ok ? revenuesRes.data.length : 0;
+  const docCount = docsRes.ok ? docsRes.data.length : 0;
+  const tabHref = (t: BillTab) =>
+    t === "overview" ? `/bills/${id}` : `/bills/${id}?tab=${t}`;
 
   return (
     <AppShell
@@ -211,168 +255,286 @@ export default async function BillDetailPage({ params }: { params: Params }) {
     >
       <section className="panel panel-wide">
         <p className="breadcrumb">
-          <Link href="/bills">{billLabel}</Link>
-          <span aria-hidden="true"> / </span>
-          <span>{bill.billNo}</span>
-        </p>
-        <h1>
-          {billLabel} {bill.billNo}
-        </h1>
-        <p className="lede meta-line">
-          Loại: {bill.billType} · Trạng thái: {bill.operationalStatus}
-          {bill.sourceSystem ? ` · Nguồn: ${bill.sourceSystem}` : ""}
-          {bill.externalId ? ` · Mã ngoài: ${bill.externalId}` : ""}
+          <Link href="/dashboard">Trang chủ</Link>
+          {" / "}
+          <Link href="/bills">Đơn hàng vận chuyển</Link>
+          {" / "}
+          <span>
+            {billLabel} {bill.billNo}
+          </span>
         </p>
 
-        <h2 className="section-title">{profileLabel}</h2>
-        {!profileRes.ok ? (
-          <div className="alert alert-error" role="alert">
-            {profileRes.message}
-          </div>
-        ) : (
-          <>
-            <p className="muted small">
-              Cập nhật: {formatDateTimeVi(profileRes.data.asOfTimestamp)}
-              {profileRes.data.hasMixedCurrencies
-                ? " · Nhiều loại tiền — không cộng gộp chéo."
-                : ""}
+        <div className="page-header-row">
+          <div>
+            <h1>
+              {billLabel} {bill.billNo}
+            </h1>
+            <p className="lede meta-line">
+              <span className="status-pill">
+                {operationalStatusLabel(bill.operationalStatus)}
+              </span>
+              {" · "}
+              {billTypeLabel(bill.billType)}
+              {bill.sourceSystem ? ` · Nguồn: ${bill.sourceSystem}` : ""}
+              {bill.externalId ? ` · Mã ngoài: ${bill.externalId}` : ""}
             </p>
-            {profileRes.data.note ? (
-              <p className="note">{profileRes.data.note}</p>
-            ) : null}
-            {profileRes.data.asOfLimitationNote ? (
-              <div className="alert alert-info">{profileRes.data.asOfLimitationNote}</div>
-            ) : null}
+          </div>
+        </div>
 
-            {profileRes.data.byCurrency.length === 0 ? (
-              <div className="empty-state" role="status">
-                Chưa có dòng {term(terms, "COST", "chi phí")} /{" "}
-                {term(terms, "REVENUE", "doanh thu")} trên {billLabel} này.
+        <div className="filter-tabs" role="tablist" aria-label="Tab hồ sơ Bill">
+          <Link
+            className={tab === "overview" ? "active" : undefined}
+            href={tabHref("overview")}
+            role="tab"
+            aria-selected={tab === "overview"}
+          >
+            Tổng quan
+          </Link>
+          <Link
+            className={tab === "costs" ? "active" : undefined}
+            href={tabHref("costs")}
+            role="tab"
+            aria-selected={tab === "costs"}
+          >
+            {costLabel} ({costCount})
+          </Link>
+          <Link
+            className={tab === "revenues" ? "active" : undefined}
+            href={tabHref("revenues")}
+            role="tab"
+            aria-selected={tab === "revenues"}
+          >
+            {revenueLabel} ({revenueCount})
+          </Link>
+          <Link
+            className={tab === "documents" ? "active" : undefined}
+            href={tabHref("documents")}
+            role="tab"
+            aria-selected={tab === "documents"}
+          >
+            {docLabel} ({docCount})
+          </Link>
+          <Link
+            className={tab === "rating" ? "active" : undefined}
+            href={tabHref("rating")}
+            role="tab"
+            aria-selected={tab === "rating"}
+          >
+            Tính giá
+          </Link>
+          <Link
+            className={tab === "history" ? "active" : undefined}
+            href={tabHref("history")}
+            role="tab"
+            aria-selected={tab === "history"}
+          >
+            Lịch sử
+          </Link>
+        </div>
+
+        {tab === "overview" ? (
+          <>
+            <div className="toolbar-row" role="group" aria-label="Hành động nhanh">
+              <Link className="btn btn-sm" href={`/bills/${id}/costs/new`}>
+                + Thêm {costLabel.toLowerCase()}
+              </Link>
+              <Link className="btn btn-sm" href={`/bills/${id}/revenues/new`}>
+                + Thêm {revenueLabel.toLowerCase()}
+              </Link>
+              <Link className="btn btn-sm btn-ghost" href={`/documents?billId=${id}`}>
+                Chứng từ
+              </Link>
+              <Link className="btn btn-sm btn-ghost" href={tabHref("rating")}>
+                Tính giá
+              </Link>
+            </div>
+
+            <h2 className="section-title">{profileLabel}</h2>
+            {!profileRes.ok ? (
+              <div className="alert alert-error" role="alert">
+                {profileRes.message}
               </div>
             ) : (
-              <div className="stack">
-                {profileRes.data.byCurrency.map((b) => (
-                  <CurrencyProfileCard key={b.currencyCode} bucket={b} terms={terms} />
-                ))}
-              </div>
+              <>
+                <p className="muted small">
+                  Cập nhật: {formatDateTimeVi(profileRes.data.asOfTimestamp)}
+                  {profileRes.data.hasMixedCurrencies
+                    ? " · Nhiều loại tiền — không cộng gộp chéo."
+                    : ""}
+                </p>
+                {profileRes.data.note ? (
+                  <p className="note">{profileRes.data.note}</p>
+                ) : null}
+                {profileRes.data.asOfLimitationNote ? (
+                  <div className="alert alert-info">
+                    {profileRes.data.asOfLimitationNote}
+                  </div>
+                ) : null}
+
+                {profileRes.data.byCurrency.length === 0 ? (
+                  <div className="empty-state" role="status">
+                    Chưa có dòng {costLabel.toLowerCase()} /{" "}
+                    {revenueLabel.toLowerCase()} trên {billLabel} này.
+                  </div>
+                ) : (
+                  <div className="stack">
+                    {profileRes.data.byCurrency.map((b) => (
+                      <CurrencyProfileCard
+                        key={b.currencyCode}
+                        bucket={b}
+                        terms={terms}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {profileRes.data.settlementOutstanding.length > 0 ? (
+                  <div className="settlement-block">
+                    <h3 className="section-title sm">{settlementLabel}</h3>
+                    <div className="table-wrap">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Tiền tệ</th>
+                            <th scope="col" className="num">
+                              {apLabel}
+                            </th>
+                            <th scope="col" className="num">
+                              {arLabel}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {profileRes.data.settlementOutstanding.map((s) => (
+                            <tr key={s.currencyCode}>
+                              <td>{s.currencyCode}</td>
+                              <td className="num">
+                                {formatMoney(
+                                  s.accountsPayableOutstanding,
+                                  s.currencyCode
+                                )}
+                              </td>
+                              <td className="num">
+                                {formatMoney(
+                                  s.accountsReceivableOutstanding,
+                                  s.currencyCode
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : null}
+              </>
             )}
 
-            {profileRes.data.settlementOutstanding.length > 0 ? (
-              <div className="settlement-block">
-                <h3 className="section-title sm">{settlementLabel}</h3>
+            <h2 className="section-title">{profitLabel}</h2>
+            {!profitRes.ok ? (
+              <div className="alert alert-error" role="alert">
+                {profitRes.message}
+              </div>
+            ) : profitRes.data.byCurrency.length === 0 ? (
+              <div className="empty-state" role="status">
+                Chưa có số liệu {profitLabel.toLowerCase()} để hiển thị.
+              </div>
+            ) : (
+              <>
+                <p className="muted small">
+                  {term(terms, "PROFITABILITY_VIEW", "Góc nhìn lợi nhuận")}: {best} (
+                  {profitRes.data.view}) ·{" "}
+                  {formatDateTimeVi(profitRes.data.asOfTimestamp)}
+                </p>
+                {profitRes.data.note ? (
+                  <p className="note">{profitRes.data.note}</p>
+                ) : null}
                 <div className="table-wrap">
                   <table className="data-table">
                     <thead>
                       <tr>
                         <th scope="col">Tiền tệ</th>
                         <th scope="col" className="num">
-                          {apLabel}
+                          {revenueLabel}
                         </th>
                         <th scope="col" className="num">
-                          {arLabel}
+                          {term(terms, "DIRECT_COST", "Chi phí trực tiếp")}
+                        </th>
+                        <th scope="col" className="num">
+                          {term(terms, "COST_ALLOCATION", "Phân bổ")}
+                        </th>
+                        <th scope="col" className="num">
+                          {costLabel}
+                        </th>
+                        <th scope="col" className="num">
+                          {term(terms, "PROFIT", "Lợi nhuận")}
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {profileRes.data.settlementOutstanding.map((s) => (
-                        <tr key={s.currencyCode}>
-                          <td>{s.currencyCode}</td>
+                      {profitRes.data.byCurrency.map((p) => (
+                        <tr key={p.currencyCode}>
+                          <td>{p.currencyCode}</td>
                           <td className="num">
-                            {formatMoney(s.accountsPayableOutstanding, s.currencyCode)}
+                            {formatMoney(p.revenueAmount, p.currencyCode)}
                           </td>
                           <td className="num">
-                            {formatMoney(s.accountsReceivableOutstanding, s.currencyCode)}
+                            {formatMoney(p.directCostAmount, p.currencyCode)}
+                          </td>
+                          <td className="num">
+                            {formatMoney(p.allocatedCostAmount, p.currencyCode)}
+                          </td>
+                          <td className="num">
+                            {formatMoney(p.costAmount, p.currencyCode)}
+                          </td>
+                          <td className={`num ${p.profitAmount < 0 ? "neg" : ""}`}>
+                            {formatMoney(p.profitAmount, p.currencyCode)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            ) : null}
+              </>
+            )}
           </>
-        )}
+        ) : null}
 
-        <BillCostRevenuePanel
-          terms={terms}
-          billId={id}
-          costs={costsRes.ok ? costsRes.data : null}
-          costsError={costsRes.ok ? null : costsRes.message}
-          revenues={revenuesRes.ok ? revenuesRes.data : null}
-          revenuesError={revenuesRes.ok ? null : revenuesRes.message}
-        />
+        {tab === "costs" || tab === "revenues" ? (
+          <BillCostRevenuePanel
+            terms={terms}
+            billId={id}
+            costs={costsRes.ok ? costsRes.data : null}
+            costsError={costsRes.ok ? null : costsRes.message}
+            revenues={revenuesRes.ok ? revenuesRes.data : null}
+            revenuesError={revenuesRes.ok ? null : revenuesRes.message}
+            focus={tab === "costs" ? "costs" : "revenues"}
+          />
+        ) : null}
 
-        <BillRatingPanel terms={terms} billId={id} />
+        {tab === "documents" ? (
+          <BillDocumentsApArPanel
+            terms={terms}
+            billId={id}
+            documents={docsRes.ok ? docsRes.data : null}
+            documentsError={docsRes.ok ? null : docsRes.message}
+            payables={apRes.ok ? apRes.data : null}
+            payablesError={apRes.ok ? null : apRes.message}
+            receivables={arRes.ok ? arRes.data : null}
+            receivablesError={arRes.ok ? null : arRes.message}
+          />
+        ) : null}
 
-        <BillDocumentsApArPanel
-          terms={terms}
-          billId={id}
-          documents={docsRes.ok ? docsRes.data : null}
-          documentsError={docsRes.ok ? null : docsRes.message}
-          payables={apRes.ok ? apRes.data : null}
-          payablesError={apRes.ok ? null : apRes.message}
-          receivables={arRes.ok ? arRes.data : null}
-          receivablesError={arRes.ok ? null : arRes.message}
-        />
+        {tab === "rating" ? <BillRatingPanel terms={terms} billId={id} /> : null}
 
-        <h2 className="section-title">{profitLabel}</h2>
-        {!profitRes.ok ? (
-          <div className="alert alert-error" role="alert">
-            {profitRes.message}
-          </div>
-        ) : profitRes.data.byCurrency.length === 0 ? (
-          <div className="empty-state" role="status">
-            Chưa có số liệu {profitLabel.toLowerCase()} để hiển thị.
-          </div>
-        ) : (
-          <>
-            <p className="muted small">
-              {term(terms, "PROFITABILITY_VIEW", "Góc nhìn lợi nhuận")}: {best} (
-              {profitRes.data.view}) · {formatDateTimeVi(profitRes.data.asOfTimestamp)}
-            </p>
-            {profitRes.data.note ? <p className="note">{profitRes.data.note}</p> : null}
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Tiền tệ</th>
-                    <th scope="col" className="num">
-                      {term(terms, "REVENUE", "Doanh thu")}
-                    </th>
-                    <th scope="col" className="num">
-                      {term(terms, "DIRECT_COST", "Chi phí trực tiếp")}
-                    </th>
-                    <th scope="col" className="num">
-                      {term(terms, "COST_ALLOCATION", "Phân bổ")}
-                    </th>
-                    <th scope="col" className="num">
-                      {term(terms, "COST", "Chi phí")}
-                    </th>
-                    <th scope="col" className="num">
-                      {term(terms, "PROFIT", "Lợi nhuận")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {profitRes.data.byCurrency.map((p) => (
-                    <tr key={p.currencyCode}>
-                      <td>{p.currencyCode}</td>
-                      <td className="num">{formatMoney(p.revenueAmount, p.currencyCode)}</td>
-                      <td className="num">{formatMoney(p.directCostAmount, p.currencyCode)}</td>
-                      <td className="num">
-                        {formatMoney(p.allocatedCostAmount, p.currencyCode)}
-                      </td>
-                      <td className="num">{formatMoney(p.costAmount, p.currencyCode)}</td>
-                      <td className={`num ${p.profitAmount < 0 ? "neg" : ""}`}>
-                        {formatMoney(p.profitAmount, p.currencyCode)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        {tab === "history" ? (
+          <AuditTrailPanel
+            terms={terms}
+            objectType="Bill"
+            objectId={id}
+            title="Lịch sử / audit"
+          />
+        ) : null}
       </section>
     </AppShell>
   );

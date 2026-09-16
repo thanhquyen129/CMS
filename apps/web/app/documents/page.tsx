@@ -76,11 +76,30 @@ export default async function DocumentsPage({
   return (
     <AppShell terms={terms} active="documents">
       <section className="panel panel-wide">
-        <h1>{docLabel}</h1>
-        <p className="lede">
-          Ba chiều độc lập: {receivedLabel} ≠ {acceptedLabel} ≠ {matchedLabel}.
-          Không gộp thành một trạng thái; không đồng nghĩa Chi phí hay Thanh toán.
+        <p className="breadcrumb">
+          <Link href="/dashboard">Trang chủ</Link>
+          {" / "}
+          {docLabel}
         </p>
+        <div className="page-header-row">
+          <div>
+            <h1>{docLabel}</h1>
+            <p className="lede">
+              Ba chiều độc lập: {receivedLabel} ≠ {acceptedLabel} ≠ {matchedLabel}.
+              Không gộp thành một trạng thái; không đồng nghĩa Chi phí hay Thanh toán.
+            </p>
+          </div>
+          <Link
+            className="btn"
+            href={
+              billId
+                ? `/documents/receive?billId=${encodeURIComponent(billId)}`
+                : "/documents/receive"
+            }
+          >
+            + Nhận chứng từ
+          </Link>
+        </div>
 
         {billId ? (
           <p className="note" role="status">
@@ -98,16 +117,6 @@ export default async function DocumentsPage({
         ) : null}
 
         <div className="search-bar" role="group" aria-label="Bộ lọc chứng từ">
-          <Link
-            className="btn"
-            href={
-              billId
-                ? `/documents/receive?billId=${encodeURIComponent(billId)}`
-                : "/documents/receive"
-            }
-          >
-            Nhận {docLabel.toLowerCase()}
-          </Link>
           {filterActive ? (
             <Link className="btn btn-ghost" href="/documents">
               Xóa bộ lọc

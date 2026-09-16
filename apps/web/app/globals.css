@@ -605,6 +605,35 @@ html[data-theme="classic"][data-layout="vertical"] .nav-group-toggle:hover {
   box-shadow: var(--shadow-md);
 }
 
+.page-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.page-header-row h1 {
+  margin-bottom: 0.35rem;
+}
+
+.page-header-row .lede {
+  margin-bottom: 0;
+  max-width: 42rem;
+}
+
+.search-bar select {
+  min-width: 10rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
 .filter-tabs {
   display: flex;
   flex-wrap: wrap;

@@ -24,17 +24,26 @@ export default async function RateCardsPage() {
   return (
     <AppShell terms={terms} active="rate-cards">
       <section className="panel panel-wide">
-        <h1>Bảng giá</h1>
-        <p className="lede">
-          Quản lý rate card → phiên bản → quy tắc → phát hành → tính giá trên{" "}
-          {billLabel} → seed {costLabel.toLowerCase()} {expected.toLowerCase()}{" "}
-          (C-011).
+        <p className="breadcrumb">
+          <Link href="/dashboard">Trang chủ</Link>
+          {" / "}
+          Bảng giá &amp; Tính giá
         </p>
-
-        <p className="cta-row" style={{ marginTop: 0 }}>
+        <div className="page-header-row">
+          <div>
+            <h1>Bảng giá &amp; Tính giá</h1>
+            <p className="lede">
+              Rate card → phiên bản → quy tắc → phát hành → tính giá trên {billLabel} →
+              seed {costLabel.toLowerCase()} {expected.toLowerCase()}. Rating tạo kỳ vọng
+              tài chính, không tạo {term(terms, "ACTUAL", "Thực tế").toLowerCase()}.
+            </p>
+          </div>
           <Link className="btn" href="/rate-cards/new">
-            Tạo bảng giá
+            + Tạo bảng giá
           </Link>
+        </div>
+
+        <p className="cta-row" style={{ marginTop: "0.75rem" }}>
           <Link className="btn btn-ghost" href="/bills">
             Danh sách {billLabel}
           </Link>

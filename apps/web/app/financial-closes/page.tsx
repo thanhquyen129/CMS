@@ -43,16 +43,26 @@ export default async function FinancialClosesPage({
   return (
     <AppShell terms={terms} active="financial-closes">
       <section className="panel panel-wide">
-        <h1>{closeLabel}</h1>
-        <p className="lede">
-          Mở lần chốt → tạo {snapshotLabel.toLowerCase()} (bất biến) → khóa.
-          P&amp;L đọc từ snapshot; không ghi đè Bill.
+        <p className="breadcrumb">
+          <Link href="/dashboard">Trang chủ</Link>
+          {" / "}
+          {closeLabel}
         </p>
+        <div className="page-header-row">
+          <div>
+            <h1>{closeLabel}</h1>
+            <p className="lede">
+              Mở → Close Review → Closed → Reopened → Reclosed. Tạo{" "}
+              {snapshotLabel.toLowerCase()} bất biến; không sửa ngầm kỳ đã chốt. P&amp;L
+              sau chốt đọc từ snapshot — không ghi đè {billLabel}.
+            </p>
+          </div>
+          <Link className="btn" href="/financial-closes/new">
+            + Mở {closeLabel.toLowerCase()}
+          </Link>
+        </div>
 
         <div className="search-bar" role="group" aria-label="Bộ lọc chốt">
-          <Link className="btn" href="/financial-closes/new">
-            Mở {closeLabel.toLowerCase()}
-          </Link>
           <Link
             className={!sp.status ? "btn btn-ghost" : "btn btn-ghost"}
             href="/financial-closes"

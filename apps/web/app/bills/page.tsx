@@ -53,23 +53,48 @@ export default async function BillsPage({
   const confirmedLabel = term(terms, "CONFIRMED", "Đã xác nhận");
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
 
-  const result = await listBills(q);
-  let bills: BillListItem[] = result.ok ? result.data.items : [];
-  if (status?.trim()) {
-    const s = status.trim().toLowerCase();
-    bills = bills.filter((b) => b.operationalStatus?.toLowerCase() === s);
-  }
-
   const pageSize = parsePageSize(pageSizeRaw);
-  const pages = calcTotalPages(bills.length, pageSize);
-  const page = parsePage(pageRaw, pages);
-  const pageRows = slicePage(bills, page, pageSize);
+  const statusFilter = status?.trim() || undefined;
+  const pageHint = Math.max(
+    1,
+    Number.parseInt(String(pageRaw ?? "1"), 10) || 1
+  );
+
+  let result;
+  let pageRows: BillListItem[];
+  let totalCount: number;
+  let page: number;
+  let pages: number;
+  let kpiBills: BillListItem[];
+  let statusOptionsSource: BillListItem[];
+
+  if (statusFilter) {
+    // listBills has no status param — fetch unpaged, then client filter + slice.
+    result = await listBills(q);
+    let bills: BillListItem[] = result.ok ? result.data.items : [];
+    const s = statusFilter.toLowerCase();
+    bills = bills.filter((b) => b.operationalStatus?.toLowerCase() === s);
+    pages = calcTotalPages(bills.length, pageSize);
+    page = parsePage(pageRaw, pages);
+    pageRows = slicePage(bills, page, pageSize);
+    totalCount = bills.length;
+    kpiBills = bills;
+    statusOptionsSource = result.ok ? result.data.items : [];
+  } else {
+    result = await listBills(q, { page: pageHint, pageSize });
+    totalCount = result.ok ? result.data.totalCount : 0;
+    pages = calcTotalPages(totalCount, pageSize);
+    page = parsePage(pageRaw, pages);
+    pageRows = result.ok ? result.data.items : [];
+    kpiBills = pageRows;
+    statusOptionsSource = pageRows;
+  }
 
   let sumRevExpected = 0;
   let sumRevConfirmed = 0;
   let sumRevActual = 0;
   let rollCurrency = "VND";
-  for (const b of bills) {
+  for (const b of kpiBills) {
     if (b.summaryCurrencyCode) rollCurrency = b.summaryCurrencyCode;
     sumRevExpected += b.revenueExpectedTotal ?? 0;
     sumRevConfirmed += b.revenueConfirmedTotal ?? 0;
@@ -77,11 +102,7 @@ export default async function BillsPage({
   }
 
   const statusOptions = Array.from(
-    new Set(
-      (result.ok ? result.data.items : [])
-        .map((b) => b.operationalStatus)
-        .filter(Boolean)
-    )
+    new Set(statusOptionsSource.map((b) => b.operationalStatus).filter(Boolean))
   );
 
   return (
@@ -139,17 +160,20 @@ export default async function BillsPage({
               {
                 key: "count",
                 label: `Tổng số ${billLabel}`,
-                value: bills.length,
-                hint:
-                  result.data.totalCount !== bills.length
+                value: statusFilter ? kpiBills.length : totalCount,
+                hint: statusFilter
+                  ? result.data.totalCount !== kpiBills.length
                     ? `Trong ${result.data.totalCount} bản ghi`
-                    : "Trong phạm vi của bạn",
+                    : "Trong phạm vi của bạn"
+                  : "Trong phạm vi của bạn",
               },
               {
                 key: "rev-e",
                 label: `${revenueLabel} (${expectedLabel})`,
                 value: formatMoney(sumRevExpected, rollCurrency),
-                hint: "Projection từ API list",
+                hint: statusFilter
+                  ? "Projection từ API list"
+                  : "Trên trang hiện tại",
               },
               {
                 key: "rev-c",
@@ -171,7 +195,7 @@ export default async function BillsPage({
           <div className="alert alert-error" role="alert">
             {result.message}
           </div>
-        ) : bills.length === 0 ? (
+        ) : totalCount === 0 ? (
           <div className="empty-state" role="status">
             {q?.trim() || status ? (
               `Không có ${billLabel} khớp bộ lọc. Thử điều kiện khác.`
@@ -205,7 +229,7 @@ export default async function BillsPage({
               params={{ q, status }}
               page={page}
               pageSize={pageSize}
-              totalCount={bills.length}
+              totalCount={totalCount}
               totalPages={pages}
             />
           </>

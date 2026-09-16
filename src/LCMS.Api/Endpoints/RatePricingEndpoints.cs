@@ -26,9 +26,23 @@ public static class RatePricingEndpoints
                 ct);
             return Results.Created($"/api/rate-cards/{id}", new { id });
         });
-        cards.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        cards.MapGet("/", async (
+            string? q,
+            string? partyType,
+            bool? isActive,
+            int? page,
+            int? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListRateCardsQuery(), ct);
+            var list = await sender.Send(
+                new ListRateCardsQuery(q, partyType, isActive, page, pageSize),
+                ct);
+            if (page is null && pageSize is null)
+            {
+                return Results.Ok(list.Items);
+            }
+
             return Results.Ok(list);
         });
         cards.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

@@ -32,13 +32,24 @@ public static class CostEndpoints
             Guid? billId,
             string? financialMaturity,
             string? attributionType,
+            Guid? vendorPartyId,
+            DateOnly? fromDate,
+            DateOnly? toDate,
             int? page,
             int? pageSize,
             ISender sender,
             CancellationToken ct) =>
         {
             var list = await sender.Send(
-                new ListCostsQuery(billId, financialMaturity, attributionType, page, pageSize),
+                new ListCostsQuery(
+                    billId,
+                    financialMaturity,
+                    attributionType,
+                    vendorPartyId,
+                    fromDate,
+                    toDate,
+                    page,
+                    pageSize),
                 ct);
             if (page is null && pageSize is null)
             {

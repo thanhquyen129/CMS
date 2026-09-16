@@ -10,7 +10,6 @@ import { listRateCards } from "@/lib/rate-cards-server";
 import {
   parsePage,
   parsePageSize,
-  slicePage,
   totalPages as calcTotalPages,
 } from "@/lib/list-paging";
 
@@ -39,24 +38,26 @@ export default async function RateCardsPage({
   const costLabel = term(terms, "COST", "Chi phí");
   const actual = term(terms, "ACTUAL", "Thực tế");
 
-  const listRes = await listRateCards();
-  let cards = listRes.ok ? listRes.data : [];
-  if (sp.partyType === "vendor" || sp.partyType === "customer") {
-    cards = cards.filter(
-      (c) => c.partyType?.toLowerCase() === sp.partyType!.toLowerCase()
-    );
-  }
-  if (sp.active === "1") cards = cards.filter((c) => c.isActive);
-  if (sp.active === "0") cards = cards.filter((c) => !c.isActive);
-  if (sp.q?.trim()) {
-    const q = sp.q.trim().toLowerCase();
-    cards = cards.filter(
-      (c) =>
-        c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
-    );
-  }
+  const partyType =
+    sp.partyType === "vendor" || sp.partyType === "customer"
+      ? sp.partyType
+      : undefined;
+  const active =
+    sp.active === "1" ? true : sp.active === "0" ? false : undefined;
+  const q = sp.q?.trim() || undefined;
 
-  const allCards = listRes.ok ? listRes.data : [];
+  const pageSize = parsePageSize(sp.pageSize);
+  const pageHint = Math.max(
+    1,
+    Number.parseInt(String(sp.page ?? "1"), 10) || 1
+  );
+
+  const [listRes, kpiRes] = await Promise.all([
+    listRateCards({ q, partyType, active, page: pageHint, pageSize }),
+    listRateCards(),
+  ]);
+
+  const allCards = kpiRes.ok ? kpiRes.data.items : [];
   const activeCount = allCards.filter((c) => c.isActive).length;
   const buyCount = allCards.filter(
     (c) => c.partyType?.toLowerCase() === "vendor"
@@ -65,10 +66,10 @@ export default async function RateCardsPage({
     (c) => c.partyType?.toLowerCase() === "customer"
   ).length;
 
-  const pageSize = parsePageSize(sp.pageSize);
-  const pages = calcTotalPages(cards.length, pageSize);
+  const totalCount = listRes.ok ? listRes.data.totalCount : 0;
+  const pages = calcTotalPages(totalCount, pageSize);
   const page = parsePage(sp.page, pages);
-  const pageRows = slicePage(cards, page, pageSize);
+  const pageRows = listRes.ok ? listRes.data.items : [];
 
   return (
     <AppShell terms={terms} active="rate-cards">
@@ -92,7 +93,7 @@ export default async function RateCardsPage({
           </Link>
         </div>
 
-        {listRes.ok ? (
+        {kpiRes.ok ? (
           <div className="stat-grid" style={{ marginTop: "0.85rem" }}>
             <div className="stat-card">
               <span className="stat-label">Tổng bảng giá</span>
@@ -160,7 +161,7 @@ export default async function RateCardsPage({
           <div className="alert alert-error" role="alert">
             {listRes.message}
           </div>
-        ) : cards.length === 0 ? (
+        ) : totalCount === 0 ? (
           <div className="empty-state" role="status">
             {sp.q || sp.partyType || sp.active
               ? "Không có bảng giá khớp bộ lọc."
@@ -178,7 +179,7 @@ export default async function RateCardsPage({
               }}
               page={page}
               pageSize={pageSize}
-              totalCount={cards.length}
+              totalCount={totalCount}
               totalPages={pages}
             />
           </>

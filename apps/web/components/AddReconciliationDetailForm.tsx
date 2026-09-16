@@ -1,13 +1,24 @@
 "use client";
 
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
+type ReconPickOption = {
+  id: string;
+  label: string;
+  amount?: number;
+  currencyCode?: string;
+};
+
 type Props = {
   terms: TerminologyMap;
   reconciliationId: string;
+  bankLines?: ReconPickOption[];
+  payments?: ReconPickOption[];
+  collections?: ReconPickOption[];
 };
 
 const SOURCE_TYPES = [
@@ -48,6 +59,9 @@ function objectLabel(terms: TerminologyMap, t: string): string {
 export function AddReconciliationDetailForm({
   terms,
   reconciliationId,
+  bankLines = [],
+  payments = [],
+  collections = [],
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -157,13 +171,31 @@ export function AddReconciliationDetailForm({
   }
 
   const busy = submitting || isPending;
+  const pickOptions = [...bankLines, ...payments, ...collections];
 
   return (
     <form className="receive-form" onSubmit={onSubmit}>
       <p className="note">
         Thêm {detailLabel.toLowerCase()}. Nếu nguồn − khớp ≠ 0 hệ thống tạo{" "}
-        {varianceLabel.toLowerCase()} (không tự mở ngoại lệ).
+        {varianceLabel.toLowerCase()} (không tự mở ngoại lệ). Chọn từ danh sách
+        gợi ý hoặc dán GUID.{" "}
+        <Link className="row-link" href="/bank-feed">
+          Sao kê
+        </Link>
+        {" · "}
+        <Link className="row-link" href="/settlements">
+          Thanh toán / Thu
+        </Link>
       </p>
+      {pickOptions.length > 0 ? (
+        <datalist id="recon-pick-ids">
+          {pickOptions.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </datalist>
+      ) : null}
       <div className="form-grid">
         <div className="field">
           <label htmlFor="sourceType">Loại nguồn</label>
@@ -190,7 +222,8 @@ export function AddReconciliationDetailForm({
             required
             disabled={busy}
             className="mono-id"
-            placeholder="GUID"
+            placeholder="Chọn gợi ý hoặc GUID"
+            list={pickOptions.length > 0 ? "recon-pick-ids" : undefined}
           />
         </div>
         <div className="field">
@@ -224,7 +257,8 @@ export function AddReconciliationDetailForm({
             type="text"
             disabled={busy}
             className="mono-id"
-            placeholder="GUID"
+            placeholder="Chọn gợi ý hoặc GUID"
+            list={pickOptions.length > 0 ? "recon-pick-ids" : undefined}
           />
         </div>
         <div className="field">

@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-16 — Triển khai checklist go-live (A→C)
+
+### User
+triển khai lần lượt đến hết
+
+### Done
+- **A:** Ghi nhận UAT spine PASS (2026-09-13) trên checklist; đóng P1 variance + recon UX.
+- **Variance:** `TransitionVarianceCommand` + `POST /api/variances/{id}/accept|clear|write-off` + BFF + `VarianceTransitionButtons`.
+- **Recon:** datalist gợi ý bank unmatched / payments / collections trên form chi tiết.
+- **C paging/filter:** Documents + Rate cards `PagedResult`; Cost `vendorPartyId`/`fromDate`/`toDate`; web list pages truyền `page`/`pageSize` server-side.
+- **UI-15:** Workflow map thêm Sao kê + Đối soát.
+- Checklist: `docs/ops/go-live-checklist.md` đánh dấu tiến độ.
+
+### Verify
+- `dotnet build` LCMS.Api OK
+- `npx tsc --noEmit` apps/web OK
+
+### Follow-up (còn)
+1. UAT 2 user Cost≠Revenue
+2. Rate-card components UI + seed revenue Expected
+3. Screenshot pixel UI-09…14
+4. Global Search đa entity
+
+---
+
 ## 2026-09-16 — Checklist go-live tuần tự
 
 ### User

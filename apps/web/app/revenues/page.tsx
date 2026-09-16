@@ -14,7 +14,6 @@ import { listRevenues } from "@/lib/costs-revenues-server";
 import {
   parsePage,
   parsePageSize,
-  slicePage,
   totalPages as calcTotalPages,
 } from "@/lib/list-paging";
 import { formatMoney } from "@/lib/money";
@@ -54,8 +53,18 @@ export default async function RevenuesPage({
   const confirmedLabel = term(terms, "CONFIRMED", "Đã xác nhận");
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
 
+  const pageSize = parsePageSize(pageSizeRaw);
+  const pageHint = Math.max(
+    1,
+    Number.parseInt(String(pageRaw ?? "1"), 10) || 1
+  );
+
   const [result, kpiRes] = await Promise.all([
-    listRevenues({ financialMaturity: maturityFilter }),
+    listRevenues({
+      financialMaturity: maturityFilter,
+      page: pageHint,
+      pageSize,
+    }),
     listRevenues(),
   ]);
   const kpiItems = kpiRes.ok ? kpiRes.data.items : [];
@@ -67,15 +76,10 @@ export default async function RevenuesPage({
       .reduce((s, r) => s + (r.amount ?? 0), 0);
   const kpiCurrency = kpiItems[0]?.currencyCode ?? "VND";
 
-  const allRows = result.ok ? result.data.items : [];
-  const pageSize = parsePageSize(pageSizeRaw);
-  const pages = calcTotalPages(
-    result.ok ? result.data.totalCount : allRows.length,
-    pageSize
-  );
+  const totalCount = result.ok ? result.data.totalCount : 0;
+  const pages = calcTotalPages(totalCount, pageSize);
   const page = parsePage(pageRaw, pages);
-  const pageRows = slicePage(allRows, page, pageSize);
-  const totalCount = result.ok ? result.data.totalCount : allRows.length;
+  const pageRows = result.ok ? result.data.items : [];
 
   const statCards: StatCardModel[] = [
     { key: "count", label: "Số dòng", value: kpiItems.length },
@@ -188,7 +192,7 @@ export default async function RevenuesPage({
           <div className="alert alert-error" role="alert">
             {result.message}
           </div>
-        ) : allRows.length === 0 ? (
+        ) : totalCount === 0 ? (
           <div className="empty-state" role="status">
             Chưa có dòng {revenueLabel.toLowerCase()}. Mở một {billLabel} và thêm doanh thu
             (Dự kiến → Đã xác nhận → Thực tế).

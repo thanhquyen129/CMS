@@ -37,6 +37,8 @@ public static class FinancialDocumentEndpoints
             string? acceptanceStatus,
             string? matchingStatus,
             Guid? billId,
+            int? page,
+            int? pageSize,
             ISender sender,
             CancellationToken ct) =>
         {
@@ -46,8 +48,15 @@ public static class FinancialDocumentEndpoints
                     receiptStatus,
                     acceptanceStatus,
                     matchingStatus,
-                    billId),
+                    billId,
+                    page,
+                    pageSize),
                 ct);
+            if (page is null && pageSize is null)
+            {
+                return Results.Ok(list.Items);
+            }
+
             return Results.Ok(list);
         });
 

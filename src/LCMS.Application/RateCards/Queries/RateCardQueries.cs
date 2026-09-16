@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Common.Paging;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,9 +52,14 @@ public sealed class GetRateCardByIdQueryHandler : IRequestHandler<GetRateCardByI
         new(card.Id, card.Code, card.Name, card.PartyType, card.CurrencyCode, card.Description, card.IsActive, card.CreatedAt);
 }
 
-public sealed record ListRateCardsQuery : IRequest<IReadOnlyList<RateCardDto>>;
+public sealed record ListRateCardsQuery(
+    string? Q = null,
+    string? PartyType = null,
+    bool? IsActive = null,
+    int? Page = null,
+    int? PageSize = null) : IRequest<PagedResult<RateCardDto>>;
 
-public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQuery, IReadOnlyList<RateCardDto>>
+public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQuery, PagedResult<RateCardDto>>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -64,18 +70,55 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
         _tenantContext = tenantContext;
     }
 
-    public async Task<IReadOnlyList<RateCardDto>> Handle(ListRateCardsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<RateCardDto>> Handle(ListRateCardsQuery request, CancellationToken cancellationToken)
     {
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
         }
 
-        return await _db.RateCards
-            .AsNoTracking()
-            .OrderBy(r => r.Code)
+        var (page, pageSize, applyPaging) = PagingNormalize.Normalize(request.Page, request.PageSize);
+
+        var query = _db.RateCards.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(request.Q))
+        {
+            var q = request.Q.Trim().ToLowerInvariant();
+            query = query.Where(r =>
+                r.Code.ToLower().Contains(q) || r.Name.ToLower().Contains(q));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PartyType))
+        {
+            var partyType = request.PartyType.Trim().ToLowerInvariant();
+            query = query.Where(r => r.PartyType.ToLower() == partyType);
+        }
+
+        if (request.IsActive.HasValue)
+        {
+            query = query.Where(r => r.IsActive == request.IsActive.Value);
+        }
+
+        var ordered = query.OrderBy(r => r.Code);
+        var totalCount = await ordered.CountAsync(cancellationToken);
+        if (totalCount == 0)
+        {
+            return PagingNormalize.Empty<RateCardDto>(page, pageSize, applyPaging);
+        }
+
+        var pageQuery = applyPaging
+            ? ordered.Skip((page - 1) * pageSize).Take(pageSize)
+            : ordered;
+
+        var items = await pageQuery
             .Select(r => new RateCardDto(
                 r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt))
             .ToListAsync(cancellationToken);
+
+        return new PagedResult<RateCardDto>(
+            items,
+            applyPaging ? page : 1,
+            applyPaging ? pageSize : totalCount,
+            totalCount);
     }
 }

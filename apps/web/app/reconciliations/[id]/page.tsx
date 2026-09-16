@@ -6,6 +6,7 @@ import { AddReconciliationDetailForm } from "@/components/AddReconciliationDetai
 import { CompleteReconciliationButton } from "@/components/CompleteReconciliationButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import { listBankFeedLines } from "@/lib/bank-feed";
 import {
   canEditReconciliation,
   getReconciliation,
@@ -14,6 +15,7 @@ import {
   reconciliationStatusLabel,
   reconciliationTypeLabel,
 } from "@/lib/reconciliations";
+import { listCollections, listPayments } from "@/lib/settlements";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -32,6 +34,42 @@ export default async function ReconciliationDetailPage({ params }: Ctx) {
   const billLabel = term(terms, "BILL", "Bill");
 
   const result = await getReconciliation(id);
+
+  const [bankRes, payRes, colRes] = result.ok && canEditReconciliation(result.data.status)
+    ? await Promise.all([
+        listBankFeedLines({ status: "unmatched" }),
+        listPayments(),
+        listCollections(),
+      ])
+    : [null, null, null];
+
+  const bankLines =
+    bankRes && bankRes.ok
+      ? bankRes.data.slice(0, 40).map((l) => ({
+          id: l.id,
+          label: `Sao kê ${formatMoney(l.amount, l.currencyCode)}${l.bankReference ? ` · ${l.bankReference}` : ""}`,
+          amount: l.amount,
+          currencyCode: l.currencyCode,
+        }))
+      : [];
+  const payments =
+    payRes && payRes.ok
+      ? payRes.data.slice(0, 40).map((p) => ({
+          id: p.id,
+          label: `TT ${formatMoney(p.amount, p.currencyCode)} · ${p.id.slice(0, 8)}…`,
+          amount: p.amount,
+          currencyCode: p.currencyCode,
+        }))
+      : [];
+  const collections =
+    colRes && colRes.ok
+      ? colRes.data.slice(0, 40).map((c) => ({
+          id: c.id,
+          label: `Thu ${formatMoney(c.amount, c.currencyCode)} · ${c.id.slice(0, 8)}…`,
+          amount: c.amount,
+          currencyCode: c.currencyCode,
+        }))
+      : [];
 
   return (
     <AppShell terms={terms} active="control">
@@ -161,6 +199,9 @@ export default async function ReconciliationDetailPage({ params }: Ctx) {
                 <AddReconciliationDetailForm
                   terms={terms}
                   reconciliationId={result.data.id}
+                  bankLines={bankLines}
+                  payments={payments}
+                  collections={collections}
                 />
               </>
             ) : (

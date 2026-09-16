@@ -11,7 +11,6 @@ import { listFinancialDocuments } from "@/lib/documents";
 import {
   parsePage,
   parsePageSize,
-  slicePage,
   totalPages as calcTotalPages,
 } from "@/lib/list-paging";
 
@@ -45,6 +44,12 @@ export default async function DocumentsPage({
   const acceptedLabel = term(terms, "ACCEPTED", "Đã chấp nhận");
   const matchedLabel = term(terms, "MATCHED", "Đã khớp");
 
+  const pageSize = parsePageSize(sp.pageSize);
+  const pageHint = Math.max(
+    1,
+    Number.parseInt(String(sp.page ?? "1"), 10) || 1
+  );
+
   const [result, billRes] = await Promise.all([
     listFinancialDocuments({
       receiptStatus: sp.receiptStatus,
@@ -52,6 +57,8 @@ export default async function DocumentsPage({
       matchingStatus: sp.matchingStatus,
       documentType,
       billId,
+      page: pageHint,
+      pageSize,
     }),
     billId ? getBill(billId) : Promise.resolve(null),
   ]);
@@ -70,11 +77,10 @@ export default async function DocumentsPage({
     Boolean(sp.acceptanceStatus) ||
     Boolean(sp.matchingStatus);
 
-  const allRows = result.ok ? result.data : [];
-  const pageSize = parsePageSize(sp.pageSize);
-  const pages = calcTotalPages(allRows.length, pageSize);
+  const totalCount = result.ok ? result.data.totalCount : 0;
+  const pages = calcTotalPages(totalCount, pageSize);
   const page = parsePage(sp.page, pages);
-  const pageRows = slicePage(allRows, page, pageSize);
+  const pageRows = result.ok ? result.data.items : [];
   const pageParams = {
     billId,
     documentType,
@@ -210,7 +216,7 @@ export default async function DocumentsPage({
           <div className="alert alert-error" role="alert">
             {result.message}
           </div>
-        ) : allRows.length === 0 ? (
+        ) : totalCount === 0 ? (
           <div className="empty-state" role="status">
             {filterActive
               ? "Không có chứng từ khớp bộ lọc."
@@ -229,7 +235,7 @@ export default async function DocumentsPage({
               params={pageParams}
               page={page}
               pageSize={pageSize}
-              totalCount={allRows.length}
+              totalCount={totalCount}
               totalPages={pages}
             />
           </>

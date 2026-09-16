@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { EscalateVarianceButton } from "@/components/EscalateVarianceButton";
+import { VarianceTransitionButtons } from "@/components/VarianceTransitionButtons";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -147,6 +148,7 @@ export default async function VarianceQueuePage({
                     </td>
                     <td>
                       <EscalateVarianceButton terms={terms} variance={item} />
+                      <VarianceTransitionButtons variance={item} />
                     </td>
                   </tr>
                 ))}

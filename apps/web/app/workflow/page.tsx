@@ -74,18 +74,30 @@ export default async function WorkflowMapPage() {
     },
     {
       no: "09",
+      title: term(terms, "BANK_FEED", "Sao kê ngân hàng"),
+      desc: "Nhập dòng sao kê — khớp / bỏ qua trước đối soát",
+      href: "/bank-feed",
+    },
+    {
+      no: "10",
+      title: term(terms, "RECONCILIATION", "Đối soát"),
+      desc: "Đối soát ngân hàng với thanh toán / thu tiền",
+      href: "/reconciliations",
+    },
+    {
+      no: "11",
       title: "Kiểm soát",
       desc: "Chênh lệch ≠ Ngoại lệ; phê duyệt độc lập",
       href: "/control",
     },
     {
-      no: "10",
+      no: "12",
       title: closeLabel,
       desc: "Snapshot bất biến; reopen / reclose theo policy",
       href: "/financial-closes",
     },
     {
-      no: "11",
+      no: "13",
       title: "Báo cáo",
       desc: "Read model — truy ngược Bill & giao dịch nguồn",
       href: "/reports",

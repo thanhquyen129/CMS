@@ -4,6 +4,7 @@ using LCMS.Application.Exceptions.Commands;
 using LCMS.Application.Exceptions.Queries;
 using LCMS.Application.Reconciliations.Commands;
 using LCMS.Application.Reconciliations.Queries;
+using LCMS.Application.Variances.Commands;
 using LCMS.Application.Variances.Queries;
 using MediatR;
 
@@ -97,6 +98,42 @@ public static class FinancialControlEndpoints
         {
             var item = await sender.Send(new GetVarianceByIdQuery(id), ct);
             return Results.Ok(item);
+        });
+
+        variances.MapPost("/{id:guid}/accept", async (
+            Guid id,
+            TransitionVarianceBody? body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new TransitionVarianceCommand(id, "accepted", body?.Explanation),
+                ct);
+            return Results.NoContent();
+        });
+
+        variances.MapPost("/{id:guid}/clear", async (
+            Guid id,
+            TransitionVarianceBody? body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new TransitionVarianceCommand(id, "cleared", body?.Explanation),
+                ct);
+            return Results.NoContent();
+        });
+
+        variances.MapPost("/{id:guid}/write-off", async (
+            Guid id,
+            TransitionVarianceBody? body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new TransitionVarianceCommand(id, "written_off", body?.Explanation),
+                ct);
+            return Results.NoContent();
         });
 
         var exceptions = app.MapGroup("/api/exceptions").WithTags("Exceptions");
@@ -262,3 +299,5 @@ public sealed record RequestApprovalRequest(
     int? RequiredLevel);
 
 public sealed record DecideApprovalRequest(string? DecisionReason);
+
+public sealed record TransitionVarianceBody(string? Explanation);

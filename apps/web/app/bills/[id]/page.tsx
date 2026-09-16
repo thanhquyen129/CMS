@@ -239,7 +239,7 @@ export default async function BillDetailPage({
   const bill = billRes.data;
   const costCount = costsRes.ok ? costsRes.data.length : 0;
   const revenueCount = revenuesRes.ok ? revenuesRes.data.length : 0;
-  const docCount = docsRes.ok ? docsRes.data.length : 0;
+  const docCount = docsRes.ok ? docsRes.data.items.length : 0;
   const tabHref = (t: BillTab) =>
     t === "overview" ? `/bills/${id}` : `/bills/${id}?tab=${t}`;
 
@@ -516,7 +516,7 @@ export default async function BillDetailPage({
           <BillDocumentsApArPanel
             terms={terms}
             billId={id}
-            documents={docsRes.ok ? docsRes.data : null}
+            documents={docsRes.ok ? docsRes.data.items : null}
             documentsError={docsRes.ok ? null : docsRes.message}
             payables={apRes.ok ? apRes.data : null}
             payablesError={apRes.ok ? null : apRes.message}

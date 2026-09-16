@@ -230,6 +230,9 @@ public sealed record ListCostsQuery(
     Guid? BillId,
     string? FinancialMaturity,
     string? AttributionType = null,
+    Guid? VendorPartyId = null,
+    DateOnly? FromDate = null,
+    DateOnly? ToDate = null,
     int? Page = null,
     int? PageSize = null) : IRequest<PagedResult<CostListItemDto>>;
 
@@ -285,6 +288,21 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, Page
         {
             var attribution = request.AttributionType.Trim().ToLowerInvariant();
             query = query.Where(c => c.AttributionType == attribution);
+        }
+
+        if (request.VendorPartyId.HasValue)
+        {
+            query = query.Where(c => c.VendorPartyId == request.VendorPartyId);
+        }
+
+        if (request.FromDate.HasValue)
+        {
+            query = query.Where(c => c.EffectiveDate >= request.FromDate.Value);
+        }
+
+        if (request.ToDate.HasValue)
+        {
+            query = query.Where(c => c.EffectiveDate <= request.ToDate.Value);
         }
 
         if (scope == DataScopes.Own)

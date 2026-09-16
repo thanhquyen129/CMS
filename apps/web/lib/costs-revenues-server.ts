@@ -63,12 +63,18 @@ export function listCostsByBill(
 export function listCosts(opts?: {
   financialMaturity?: string;
   attributionType?: string;
+  vendorPartyId?: string;
+  fromDate?: string;
+  toDate?: string;
   page?: number;
   pageSize?: number;
 }): Promise<ApiResult<PagedResult<CostListItem>>> {
   const p = new URLSearchParams();
   if (opts?.financialMaturity) p.set("financialMaturity", opts.financialMaturity);
   if (opts?.attributionType) p.set("attributionType", opts.attributionType);
+  if (opts?.vendorPartyId) p.set("vendorPartyId", opts.vendorPartyId);
+  if (opts?.fromDate) p.set("fromDate", opts.fromDate);
+  if (opts?.toDate) p.set("toDate", opts.toDate);
   if (opts?.page != null) p.set("page", String(opts.page));
   if (opts?.pageSize != null) p.set("pageSize", String(opts.pageSize));
   const qs = p.toString();

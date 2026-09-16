@@ -28,7 +28,7 @@ export async function BillRatingPanel({ terms, billId }: Props) {
   let cardsWithVersions: { card: RateCard; versions: RateVersion[] }[] = [];
   if (cardsRes.ok) {
     cardsWithVersions = await Promise.all(
-      cardsRes.data.map(async (card) => {
+      cardsRes.data.items.map(async (card) => {
         const versionsRes = await fetchRateVersions(card.id);
         return {
           card,

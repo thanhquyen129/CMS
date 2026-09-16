@@ -183,7 +183,7 @@ export default async function DocumentMatchSessionPage({
       acceptanceStatus: "accepted",
     });
     if (others.ok) {
-      acceptedDocs = others.data.filter((d) => d.id !== doc.id);
+      acceptedDocs = others.data.items.filter((d) => d.id !== doc.id);
     } else {
       targetDocHint = others.message;
     }

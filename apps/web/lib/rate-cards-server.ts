@@ -9,6 +9,7 @@ import type {
   Rating,
   RatingHistoryItem,
 } from "./rate-cards";
+import { unwrapPaged, type PagedResult } from "./paging";
 
 async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   const token = await getSessionToken();
@@ -52,8 +53,24 @@ async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   }
 }
 
-export function listRateCards(): Promise<ApiResult<RateCard[]>> {
-  return apiGet<RateCard[]>("/api/rate-cards");
+export function listRateCards(opts?: {
+  q?: string;
+  partyType?: string;
+  active?: boolean;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResult<PagedResult<RateCard>>> {
+  const p = new URLSearchParams();
+  if (opts?.q) p.set("q", opts.q);
+  if (opts?.partyType) p.set("partyType", opts.partyType);
+  if (opts?.active === true) p.set("isActive", "true");
+  if (opts?.active === false) p.set("isActive", "false");
+  if (opts?.page != null) p.set("page", String(opts.page));
+  if (opts?.pageSize != null) p.set("pageSize", String(opts.pageSize));
+  const qs = p.toString();
+  return apiGet<RateCard[] | PagedResult<RateCard>>(
+    qs ? `/api/rate-cards?${qs}` : "/api/rate-cards"
+  ).then((r) => (r.ok ? { ok: true, data: unwrapPaged(r.data) } : r));
 }
 
 export function getRateCard(id: string): Promise<ApiResult<RateCard>> {

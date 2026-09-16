@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Common.Paging;
 using LCMS.Application.Identity;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -143,10 +144,12 @@ public sealed record ListFinancialDocumentsQuery(
     string? ReceiptStatus,
     string? AcceptanceStatus,
     string? MatchingStatus,
-    Guid? BillId = null) : IRequest<IReadOnlyList<FinancialDocumentListItemDto>>;
+    Guid? BillId = null,
+    int? Page = null,
+    int? PageSize = null) : IRequest<PagedResult<FinancialDocumentListItemDto>>;
 
 public sealed class ListFinancialDocumentsQueryHandler
-    : IRequestHandler<ListFinancialDocumentsQuery, IReadOnlyList<FinancialDocumentListItemDto>>
+    : IRequestHandler<ListFinancialDocumentsQuery, PagedResult<FinancialDocumentListItemDto>>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -168,7 +171,7 @@ public sealed class ListFinancialDocumentsQueryHandler
         _orgHierarchy = orgHierarchy;
     }
 
-    public async Task<IReadOnlyList<FinancialDocumentListItemDto>> Handle(
+    public async Task<PagedResult<FinancialDocumentListItemDto>> Handle(
         ListFinancialDocumentsQuery request,
         CancellationToken cancellationToken)
     {
@@ -176,6 +179,8 @@ public sealed class ListFinancialDocumentsQueryHandler
         {
             throw new TenantRequiredAppException();
         }
+
+        var (page, pageSize, applyPaging) = PagingNormalize.Normalize(request.Page, request.PageSize);
 
         var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
             _permissions, _userContext, _db, _orgHierarchy,
@@ -220,7 +225,7 @@ public sealed class ListFinancialDocumentsQueryHandler
         {
             if (!_userContext.HasUser)
             {
-                return [];
+                return PagingNormalize.Empty<FinancialDocumentListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(d => d.CreatedBy == _userContext.UserId);
@@ -230,7 +235,7 @@ public sealed class ListFinancialDocumentsQueryHandler
             var billIds = await DataScopeFilter.BillIdsInOrgSubtreeAsync(_db, orgSubtree, cancellationToken);
             if (billIds.Count == 0)
             {
-                return [];
+                return PagingNormalize.Empty<FinancialDocumentListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(d =>
@@ -239,8 +244,18 @@ public sealed class ListFinancialDocumentsQueryHandler
                     l.DocumentId == d.Id && l.BillId != null && billIds.Contains(l.BillId.Value)));
         }
 
-        return await query
-            .OrderByDescending(d => d.Id)
+        var ordered = query.OrderByDescending(d => d.Id);
+        var totalCount = await ordered.CountAsync(cancellationToken);
+        if (totalCount == 0)
+        {
+            return PagingNormalize.Empty<FinancialDocumentListItemDto>(page, pageSize, applyPaging);
+        }
+
+        var pageQuery = applyPaging
+            ? ordered.Skip((page - 1) * pageSize).Take(pageSize)
+            : ordered;
+
+        var items = await pageQuery
             .Select(d => new FinancialDocumentListItemDto(
                 d.Id,
                 d.DocumentType,
@@ -254,6 +269,12 @@ public sealed class ListFinancialDocumentsQueryHandler
                 d.MatchingStatus,
                 d.DocumentDate))
             .ToListAsync(cancellationToken);
+
+        return new PagedResult<FinancialDocumentListItemDto>(
+            items,
+            applyPaging ? page : 1,
+            applyPaging ? pageSize : totalCount,
+            totalCount);
     }
 }
 

@@ -14,7 +14,6 @@ import { listCosts } from "@/lib/costs-revenues-server";
 import {
   parsePage,
   parsePageSize,
-  slicePage,
   totalPages as calcTotalPages,
 } from "@/lib/list-paging";
 import { formatMoney } from "@/lib/money";
@@ -22,14 +21,26 @@ import { formatMoney } from "@/lib/money";
 type SearchParams = Promise<{
   maturity?: string;
   attribution?: string;
+  fromDate?: string;
+  toDate?: string;
+  vendorPartyId?: string;
   page?: string;
   pageSize?: string;
 }>;
 
-function costsHref(opts: { maturity?: string; attribution?: string }): string {
+function costsHref(opts: {
+  maturity?: string;
+  attribution?: string;
+  fromDate?: string;
+  toDate?: string;
+  vendorPartyId?: string;
+}): string {
   const p = new URLSearchParams();
   if (opts.maturity) p.set("maturity", opts.maturity);
   if (opts.attribution) p.set("attribution", opts.attribution);
+  if (opts.fromDate) p.set("fromDate", opts.fromDate);
+  if (opts.toDate) p.set("toDate", opts.toDate);
+  if (opts.vendorPartyId) p.set("vendorPartyId", opts.vendorPartyId);
   const qs = p.toString();
   return qs ? `/costs?${qs}` : "/costs";
 }
@@ -55,6 +66,9 @@ export default async function CostsPage({
     sp.attribution === "direct" || sp.attribution === "shared"
       ? sp.attribution
       : undefined;
+  const fromDate = sp.fromDate?.trim() || undefined;
+  const toDate = sp.toDate?.trim() || undefined;
+  const vendorPartyId = sp.vendorPartyId?.trim() || undefined;
 
   const terms = await fetchTerminology();
   const costLabel = term(terms, "COST", "Chi phí");
@@ -65,10 +79,21 @@ export default async function CostsPage({
   const sharedLabel = term(terms, "ATTRIBUTION_SHARED", "Chung");
   const directLabel = term(terms, "ATTRIBUTION_DIRECT", "Trực tiếp");
 
+  const pageSize = parsePageSize(sp.pageSize);
+  const pageHint = Math.max(
+    1,
+    Number.parseInt(String(sp.page ?? "1"), 10) || 1
+  );
+
+  const denser = { fromDate, toDate, vendorPartyId };
+
   const [result, kpiRes] = await Promise.all([
     listCosts({
       financialMaturity: maturityFilter,
       attributionType: attributionFilter,
+      ...denser,
+      page: pageHint,
+      pageSize,
     }),
     listCosts({ attributionType: attributionFilter }),
   ]);
@@ -86,19 +111,22 @@ export default async function CostsPage({
   const sumActual = sumByMaturity("actual");
   const sumAll = sumExpected + sumConfirmed + sumActual;
 
-  const allRows = result.ok ? result.data.items : [];
-  const pageSize = parsePageSize(sp.pageSize);
-  const pages = calcTotalPages(
-    result.ok ? result.data.totalCount : allRows.length,
-    pageSize
-  );
+  const totalCount = result.ok ? result.data.totalCount : 0;
+  const pages = calcTotalPages(totalCount, pageSize);
   const page = parsePage(sp.page, pages);
-  const pageRows = slicePage(allRows, page, pageSize);
-  const totalCount = result.ok ? result.data.totalCount : allRows.length;
+  const pageRows = result.ok ? result.data.items : [];
   const pageParams = {
     maturity: maturityFilter,
     attribution: attributionFilter,
+    fromDate,
+    toDate,
+    vendorPartyId,
   };
+  const tabHrefBase = {
+    attribution: attributionFilter,
+    ...denser,
+  };
+  const denserActive = Boolean(fromDate || toDate || vendorPartyId);
 
   const statCards: StatCardModel[] = [
     {
@@ -164,7 +192,7 @@ export default async function CostsPage({
         <div className="filter-tabs" role="tablist" aria-label="Lọc độ chín">
           <Link
             className={!maturityFilter ? "active" : undefined}
-            href={costsHref({ attribution: attributionFilter })}
+            href={costsHref(tabHrefBase)}
           >
             Tất cả độ chín
           </Link>
@@ -172,7 +200,7 @@ export default async function CostsPage({
             className={maturityFilter === "expected" ? "active" : undefined}
             href={costsHref({
               maturity: "expected",
-              attribution: attributionFilter,
+              ...tabHrefBase,
             })}
           >
             {expectedLabel}
@@ -181,7 +209,7 @@ export default async function CostsPage({
             className={maturityFilter === "confirmed" ? "active" : undefined}
             href={costsHref({
               maturity: "confirmed",
-              attribution: attributionFilter,
+              ...tabHrefBase,
             })}
           >
             {confirmedLabel}
@@ -190,7 +218,7 @@ export default async function CostsPage({
             className={maturityFilter === "actual" ? "active" : undefined}
             href={costsHref({
               maturity: "actual",
-              attribution: attributionFilter,
+              ...tabHrefBase,
             })}
           >
             {actualLabel}
@@ -200,29 +228,89 @@ export default async function CostsPage({
         <div className="filter-tabs" role="tablist" aria-label="Lọc nguồn">
           <Link
             className={!attributionFilter ? "active" : undefined}
-            href={costsHref({ maturity: maturityFilter })}
+            href={costsHref({ maturity: maturityFilter, ...denser })}
           >
             Mọi nguồn
           </Link>
           <Link
             className={attributionFilter === "direct" ? "active" : undefined}
-            href={costsHref({ maturity: maturityFilter, attribution: "direct" })}
+            href={costsHref({
+              maturity: maturityFilter,
+              attribution: "direct",
+              ...denser,
+            })}
           >
             {directLabel}
           </Link>
           <Link
             className={attributionFilter === "shared" ? "active" : undefined}
-            href={costsHref({ maturity: maturityFilter, attribution: "shared" })}
+            href={costsHref({
+              maturity: maturityFilter,
+              attribution: "shared",
+              ...denser,
+            })}
           >
             {sharedLabel}
           </Link>
         </div>
 
+        <form className="search-bar denser-filters" method="get" action="/costs">
+          {maturityFilter ? (
+            <input type="hidden" name="maturity" value={maturityFilter} />
+          ) : null}
+          {attributionFilter ? (
+            <input type="hidden" name="attribution" value={attributionFilter} />
+          ) : null}
+          <label className="sr-only" htmlFor="fromDate">
+            Từ ngày
+          </label>
+          <input
+            id="fromDate"
+            name="fromDate"
+            type="date"
+            defaultValue={fromDate ?? ""}
+          />
+          <label className="sr-only" htmlFor="toDate">
+            Đến ngày
+          </label>
+          <input
+            id="toDate"
+            name="toDate"
+            type="date"
+            defaultValue={toDate ?? ""}
+          />
+          <label className="sr-only" htmlFor="vendorPartyId">
+            Nhà cung cấp (UUID)
+          </label>
+          <input
+            id="vendorPartyId"
+            name="vendorPartyId"
+            type="text"
+            placeholder="UUID nhà cung cấp…"
+            defaultValue={vendorPartyId ?? ""}
+            autoComplete="off"
+          />
+          <button className="btn" type="submit">
+            Lọc
+          </button>
+          {denserActive ? (
+            <Link
+              className="btn btn-ghost"
+              href={costsHref({
+                maturity: maturityFilter,
+                attribution: attributionFilter,
+              })}
+            >
+              Làm mới
+            </Link>
+          ) : null}
+        </form>
+
         {!result.ok ? (
           <div className="alert alert-error" role="alert">
             {result.message}
           </div>
-        ) : allRows.length === 0 ? (
+        ) : totalCount === 0 ? (
           <div className="empty-state" role="status">
             Chưa có {costLabel.toLowerCase()} trong phạm vi lọc. Mở một {billLabel} để
             ghi chi phí trực tiếp, hoặc tạo chi phí chung.

@@ -6,6 +6,7 @@ import type {
   FinancialDocument,
   FinancialDocumentListItem,
 } from "./documents-shared";
+import { unwrapPaged, type PagedResult } from "./paging";
 
 export type {
   FinancialDocument,
@@ -74,7 +75,9 @@ export function listFinancialDocuments(opts?: {
   acceptanceStatus?: string;
   matchingStatus?: string;
   billId?: string;
-}): Promise<ApiResult<FinancialDocumentListItem[]>> {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResult<PagedResult<FinancialDocumentListItem>>> {
   const params = new URLSearchParams();
   if (opts?.documentType) params.set("documentType", opts.documentType);
   if (opts?.receiptStatus) params.set("receiptStatus", opts.receiptStatus);
@@ -82,10 +85,12 @@ export function listFinancialDocuments(opts?: {
     params.set("acceptanceStatus", opts.acceptanceStatus);
   if (opts?.matchingStatus) params.set("matchingStatus", opts.matchingStatus);
   if (opts?.billId) params.set("billId", opts.billId);
+  if (opts?.page != null) params.set("page", String(opts.page));
+  if (opts?.pageSize != null) params.set("pageSize", String(opts.pageSize));
   const qs = params.toString();
-  return apiGet<FinancialDocumentListItem[]>(
+  return apiGet<FinancialDocumentListItem[] | PagedResult<FinancialDocumentListItem>>(
     qs ? `/api/financial-documents?${qs}` : "/api/financial-documents"
-  );
+  ).then((r) => (r.ok ? { ok: true, data: unwrapPaged(r.data) } : r));
 }
 
 export function getFinancialDocument(

@@ -58,8 +58,7 @@ export default async function DashboardPage() {
   }
 
   const terms = await fetchTerminology();
-  const summaryLabel = term(terms, "DASHBOARD_SUMMARY", "Tóm tắt bảng điều khiển");
-  const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
+  const dashboardLabel = "Trang chủ";
   const billLabel = term(terms, "BILL", "Bill");
   const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
@@ -125,11 +124,11 @@ export default async function DashboardPage() {
   return (
     <AppShell terms={terms} active="dashboard">
       <section className="panel panel-wide dash-hero">
-        <h1>{summaryLabel}</h1>
+        <h1>{dashboardLabel}</h1>
         <p className="lede">
-          {dashboardLabel} kiểm soát tài chính quanh {billLabel}: việc cần xử lý,
+          Trung tâm điều hành tài chính quanh {billLabel}: việc cần xử lý,
           {` ${bestAvailableLabel}`}, chứng từ, AP/AR, tất toán và chốt — số liệu
-          projection, không phải sổ cái.
+          projection, không phải sổ cái. Kiểm soát chi phí hôm nay, tạo lợi nhuận ngày mai.
         </p>
 
         {!result.ok ? (

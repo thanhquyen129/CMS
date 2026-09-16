@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
@@ -109,7 +109,7 @@ export default async function AgingSummaryPage({
   });
 
   return (
-    <AppShell terms={terms} active="ap-ar">
+    <AppShell terms={terms} active="ap">
       <section className="panel panel-wide">
         <p className="breadcrumb">
           <Link href="/ap-ar">

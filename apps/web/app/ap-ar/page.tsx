@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
@@ -221,11 +221,19 @@ export default async function ApArPage({
   const showSettledAmount =
     statusFilter === "settled" || statusFilter === "all";
 
+  const navActive = activeTab === "ar" ? "ar" : "ap";
+
   return (
-    <AppShell terms={terms} active="ap-ar">
+    <AppShell terms={terms} active={navActive}>
       <section className="panel panel-wide">
+        <p className="breadcrumb">
+          <Link href="/dashboard">Trang chủ</Link>
+          {" / "}
+          {activeTab === "ar" ? arLabel : apLabel}
+        </p>
         <h1>
-          {apLabel} / {arLabel}
+          {activeTab === "ar" ? arLabel : activeTab === "exposure" ? "Exposure" : apLabel}
+          {activeTab === "exposure" ? "" : activeTab === "ar" ? " (AR)" : " (AP)"}
         </h1>
         <p className="lede">
           Đọc {outstandingLabel} đã ghi nhận và lịch sử {settledLabel.toLowerCase()}.{" "}

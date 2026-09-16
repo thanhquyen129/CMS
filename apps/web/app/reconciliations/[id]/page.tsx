@@ -34,7 +34,7 @@ export default async function ReconciliationDetailPage({ params }: Ctx) {
   const result = await getReconciliation(id);
 
   return (
-    <AppShell terms={terms} active="reconciliations">
+    <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
         <p className="breadcrumb">
           <Link href="/reconciliations">{reconLabel}</Link>

@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-16 — PO UI/UX Baseline v1.0 (shell + nav + hub screens)
+
+### User
+Làm bố cục/giao diện theo `docs/po/` Final Frontend Baseline v1.0 (UI-01→UI-15 APPROVED). Giữ guardrail tài chính; Vietnamese UX; khi khác mockup vs code thì bám Spec/Traceability.
+
+### Done
+- **Navigation Contract (14 module):** `AppShell` theo UI-15 — Trang chủ, Đơn hàng vận chuyển (Bill), Bảng giá, Chi phí, Doanh thu, Chứng từ, AP, AR (tách nav), Thanh toán & Thu tiền, Kiểm soát tài chính, Chốt, Báo cáo, Danh mục dữ liệu, Hệ thống & Cài đặt.
+- **Shell:** brand LCMS, topbar Global Search (Ctrl+K → tìm Bill), sidebar navy Ledger, nhóm con collapse.
+- **Hub mới:** `/costs`, `/revenues`, `/control`, `/reports`, `/workflow` (UI-15 map).
+- Nhãn/breadcrumb PO trên dashboard, bills, admin, settings.
+
+### Architecture note (không tự phá H-002)
+- Mockup UI-02 có subnav Order/Shipment CRUD — **chưa dựng**: CMS là lớp kiểm soát tài chính; SoT vận hành ngoài CMS. Entry “Đơn hàng vận chuyển” = danh sách/tạo **Bill** (Financial Anchor). Cần ADR/PO nếu muốn TMS surface trong CMS.
+
+### Follow-up (screenshot UAT từng màn)
+- Master-detail drawer Bill (UI-02), denser filters/KPI cards trên từng list, AP/AR tách route vật lý nếu PO yêu cầu (hiện `?tab=`), Global Search multi-entity API.
+
+### Files
+- `components/AppShell.tsx`, `ShellChrome.tsx`, `NavGroup.tsx`, `GlobalSearch.tsx`
+- `app/costs/page.tsx`, `revenues/page.tsx`, `control/page.tsx`, `reports/page.tsx`, `workflow/page.tsx`
+- `globals.css`, `lib/ui-preferences.ts`, `lib/costs-revenues-server.ts`, `docs/design/CMS-LEDGER-THEME.md`
+
+### Verify
+- `npx tsc --noEmit` apps/web pass
+
+---
+
 ## 2026-09-15 — Party address (VN merger) + VietQR bank picker
 
 ### User

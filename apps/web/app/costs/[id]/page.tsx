@@ -40,7 +40,7 @@ export default async function CostDetailPage({ params }: { params: Params }) {
   const costRes = await getCost(id);
   if (!costRes.ok) {
     return (
-      <AppShell terms={terms} active="bills">
+      <AppShell terms={terms} active="costs">
         <section className="panel">
           <LineDetailBackLink href="/bills" label={`Danh sách ${billLabel}`} />
           <div className="alert alert-error" role="alert">
@@ -70,7 +70,7 @@ export default async function CostDetailPage({ params }: { params: Params }) {
   const adjustments = cost.adjustments ?? [];
 
   return (
-    <AppShell terms={terms} active="bills">
+    <AppShell terms={terms} active="costs">
       <section className="panel panel-wide">
         <LineDetailBackLink
           href={backHref}

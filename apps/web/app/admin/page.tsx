@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AUTH_COOKIE } from "@/lib/auth";
-import { fetchTerminology, term } from "@/lib/api";
+import { fetchTerminology } from "@/lib/api";
 
 export default async function AdminHubPage() {
   const jar = await cookies();
@@ -12,18 +12,17 @@ export default async function AdminHubPage() {
   }
 
   const terms = await fetchTerminology();
-  const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
 
   const links = [
     {
       href: "/admin/access",
       title: "Phân quyền",
-      desc: "Vai trò hệ thống, gán thành viên, bật/tắt quyền hành động.",
+      desc: "Vai trò hệ thống, gán thành viên, bật/tắt quyền hành động × phạm vi dữ liệu.",
     },
     {
       href: "/admin/parties",
       title: "Đối tác kinh doanh",
-      desc: "Mã và tên đối tác dùng trên chứng từ, AP/AR, thanh toán.",
+      desc: "Khách hàng / NCC — mã và hồ sơ dùng trên chứng từ, AP/AR, thanh toán.",
     },
     {
       href: "/admin/organizations",
@@ -41,13 +40,13 @@ export default async function AdminHubPage() {
     <AppShell terms={terms} active="admin">
       <section className="panel panel-wide">
         <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
+          <Link href="/dashboard">Trang chủ</Link>
           {" / "}
-          Danh mục
+          Danh mục dữ liệu
         </p>
-        <h1>Danh mục</h1>
+        <h1>Danh mục dữ liệu</h1>
         <p className="lede">
-          Phân quyền thành viên và master data tối thiểu. Không xóa danh mục tại
+          Master data theo tenant — cô lập dữ liệu doanh nghiệp. Không xóa danh mục tại
           đây — vô hiệu hoá qua API khi cần.
         </p>
 

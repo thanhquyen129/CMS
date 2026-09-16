@@ -42,7 +42,7 @@ export default async function RevenueDetailPage({
   const revRes = await getRevenue(id);
   if (!revRes.ok) {
     return (
-      <AppShell terms={terms} active="bills">
+      <AppShell terms={terms} active="revenues">
         <section className="panel">
           <LineDetailBackLink href="/bills" label={`Danh sách ${billLabel}`} />
           <div className="alert alert-error" role="alert">
@@ -68,7 +68,7 @@ export default async function RevenueDetailPage({
   const adjustments = revenue.adjustments ?? [];
 
   return (
-    <AppShell terms={terms} active="bills">
+    <AppShell terms={terms} active="revenues">
       <section className="panel panel-wide">
         <LineDetailBackLink href={backHref} label={`Hồ sơ ${billLabel}`} />
         <h1>

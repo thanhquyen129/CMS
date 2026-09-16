@@ -27,9 +27,20 @@ export default async function BillsPage({
   return (
     <AppShell terms={terms} active="bills">
       <section className="panel panel-wide">
+        <p className="breadcrumb">
+          <Link href="/dashboard">Trang chủ</Link>
+          {" / "}
+          Đơn hàng vận chuyển
+          {" / "}
+          Danh sách {billLabel}
+        </p>
         <h1>Danh sách {billLabel}</h1>
         <p className="lede">
-          Tìm {billLabel} theo số hiệu, rồi mở hồ sơ tài chính (Dự kiến / Đã xác nhận / Thực tế).
+          Quản lý vận đơn ({billLabel}) và thông tin tài chính liên quan —{" "}
+          {term(terms, "EXPECTED", "Dự kiến")} /{" "}
+          {term(terms, "CONFIRMED", "Đã xác nhận")} /{" "}
+          {term(terms, "ACTUAL", "Thực tế")}. {billLabel} là neo tài chính (Financial
+          Anchor).
         </p>
 
         <p className="cta-row" style={{ marginTop: 0 }}>

@@ -9,9 +9,14 @@ export type UiDensityId = "comfortable" | "compact";
 export type UiHomePath =
   | "/dashboard"
   | "/bills"
+  | "/costs"
+  | "/revenues"
   | "/documents"
   | "/ap-ar"
   | "/settlements"
+  | "/control"
+  | "/reports"
+  | "/financial-closes"
   | "/bank-feed"
   | "/queues/exceptions"
   | "/queues/variances"
@@ -19,7 +24,8 @@ export type UiHomePath =
   | "/queues/reconciliations"
   | "/integration-errors"
   | "/admin"
-  | "/settings";
+  | "/settings"
+  | "/workflow";
 
 export type UiPreferences = {
   theme: UiThemeId;
@@ -46,19 +52,25 @@ export const DEFAULT_UI_PREFERENCES: UiPreferences = {
 };
 
 export const UI_HOME_OPTIONS: ReadonlyArray<{ id: UiHomePath; label: string }> = [
-  { id: "/dashboard", label: "Bảng điều khiển" },
-  { id: "/bills", label: "Bill" },
+  { id: "/dashboard", label: "Trang chủ" },
+  { id: "/bills", label: "Đơn hàng vận chuyển / Bill" },
+  { id: "/costs", label: "Chi phí" },
+  { id: "/revenues", label: "Doanh thu & Lợi nhuận" },
   { id: "/documents", label: "Chứng từ tài chính" },
-  { id: "/ap-ar", label: "Phải trả / Phải thu" },
-  { id: "/settlements", label: "Thanh toán / Thu tiền" },
+  { id: "/ap-ar", label: "Công nợ AP/AR" },
+  { id: "/settlements", label: "Thanh toán & Thu tiền" },
+  { id: "/control", label: "Kiểm soát tài chính" },
+  { id: "/reports", label: "Báo cáo & Phân tích" },
+  { id: "/financial-closes", label: "Chốt tài chính" },
   { id: "/bank-feed", label: "Sao kê ngân hàng" },
   { id: "/queues/exceptions", label: "Hàng đợi ngoại lệ" },
   { id: "/queues/variances", label: "Hàng đợi chênh lệch" },
   { id: "/queues/approvals", label: "Hàng đợi phê duyệt" },
   { id: "/queues/reconciliations", label: "Hàng đợi đối soát" },
+  { id: "/workflow", label: "Bản đồ luồng hệ thống" },
   { id: "/integration-errors", label: "Lỗi tích hợp" },
-  { id: "/admin", label: "Danh mục" },
-  { id: "/settings", label: "Cài đặt" },
+  { id: "/admin", label: "Danh mục dữ liệu" },
+  { id: "/settings", label: "Hệ thống & Cài đặt" },
 ];
 
 export const UI_THEME_OPTIONS: ReadonlyArray<{
@@ -70,8 +82,8 @@ export const UI_THEME_OPTIONS: ReadonlyArray<{
   {
     id: "ledger",
     label: "CMS Ledger",
-    description: "Chuẩn sản phẩm: bàn làm việc sáng — jade CTA, chrome trắng.",
-    swatches: ["#0f6b58", "#ffffff", "#f4f6f8"],
+    description: "Chuẩn sản phẩm PO: sidebar navy + jade CTA, chrome trắng.",
+    swatches: ["#0f6b58", "#123047", "#f4f6f8"],
   },
   {
     id: "harbor-dawn",

@@ -32,14 +32,15 @@ Bộ theme gốc cho **Cost Management System**: lớp kiểm soát tài chính 
 | Ink | `#15202b` | Chữ chính, số tiền |
 | Muted | `#5c6b7a` | Nhãn phụ |
 | BG | `#f4f6f8` | Nền giấy làm việc |
-| Surface / chrome | `#ffffff` | Panel + nav sáng (không header tối) |
+| Surface / chrome | `#ffffff` | Panel + vùng nội dung sáng |
+| Sidebar (vertical) | `#123047` | Nav cấp 1 theo PO baseline |
 | Line | `#d8dee6` | Viền sổ |
 | Accent | `#0f6b58` | CTA / link / active |
 | Danger | `#a61b1b` | Ngoại lệ / âm |
 | Warning | `#9a5b12` | Chờ / lệch |
 | Radius | `8px` | Chuyên nghiệp, không “toy UI” |
 
-**Ghi chú (2026-09-15):** chrome nav đổi từ slate tối `#1a2b3c` sang trắng — header tối làm cả viewport “nặng”, lệch cảm giác bàn kiểm soát tài chính sáng.
+**Ghi chú (2026-09-16):** Sidebar dọc Ledger đổi lại **navy `#123047`** theo PO UI/UX Baseline v1.0 (UI-01…UI-15). Vùng nội dung vẫn nền giấy sáng; accent jade giữ cho CTA tài chính.
 
 ## Non-goals
 

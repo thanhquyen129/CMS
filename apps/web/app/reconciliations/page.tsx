@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
@@ -34,7 +34,7 @@ export default async function ReconciliationsPage({
   );
 
   return (
-    <AppShell terms={terms} active="reconciliations">
+    <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
         <h1>{reconLabel}</h1>
         <p className="lede">

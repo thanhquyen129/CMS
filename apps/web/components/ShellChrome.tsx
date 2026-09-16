@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
+import { GlobalSearch } from "./GlobalSearch";
 import { LogoutButton } from "./LogoutButton";
 
 type ShellChromeProps = {
@@ -51,8 +52,8 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
         <div className="mobile-bar-brand">
           <span className="brand-mark" aria-hidden="true" />
           <div>
-            CMS
-            <small>Kiểm soát chi phí &amp; lợi nhuận</small>
+            LCMS
+            <small>Logistics Cost Management System</small>
           </div>
         </div>
         <div className="mobile-bar-actions">
@@ -69,11 +70,10 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
       </aside>
 
       <div className="main">
-        {topbarRight ? (
-          <div className="topbar">
-            <div className="topbar-actions">{topbarRight}</div>
-          </div>
-        ) : null}
+        <div className="topbar">
+          <GlobalSearch />
+          <div className="topbar-actions">{topbarRight}</div>
+        </div>
         {children}
       </div>
 

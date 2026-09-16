@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
@@ -37,7 +37,7 @@ export default async function BankFeedPage({
   const result = await listBankFeedLines(status ? { status } : undefined);
 
   return (
-    <AppShell terms={terms} active="bank-feed">
+    <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
         <h1>{feedLabel}</h1>
         <p className="lede">

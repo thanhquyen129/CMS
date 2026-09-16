@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
@@ -46,7 +46,7 @@ export default async function VarianceQueuePage({
   const result = await listVariances({ status });
 
   return (
-    <AppShell terms={terms} active="variances">
+    <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
         <p className="breadcrumb">
           <Link href="/dashboard">{dashboardLabel}</Link>

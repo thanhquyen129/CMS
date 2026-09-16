@@ -18,14 +18,14 @@ export default async function SettingsPage() {
     <AppShell terms={terms} active="settings">
       <div className="panel panel-wide">
         <p className="breadcrumb">
-          <a href="/dashboard">Bảng điều khiển</a>
+          <a href="/dashboard">Trang chủ</a>
           {" / "}
-          Cài đặt
+          Hệ thống &amp; Cài đặt
         </p>
-        <h1>Cài đặt</h1>
+        <h1>Hệ thống &amp; Cài đặt</h1>
         <p className="lede">
-          Giao diện (cookie) và cài đặt tài chính thuê bao (P19/P20). Ngưỡng
-          ghi đè node khi đã lưu.
+          Giao diện (cookie), cấu hình nghiệp vụ thuê bao, và liên kết quản trị.
+          Ngưỡng ghi đè node khi đã lưu.
         </p>
         <SettingsForm />
         <TenantFinancialSettingsForm />

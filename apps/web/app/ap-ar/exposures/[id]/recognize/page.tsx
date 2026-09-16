@@ -47,7 +47,7 @@ export default async function RecognizeExposurePage({
 
   if (!exposureRes.ok) {
     return (
-      <AppShell terms={terms} active="ap-ar">
+      <AppShell terms={terms} active="ap">
         <section className="panel panel-wide">
           <div className="alert alert-error" role="alert">
             {exposureRes.message}
@@ -65,7 +65,7 @@ export default async function RecognizeExposurePage({
   const exp = exposureRes.data;
 
   return (
-    <AppShell terms={terms} active="ap-ar">
+    <AppShell terms={terms} active="ap">
       <section className="panel panel-wide">
         <p className="breadcrumb">
           <Link href="/ap-ar?tab=exposure">Exposure</Link>

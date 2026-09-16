@@ -59,6 +59,17 @@ export function listCostsByBill(
   );
 }
 
+export function listCosts(opts?: {
+  financialMaturity?: string;
+  attributionType?: string;
+}): Promise<ApiResult<CostListItem[]>> {
+  const p = new URLSearchParams();
+  if (opts?.financialMaturity) p.set("financialMaturity", opts.financialMaturity);
+  if (opts?.attributionType) p.set("attributionType", opts.attributionType);
+  const qs = p.toString();
+  return apiGet<CostListItem[]>(qs ? `/api/costs?${qs}` : "/api/costs");
+}
+
 export function listSharedCosts(): Promise<ApiResult<CostListItem[]>> {
   return apiGet<CostListItem[]>(
     `/api/costs?attributionType=${encodeURIComponent("shared")}`
@@ -79,4 +90,13 @@ export function listRevenuesByBill(
   return apiGet<RevenueListItem[]>(
     `/api/revenues?billId=${encodeURIComponent(billId)}`
   );
+}
+
+export function listRevenues(opts?: {
+  financialMaturity?: string;
+}): Promise<ApiResult<RevenueListItem[]>> {
+  const p = new URLSearchParams();
+  if (opts?.financialMaturity) p.set("financialMaturity", opts.financialMaturity);
+  const qs = p.toString();
+  return apiGet<RevenueListItem[]>(qs ? `/api/revenues?${qs}` : "/api/revenues");
 }

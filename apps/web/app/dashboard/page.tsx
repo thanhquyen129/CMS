@@ -4,18 +4,21 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import {
   FinColors,
-  FunnelSteps,
   GroupedBarChart,
-  HorizontalBarChart,
   StackedCompositionBar,
 } from "@/components/charts/FinanceCharts";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { AUTH_COOKIE, DISPLAY_NAME_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
   agingBucketLabel,
   getAgingSummary,
   type AgingBucketSummary,
 } from "@/lib/ap-ar";
+import {
+  billTypeLabel,
+  listBills,
+  operationalStatusLabel,
+} from "@/lib/bills";
 import { getDashboardSummary } from "@/lib/control-desk";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
@@ -28,27 +31,33 @@ const AGING_BUCKET_ORDER = [
   "no_due_date",
 ] as const;
 
-function agingColor(bucket: string): string {
-  switch (bucket.toLowerCase()) {
-    case "current":
-      return FinColors.agingCurrent;
-    case "1_30":
-      return FinColors.agingMid;
-    case "31_60":
-      return FinColors.agingMid;
-    case "61_90":
-    case "90_plus":
-      return FinColors.agingLate;
-    default:
-      return FinColors.agingNone;
-  }
-}
-
 function orderedBuckets(buckets: AgingBucketSummary[] | undefined) {
   const map = new Map((buckets ?? []).map((b) => [b.bucket.toLowerCase(), b]));
   return AGING_BUCKET_ORDER.map((key) => map.get(key)).filter(
     (b): b is AgingBucketSummary => Boolean(b)
   );
+}
+
+function weekdayVi(d: Date): string {
+  const names = [
+    "Chủ Nhật",
+    "Thứ Hai",
+    "Thứ Ba",
+    "Thứ Tư",
+    "Thứ Năm",
+    "Thứ Sáu",
+    "Thứ Bảy",
+  ];
+  return names[d.getDay()] ?? "";
+}
+
+function compactMoney(n: number, currency: string): string {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "−" : "";
+  if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(1)}B`;
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(0)}k`;
+  return formatMoney(n, currency);
 }
 
 export default async function DashboardPage() {
@@ -57,8 +66,8 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  const displayName = jar.get(DISPLAY_NAME_COOKIE)?.value?.trim() || "";
   const terms = await fetchTerminology();
-  const dashboardLabel = "Trang chủ";
   const billLabel = term(terms, "BILL", "Bill");
   const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
@@ -71,42 +80,27 @@ export default async function DashboardPage() {
   const profitLabel = term(terms, "PROFIT", "Lợi nhuận");
   const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
   const asOfLabel = term(terms, "AS_OF", "Tại thời điểm");
-  const rollUpLabel = term(terms, "BASE_CURRENCY_ROLLUP", "Cộng gộp theo tiền tệ cơ sở");
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
-  const matchLabel = term(terms, "DOCUMENT_MATCH", "Khớp chứng từ");
-  const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
-  const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
-  const payableExposureLabel = term(
-    terms,
-    "PAYABLE_EXPOSURE",
-    "Nghĩa vụ phải trả (exposure)"
-  );
-  const receivableExposureLabel = term(
-    terms,
-    "RECEIVABLE_EXPOSURE",
-    "Quyền thu dự kiến (exposure)"
-  );
-  const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
-  const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
+  const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Công nợ phải trả");
+  const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Công nợ phải thu");
   const expectedLabel = term(terms, "EXPECTED", "Dự kiến");
   const confirmedLabel = term(terms, "CONFIRMED", "Đã xác nhận");
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
   const maturityLabel = term(terms, "MATURITY_BREAKDOWN", "Phân tách độ chín");
-  const settlementOpenLabel = term(terms, "SETTLEMENT_OPEN", "Chưa tất toán");
   const bankUnmatchedLabel = term(terms, "BANK_FEED_UNMATCHED", "Chưa đối soát");
-  const receivedLabel = term(terms, "RECEIVED", "Đã nhận");
-  const acceptedLabel = term(terms, "ACCEPTED", "Đã chấp nhận");
-  const matchedLabel = term(terms, "MATCHED", "Đã khớp");
+  const agingLabel = term(terms, "AGING", "Tuổi nợ");
 
-  const [result, agingRes] = await Promise.all([
+  const [result, agingRes, billsRes] = await Promise.all([
     getDashboardSummary(),
     getAgingSummary(),
+    listBills(),
   ]);
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 11 ? "Chào buổi sáng" : hour < 14 ? "Chào buổi trưa" : hour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
+  const now = new Date();
+  const greetingName = displayName ? `Xin chào, ${displayName}!` : "Xin chào!";
+  const dateLine = `${weekdayVi(now)}, ${now.toLocaleDateString("vi-VN")}`;
+
   const vis = result.ok
     ? result.data.financialVisibility ?? {
         canViewCost: true,
@@ -114,356 +108,211 @@ export default async function DashboardPage() {
         canViewMargin: true,
       }
     : null;
-  const agingLabel = term(terms, "AGING", "Tuổi nợ");
 
-  function moneyOrHidden(
-    amount: number | null | undefined,
-    currency: string,
-    allowed: boolean
-  ): string {
-    if (!allowed || amount == null) return "—";
-    return formatMoney(amount, currency);
+  const roll = result.ok ? result.data.baseCurrencyRollUp : null;
+  const row0 = result.ok ? result.data.totalsByCurrency[0] : null;
+  const currency =
+    roll?.baseCurrency ?? row0?.currencyCode ?? "VND";
+  const costAmt = Number(
+    roll?.costBestAvailableBase ?? row0?.costBestAvailable ?? 0
+  );
+  const revAmt = Number(
+    roll?.revenueBestAvailableBase ?? row0?.revenueBestAvailable ?? 0
+  );
+  const profitAmt = Number(
+    roll?.profitBestAvailableBase ?? row0?.profitBestAvailable ?? 0
+  );
+
+  const recentBills = billsRes.ok ? billsRes.data.items.slice(0, 6) : [];
+  const mat = result.ok ? result.data.maturityPipeline : null;
+
+  const notifs: { tone: "ok" | "warn" | "info"; text: string; href: string }[] =
+    [];
+  if (result.ok) {
+    if (result.data.overdueExceptionCount > 0) {
+      notifs.push({
+        tone: "warn",
+        text: `${result.data.overdueExceptionCount} ngoại lệ quá hạn cần xử lý`,
+        href: "/queues/exceptions?overdueOnly=1",
+      });
+    }
+    if (result.data.unmatchedBankFeedCount > 0) {
+      notifs.push({
+        tone: "warn",
+        text: `${result.data.unmatchedBankFeedCount} dòng ${bankFeedLabel.toLowerCase()} chưa đối soát`,
+        href: "/bank-feed?status=unmatched",
+      });
+    }
+    if (result.data.pendingApprovalCount > 0) {
+      notifs.push({
+        tone: "info",
+        text: `${result.data.pendingApprovalCount} yêu cầu chờ phê duyệt`,
+        href: "/queues/approvals",
+      });
+    }
+    if (result.data.openCloseCount > 0) {
+      notifs.push({
+        tone: "ok",
+        text: `${result.data.openCloseCount} kỳ ${closeLabel.toLowerCase()} đang mở`,
+        href: "/financial-closes",
+      });
+    }
   }
+
+  const apBuckets = agingRes.ok
+    ? orderedBuckets(agingRes.data.payable?.buckets)
+    : [];
+  const arBuckets = agingRes.ok
+    ? orderedBuckets(agingRes.data.receivable?.buckets)
+    : [];
 
   return (
     <AppShell terms={terms} active="dashboard">
-      <section className="panel panel-wide dash-hero">
-        <p className="meta-line muted" style={{ margin: "0 0 0.15rem" }}>
-          {greeting}
-        </p>
-        <h1>{dashboardLabel}</h1>
-        <p className="lede">
-          Trung tâm điều hành tài chính quanh {billLabel}: việc cần xử lý,
-          {` ${bestAvailableLabel}`}, chứng từ, AP/AR, tất toán và chốt — số liệu
-          projection, không phải sổ cái. Kiểm soát chi phí hôm nay, tạo lợi nhuận ngày mai.
-        </p>
-
-        {!result.ok ? (
+      {!result.ok ? (
+        <section className="panel panel-wide">
           <div className="alert alert-error" role="alert">
             {result.message}
           </div>
-        ) : (
-          <>
-            <p className="meta-line muted">
-              {asOfLabel}: {formatDateTimeVi(result.data.asOfTimestamp)}
-            </p>
-            <p className="cta-row">
-              <Link className="btn" href="/queues/exceptions">
-                Xử lý {exceptionQueueLabel}
-              </Link>{" "}
-              <Link className="btn btn-ghost" href="/bills">
-                Mở danh sách {billLabel}
-              </Link>
-            </p>
-          </>
-        )}
-      </section>
+        </section>
+      ) : (
+        <div className="po-dash">
+          {/* Hero */}
+          <header className="po-dash-hero">
+            <div>
+              <p className="po-dash-hello">{greetingName}</p>
+              <p className="po-dash-sub">
+                Trung tâm điều hành tài chính quanh {billLabel} — việc cần xử lý,
+                Best Available, chứng từ, AP/AR và chốt kỳ.
+              </p>
+            </div>
+            <div className="po-dash-hero-meta">
+              <p className="po-dash-date">{dateLine}</p>
+              <p className="muted">
+                {asOfLabel}: {formatDateTimeVi(result.data.asOfTimestamp)}
+              </p>
+              <p className="po-dash-slogan muted">
+                Kiểm soát chi phí hôm nay · tạo lợi nhuận ngày mai
+              </p>
+            </div>
+          </header>
 
-      {result.ok ? (
-        <div className="dash-layout">
-          {/* —— 1. Việc cần xử lý —— */}
-          <section className="panel panel-wide dash-cluster" aria-labelledby="dash-work">
-            <h2 id="dash-work" className="cluster-title">
-              Việc cần xử lý của bạn
-            </h2>
-            <p className="cluster-lede">
-              Hàng đợi kiểm soát: ngoại lệ, phê duyệt, đối soát, chênh lệch, chốt —
-              bấm card để drill-down danh sách đã lọc.
-            </p>
-            <div className="stat-grid" role="list">
-              <Link
-                className="stat-card"
-                href="/queues/exceptions"
-                role="listitem"
-              >
-                <span className="stat-label">{exceptionQueueLabel}</span>
-                <span className="stat-value">
-                  {result.data.openExceptionCount}
-                </span>
-                <span className="stat-hint">Mở hàng đợi ngoại lệ</span>
-              </Link>
-              <Link
-                className="stat-card"
-                href="/queues/approvals"
-                role="listitem"
-              >
-                <span className="stat-label">{approvalQueueLabel}</span>
-                <span className="stat-value">
-                  {result.data.pendingApprovalCount}
-                </span>
-                <span className="stat-hint">Mở hàng đợi phê duyệt</span>
-              </Link>
-              <div className="stat-card stat-card-static" role="listitem">
-                <span className="stat-label">{overdueLabel}</span>
-                <span
-                  className={
-                    result.data.overdueExceptionCount > 0
-                      ? "stat-value stat-warn"
-                      : "stat-value"
-                  }
-                >
-                  {result.data.overdueExceptionCount}
-                </span>
-                {result.data.overdueExceptionCount > 0 ? (
-                  <Link
-                    className="stat-hint row-link"
-                    href="/queues/exceptions?overdueOnly=1"
-                  >
-                    Xem quá hạn
-                  </Link>
-                ) : (
-                  <span className="stat-hint">Không có quá hạn</span>
-                )}
+          {/* KPI strip — no fake TMS "đơn hàng" (H-002) */}
+          <div className="po-kpi-row" role="list">
+            {vis?.canViewCost ? (
+              <div className="po-kpi po-kpi-cost" role="listitem">
+                <span className="po-kpi-icon" aria-hidden="true" />
+                <span className="po-kpi-label">Tổng {costLabel.toLowerCase()}</span>
+                <strong className="po-kpi-value">
+                  {formatMoney(costAmt, currency)}
+                </strong>
+                <span className="po-kpi-hint">Best Available · {currency}</span>
               </div>
-              <Link
-                className="stat-card"
-                href="/queues/reconciliations"
+            ) : null}
+            {vis?.canViewRevenue ? (
+              <div className="po-kpi po-kpi-rev" role="listitem">
+                <span className="po-kpi-icon" aria-hidden="true" />
+                <span className="po-kpi-label">Tổng {revenueLabel.toLowerCase()}</span>
+                <strong className="po-kpi-value">
+                  {formatMoney(revAmt, currency)}
+                </strong>
+                <span className="po-kpi-hint">Best Available · {currency}</span>
+              </div>
+            ) : null}
+            {vis?.canViewMargin ? (
+              <div
+                className={`po-kpi po-kpi-profit${profitAmt < 0 ? " is-neg" : ""}`}
                 role="listitem"
               >
-                <span className="stat-label">{reconQueueLabel}</span>
-                <span className="stat-value">
-                  {result.data.openReconciliationCount}
-                </span>
-                <span className="stat-hint">Phiên draft / đang xử lý</span>
+                <span className="po-kpi-icon" aria-hidden="true" />
+                <span className="po-kpi-label">{profitLabel}</span>
+                <strong className="po-kpi-value">
+                  {formatMoney(profitAmt, currency)}
+                </strong>
+                <span className="po-kpi-hint">DT − CP (Best Available)</span>
+              </div>
+            ) : null}
+            <Link className="po-kpi po-kpi-bill" href="/bills" role="listitem">
+              <span className="po-kpi-icon" aria-hidden="true" />
+              <span className="po-kpi-label">Số {billLabel}</span>
+              <strong className="po-kpi-value">{result.data.billCount}</strong>
+              <span className="po-kpi-hint">Neo tài chính trong phạm vi</span>
+            </Link>
+          </div>
+
+          {/* Task strip */}
+          <section className="po-task-panel" aria-labelledby="po-tasks">
+            <div className="po-section-head">
+              <h2 id="po-tasks">Việc cần xử lý của bạn</h2>
+              <Link className="row-link" href="/control">
+                Xem tất cả →
+              </Link>
+            </div>
+            <div className="po-task-strip">
+              <Link className="po-task" href="/queues/exceptions">
+                <strong>{result.data.openExceptionCount}</strong>
+                <span>{exceptionQueueLabel}</span>
+              </Link>
+              <Link className="po-task" href="/queues/approvals">
+                <strong>{result.data.pendingApprovalCount}</strong>
+                <span>Chờ phê duyệt</span>
               </Link>
               <Link
-                className="stat-card"
-                href="/queues/variances"
-                role="listitem"
+                className={`po-task${result.data.overdueExceptionCount > 0 ? " is-warn" : ""}`}
+                href="/queues/exceptions?overdueOnly=1"
               >
-                <span className="stat-label">{openVarianceLabel}</span>
-                <span className="stat-value">
-                  {result.data.openVarianceCount}
-                </span>
-                <span className="stat-hint">Mở hàng đợi chênh lệch</span>
+                <strong>{result.data.overdueExceptionCount}</strong>
+                <span>{overdueLabel}</span>
+              </Link>
+              <Link className="po-task" href="/queues/reconciliations">
+                <strong>{result.data.openReconciliationCount}</strong>
+                <span>{reconQueueLabel}</span>
+              </Link>
+              <Link className="po-task" href="/queues/variances">
+                <strong>{result.data.openVarianceCount}</strong>
+                <span>{openVarianceLabel}</span>
               </Link>
               <Link
-                className="stat-card"
+                className={`po-task${result.data.unmatchedBankFeedCount > 0 ? " is-warn" : ""}`}
                 href="/bank-feed?status=unmatched"
-                role="listitem"
               >
-                <span className="stat-label">
+                <strong>{result.data.unmatchedBankFeedCount}</strong>
+                <span>
                   {bankFeedLabel} · {bankUnmatchedLabel}
                 </span>
-                <span
-                  className={
-                    result.data.unmatchedBankFeedCount > 0
-                      ? "stat-value stat-warn"
-                      : "stat-value"
-                  }
-                >
-                  {result.data.unmatchedBankFeedCount}
-                </span>
-                <span className="stat-hint">Dòng chưa đối soát</span>
               </Link>
-              <div className="stat-card stat-card-static" role="listitem">
-                <span className="stat-label">{closeLabel} đang mở</span>
-                <span className="stat-value">{result.data.openCloseCount}</span>
-                <Link className="stat-hint row-link" href="/financial-closes">
-                  Mở sổ chốt
-                </Link>
-              </div>
-              <div className="stat-card stat-card-static" role="listitem">
-                <span className="stat-label">Số {billLabel}</span>
-                <span className="stat-value">{result.data.billCount}</span>
-                <Link className="stat-hint row-link" href="/bills">
-                  Mở danh sách {billLabel}
-                </Link>
-              </div>
+              <Link className="po-task" href="/financial-closes">
+                <strong>{result.data.openCloseCount}</strong>
+                <span>{closeLabel} đang mở</span>
+              </Link>
+              <Link className="po-task" href="/bills">
+                <strong>{result.data.billCount}</strong>
+                <span>{billLabel} cần theo dõi</span>
+              </Link>
             </div>
           </section>
 
-          {/* —— 2. Best Available P&L —— */}
-          <section
-            className="panel panel-wide dash-cluster"
-            aria-labelledby="dash-pnl"
-          >
-            <h2 id="dash-pnl" className="cluster-title">
-              {bestAvailableLabel} · {costLabel} / {revenueLabel} / {profitLabel}
-            </h2>
-            <p className="cluster-lede">
-              Theo tiền tệ: {actualLabel} → {confirmedLabel} → {expectedLabel}. Projection
-              read-only — không ghi lên {billLabel}. Xem chi phí ≠ xem doanh thu ≠ biên.
-            </p>
-
-            {vis && !vis.canViewCost && !vis.canViewRevenue ? (
-              <div className="empty-state" role="status">
-                Không có quyền xem {costLabel.toLowerCase()} /{" "}
-                {revenueLabel.toLowerCase()}. Số tiền đã ẩn.
+          {/* Chart + Best available */}
+          <div className="po-mid-grid">
+            <section className="po-card" aria-labelledby="po-chart">
+              <div className="po-section-head">
+                <h2 id="po-chart">
+                  {costLabel}, {revenueLabel.toLowerCase()} và{" "}
+                  {profitLabel.toLowerCase()}
+                </h2>
+                <span className="muted">Kỳ hiện tại · Best Available</span>
               </div>
-            ) : result.data.totalsByCurrency.length === 0 ? (
-              <div className="empty-state" role="status">
-                Chưa có {costLabel}/{revenueLabel} để tổng hợp. Tạo dòng trên{" "}
-                {billLabel} rồi quay lại.
-              </div>
-            ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Tiền tệ</th>
-                      {vis?.canViewCost ? (
-                        <th scope="col" className="num">
-                          {costLabel}
-                        </th>
-                      ) : null}
-                      {vis?.canViewRevenue ? (
-                        <th scope="col" className="num">
-                          {revenueLabel}
-                        </th>
-                      ) : null}
-                      {vis?.canViewMargin ? (
-                        <th scope="col" className="num">
-                          {profitLabel}
-                        </th>
-                      ) : null}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.data.totalsByCurrency.map((row) => (
-                      <tr key={row.currencyCode}>
-                        <td>{row.currencyCode}</td>
-                        {vis?.canViewCost ? (
-                          <td className="num">
-                            {moneyOrHidden(
-                              row.costBestAvailable,
-                              row.currencyCode,
-                              true
-                            )}
-                          </td>
-                        ) : null}
-                        {vis?.canViewRevenue ? (
-                          <td className="num">
-                            {moneyOrHidden(
-                              row.revenueBestAvailable,
-                              row.currencyCode,
-                              true
-                            )}
-                          </td>
-                        ) : null}
-                        {vis?.canViewMargin ? (
-                          <td
-                            className={
-                              (row.profitBestAvailable ?? 0) < 0
-                                ? "num neg"
-                                : "num"
-                            }
-                          >
-                            {moneyOrHidden(
-                              row.profitBestAvailable,
-                              row.currencyCode,
-                              true
-                            )}
-                          </td>
-                        ) : null}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {result.data.baseCurrencyRollUp &&
-            (vis?.canViewCost || vis?.canViewRevenue) ? (
-              <>
-                <h3 className="section-title sm">{rollUpLabel}</h3>
-                <dl className="metric-grid">
-                  <div>
-                    <dt>Tiền tệ cơ sở</dt>
-                    <dd>{result.data.baseCurrencyRollUp.baseCurrency}</dd>
-                  </div>
-                  {vis?.canViewCost ? (
-                    <div>
-                      <dt>{costLabel}</dt>
-                      <dd>
-                        {moneyOrHidden(
-                          result.data.baseCurrencyRollUp.costBestAvailableBase,
-                          result.data.baseCurrencyRollUp.baseCurrency,
-                          true
-                        )}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {vis?.canViewRevenue ? (
-                    <div>
-                      <dt>{revenueLabel}</dt>
-                      <dd>
-                        {moneyOrHidden(
-                          result.data.baseCurrencyRollUp
-                            .revenueBestAvailableBase,
-                          result.data.baseCurrencyRollUp.baseCurrency,
-                          true
-                        )}
-                      </dd>
-                    </div>
-                  ) : null}
-                  {vis?.canViewMargin ? (
-                    <div>
-                      <dt>{profitLabel}</dt>
-                      <dd
-                        className={
-                          (result.data.baseCurrencyRollUp
-                            .profitBestAvailableBase ?? 0) < 0
-                            ? "neg"
-                            : undefined
-                        }
-                      >
-                        {moneyOrHidden(
-                          result.data.baseCurrencyRollUp
-                            .profitBestAvailableBase,
-                          result.data.baseCurrencyRollUp.baseCurrency,
-                          true
-                        )}
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-                <p className="note">
-                  {result.data.baseCurrencyRollUp.fxStubNote}
-                </p>
-              </>
-            ) : null}
-
-            <p className="note">{result.data.note}</p>
-          </section>
-
-          {/* —— 2b. Biểu đồ kiểm soát —— */}
-          <section
-            className="panel panel-wide dash-cluster dash-span-2"
-            aria-labelledby="dash-charts"
-          >
-            <h2 id="dash-charts" className="cluster-title">
-              Biểu đồ kiểm soát
-            </h2>
-            <p className="cluster-lede">
-              P&amp;L Best Available, độ chín dòng, hàng đợi việc, phễu chứng từ và{" "}
-              {agingLabel.toLowerCase()} AP/AR — cùng nguồn API, không SoT.
-            </p>
-
-            <div className="fin-chart-grid">
               {(vis?.canViewCost || vis?.canViewRevenue) &&
-              (result.data.baseCurrencyRollUp ||
-                result.data.totalsByCurrency[0]) ? (
+              (costAmt !== 0 || revAmt !== 0 || profitAmt !== 0) ? (
                 <GroupedBarChart
-                  caption={`${bestAvailableLabel} (${
-                    result.data.baseCurrencyRollUp?.baseCurrency ??
-                    result.data.totalsByCurrency[0]?.currencyCode ??
-                    ""
-                  })`}
+                  caption={`${bestAvailableLabel} (${currency})`}
                   series={[
                     ...(vis?.canViewCost
                       ? [
                           {
                             key: "cost",
                             label: costLabel,
-                            value: Number(
-                              result.data.baseCurrencyRollUp
-                                ?.costBestAvailableBase ??
-                                result.data.totalsByCurrency[0]
-                                  ?.costBestAvailable ??
-                                0
-                            ),
-                            color: FinColors.cost,
+                            value: costAmt,
+                            color: "#3b82f6",
                           },
                         ]
                       : []),
@@ -472,14 +321,8 @@ export default async function DashboardPage() {
                           {
                             key: "rev",
                             label: revenueLabel,
-                            value: Number(
-                              result.data.baseCurrencyRollUp
-                                ?.revenueBestAvailableBase ??
-                                result.data.totalsByCurrency[0]
-                                  ?.revenueBestAvailable ??
-                                0
-                            ),
-                            color: FinColors.revenue,
+                            value: revAmt,
+                            color: "#22c55e",
                           },
                         ]
                       : []),
@@ -488,552 +331,302 @@ export default async function DashboardPage() {
                           {
                             key: "pnl",
                             label: profitLabel,
-                            value: Number(
-                              result.data.baseCurrencyRollUp
-                                ?.profitBestAvailableBase ??
-                                result.data.totalsByCurrency[0]
-                                  ?.profitBestAvailable ??
-                                0
-                            ),
+                            value: profitAmt,
                             color:
-                              Number(
-                                result.data.baseCurrencyRollUp
-                                  ?.profitBestAvailableBase ??
-                                  result.data.totalsByCurrency[0]
-                                    ?.profitBestAvailable ??
-                                  0
-                              ) < 0
-                                ? FinColors.profitNeg
-                                : FinColors.profit,
+                              profitAmt < 0 ? FinColors.profitNeg : "#f59e0b",
                           },
                         ]
                       : []),
                   ]}
-                  valueFormatter={(n) => {
-                    const abs = Math.abs(n);
-                    const sign = n < 0 ? "−" : "";
-                    if (abs >= 1_000_000_000)
-                      return `${sign}${(abs / 1_000_000_000).toFixed(1)}B`;
-                    if (abs >= 1_000_000)
-                      return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
-                    if (abs >= 1_000)
-                      return `${sign}${(abs / 1_000).toFixed(0)}k`;
-                    return formatMoney(
-                      n,
-                      result.data.baseCurrencyRollUp?.baseCurrency ??
-                        result.data.totalsByCurrency[0]?.currencyCode ??
-                        "VND"
-                    );
-                  }}
+                  valueFormatter={(n) => compactMoney(n, currency)}
                 />
               ) : (
-                <div className="fin-chart">
-                  <p className="fin-chart-caption">
-                    {bestAvailableLabel} · P&amp;L
-                  </p>
-                  <p className="fin-chart-empty" role="status">
-                    Không có số tiền để vẽ (thiếu quyền hoặc chưa có dòng CP/DT).
-                  </p>
-                </div>
+                <p className="empty-state" role="status">
+                  Chưa có số CP/DT để vẽ. Ghi dòng trên {billLabel} rồi quay lại.
+                </p>
               )}
+            </section>
 
-              {result.data.maturityPipeline && vis?.canViewCost ? (
-                <StackedCompositionBar
-                  caption={`${maturityLabel} · ${costLabel} (số dòng)`}
-                  segments={[
-                    {
-                      key: "e",
-                      label: expectedLabel,
-                      value:
-                        result.data.maturityPipeline.costExpectedOnlyCount,
-                      color: FinColors.expected,
-                    },
-                    {
-                      key: "c",
-                      label: confirmedLabel,
-                      value:
-                        result.data.maturityPipeline.costConfirmedOnlyCount,
-                      color: FinColors.confirmed,
-                    },
-                    {
-                      key: "a",
-                      label: actualLabel,
-                      value: result.data.maturityPipeline.costActualCount,
-                      color: FinColors.actual,
-                    },
-                  ]}
-                />
-              ) : null}
-
-              {result.data.maturityPipeline && vis?.canViewRevenue ? (
-                <StackedCompositionBar
-                  caption={`${maturityLabel} · ${revenueLabel} (số dòng)`}
-                  segments={[
-                    {
-                      key: "e",
-                      label: expectedLabel,
-                      value:
-                        result.data.maturityPipeline
-                          .revenueExpectedOnlyCount,
-                      color: FinColors.expected,
-                    },
-                    {
-                      key: "c",
-                      label: confirmedLabel,
-                      value:
-                        result.data.maturityPipeline
-                          .revenueConfirmedOnlyCount,
-                      color: FinColors.confirmed,
-                    },
-                    {
-                      key: "a",
-                      label: actualLabel,
-                      value: result.data.maturityPipeline.revenueActualCount,
-                      color: FinColors.actual,
-                    },
-                  ]}
-                />
-              ) : null}
-
-              <HorizontalBarChart
-                caption="Cơ cấu hàng đợi việc"
-                series={[
-                  {
-                    key: "ex",
-                    label: exceptionQueueLabel,
-                    value: result.data.openExceptionCount,
-                    color: FinColors.work,
-                  },
-                  {
-                    key: "od",
-                    label: overdueLabel,
-                    value: result.data.overdueExceptionCount,
-                    color: FinColors.workDanger,
-                  },
-                  {
-                    key: "appr",
-                    label: approvalQueueLabel,
-                    value: result.data.pendingApprovalCount,
-                    color: FinColors.workMuted,
-                  },
-                  {
-                    key: "var",
-                    label: openVarianceLabel,
-                    value: result.data.openVarianceCount,
-                    color: FinColors.workWarn,
-                  },
-                  {
-                    key: "recon",
-                    label: reconQueueLabel,
-                    value: result.data.openReconciliationCount,
-                    color: FinColors.work,
-                  },
-                  {
-                    key: "bank",
-                    label: `${bankFeedLabel} · ${bankUnmatchedLabel}`,
-                    value: result.data.unmatchedBankFeedCount,
-                    color: FinColors.workWarn,
-                  },
-                ]}
-              />
-
-              {result.data.documents ? (
-                <FunnelSteps
-                  caption={`Phễu ${docLabel.toLowerCase()}`}
-                  steps={[
-                    {
-                      key: "recv",
-                      label: `${receivedLabel}, chờ chấp nhận`,
-                      value: result.data.documents.awaitingAcceptanceCount,
-                      color: FinColors.doc1,
-                    },
-                    {
-                      key: "acc",
-                      label: `${acceptedLabel}, chưa khớp đủ`,
-                      value: result.data.documents.acceptedUnmatchedCount,
-                      color: FinColors.doc2,
-                    },
-                    {
-                      key: "draft",
-                      label: `${matchLabel} nháp`,
-                      value: result.data.documents.draftMatchCount,
-                      color: FinColors.doc3,
-                    },
-                  ]}
-                />
-              ) : null}
-
-              {agingRes.ok &&
-              (agingRes.data.canViewPayable ||
-                agingRes.data.canViewReceivable) ? (
-                <>
-                  {agingRes.data.canViewPayable && agingRes.data.payable ? (
-                    <HorizontalBarChart
-                      caption={`${agingLabel} · ${apLabel} (dư nợ)`}
-                      series={orderedBuckets(agingRes.data.payable.buckets).map(
-                        (b) => ({
-                          key: b.bucket,
-                          label: agingBucketLabel(b.bucket),
-                          value: b.outstanding,
-                          color: agingColor(b.bucket),
-                        })
-                      )}
-                      valueFormatter={(n) =>
-                        formatMoney(
-                          n,
-                          agingRes.data.payable?.payableItems?.[0]
-                            ?.currencyCode || "VND"
-                        )
-                      }
-                      emptyLabel="Không có dư nợ AP trong phạm vi."
-                    />
-                  ) : null}
-                  {agingRes.data.canViewReceivable &&
-                  agingRes.data.receivable ? (
-                    <HorizontalBarChart
-                      caption={`${agingLabel} · ${arLabel} (dư nợ)`}
-                      series={orderedBuckets(
-                        agingRes.data.receivable.buckets
-                      ).map((b) => ({
-                        key: b.bucket,
-                        label: agingBucketLabel(b.bucket),
-                        value: b.outstanding,
-                        color: agingColor(b.bucket),
-                      }))}
-                      valueFormatter={(n) =>
-                        formatMoney(
-                          n,
-                          agingRes.data.receivable?.receivableItems?.[0]
-                            ?.currencyCode || "VND"
-                        )
-                      }
-                      emptyLabel="Không có dư nợ AR trong phạm vi."
-                    />
-                  ) : null}
-                </>
-              ) : agingRes.ok ? (
-                <div className="fin-chart">
-                  <p className="fin-chart-caption">{agingLabel} AP/AR</p>
-                  <p className="fin-chart-empty" role="status">
-                    {agingRes.data.note}
-                  </p>
-                </div>
-              ) : (
-                <div className="fin-chart">
-                  <p className="fin-chart-caption">{agingLabel} AP/AR</p>
-                  <p className="fin-chart-empty" role="status">
-                    {agingRes.message}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <p className="cta-row">
-              <Link className="btn btn-ghost" href="/ap-ar/aging">
-                Chi tiết {agingLabel.toLowerCase()}
-              </Link>
-            </p>
-          </section>
-
-          {/* —— 3. Độ chín —— */}
-          {result.data.maturityPipeline ? (
-            <section
-              className="panel panel-wide dash-cluster"
-              aria-labelledby="dash-maturity"
-            >
-              <h2 id="dash-maturity" className="cluster-title">
-                {maturityLabel}
-              </h2>
-              <p className="cluster-lede">
-                Số dòng {costLabel}/{revenueLabel} theo lớp độ chín — không phải
-                số tiền. Giúp thấy backlog xác nhận / thực tế hóa.
+            <section className="po-card" aria-labelledby="po-ba">
+              <div className="po-section-head">
+                <h2 id="po-ba">{bestAvailableLabel}</h2>
+                <span className="muted">{currency}</span>
+              </div>
+              <p className="cluster-lede" style={{ marginTop: 0 }}>
+                {actualLabel} → {confirmedLabel} → {expectedLabel}. Projection —
+                không phải sổ cái.
               </p>
-              <div className="dash-split">
-                <div>
-                  <h3 className="section-title sm">{costLabel}</h3>
-                  <div className="stat-grid stat-grid-3" role="list">
-                    <div className="stat-card stat-card-static" role="listitem">
-                      <span className="stat-label">{expectedLabel}</span>
-                      <span className="stat-value">
-                        {result.data.maturityPipeline.costExpectedOnlyCount}
-                      </span>
-                      <span className="stat-hint">Chỉ dự kiến</span>
+              <div className="po-ba-stack">
+                {vis?.canViewCost ? (
+                  <div className="po-ba-block">
+                    <div className="po-ba-head">
+                      <span>{costLabel}</span>
+                      <strong>{formatMoney(costAmt, currency)}</strong>
                     </div>
-                    <div className="stat-card stat-card-static" role="listitem">
-                      <span className="stat-label">{confirmedLabel}</span>
-                      <span className="stat-value">
-                        {result.data.maturityPipeline.costConfirmedOnlyCount}
-                      </span>
-                      <span className="stat-hint">Đã xác nhận, chưa thực tế</span>
-                    </div>
-                    <div className="stat-card stat-card-static" role="listitem">
-                      <span className="stat-label">{actualLabel}</span>
-                      <span className="stat-value">
-                        {result.data.maturityPipeline.costActualCount}
-                      </span>
-                      <span className="stat-hint">Đã có thực tế</span>
-                    </div>
+                    {mat ? (
+                      <ul className="po-ba-maturity">
+                        <li>
+                          <span>{expectedLabel}</span>
+                          <strong>{mat.costExpectedOnlyCount} dòng</strong>
+                        </li>
+                        <li>
+                          <span>{confirmedLabel}</span>
+                          <strong>{mat.costConfirmedOnlyCount} dòng</strong>
+                        </li>
+                        <li>
+                          <span>{actualLabel}</span>
+                          <strong>{mat.costActualCount} dòng</strong>
+                        </li>
+                      </ul>
+                    ) : null}
                   </div>
-                </div>
-                <div>
-                  <h3 className="section-title sm">{revenueLabel}</h3>
-                  <div className="stat-grid stat-grid-3" role="list">
-                    <div className="stat-card stat-card-static" role="listitem">
-                      <span className="stat-label">{expectedLabel}</span>
-                      <span className="stat-value">
-                        {
-                          result.data.maturityPipeline
-                            .revenueExpectedOnlyCount
-                        }
-                      </span>
-                      <span className="stat-hint">Chỉ dự kiến</span>
+                ) : null}
+                {vis?.canViewRevenue ? (
+                  <div className="po-ba-block">
+                    <div className="po-ba-head">
+                      <span>{revenueLabel}</span>
+                      <strong>{formatMoney(revAmt, currency)}</strong>
                     </div>
-                    <div className="stat-card stat-card-static" role="listitem">
-                      <span className="stat-label">{confirmedLabel}</span>
-                      <span className="stat-value">
-                        {
-                          result.data.maturityPipeline
-                            .revenueConfirmedOnlyCount
-                        }
-                      </span>
-                      <span className="stat-hint">Đã xác nhận, chưa thực tế</span>
-                    </div>
-                    <div className="stat-card stat-card-static" role="listitem">
-                      <span className="stat-label">{actualLabel}</span>
-                      <span className="stat-value">
-                        {result.data.maturityPipeline.revenueActualCount}
-                      </span>
-                      <span className="stat-hint">Đã có thực tế</span>
-                    </div>
+                    {mat ? (
+                      <ul className="po-ba-maturity">
+                        <li>
+                          <span>{expectedLabel}</span>
+                          <strong>{mat.revenueExpectedOnlyCount} dòng</strong>
+                        </li>
+                        <li>
+                          <span>{confirmedLabel}</span>
+                          <strong>{mat.revenueConfirmedOnlyCount} dòng</strong>
+                        </li>
+                        <li>
+                          <span>{actualLabel}</span>
+                          <strong>{mat.revenueActualCount} dòng</strong>
+                        </li>
+                      </ul>
+                    ) : null}
                   </div>
-                </div>
+                ) : null}
+                {vis?.canViewMargin ? (
+                  <div className="po-ba-block">
+                    <div className="po-ba-head">
+                      <span>{profitLabel}</span>
+                      <strong className={profitAmt < 0 ? "neg" : undefined}>
+                        {formatMoney(profitAmt, currency)}
+                      </strong>
+                    </div>
+                    <p className="muted" style={{ margin: "0.35rem 0 0", fontSize: "0.82rem" }}>
+                      Biên = Best Available DT − CP
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </section>
-          ) : null}
+          </div>
 
-          {/* —— 4. Chứng từ —— */}
-          {result.data.documents ? (
-            <section
-              className="panel panel-wide dash-cluster"
-              aria-labelledby="dash-docs"
-            >
-              <h2 id="dash-docs" className="cluster-title">
-                {docLabel}
-              </h2>
-              <p className="cluster-lede">
-                Chuỗi độc lập: {receivedLabel} ≠ {acceptedLabel} ≠ {matchedLabel}.
-                Không tự tạo {costLabel}/{revenueLabel}.
-              </p>
-              <div className="stat-grid" role="list">
-                <Link className="stat-card" href="/documents" role="listitem">
-                  <span className="stat-label">
-                    {receivedLabel}, chờ {acceptedLabel.toLowerCase()}
-                  </span>
-                  <span className="stat-value">
-                    {result.data.documents.awaitingAcceptanceCount}
-                  </span>
-                  <span className="stat-hint">Mở danh sách chứng từ</span>
+          {/* Maturity + recent bills */}
+          <div className="po-mid-grid">
+            <section className="po-card" aria-labelledby="po-mat">
+              <div className="po-section-head">
+                <h2 id="po-mat">{maturityLabel}</h2>
+              </div>
+              {mat && (vis?.canViewCost || vis?.canViewRevenue) ? (
+                <div className="po-mat-cols">
+                  {vis?.canViewCost ? (
+                    <StackedCompositionBar
+                      caption={`${costLabel} (số dòng)`}
+                      segments={[
+                        {
+                          key: "e",
+                          label: expectedLabel,
+                          value: mat.costExpectedOnlyCount,
+                          color: FinColors.expected,
+                        },
+                        {
+                          key: "c",
+                          label: confirmedLabel,
+                          value: mat.costConfirmedOnlyCount,
+                          color: FinColors.confirmed,
+                        },
+                        {
+                          key: "a",
+                          label: actualLabel,
+                          value: mat.costActualCount,
+                          color: FinColors.actual,
+                        },
+                      ]}
+                    />
+                  ) : null}
+                  {vis?.canViewRevenue ? (
+                    <StackedCompositionBar
+                      caption={`${revenueLabel} (số dòng)`}
+                      segments={[
+                        {
+                          key: "e",
+                          label: expectedLabel,
+                          value: mat.revenueExpectedOnlyCount,
+                          color: FinColors.expected,
+                        },
+                        {
+                          key: "c",
+                          label: confirmedLabel,
+                          value: mat.revenueConfirmedOnlyCount,
+                          color: FinColors.confirmed,
+                        },
+                        {
+                          key: "a",
+                          label: actualLabel,
+                          value: mat.revenueActualCount,
+                          color: FinColors.actual,
+                        },
+                      ]}
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <p className="empty-state" role="status">
+                  Chưa có dữ liệu độ chín.
+                </p>
+              )}
+            </section>
+
+            <section className="po-card" aria-labelledby="po-recent">
+              <div className="po-section-head">
+                <h2 id="po-recent">{billLabel} gần đây</h2>
+                <Link className="row-link" href="/bills">
+                  Xem tất cả →
                 </Link>
-                <Link className="stat-card" href="/documents" role="listitem">
-                  <span className="stat-label">
-                    {acceptedLabel}, chưa khớp đủ
-                  </span>
-                  <span
-                    className={
-                      result.data.documents.acceptedUnmatchedCount > 0
-                        ? "stat-value stat-warn"
-                        : "stat-value"
-                    }
-                  >
-                    {result.data.documents.acceptedUnmatchedCount}
-                  </span>
-                  <span className="stat-hint">Cần {matchLabel.toLowerCase()}</span>
-                </Link>
-                <div className="stat-card stat-card-static" role="listitem">
-                  <span className="stat-label">
-                    {matchLabel} nháp
-                  </span>
-                  <span className="stat-value">
-                    {result.data.documents.draftMatchCount}
-                  </span>
-                  <Link className="stat-hint row-link" href="/documents">
-                    Tiếp tục khớp
+              </div>
+              {recentBills.length === 0 ? (
+                <p className="empty-state" role="status">
+                  Chưa có {billLabel}.{" "}
+                  <Link className="row-link" href="/bills/new">
+                    Tạo mới
                   </Link>
+                </p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="data-table po-recent-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Mã {billLabel}</th>
+                        <th scope="col">Loại</th>
+                        <th scope="col">Ngày tạo</th>
+                        <th scope="col">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentBills.map((b) => (
+                        <tr key={b.id}>
+                          <td>
+                            <Link className="row-link" href={`/bills/${b.id}`}>
+                              {b.billNo}
+                            </Link>
+                          </td>
+                          <td>{billTypeLabel(b.billType)}</td>
+                          <td>{formatDateTimeVi(b.createdAt)}</td>
+                          <td>
+                            <span
+                              className={`status-pill status-${b.operationalStatus?.toLowerCase() || "active"}`}
+                            >
+                              {operationalStatusLabel(b.operationalStatus)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-              <p className="cta-row">
-                <Link className="btn btn-ghost" href="/documents/receive">
-                  Nhận chứng từ mới
-                </Link>
-              </p>
+              )}
             </section>
-          ) : null}
+          </div>
 
-          {/* —— 5. AP/AR —— */}
-          {result.data.apAr ? (
-            <section
-              className="panel panel-wide dash-cluster"
-              aria-labelledby="dash-apar"
-            >
-              <h2 id="dash-apar" className="cluster-title">
-                {apLabel} / {arLabel}
-              </h2>
-              <p className="cluster-lede">
-                Exposure → ghi nhận AP/AR → tất toán. {settlementOpenLabel} gồm cả
-                tất toán một phần.
-              </p>
-              <div className="stat-grid" role="list">
-                <Link className="stat-card" href="/ap-ar" role="listitem">
-                  <span className="stat-label">
-                    {apLabel} · {settlementOpenLabel}
-                  </span>
-                  <span className="stat-value">
-                    {result.data.apAr.openAccountsPayableCount}
-                  </span>
-                  <span className="stat-hint">Chưa tất toán hết</span>
-                </Link>
-                <Link className="stat-card" href="/ap-ar" role="listitem">
-                  <span className="stat-label">
-                    {arLabel} · {settlementOpenLabel}
-                  </span>
-                  <span className="stat-value">
-                    {result.data.apAr.openAccountsReceivableCount}
-                  </span>
-                  <span className="stat-hint">Chưa tất toán hết</span>
-                </Link>
-                <Link
-                  className="stat-card"
-                  href="/ap-ar/exposures/new"
-                  role="listitem"
-                >
-                  <span className="stat-label">{payableExposureLabel}</span>
-                  <span className="stat-value">
-                    {result.data.apAr.openPayableExposureCount}
-                  </span>
-                  <span className="stat-hint">Chưa ghi nhận đủ</span>
-                </Link>
-                <Link className="stat-card" href="/ap-ar" role="listitem">
-                  <span className="stat-label">{receivableExposureLabel}</span>
-                  <span className="stat-value">
-                    {result.data.apAr.openReceivableExposureCount}
-                  </span>
-                  <span className="stat-hint">Chưa ghi nhận đủ</span>
+          {/* Bottom: docs / AP-AR / notifications */}
+          <div className="po-bottom-grid">
+            <section className="po-card" aria-labelledby="po-docs">
+              <div className="po-section-head">
+                <h2 id="po-docs">{docLabel}</h2>
+                <Link className="row-link" href="/documents">
+                  Xem →
                 </Link>
               </div>
+              {result.data.documents ? (
+                <ul className="po-mini-stats">
+                  <li>
+                    <span>Chờ chấp nhận</span>
+                    <strong>{result.data.documents.awaitingAcceptanceCount}</strong>
+                  </li>
+                  <li>
+                    <span>Đã chấp nhận · chưa khớp</span>
+                    <strong>{result.data.documents.acceptedUnmatchedCount}</strong>
+                  </li>
+                  <li>
+                    <span>Khớp nháp</span>
+                    <strong>{result.data.documents.draftMatchCount}</strong>
+                  </li>
+                </ul>
+              ) : (
+                <p className="muted">Không có quyền xem cụm chứng từ.</p>
+              )}
             </section>
-          ) : null}
 
-          {/* —— 6. Thanh toán / Thu tiền —— */}
-          {result.data.settlements ? (
-            <section
-              className="panel panel-wide dash-cluster"
-              aria-labelledby="dash-settle"
-            >
-              <h2 id="dash-settle" className="cluster-title">
-                {paymentLabel} / {collectionLabel}
-              </h2>
-              <p className="cluster-lede">
-                Giao dịch tiền mặt đang mở (chưa hủy). Phân bổ mới làm đổi số dư
-                AP/AR.
-              </p>
-              <div className="stat-grid" role="list">
-                <Link
-                  className="stat-card"
-                  href="/settlements"
-                  role="listitem"
-                >
-                  <span className="stat-label">
-                    {paymentLabel} đang mở
-                  </span>
-                  <span className="stat-value">
-                    {result.data.settlements.openPaymentCount}
-                  </span>
-                  <span className="stat-hint">Danh sách tất toán</span>
-                </Link>
-                <Link
-                  className="stat-card"
-                  href="/settlements"
-                  role="listitem"
-                >
-                  <span className="stat-label">
-                    {collectionLabel} đang mở
-                  </span>
-                  <span className="stat-value">
-                    {result.data.settlements.openCollectionCount}
-                  </span>
-                  <span className="stat-hint">Danh sách tất toán</span>
+            <section className="po-card" aria-labelledby="po-apar">
+              <div className="po-section-head">
+                <h2 id="po-apar">
+                  {apLabel} / {arLabel}
+                </h2>
+                <Link className="row-link" href="/ap-ar">
+                  Xem →
                 </Link>
               </div>
-              <p className="cta-row">
-                <Link className="btn btn-ghost" href="/settlements/payments/new">
-                  Tạo {paymentLabel.toLowerCase()}
-                </Link>{" "}
-                <Link
-                  className="btn btn-ghost"
-                  href="/settlements/collections/new"
-                >
-                  Tạo {collectionLabel.toLowerCase()}
-                </Link>
-              </p>
+              {result.data.apAr ? (
+                <ul className="po-mini-stats">
+                  <li>
+                    <span>{apLabel} còn dư</span>
+                    <strong>{result.data.apAr.openAccountsPayableCount}</strong>
+                  </li>
+                  <li>
+                    <span>{arLabel} còn dư</span>
+                    <strong>
+                      {result.data.apAr.openAccountsReceivableCount}
+                    </strong>
+                  </li>
+                </ul>
+              ) : (
+                <p className="muted">Không có quyền xem AP/AR.</p>
+              )}
+              {(apBuckets.length > 0 || arBuckets.length > 0) && (
+                <p className="muted" style={{ marginTop: "0.65rem", fontSize: "0.8rem" }}>
+                  {agingLabel}:{" "}
+                  {[...apBuckets, ...arBuckets]
+                    .slice(0, 3)
+                    .map((b) => `${agingBucketLabel(b.bucket)} ${b.count}`)
+                    .join(" · ")}
+                </p>
+              )}
             </section>
-          ) : null}
 
-          {/* —— 7. Lối tắt chức năng —— */}
-          <section
-            className="panel panel-wide dash-cluster"
-            aria-labelledby="dash-shortcuts"
-          >
-            <h2 id="dash-shortcuts" className="cluster-title">
-              Lối tắt chức năng
-            </h2>
-            <p className="cluster-lede">
-              Đi thẳng tới màn hình vận hành — không giả lập báo cáo.
-            </p>
-            <ul className="dash-shortcuts">
-              <li>
-                <Link href="/bills/new">Tạo {billLabel} mới</Link>
-              </li>
-              <li>
-                <Link href="/costs/shared">
-                  {costLabel} {term(terms, "ATTRIBUTION_SHARED", "Chung").toLowerCase()}
-                </Link>
-              </li>
-              <li>
-                <Link href="/rate-cards">Bảng giá / Rating</Link>
-              </li>
-              <li>
-                <Link href="/documents/receive">Nhận {docLabel.toLowerCase()}</Link>
-              </li>
-              <li>
-                <Link href="/ap-ar">Xem {apLabel} / {arLabel}</Link>
-              </li>
-              <li>
-                <Link href="/ap-ar/aging">Tóm tắt tuổi nợ</Link>
-              </li>
-              <li>
-                <Link href="/settlements">
-                  {paymentLabel} &amp; {collectionLabel}
-                </Link>
-              </li>
-              <li>
-                <Link href="/reconciliations">Phiên đối soát</Link>
-              </li>
-              <li>
-                <Link href="/bank-feed">{bankFeedLabel}</Link>
-              </li>
-              <li>
-                <Link href="/financial-closes">{closeLabel}</Link>
-              </li>
-              <li>
-                <Link href="/queues/approvals">{approvalQueueLabel}</Link>
-              </li>
-              <li>
-                <Link href="/queues/variances">{openVarianceLabel}</Link>
-              </li>
-            </ul>
-          </section>
+            <section className="po-card" aria-labelledby="po-notif">
+              <div className="po-section-head">
+                <h2 id="po-notif">Thông báo hệ thống</h2>
+              </div>
+              {notifs.length === 0 ? (
+                <p className="muted" role="status">
+                  Không có cảnh báo từ hàng đợi hiện tại.
+                </p>
+              ) : (
+                <ul className="po-notif-list">
+                  {notifs.map((n) => (
+                    <li key={n.href + n.text} className={`tone-${n.tone}`}>
+                      <Link href={n.href}>{n.text}</Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+
+          <p className="note po-dash-note">{result.data.note}</p>
         </div>
-      ) : null}
+      )}
     </AppShell>
   );
 }

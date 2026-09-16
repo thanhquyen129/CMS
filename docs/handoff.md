@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-09-16 — Dashboard UI-01 pixel closer to PO mockup
+
+### User
+Chưa thấy giống giao diện PO (UI-01 Dashboard V2).
+
+### Done
+- Restructure `/dashboard` to PO layout: greeting + date, KPI strip (CP/DT/LN/Bill — **không** fake TMS đơn hàng), horizontal task strip, chart + Best Available maturity, maturity charts + Bill gần đây, docs/AP-AR/thông báo (từ queue thật).
+- Ledger nav active → blue `#2563eb` (PO).
+- Login sets `lcms_dn` displayName cookie for “Xin chào, …” (cleared on logout).
+
+### Files
+- `apps/web/app/dashboard/page.tsx`, `globals.css`
+- `lib/auth.ts`, `bff/auth/login|logout/route.ts`
+
+### Verify
+- `npm run build` pass
+
+### Follow-up
+- Monthly Th01–Th12 series when dashboard API exposes time buckets; customer/route columns when Bill list has them; shell topbar user chip.
+
+---
 ## 2026-09-16 — Fix Next.js build (client imports next/headers)
 
 ### User

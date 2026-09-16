@@ -1,5 +1,7 @@
 export const AUTH_COOKIE = "lcms_at";
 export const REFRESH_COOKIE = "lcms_rt";
+/** Non-httpOnly display name for UI greeting (set at login). */
+export const DISPLAY_NAME_COOKIE = "lcms_dn";
 
 export function getApiInternalUrl(): string {
   return (

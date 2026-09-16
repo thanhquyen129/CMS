@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   AUTH_COOKIE,
   REFRESH_COOKIE,
+  DISPLAY_NAME_COOKIE,
   cookieSecure,
   getApiInternalUrl,
 } from "@/lib/auth";
@@ -75,6 +76,24 @@ export async function POST(req: NextRequest) {
       sameSite: "lax",
       path: "/",
       maxAge: Math.max(60, refreshExpiresIn),
+    });
+  }
+  const displayName =
+    payload.user &&
+    typeof payload.user === "object" &&
+    "displayName" in payload.user &&
+    typeof (payload.user as { displayName?: unknown }).displayName === "string"
+      ? String((payload.user as { displayName: string }).displayName).trim()
+      : "";
+  if (displayName) {
+    res.cookies.set({
+      name: DISPLAY_NAME_COOKIE,
+      value: displayName.slice(0, 80),
+      httpOnly: false,
+      secure: cookieSecure(),
+      sameSite: "lax",
+      path: "/",
+      maxAge: Math.max(60, refreshExpiresIn || expiresIn),
     });
   }
   return res;

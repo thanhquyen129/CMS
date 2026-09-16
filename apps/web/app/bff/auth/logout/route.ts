@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   AUTH_COOKIE,
   REFRESH_COOKIE,
+  DISPLAY_NAME_COOKIE,
   cookieSecure,
   getApiInternalUrl,
 } from "@/lib/auth";
@@ -21,11 +22,11 @@ export async function POST() {
   }
 
   const res = NextResponse.json({ ok: true });
-  for (const name of [AUTH_COOKIE, REFRESH_COOKIE]) {
+  for (const name of [AUTH_COOKIE, REFRESH_COOKIE, DISPLAY_NAME_COOKIE]) {
     res.cookies.set({
       name,
       value: "",
-      httpOnly: true,
+      httpOnly: name !== DISPLAY_NAME_COOKIE,
       secure: cookieSecure(),
       sameSite: "lax",
       path: "/",

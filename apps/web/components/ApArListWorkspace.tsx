@@ -11,7 +11,7 @@ import {
   settlementStatusLabel,
   type AccountsPayableItem,
   type AccountsReceivableItem,
-} from "@/lib/ap-ar";
+} from "@/lib/ap-ar-shared";
 import { formatMoney } from "@/lib/money";
 import type { TerminologyMap } from "@/lib/terminology";
 

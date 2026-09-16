@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-16 — Fix Next.js build (client imports next/headers)
+
+### User
+Deploy CI fail: `npm run build` in Dockerfile.web (Compose up).
+
+### Done
+- Split client-safe modules so `"use client"` workspaces no longer import server `lib/*` that pull `next/headers` via `getSessionToken`:
+  - `ap-ar-shared.ts`, `settlements-shared.ts`, `documents-shared.ts` (+ existing `bills-shared.ts`)
+- Client imports updated: `ApArListWorkspace`, `SettlementListWorkspace`, `DocumentListWorkspace`, `DocumentStatusTriad`.
+- Verified `npm run build` succeeds locally.
+
+### Files
+- `apps/web/lib/*-shared.ts`, `ap-ar.ts`, `settlements.ts`, `documents.ts`
+- workspace + DocumentStatusTriad components
+
+### Verify
+- `npm run build` (apps/web) pass
+
+---
 ## 2026-09-16 — Pixel-match PO UI-01→15 (shared list kit + drawers + hubs)
 
 ### User

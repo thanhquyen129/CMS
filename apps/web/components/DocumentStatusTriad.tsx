@@ -4,7 +4,7 @@ import {
   acceptanceStatusLabel,
   matchingStatusLabel,
   receiptStatusLabel,
-} from "@/lib/documents";
+} from "@/lib/documents-shared";
 
 type Props = {
   terms: TerminologyMap;

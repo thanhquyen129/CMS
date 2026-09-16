@@ -9,7 +9,7 @@ import {
   settlementBillLinkLabel,
   type CollectionItem,
   type PaymentItem,
-} from "@/lib/settlements";
+} from "@/lib/settlements-shared";
 import { formatMoney } from "@/lib/money";
 import type { TerminologyMap } from "@/lib/terminology";
 

@@ -9,7 +9,7 @@ import {
   directionLabel,
   documentTypeLabel,
   type FinancialDocumentListItem,
-} from "@/lib/documents";
+} from "@/lib/documents-shared";
 import { formatMoney } from "@/lib/money";
 import type { TerminologyMap } from "@/lib/terminology";
 

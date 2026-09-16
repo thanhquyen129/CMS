@@ -103,6 +103,10 @@ export default async function DashboardPage() {
     getDashboardSummary(),
     getAgingSummary(),
   ]);
+
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 11 ? "Chào buổi sáng" : hour < 14 ? "Chào buổi trưa" : hour < 18 ? "Chào buổi chiều" : "Chào buổi tối";
   const vis = result.ok
     ? result.data.financialVisibility ?? {
         canViewCost: true,
@@ -124,6 +128,9 @@ export default async function DashboardPage() {
   return (
     <AppShell terms={terms} active="dashboard">
       <section className="panel panel-wide dash-hero">
+        <p className="meta-line muted" style={{ margin: "0 0 0.15rem" }}>
+          {greeting}
+        </p>
         <h1>{dashboardLabel}</h1>
         <p className="lede">
           Trung tâm điều hành tài chính quanh {billLabel}: việc cần xử lý,

@@ -1,5 +1,32 @@
 # Handoff
 
+## 2026-09-16 — Pixel-match PO UI-01→15 (shared list kit + drawers + hubs)
+
+### User
+Implement plan pixel-match PO UI-01 → UI-15 (shared toolkit, drawers, denser list/KPI/charts; no TMS Order).
+
+### Done
+- **P0 toolkit:** `ListPageHeader`, `FilterBar`, `StatCardGrid`, `DataTableShell`, `DrawerTabs`, `AnalyticsRow` under `apps/web/components/list/`.
+- **API paging:** `PagedResult<T>` + optional `page`/`pageSize` on Bills/Costs/Revenues lists; bare array when paging omitted (compat). Web `lib/paging.ts` unwrap.
+- **Drawers + tabs:** Cost/Rate/Revenue/Document/AP-AR/Settlements/Admin parties; maturity stepper on Cost/Revenue.
+- **Pages polished:** bills (FilterBar/StatCardGrid), costs/revenues analytics, ap-ar aging KPIs+drawer, settlements allocation drawer, dashboard greeting, control/reports/closes hubs, admin tabs, settings hub, workflow 11-step map.
+- **Client boundary fix:** `lib/bills-shared.ts` so `BillListWorkspace` does not import `next/headers` via `lib/api`.
+
+### Files
+- `src/LCMS.Application/Common/Paging/*`, Bill/Cost/Revenue list queries + endpoints
+- `apps/web/components/list/*`, `*ListWorkspace.tsx` (new ApAr/Settlement/AdminParty/Revenue)
+- pages: bills, costs, revenues, ap-ar, settlements, dashboard, control, financial-closes, reports, admin, parties, settings, workflow
+- `lib/bills.ts`, `bills-shared.ts`, `costs-revenues-server.ts`, `paging.ts`, `globals.css`
+
+### Verify
+- `npx tsc --noEmit` apps/web pass
+- `dotnet test --filter BillListFinancialSummaryTests` pass
+
+### Follow-up
+- denser cost filters (vendor/date) when API exposes; Export Excel only when endpoint exists; notification badge from real queue count in shell.
+
+---
+
 ## 2026-09-16 — Drawer Rate/Cost/Document + list pagination + denser filters
 
 ### User

@@ -35,9 +35,15 @@ public static class TenantBillEndpoints
                 ct);
             return Results.Created($"/api/bills/{id}", new { id });
         });
-        bills.MapGet("/", async (string? q, ISender sender, CancellationToken ct) =>
+        bills.MapGet("/", async (string? q, int? page, int? pageSize, ISender sender, CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListBillsQuery(q), ct);
+            var list = await sender.Send(new ListBillsQuery(q, page, pageSize), ct);
+            // Legacy callers (no paging) expect a bare array.
+            if (page is null && pageSize is null)
+            {
+                return Results.Ok(list.Items);
+            }
+
             return Results.Ok(list);
         });
         bills.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

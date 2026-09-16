@@ -8,6 +8,7 @@ import type {
   RevenueDto,
   RevenueListItem,
 } from "./costs-revenues";
+import { unwrapPaged, type PagedResult } from "./paging";
 
 async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   const token = await getSessionToken();
@@ -62,12 +63,18 @@ export function listCostsByBill(
 export function listCosts(opts?: {
   financialMaturity?: string;
   attributionType?: string;
-}): Promise<ApiResult<CostListItem[]>> {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResult<PagedResult<CostListItem>>> {
   const p = new URLSearchParams();
   if (opts?.financialMaturity) p.set("financialMaturity", opts.financialMaturity);
   if (opts?.attributionType) p.set("attributionType", opts.attributionType);
+  if (opts?.page != null) p.set("page", String(opts.page));
+  if (opts?.pageSize != null) p.set("pageSize", String(opts.pageSize));
   const qs = p.toString();
-  return apiGet<CostListItem[]>(qs ? `/api/costs?${qs}` : "/api/costs");
+  return apiGet<CostListItem[] | PagedResult<CostListItem>>(
+    qs ? `/api/costs?${qs}` : "/api/costs"
+  ).then((r) => (r.ok ? { ok: true, data: unwrapPaged(r.data) } : r));
 }
 
 export function listSharedCosts(): Promise<ApiResult<CostListItem[]>> {
@@ -94,9 +101,15 @@ export function listRevenuesByBill(
 
 export function listRevenues(opts?: {
   financialMaturity?: string;
-}): Promise<ApiResult<RevenueListItem[]>> {
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResult<PagedResult<RevenueListItem>>> {
   const p = new URLSearchParams();
   if (opts?.financialMaturity) p.set("financialMaturity", opts.financialMaturity);
+  if (opts?.page != null) p.set("page", String(opts.page));
+  if (opts?.pageSize != null) p.set("pageSize", String(opts.pageSize));
   const qs = p.toString();
-  return apiGet<RevenueListItem[]>(qs ? `/api/revenues?${qs}` : "/api/revenues");
+  return apiGet<RevenueListItem[] | PagedResult<RevenueListItem>>(
+    qs ? `/api/revenues?${qs}` : "/api/revenues"
+  ).then((r) => (r.ok ? { ok: true, data: unwrapPaged(r.data) } : r));
 }

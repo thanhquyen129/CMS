@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { BillListWorkspace } from "@/components/BillListWorkspace";
 import { ListPagination } from "@/components/ListPagination";
+import {
+  FilterBar,
+  ListPageHeader,
+  StatCardGrid,
+} from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -49,7 +54,7 @@ export default async function BillsPage({
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
 
   const result = await listBills(q);
-  let bills: BillListItem[] = result.ok ? result.data : [];
+  let bills: BillListItem[] = result.ok ? result.data.items : [];
   if (status?.trim()) {
     const s = status.trim().toLowerCase();
     bills = bills.filter((b) => b.operationalStatus?.toLowerCase() === s);
@@ -73,7 +78,7 @@ export default async function BillsPage({
 
   const statusOptions = Array.from(
     new Set(
-      (result.ok ? result.data : [])
+      (result.ok ? result.data.items : [])
         .map((b) => b.operationalStatus)
         .filter(Boolean)
     )
@@ -82,99 +87,84 @@ export default async function BillsPage({
   return (
     <AppShell terms={terms} active="bills">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          Đơn hàng vận chuyển
-          {" / "}
-          Danh sách {billLabel}
-        </p>
-        <div className="page-header-row">
-          <div>
-            <h1>Danh sách {billLabel}</h1>
-            <p className="lede">
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: "Đơn hàng vận chuyển" },
+            { label: `Danh sách ${billLabel}` },
+          ]}
+          title={`Danh sách ${billLabel}`}
+          lede={
+            <>
               Quản lý vận đơn ({billLabel}) và thông tin tài chính liên quan —{" "}
               {expectedLabel} / {confirmedLabel} / {actualLabel}. {billLabel} là neo
               tài chính (Financial Anchor). Chọn dòng để xem panel chi tiết.
-            </p>
-          </div>
-          <Link className="btn" href="/bills/new">
-            + Tạo {billLabel}
-          </Link>
-        </div>
-
-        <form className="search-bar" method="get" action="/bills" role="search">
-          <label className="sr-only" htmlFor="q">
-            Tìm {billLabel}
-          </label>
-          <input
-            id="q"
-            name="q"
-            type="search"
-            placeholder={`Tìm theo số ${billLabel}, reference…`}
-            defaultValue={q ?? ""}
-            autoComplete="off"
-          />
-          <label className="sr-only" htmlFor="status">
-            Trạng thái
-          </label>
-          <select id="status" name="status" defaultValue={status ?? ""}>
-            <option value="">Tất cả trạng thái</option>
-            {statusOptions.map((s) => (
-              <option key={s} value={s}>
-                {operationalStatusLabel(s)}
-              </option>
-            ))}
-          </select>
-          <button className="btn" type="submit">
-            Lọc
-          </button>
-          {q || status ? (
-            <Link className="btn btn-ghost" href="/bills">
-              Làm mới
+            </>
+          }
+          action={
+            <Link className="btn" href="/bills/new">
+              + Tạo {billLabel}
             </Link>
-          ) : null}
-        </form>
+          }
+        />
+
+        <FilterBar
+          action="/bills"
+          resetHref={q || status ? "/bills" : undefined}
+          fields={[
+            {
+              kind: "search",
+              name: "q",
+              label: `Tìm ${billLabel}`,
+              placeholder: `Tìm theo số ${billLabel}, reference…`,
+              defaultValue: q,
+            },
+            {
+              kind: "select",
+              name: "status",
+              label: "Trạng thái",
+              defaultValue: status,
+              emptyLabel: "Tất cả trạng thái",
+              options: statusOptions.map((s) => ({
+                value: s,
+                label: operationalStatusLabel(s),
+              })),
+            },
+          ]}
+        />
 
         {result.ok ? (
-          <div className="stat-grid" style={{ marginTop: "0.85rem" }}>
-            <div className="stat-card">
-              <span className="stat-label">Tổng số {billLabel}</span>
-              <strong className="stat-value">{bills.length}</strong>
-              <span className="stat-hint">
-                {result.data.length !== bills.length
-                  ? `Trong ${result.data.length} bản ghi`
-                  : "Trong phạm vi của bạn"}
-              </span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">
-                {revenueLabel} ({expectedLabel})
-              </span>
-              <strong className="stat-value">
-                {formatMoney(sumRevExpected, rollCurrency)}
-              </strong>
-              <span className="stat-hint">Projection từ API list</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">
-                {revenueLabel} ({confirmedLabel})
-              </span>
-              <strong className="stat-value">
-                {formatMoney(sumRevConfirmed, rollCurrency)}
-              </strong>
-              <span className="stat-hint">Không cộng gộp đa tiền tệ</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">
-                {revenueLabel} ({actualLabel})
-              </span>
-              <strong className="stat-value">
-                {formatMoney(sumRevActual, rollCurrency)}
-              </strong>
-              <span className="stat-hint">Theo tiền tệ chính từng Bill</span>
-            </div>
-          </div>
+          <StatCardGrid
+            cards={[
+              {
+                key: "count",
+                label: `Tổng số ${billLabel}`,
+                value: bills.length,
+                hint:
+                  result.data.totalCount !== bills.length
+                    ? `Trong ${result.data.totalCount} bản ghi`
+                    : "Trong phạm vi của bạn",
+              },
+              {
+                key: "rev-e",
+                label: `${revenueLabel} (${expectedLabel})`,
+                value: formatMoney(sumRevExpected, rollCurrency),
+                hint: "Projection từ API list",
+              },
+              {
+                key: "rev-c",
+                label: `${revenueLabel} (${confirmedLabel})`,
+                value: formatMoney(sumRevConfirmed, rollCurrency),
+                hint: "Không cộng gộp đa tiền tệ",
+              },
+              {
+                key: "rev-a",
+                label: `${revenueLabel} (${actualLabel})`,
+                value: formatMoney(sumRevActual, rollCurrency),
+                hint: "Theo tiền tệ chính từng Bill",
+              },
+            ]}
+          />
         ) : null}
 
         {!result.ok ? (

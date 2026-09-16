@@ -2,28 +2,42 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { ReverseRecognizeButton } from "@/components/ReverseRecognizeButton";
-import { WriteOffButton } from "@/components/WriteOffButton";
+import { ApArListWorkspace } from "@/components/ApArListWorkspace";
+import { ListPagination } from "@/components/ListPagination";
+import { AnalyticsRow, AnalyticsPanel } from "@/components/list/AnalyticsRow";
+import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
+import { FinColors, HorizontalBarChart } from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
   agingBucketLabel,
   exposureStatusLabel,
   filterByApArStatus,
+  getAgingSummary,
   listAccountsPayable,
   listAccountsReceivable,
   listPayableExposures,
   listReceivableExposures,
   parseApArStatusFilter,
-  settlementStatusLabel,
-  type ApArStatusFilter,
   type AccountsPayableItem,
   type AccountsReceivableItem,
+  type ApArStatusFilter,
 } from "@/lib/ap-ar";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 import { formatMoney } from "@/lib/money";
 import type { TerminologyMap } from "@/lib/terminology";
 
-type SearchParams = Promise<{ tab?: string; status?: string }>;
+type SearchParams = Promise<{
+  tab?: string;
+  status?: string;
+  page?: string;
+  pageSize?: string;
+}>;
 
 function apArHref(opts: {
   tab?: string;
@@ -49,109 +63,38 @@ function statusFilterLabel(
   return term(terms, "OUTSTANDING", "Còn dư");
 }
 
-function ApArTable({
-  terms,
-  items,
-  kind,
-  billLabel,
-  outstandingLabel,
-  agingLabel,
-  showSettledAmount,
-}: {
-  terms: TerminologyMap;
-  items: (AccountsPayableItem | AccountsReceivableItem)[];
-  kind: "payable" | "receivable";
-  billLabel: string;
-  outstandingLabel: string;
-  agingLabel: string;
-  showSettledAmount: boolean;
-}) {
-  return (
-    <div className="table-wrap">
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th scope="col">{billLabel}</th>
-            <th scope="col" className="num">
-              Đã ghi nhận
-            </th>
-            {showSettledAmount ? (
-              <th scope="col" className="num">
-                Đã tất toán
-              </th>
-            ) : null}
-            <th scope="col" className="num">
-              {outstandingLabel}
-            </th>
-            <th scope="col">Trạng thái tất toán</th>
-            <th scope="col">Hạn</th>
-            <th scope="col">{agingLabel}</th>
-            <th scope="col">Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr key={row.id}>
-              <td>
-                {row.billId ? (
-                  <Link className="row-link" href={`/bills/${row.billId}`}>
-                    Mở {billLabel}
-                  </Link>
-                ) : (
-                  <span className="muted">—</span>
-                )}
-              </td>
-              <td className="num">
-                {formatMoney(row.recognizedAmount, row.currencyCode)}
-              </td>
-              {showSettledAmount ? (
-                <td className="num">
-                  {formatMoney(row.finalizedSettledAmount, row.currencyCode)}
-                </td>
-              ) : null}
-              <td className="num">
-                {formatMoney(row.outstanding, row.currencyCode)}
-              </td>
-              <td>{settlementStatusLabel(terms, row.settlementStatus)}</td>
-              <td>{row.dueDate ?? "—"}</td>
-              <td>
-                {agingBucketLabel(row.agingBucket)}
-                {row.daysPastDue != null && row.daysPastDue > 0
-                  ? ` · ${row.daysPastDue} ngày`
-                  : ""}
-              </td>
-              <td>
-                <div className="cta-row" style={{ gap: "0.35rem", flexWrap: "wrap" }}>
-                  {row.outstanding > 0 ? (
-                    <WriteOffButton
-                      terms={terms}
-                      kind={kind}
-                      accountsId={row.id}
-                      outstanding={row.outstanding}
-                      currencyCode={row.currencyCode}
-                    />
-                  ) : null}
-                  <ReverseRecognizeButton
-                    terms={terms}
-                    kind={kind}
-                    accountsId={row.id}
-                    outstanding={row.outstanding}
-                    currencyCode={row.currencyCode}
-                    settledAmount={row.finalizedSettledAmount}
-                    recordStatus={row.recordStatus}
-                  />
-                  {row.outstanding <= 0 &&
-                  row.recordStatus?.toLowerCase() !== "active" ? (
-                    <span className="muted small">—</span>
-                  ) : null}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+const AGING_BUCKET_ORDER = [
+  "current",
+  "1_30",
+  "31_60",
+  "61_90",
+  "90_plus",
+  "no_due_date",
+] as const;
+
+function agingColor(bucket: string): string {
+  switch (bucket.toLowerCase()) {
+    case "current":
+      return FinColors.agingCurrent;
+    case "1_30":
+      return FinColors.agingMid;
+    case "31_60":
+    case "61_90":
+    case "90_plus":
+      return FinColors.agingLate;
+    default:
+      return FinColors.agingNone;
+  }
+}
+
+function agingOutstanding(
+  buckets: { bucket: string; outstanding: number }[] | undefined,
+  keys: readonly string[]
+): number {
+  if (!buckets) return 0;
+  return buckets
+    .filter((b) => keys.includes(b.bucket?.toLowerCase()))
+    .reduce((s, b) => s + b.outstanding, 0);
 }
 
 export default async function ApArPage({
@@ -164,7 +107,8 @@ export default async function ApArPage({
     redirect("/login");
   }
 
-  const { tab, status: statusRaw } = await searchParams;
+  const { tab, status: statusRaw, page: pageRaw, pageSize: pageSizeRaw } =
+    await searchParams;
   const activeTab =
     tab === "ar" || tab === "exposure" ? tab : "ap";
   const statusFilter = parseApArStatusFilter(statusRaw);
@@ -188,13 +132,15 @@ export default async function ApArPage({
   const billLabel = term(terms, "BILL", "Bill");
   const costLabel = term(terms, "COST", "Chi phí");
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
+  const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
 
-  const [apRes, arRes, peRes, reRes] = await Promise.all([
+  const [apRes, arRes, peRes, reRes, agingRes] = await Promise.all([
     listAccountsPayable(),
     listAccountsReceivable(),
     listPayableExposures(),
     listReceivableExposures(),
+    getAgingSummary(),
   ]);
 
   const apItems = apRes.ok
@@ -222,6 +168,73 @@ export default async function ApArPage({
     statusFilter === "settled" || statusFilter === "all";
 
   const navActive = activeTab === "ar" ? "ar" : "ap";
+
+  // —— Paging (client-driven, GET query) for the active AP or AR table ——
+  const activeRows: (AccountsPayableItem | AccountsReceivableItem)[] =
+    activeTab === "ar" ? arItems : apItems;
+  const pageSize = parsePageSize(pageSizeRaw);
+  const pages = calcTotalPages(activeRows.length, pageSize);
+  const page = parsePage(pageRaw, pages);
+  const pageRows = slicePage(activeRows, page, pageSize);
+  const pageParams = { tab: activeTab, status: statusFilter };
+
+  // —— Denser aging KPI (not-due / 0-30 / >30 / settled) when data exists ——
+  const agingSide =
+    activeTab === "ar" ? agingRes.ok && agingRes.data.receivable : agingRes.ok && agingRes.data.payable;
+  const agingBuckets =
+    activeTab === "ar"
+      ? agingRes.ok
+        ? agingRes.data.receivable?.buckets
+        : undefined
+      : agingRes.ok
+        ? agingRes.data.payable?.buckets
+        : undefined;
+  const agingCurrency =
+    (activeTab === "ar"
+      ? agingRes.ok && agingRes.data.receivable?.receivableItems?.[0]?.currencyCode
+      : agingRes.ok && agingRes.data.payable?.payableItems?.[0]?.currencyCode) ||
+    activeRows[0]?.currencyCode ||
+    "VND";
+  const notDue = agingOutstanding(agingBuckets, ["current", "no_due_date"]);
+  const due0to30 = agingOutstanding(agingBuckets, ["1_30"]);
+  const dueOver30 = agingOutstanding(agingBuckets, ["31_60", "61_90", "90_plus"]);
+
+  const cashLabel = activeTab === "ar" ? collectionLabel : paymentLabel;
+  const cashCreateHref =
+    activeTab === "ar" ? "/settlements/collections/new" : "/settlements/payments/new";
+
+  const statCards: StatCardModel[] = [
+    {
+      key: "count",
+      label: `${activeTab === "ar" ? arLabel : apLabel} (đang xem)`,
+      value: activeRows.length,
+    },
+    {
+      key: "settled",
+      label: `${settledLabel} (${activeTab === "ar" ? "AR" : "AP"})`,
+      value: activeTab === "ar" ? arSettledCount : apSettledCount,
+    },
+  ];
+  if (agingSide) {
+    statCards.push(
+      {
+        key: "notdue",
+        label: "Trong hạn",
+        value: formatMoney(notDue, agingCurrency),
+      },
+      {
+        key: "due30",
+        label: "Quá hạn 1–30 ngày",
+        value: formatMoney(due0to30, agingCurrency),
+      },
+      {
+        key: "over30",
+        label: "Quá hạn > 30 ngày",
+        value: formatMoney(dueOver30, agingCurrency),
+        tone: dueOver30 > 0 ? "danger" : "default",
+      }
+    );
+  }
 
   return (
     <AppShell terms={terms} active={navActive}>
@@ -256,28 +269,30 @@ export default async function ApArPage({
           </Link>
         </div>
 
-        <div className="stat-grid" style={{ marginTop: "0.5rem" }}>
-          <div className="stat-card">
-            <span className="stat-label">{apLabel} (đang xem)</span>
-            <strong className="stat-value">
-              {activeTab === "ap" ? apItems.length : "—"}
-            </strong>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">{arLabel} (đang xem)</span>
-            <strong className="stat-value">
-              {activeTab === "ar" ? arItems.length : "—"}
-            </strong>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Đã tất toán (AP)</span>
-            <strong className="stat-value">{apSettledCount}</strong>
-          </div>
-          <div className="stat-card">
-            <span className="stat-label">Đã tất toán (AR)</span>
-            <strong className="stat-value">{arSettledCount}</strong>
-          </div>
-        </div>
+        {activeTab !== "exposure" ? <StatCardGrid cards={statCards} /> : null}
+
+        {activeTab !== "exposure" && agingSide && agingBuckets ? (
+          <AnalyticsRow columns={1}>
+            <AnalyticsPanel>
+              <HorizontalBarChart
+                caption={`${agingLabel} · ${activeTab === "ar" ? arLabel : apLabel} (dư nợ)`}
+                series={AGING_BUCKET_ORDER.map((key) => {
+                  const b = agingBuckets.find(
+                    (x) => x.bucket?.toLowerCase() === key
+                  );
+                  return {
+                    key,
+                    label: agingBucketLabel(key),
+                    value: b?.outstanding ?? 0,
+                    color: agingColor(key),
+                  };
+                })}
+                valueFormatter={(n) => formatMoney(n, agingCurrency)}
+                emptyLabel={`Không có dư nợ ${activeTab === "ar" ? "AR" : "AP"} trong phạm vi.`}
+              />
+            </AnalyticsPanel>
+          </AnalyticsRow>
+        ) : null}
 
         <div className="toolbar-row" role="group" aria-label="Thao tác AP/AR">
           <Link className="btn btn-sm" href="/settlements">
@@ -391,15 +406,27 @@ export default async function ApArPage({
                 )}
               </div>
             ) : (
-              <ApArTable
-                terms={terms}
-                items={apItems}
-                kind="payable"
-                billLabel={billLabel}
-                outstandingLabel={outstandingLabel}
-                agingLabel={agingLabel}
-                showSettledAmount={showSettledAmount}
-              />
+              <>
+                <ApArListWorkspace
+                  terms={terms}
+                  items={pageRows}
+                  kind="payable"
+                  billLabel={billLabel}
+                  outstandingLabel={outstandingLabel}
+                  agingLabel={agingLabel}
+                  showSettledAmount={showSettledAmount}
+                  cashLabel={cashLabel}
+                  cashCreateHref={cashCreateHref}
+                />
+                <ListPagination
+                  basePath="/ap-ar"
+                  params={pageParams}
+                  page={page}
+                  pageSize={pageSize}
+                  totalCount={activeRows.length}
+                  totalPages={pages}
+                />
+              </>
             )}
           </>
         ) : null}
@@ -439,15 +466,27 @@ export default async function ApArPage({
                 )}
               </div>
             ) : (
-              <ApArTable
-                terms={terms}
-                items={arItems}
-                kind="receivable"
-                billLabel={billLabel}
-                outstandingLabel={outstandingLabel}
-                agingLabel={agingLabel}
-                showSettledAmount={showSettledAmount}
-              />
+              <>
+                <ApArListWorkspace
+                  terms={terms}
+                  items={pageRows}
+                  kind="receivable"
+                  billLabel={billLabel}
+                  outstandingLabel={outstandingLabel}
+                  agingLabel={agingLabel}
+                  showSettledAmount={showSettledAmount}
+                  cashLabel={cashLabel}
+                  cashCreateHref={cashCreateHref}
+                />
+                <ListPagination
+                  basePath="/ap-ar"
+                  params={pageParams}
+                  page={page}
+                  pageSize={pageSize}
+                  totalCount={activeRows.length}
+                  totalPages={pages}
+                />
+              </>
             )}
           </>
         ) : null}

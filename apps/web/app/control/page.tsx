@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { AnalyticsRow, AnalyticsPanel } from "@/components/list/AnalyticsRow";
+import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
+import { FinColors, HorizontalBarChart } from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { getDashboardSummary } from "@/lib/control-desk";
@@ -82,28 +85,95 @@ export default async function ControlHubPage() {
             {summary.message}
           </div>
         ) : (
-          <div className="stat-grid" style={{ marginTop: "1rem" }}>
-            <div className="stat-card">
-              <span className="stat-label">{approvalQueueLabel}</span>
-              <strong className="stat-value">{summary.data.pendingApprovalCount}</strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{exceptionQueueLabel}</span>
-              <strong className="stat-value">{summary.data.openExceptionCount}</strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{varianceLabel} đang mở</span>
-              <strong className="stat-value">{summary.data.openVarianceCount}</strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{reconQueueLabel}</span>
-              <strong className="stat-value">{summary.data.openReconciliationCount}</strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{bankFeedLabel} chưa khớp</span>
-              <strong className="stat-value">{summary.data.unmatchedBankFeedCount}</strong>
-            </div>
-          </div>
+          <>
+            <StatCardGrid
+              cards={[
+                {
+                  key: "approval",
+                  label: approvalQueueLabel,
+                  value: summary.data.pendingApprovalCount,
+                  href: "/queues/approvals",
+                },
+                {
+                  key: "exception",
+                  label: exceptionQueueLabel,
+                  value: summary.data.openExceptionCount,
+                  href: "/queues/exceptions",
+                },
+                {
+                  key: "overdue",
+                  label: "Ngoại lệ quá hạn",
+                  value: summary.data.overdueExceptionCount,
+                  tone: summary.data.overdueExceptionCount > 0 ? "danger" : "default",
+                  href: "/queues/exceptions?overdueOnly=1",
+                },
+                {
+                  key: "variance",
+                  label: `${varianceLabel} đang mở`,
+                  value: summary.data.openVarianceCount,
+                  href: "/queues/variances",
+                },
+                {
+                  key: "recon",
+                  label: reconQueueLabel,
+                  value: summary.data.openReconciliationCount,
+                  href: "/queues/reconciliations",
+                },
+                {
+                  key: "bank",
+                  label: `${bankFeedLabel} chưa khớp`,
+                  value: summary.data.unmatchedBankFeedCount,
+                  href: "/bank-feed?status=unmatched",
+                },
+              ]}
+            />
+
+            <AnalyticsRow columns={1}>
+              <AnalyticsPanel>
+                <HorizontalBarChart
+                  caption="Cơ cấu hàng đợi kiểm soát"
+                  series={[
+                    {
+                      key: "appr",
+                      label: approvalQueueLabel,
+                      value: summary.data.pendingApprovalCount,
+                      color: FinColors.workMuted,
+                    },
+                    {
+                      key: "ex",
+                      label: exceptionQueueLabel,
+                      value: summary.data.openExceptionCount,
+                      color: FinColors.work,
+                    },
+                    {
+                      key: "od",
+                      label: "Quá hạn",
+                      value: summary.data.overdueExceptionCount,
+                      color: FinColors.workDanger,
+                    },
+                    {
+                      key: "var",
+                      label: varianceLabel,
+                      value: summary.data.openVarianceCount,
+                      color: FinColors.workWarn,
+                    },
+                    {
+                      key: "recon",
+                      label: reconQueueLabel,
+                      value: summary.data.openReconciliationCount,
+                      color: FinColors.work,
+                    },
+                    {
+                      key: "bank",
+                      label: bankFeedLabel,
+                      value: summary.data.unmatchedBankFeedCount,
+                      color: FinColors.workWarn,
+                    },
+                  ]}
+                />
+              </AnalyticsPanel>
+            </AnalyticsRow>
+          </>
         )}
 
         <div className="hub-links">

@@ -2,13 +2,11 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { SettlementListWorkspace } from "@/components/SettlementListWorkspace";
+import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import {
-  listCollections,
-  listPayments,
-  settlementBillLinkLabel,
-} from "@/lib/settlements";
+import { listCollections, listPayments } from "@/lib/settlements";
 import { formatMoney } from "@/lib/money";
 
 type SearchParams = Promise<{ tab?: string }>;
@@ -46,6 +44,33 @@ export default async function SettlementsPage({
 
   const payments = payRes.ok ? payRes.data : [];
   const collections = colRes.ok ? colRes.data : [];
+  const activeRows = activeTab === "collections" ? collections : payments;
+  const activeRes = activeTab === "collections" ? colRes : payRes;
+  const activeLabel = activeTab === "collections" ? collectionLabel : paymentLabel;
+  const activeCurrency = activeRows[0]?.currencyCode ?? "VND";
+  const totalAmount = activeRows.reduce((s, r) => s + r.amount, 0);
+  const totalAllocated = activeRows.reduce((s, r) => s + r.allocatedAmount, 0);
+  const totalUnapplied = activeRows.reduce((s, r) => s + r.unappliedAmount, 0);
+
+  const statCards: StatCardModel[] = [
+    { key: "count", label: `Số ${activeLabel.toLowerCase()}`, value: activeRows.length },
+    {
+      key: "amount",
+      label: "Tổng số tiền",
+      value: formatMoney(totalAmount, activeCurrency),
+    },
+    {
+      key: "allocated",
+      label: "Đã phân bổ",
+      value: formatMoney(totalAllocated, activeCurrency),
+    },
+    {
+      key: "unapplied",
+      label: unappliedLabel,
+      value: formatMoney(totalUnapplied, activeCurrency),
+      tone: totalUnapplied > 0 ? "danger" : "default",
+    },
+  ];
 
   return (
     <AppShell terms={terms} active="settlements">
@@ -91,160 +116,28 @@ export default async function SettlementsPage({
           )}
         </div>
 
-        {activeTab === "payments" ? (
-          <>
-            {!payRes.ok ? (
-              <div className="alert alert-error" role="alert">
-                {payRes.message}
-              </div>
-            ) : payments.length === 0 ? (
-              <div className="empty-state" role="status">
-                Chưa có {paymentLabel.toLowerCase()}. Tạo mới rồi phân bổ vào
-                AP.
-              </div>
-            ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Ngày</th>
-                      <th scope="col" className="num">
-                        Số tiền
-                      </th>
-                      <th scope="col" className="num">
-                        {unappliedLabel}
-                      </th>
-                      <th scope="col" className="num">
-                        {availableLabel}
-                      </th>
-                      <th scope="col">{billLabel}</th>
-                      <th scope="col">Tham chiếu</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <Link
-                            className="row-link"
-                            href={`/settlements/payments/${row.id}`}
-                          >
-                            {row.valueDate}
-                          </Link>
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.amount, row.currencyCode)}
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.unappliedAmount, row.currencyCode)}
-                        </td>
-                        <td className="num">
-                          {formatMoney(
-                            row.availableToAllocate,
-                            row.currencyCode
-                          )}
-                        </td>
-                        <td>
-                          {row.billId ? (
-                            <Link
-                              className="row-link"
-                              href={`/bills/${row.billId}`}
-                            >
-                              {settlementBillLinkLabel(
-                                row.billId,
-                                row.billNo,
-                                billLabel
-                              )}
-                            </Link>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td>{row.referenceNo ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
+        {activeRes.ok && activeRows.length > 0 ? (
+          <StatCardGrid cards={statCards} />
+        ) : null}
+
+        {!activeRes.ok ? (
+          <div className="alert alert-error" role="alert">
+            {activeRes.message}
+          </div>
+        ) : activeRows.length === 0 ? (
+          <div className="empty-state" role="status">
+            Chưa có {activeLabel.toLowerCase()}. Tạo mới rồi phân bổ vào{" "}
+            {activeTab === "collections" ? "AR" : "AP"}.
+          </div>
         ) : (
-          <>
-            {!colRes.ok ? (
-              <div className="alert alert-error" role="alert">
-                {colRes.message}
-              </div>
-            ) : collections.length === 0 ? (
-              <div className="empty-state" role="status">
-                Chưa có {collectionLabel.toLowerCase()}. Tạo mới rồi phân bổ vào
-                AR.
-              </div>
-            ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Ngày</th>
-                      <th scope="col" className="num">
-                        Số tiền
-                      </th>
-                      <th scope="col" className="num">
-                        {unappliedLabel}
-                      </th>
-                      <th scope="col" className="num">
-                        {availableLabel}
-                      </th>
-                      <th scope="col">{billLabel}</th>
-                      <th scope="col">Tham chiếu</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {collections.map((row) => (
-                      <tr key={row.id}>
-                        <td>
-                          <Link
-                            className="row-link"
-                            href={`/settlements/collections/${row.id}`}
-                          >
-                            {row.valueDate}
-                          </Link>
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.amount, row.currencyCode)}
-                        </td>
-                        <td className="num">
-                          {formatMoney(row.unappliedAmount, row.currencyCode)}
-                        </td>
-                        <td className="num">
-                          {formatMoney(
-                            row.availableToAllocate,
-                            row.currencyCode
-                          )}
-                        </td>
-                        <td>
-                          {row.billId ? (
-                            <Link
-                              className="row-link"
-                              href={`/bills/${row.billId}`}
-                            >
-                              {settlementBillLinkLabel(
-                                row.billId,
-                                row.billNo,
-                                billLabel
-                              )}
-                            </Link>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td>{row.referenceNo ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
+          <SettlementListWorkspace
+            terms={terms}
+            items={activeRows}
+            kind={activeTab === "collections" ? "collection" : "payment"}
+            billLabel={billLabel}
+            unappliedLabel={unappliedLabel}
+            availableLabel={availableLabel}
+          />
         )}
       </section>
     </AppShell>

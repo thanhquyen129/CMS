@@ -32,12 +32,19 @@ public static class CostEndpoints
             Guid? billId,
             string? financialMaturity,
             string? attributionType,
+            int? page,
+            int? pageSize,
             ISender sender,
             CancellationToken ct) =>
         {
             var list = await sender.Send(
-                new ListCostsQuery(billId, financialMaturity, attributionType),
+                new ListCostsQuery(billId, financialMaturity, attributionType, page, pageSize),
                 ct);
+            if (page is null && pageSize is null)
+            {
+                return Results.Ok(list.Items);
+            }
+
             return Results.Ok(list);
         });
 

@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Common.Paging;
 using LCMS.Application.Identity;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -122,9 +123,12 @@ public sealed class GetBillByIdQueryHandler : IRequestHandler<GetBillByIdQuery, 
         bill.CreatedAt);
 }
 
-public sealed record ListBillsQuery(string? Q = null) : IRequest<IReadOnlyList<BillListItemDto>>;
+public sealed record ListBillsQuery(
+    string? Q = null,
+    int? Page = null,
+    int? PageSize = null) : IRequest<PagedResult<BillListItemDto>>;
 
-public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IReadOnlyList<BillListItemDto>>
+public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, PagedResult<BillListItemDto>>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -146,7 +150,7 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
         _orgHierarchy = orgHierarchy;
     }
 
-    public async Task<IReadOnlyList<BillListItemDto>> Handle(
+    public async Task<PagedResult<BillListItemDto>> Handle(
         ListBillsQuery request,
         CancellationToken cancellationToken)
     {
@@ -154,6 +158,8 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
         {
             throw new TenantRequiredAppException();
         }
+
+        var (page, pageSize, applyPaging) = PagingNormalize.Normalize(request.Page, request.PageSize);
 
         var scope = await _permissions.EnsureAndResolveDataScopeAsync(
             PermissionCodes.BillRead,
@@ -166,7 +172,7 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
         {
             if (!_userContext.HasUser)
             {
-                return [];
+                return PagingNormalize.Empty<BillListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(b => b.CreatedBy == _userContext.UserId);
@@ -175,7 +181,7 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
         {
             if (!_userContext.HasUser)
             {
-                return [];
+                return PagingNormalize.Empty<BillListItemDto>(page, pageSize, applyPaging);
             }
 
             var actor = await _db.Users.AsNoTracking()
@@ -183,7 +189,7 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
             var orgSubtree = await _orgHierarchy.GetSubtreeIdsAsync(actor?.OrganizationId, cancellationToken);
             if (orgSubtree.Count == 0)
             {
-                return [];
+                return PagingNormalize.Empty<BillListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(b => b.OrganizationId != null && orgSubtree.Contains(b.OrganizationId.Value));
@@ -212,9 +218,18 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
                 || orderBillIds.Contains(b.Id));
         }
 
-        var bills = await query
-            .OrderByDescending(b => b.BillNo)
-            .ThenBy(b => b.Id)
+        var ordered = query.OrderByDescending(b => b.BillNo).ThenBy(b => b.Id);
+        var totalCount = await ordered.CountAsync(cancellationToken);
+        if (totalCount == 0)
+        {
+            return PagingNormalize.Empty<BillListItemDto>(page, pageSize, applyPaging);
+        }
+
+        var pageQuery = applyPaging
+            ? ordered.Skip((page - 1) * pageSize).Take(pageSize)
+            : ordered;
+
+        var bills = await pageQuery
             .Select(b => new BillListItemDto(
                 b.Id,
                 b.BillNo,
@@ -233,12 +248,12 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
                 null))
             .ToListAsync(cancellationToken);
 
-        if (bills.Count == 0)
-        {
-            return bills;
-        }
-
-        return await AttachFinancialSummariesAsync(bills, cancellationToken);
+        var enriched = await AttachFinancialSummariesAsync(bills, cancellationToken);
+        return new PagedResult<BillListItemDto>(
+            enriched,
+            applyPaging ? page : 1,
+            applyPaging ? pageSize : totalCount,
+            totalCount);
     }
 
     /// <summary>

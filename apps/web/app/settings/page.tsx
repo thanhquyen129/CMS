@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { SettingsForm } from "@/components/SettingsForm";
@@ -27,6 +28,30 @@ export default async function SettingsPage() {
           Giao diện (cookie), cấu hình nghiệp vụ thuê bao, và liên kết quản trị.
           Ngưỡng ghi đè node khi đã lưu.
         </p>
+
+        <div className="hub-links">
+          <Link href="/admin/access" className="panel">
+            <h2 className="section-title">🔐 Phân quyền</h2>
+            <p className="muted">Vai trò, gán thành viên, quyền hành động × phạm vi.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+          <Link href="/admin" className="panel">
+            <h2 className="section-title">📋 Danh mục dữ liệu</h2>
+            <p className="muted">Đối tác, đơn vị tổ chức, tiền tệ.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+          <Link href="/integration-errors" className="panel">
+            <h2 className="section-title">🔌 Lỗi tích hợp</h2>
+            <p className="muted">Hàng đợi lỗi đồng bộ / dead-letter cần xử lý.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+          <Link href="/workflow" className="panel">
+            <h2 className="section-title">🗺️ Bản đồ luồng hệ thống</h2>
+            <p className="muted">Điều hướng end-to-end theo 11 bước nghiệp vụ.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+        </div>
+
         <SettingsForm />
         <TenantFinancialSettingsForm />
       </div>

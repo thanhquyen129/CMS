@@ -100,7 +100,7 @@ export default async function SharedCostDetailPage({
           ? actual
           : cost.financialMaturity;
 
-  const bills = billsRes.ok ? billsRes.data : [];
+  const bills = billsRes.ok ? billsRes.data.items : [];
   const billNoById = new Map(bills.map((b) => [b.id, b.billNo]));
   const allocations = [...(cost.allocations ?? [])].sort(
     (a, b) => b.versionNo - a.versionNo

@@ -2,16 +2,12 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { AdminPartyListWorkspace } from "@/components/AdminPartyListWorkspace";
 import { CreateBusinessPartyForm } from "@/components/CreateBusinessPartyForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listAdminParties } from "@/lib/master-data";
-import {
-  formatCreditLimit,
-  partyLabel,
-  partyRoleLabel,
-  PARTY_ROLE_OPTIONS,
-} from "@/lib/party";
+import { PARTY_ROLE_OPTIONS } from "@/lib/party";
 
 type Search = {
   q?: string;
@@ -58,6 +54,21 @@ export default async function AdminPartiesPage({
           Hồ sơ đối tác chuẩn tài chính: MST, vai trò, điều khoản thanh toán,
           hạn mức công nợ, tài khoản ngân hàng và người liên hệ.
         </p>
+
+        <div className="filter-tabs" role="tablist" aria-label="Danh mục dữ liệu">
+          <Link className="active" href="/admin/parties" role="tab" aria-selected="true">
+            Đối tác
+          </Link>
+          <Link href="/admin/access" role="tab" aria-selected="false">
+            Phân quyền
+          </Link>
+          <Link href="/admin/organizations" role="tab" aria-selected="false">
+            Đơn vị / Tổ chức
+          </Link>
+          <Link href="/admin/currencies" role="tab" aria-selected="false">
+            Tiền tệ
+          </Link>
+        </div>
 
         <form className="filter-bar" method="get">
           <div className="form-grid">
@@ -113,49 +124,7 @@ export default async function AdminPartiesPage({
                 Chưa có đối tác khớp bộ lọc.
               </div>
             ) : (
-              <div className="table-wrap">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Mã</th>
-                      <th scope="col">Tên</th>
-                      <th scope="col">MST</th>
-                      <th scope="col">Vai trò</th>
-                      <th scope="col">Hạn mức</th>
-                      <th scope="col">Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.data.map((p) => (
-                      <tr key={p.id}>
-                        <td className="mono-id">
-                          <Link href={`/admin/parties/${p.id}`}>{p.code}</Link>
-                        </td>
-                        <td>
-                          <Link href={`/admin/parties/${p.id}`}>
-                            {partyLabel(p)}
-                          </Link>
-                        </td>
-                        <td className="mono-id">{p.taxId || "—"}</td>
-                        <td>
-                          {(p.roleCodes ?? []).length === 0
-                            ? "—"
-                            : (p.roleCodes ?? [])
-                                .map(partyRoleLabel)
-                                .join(", ")}
-                        </td>
-                        <td>
-                          {formatCreditLimit(
-                            p.creditLimit,
-                            p.creditLimitCurrencyCode
-                          )}
-                        </td>
-                        <td>{p.isActive ? "Đang dùng" : "Ngừng"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <AdminPartyListWorkspace parties={result.data} />
             )}
           </fieldset>
 

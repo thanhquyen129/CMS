@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -39,28 +41,40 @@ export default async function FinancialClosesPage({
   });
 
   const items = result.ok ? result.data : [];
+  const openCount = items.filter(
+    (r) => r.status?.toLowerCase() === "open"
+  ).length;
+  const lockedCount = items.filter(
+    (r) => r.status?.toLowerCase() === "locked"
+  ).length;
+  const reopenedCount = items.filter(
+    (r) => r.status?.toLowerCase() === "reopened"
+  ).length;
+  const statCards: StatCardModel[] = [
+    { key: "total", label: `Tổng ${closeLabel.toLowerCase()}`, value: items.length },
+    { key: "open", label: "Đang mở", value: openCount },
+    { key: "locked", label: "Đã khóa", value: lockedCount },
+    { key: "reopened", label: "Đã mở lại", value: reopenedCount },
+  ];
 
   return (
     <AppShell terms={terms} active="financial-closes">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          {closeLabel}
-        </p>
-        <div className="page-header-row">
-          <div>
-            <h1>{closeLabel}</h1>
-            <p className="lede">
-              Mở → Close Review → Closed → Reopened → Reclosed. Tạo{" "}
-              {snapshotLabel.toLowerCase()} bất biến; không sửa ngầm kỳ đã chốt. P&amp;L
-              sau chốt đọc từ snapshot — không ghi đè {billLabel}.
-            </p>
-          </div>
-          <Link className="btn" href="/financial-closes/new">
-            + Mở {closeLabel.toLowerCase()}
-          </Link>
-        </div>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: closeLabel },
+          ]}
+          title={closeLabel}
+          lede={`Mở → Close Review → Closed → Reopened → Reclosed. Tạo ${snapshotLabel.toLowerCase()} bất biến; không sửa ngầm kỳ đã chốt. P&L sau chốt đọc từ snapshot — không ghi đè ${billLabel}.`}
+          action={
+            <Link className="btn" href="/financial-closes/new">
+              + Mở {closeLabel.toLowerCase()}
+            </Link>
+          }
+        />
+
+        {result.ok ? <StatCardGrid cards={statCards} /> : null}
 
         <div className="search-bar" role="group" aria-label="Bộ lọc chốt">
           <Link
@@ -113,6 +127,7 @@ export default async function FinancialClosesPage({
                   <th scope="col">Trạng thái</th>
                   <th scope="col">Snapshot</th>
                   <th scope="col">Bắt đầu</th>
+                  <th scope="col">Checklist</th>
                 </tr>
               </thead>
               <tbody>
@@ -147,6 +162,25 @@ export default async function FinancialClosesPage({
                       {row.startedAt
                         ? formatDateTimeVi(row.startedAt)
                         : "—"}
+                    </td>
+                    <td>
+                      <ol className="maturity-stepper compact">
+                        <li className={row.startedAt ? "is-done" : undefined}>
+                          Bắt đầu
+                        </li>
+                        <li
+                          className={
+                            (row.snapshots?.length ?? 0) > 0
+                              ? "is-done"
+                              : undefined
+                          }
+                        >
+                          Snapshot
+                        </li>
+                        <li className={row.lockedAt ? "is-done" : undefined}>
+                          Khóa
+                        </li>
+                      </ol>
                     </td>
                   </tr>
                 ))}

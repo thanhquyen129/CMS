@@ -50,6 +50,14 @@ export default async function AdminHubPage() {
           đây — vô hiệu hoá qua API khi cần.
         </p>
 
+        <div className="filter-tabs" role="tablist" aria-label="Danh mục dữ liệu">
+          {links.map((item) => (
+            <Link key={item.href} href={item.href} role="tab" aria-selected="false">
+              {item.title}
+            </Link>
+          ))}
+        </div>
+
         <div className="card-grid" style={{ marginTop: "1.25rem" }}>
           {links.map((item) => (
             <Link

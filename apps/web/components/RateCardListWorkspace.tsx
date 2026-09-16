@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { DetailDrawer } from "./DetailDrawer";
+import { DrawerTabs } from "./list/DrawerTabs";
 import { partyTypeLabel, type RateCard } from "@/lib/rate-cards";
 import { formatDateTimeVi } from "@/lib/money";
 
@@ -13,11 +14,15 @@ type Props = {
 
 export function RateCardListWorkspace({ cards, billLabel }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState("overview");
   const selected = useMemo(
     () => cards.find((c) => c.id === selectedId) ?? null,
     [cards, selectedId]
   );
-  const close = useCallback(() => setSelectedId(null), []);
+  const close = useCallback(() => {
+    setSelectedId(null);
+    setTab("overview");
+  }, []);
 
   return (
     <>
@@ -44,11 +49,15 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                   className={active ? "row-selected" : undefined}
                   tabIndex={0}
                   style={{ cursor: "pointer" }}
-                  onClick={() => setSelectedId(c.id)}
+                  onClick={() => {
+                    setSelectedId(c.id);
+                    setTab("overview");
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       setSelectedId(c.id);
+                      setTab("overview");
                     }
                   }}
                 >
@@ -130,30 +139,54 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
         }
       >
         {selected ? (
-          <dl className="metric-grid">
-            <div>
-              <dt>Loại giá</dt>
-              <dd>{partyTypeLabel(selected.partyType)}</dd>
-            </div>
-            <div>
-              <dt>Tiền tệ</dt>
-              <dd>{selected.currencyCode}</dd>
-            </div>
-            <div>
-              <dt>Mô tả</dt>
-              <dd>{selected.description || "—"}</dd>
-            </div>
-            <div>
-              <dt>Tạo lúc</dt>
-              <dd>{formatDateTimeVi(selected.createdAt)}</dd>
-            </div>
-            <div>
-              <dt>Ghi chú nghiệp vụ</dt>
-              <dd className="muted">
-                Rating tạo kỳ vọng tài chính (Dự kiến), không tạo Thực tế.
-              </dd>
-            </div>
-          </dl>
+          <>
+            <DrawerTabs
+              tabs={[
+                { id: "overview", label: "Thông tin chung" },
+                { id: "pricing", label: "Chi tiết giá" },
+                { id: "history", label: "Lịch sử" },
+              ]}
+              activeId={tab}
+              onChange={setTab}
+            />
+            {tab === "overview" ? (
+              <dl className="metric-grid">
+                <div>
+                  <dt>Loại giá</dt>
+                  <dd>{partyTypeLabel(selected.partyType)}</dd>
+                </div>
+                <div>
+                  <dt>Tiền tệ</dt>
+                  <dd>{selected.currencyCode}</dd>
+                </div>
+                <div>
+                  <dt>Mô tả</dt>
+                  <dd>{selected.description || "—"}</dd>
+                </div>
+                <div>
+                  <dt>Tạo lúc</dt>
+                  <dd>{formatDateTimeVi(selected.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt>Ghi chú nghiệp vụ</dt>
+                  <dd className="muted">
+                    Rating tạo kỳ vọng tài chính (Dự kiến), không tạo Thực tế.
+                  </dd>
+                </div>
+              </dl>
+            ) : null}
+            {tab === "pricing" ? (
+              <p className="muted">
+                Quy tắc / phụ phí / bậc trọng lượng nằm trên hồ sơ phiên bản bảng giá.
+                Mở hồ sơ đầy đủ để xem và chỉnh.
+              </p>
+            ) : null}
+            {tab === "history" ? (
+              <p className="muted">
+                Lịch sử phiên bản (publish) xem tại trang chi tiết bảng giá.
+              </p>
+            ) : null}
+          </>
         ) : null}
       </DetailDrawer>
     </>

@@ -5,45 +5,48 @@ import { useCallback, useMemo, useState } from "react";
 import { DetailDrawer } from "./DetailDrawer";
 import { DrawerTabs } from "./list/DrawerTabs";
 import {
-  isSharedCost,
   maturityLabelKey,
-  type CostListItem,
+  type RevenueListItem,
 } from "@/lib/costs-revenues";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
   terms: TerminologyMap;
-  costs: CostListItem[];
+  revenues: RevenueListItem[];
   billLabel: string;
-  costLabel: string;
+  revenueLabel: string;
   expectedLabel: string;
   confirmedLabel: string;
   actualLabel: string;
-  directLabel: string;
-  sharedLabel: string;
 };
 
-function maturityVi(terms: TerminologyMap, maturity: string, fallbacks: Record<string, string>) {
-  return term(terms, maturityLabelKey(maturity), fallbacks[maturity?.toLowerCase()] ?? maturity);
+function maturityVi(
+  terms: TerminologyMap,
+  maturity: string,
+  fallbacks: Record<string, string>
+) {
+  return term(
+    terms,
+    maturityLabelKey(maturity),
+    fallbacks[maturity?.toLowerCase()] ?? maturity
+  );
 }
 
-export function CostListWorkspace({
+export function RevenueListWorkspace({
   terms,
-  costs,
+  revenues,
   billLabel,
-  costLabel,
+  revenueLabel,
   expectedLabel,
   confirmedLabel,
   actualLabel,
-  directLabel,
-  sharedLabel,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState("overview");
   const selected = useMemo(
-    () => costs.find((c) => c.id === selectedId) ?? null,
-    [costs, selectedId]
+    () => revenues.find((r) => r.id === selectedId) ?? null,
+    [revenues, selectedId]
   );
   const close = useCallback(() => {
     setSelectedId(null);
@@ -55,9 +58,8 @@ export function CostListWorkspace({
     confirmed: confirmedLabel,
     actual: actualLabel,
   };
+
   const m = selected?.financialMaturity?.toLowerCase() ?? "";
-  const hrefFor = (c: CostListItem) =>
-    isSharedCost(c.attributionType) ? `/costs/shared/${c.id}` : `/costs/${c.id}`;
 
   return (
     <>
@@ -65,9 +67,8 @@ export function CostListWorkspace({
         <table className="data-table">
           <thead>
             <tr>
-              <th scope="col">Mã</th>
+              <th scope="col">Loại</th>
               <th scope="col">{billLabel}</th>
-              <th scope="col">Nguồn</th>
               <th scope="col">Độ chín</th>
               <th scope="col" className="num">
                 Số tiền
@@ -79,23 +80,22 @@ export function CostListWorkspace({
             </tr>
           </thead>
           <tbody>
-            {costs.map((c) => {
-              const href = hrefFor(c);
-              const active = selectedId === c.id;
+            {revenues.map((r) => {
+              const active = selectedId === r.id;
               return (
                 <tr
-                  key={c.id}
+                  key={r.id}
                   className={active ? "row-selected" : undefined}
                   tabIndex={0}
                   style={{ cursor: "pointer" }}
                   onClick={() => {
-                    setSelectedId(c.id);
+                    setSelectedId(r.id);
                     setTab("overview");
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setSelectedId(c.id);
+                      setSelectedId(r.id);
                       setTab("overview");
                     }
                   }}
@@ -113,41 +113,37 @@ export function CostListWorkspace({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedId(c.id);
+                        setSelectedId(r.id);
+                        setTab("overview");
                       }}
                     >
-                      {c.costTypeCode || c.id.slice(0, 8)}
+                      {r.revenueTypeCode || r.id.slice(0, 8)}
                     </button>
                   </td>
                   <td>
-                    {c.billId ? (
-                      <Link
-                        className="row-link"
-                        href={`/bills/${c.billId}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {c.billId.slice(0, 8)}…
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td>
-                    {isSharedCost(c.attributionType) ? sharedLabel : directLabel}
+                    <Link
+                      className="row-link"
+                      href={`/bills/${r.billId}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {r.billId.slice(0, 8)}…
+                    </Link>
                   </td>
                   <td>
                     <span
-                      className={`maturity-pill maturity-${c.financialMaturity?.toLowerCase()}`}
+                      className={`maturity-pill maturity-${r.financialMaturity?.toLowerCase()}`}
                     >
-                      {maturityVi(terms, c.financialMaturity, fallbacks)}
+                      {maturityVi(terms, r.financialMaturity, fallbacks)}
                     </span>
                   </td>
-                  <td className="num">{formatMoney(c.amount, c.currencyCode)}</td>
-                  <td>{formatDateTimeVi(c.effectiveDate)}</td>
+                  <td className="num">
+                    {formatMoney(r.amount, r.currencyCode)}
+                  </td>
+                  <td>{formatDateTimeVi(r.effectiveDate)}</td>
                   <td>
                     <Link
                       className="btn btn-ghost btn-sm"
-                      href={href}
+                      href={`/revenues/${r.id}`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       Hồ sơ
@@ -165,7 +161,7 @@ export function CostListWorkspace({
         onClose={close}
         title={
           selected
-            ? `${costLabel} ${selected.costTypeCode || selected.id.slice(0, 8)}`
+            ? `${revenueLabel} ${selected.revenueTypeCode || selected.id.slice(0, 8)}`
             : null
         }
         subtitle={
@@ -180,24 +176,15 @@ export function CostListWorkspace({
         footer={
           selected ? (
             <div className="toolbar-row" style={{ margin: 0 }}>
-              <Link
-                className="btn btn-sm"
-                href={
-                  isSharedCost(selected.attributionType)
-                    ? `/costs/shared/${selected.id}`
-                    : `/costs/${selected.id}`
-                }
-              >
+              <Link className="btn btn-sm" href={`/revenues/${selected.id}`}>
                 Mở hồ sơ đầy đủ
               </Link>
-              {selected.billId ? (
-                <Link
-                  className="btn btn-sm btn-ghost"
-                  href={`/bills/${selected.billId}`}
-                >
-                  {billLabel}
-                </Link>
-              ) : null}
+              <Link
+                className="btn btn-sm btn-ghost"
+                href={`/bills/${selected.billId}`}
+              >
+                {billLabel}
+              </Link>
             </div>
           ) : null
         }
@@ -216,83 +203,63 @@ export function CostListWorkspace({
             {tab === "overview" ? (
               <dl className="metric-grid">
                 <div>
-                  <dt>Nguồn</dt>
-                  <dd>
-                    {isSharedCost(selected.attributionType)
-                      ? sharedLabel
-                      : directLabel}
-                  </dd>
+                  <dt>Loại</dt>
+                  <dd>{selected.revenueTypeCode || "—"}</dd>
                 </div>
                 <div>
                   <dt>Số tiền hiện hành</dt>
                   <dd>{formatMoney(selected.amount, selected.currencyCode)}</dd>
                 </div>
                 <div>
-                  <dt>{expectedLabel}</dt>
-                  <dd>
-                    {formatMoney(
-                      selected.expectedAmount ?? selected.amount,
-                      selected.currencyCode
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{confirmedLabel}</dt>
-                  <dd>
-                    {selected.confirmedAmount != null
-                      ? formatMoney(selected.confirmedAmount, selected.currencyCode)
-                      : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{actualLabel}</dt>
-                  <dd>
-                    {selected.actualAmount != null
-                      ? formatMoney(selected.actualAmount, selected.currencyCode)
-                      : "—"}
-                  </dd>
-                </div>
-                <div>
                   <dt>Hiệu lực</dt>
                   <dd>{formatDateTimeVi(selected.effectiveDate)}</dd>
+                </div>
+                <div>
+                  <dt>Trạng thái ghi</dt>
+                  <dd>{selected.recordStatus}</dd>
                 </div>
               </dl>
             ) : null}
             {tab === "maturity" ? (
-              <ol className="maturity-stepper">
-                <li className={m === "expected" ? "is-current" : "is-done"}>
-                  {expectedLabel}
-                </li>
-                <li
-                  className={
-                    m === "confirmed"
-                      ? "is-current"
-                      : m === "actual"
-                        ? "is-done"
-                        : undefined
-                  }
-                >
-                  {confirmedLabel}
-                </li>
-                <li className={m === "actual" ? "is-current" : undefined}>
-                  {actualLabel}
-                </li>
-              </ol>
+              <>
+                <ol className="maturity-stepper">
+                  <li className={m === "expected" ? "is-current" : m !== "expected" ? "is-done" : undefined}>
+                    {expectedLabel}
+                  </li>
+                  <li
+                    className={
+                      m === "confirmed"
+                        ? "is-current"
+                        : m === "actual"
+                          ? "is-done"
+                          : undefined
+                    }
+                  >
+                    {confirmedLabel}
+                  </li>
+                  <li className={m === "actual" ? "is-current" : undefined}>
+                    {actualLabel}
+                  </li>
+                </ol>
+                <p className="muted">
+                  {revenueLabel} ≠ hóa đơn / AR / thu tiền. Chuyển độ chín trên hồ sơ
+                  đầy đủ.
+                </p>
+              </>
             ) : null}
             {tab === "related" ? (
               <ul className="stack-list">
-                {selected.billId ? (
-                  <li>
-                    <Link className="row-link" href={`/bills/${selected.billId}`}>
-                      {billLabel} {selected.billId.slice(0, 8)}…
-                    </Link>
-                  </li>
-                ) : (
-                  <li className="muted">Chi phí chung — phân bổ trên hồ sơ đầy đủ.</li>
-                )}
                 <li>
-                  <Link className="row-link" href={hrefFor(selected)}>
-                    Hồ sơ / phân bổ / chứng từ
+                  <Link className="row-link" href={`/bills/${selected.billId}`}>
+                    {billLabel} {selected.billId.slice(0, 8)}…
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    className="row-link"
+                    href={`/bills/${selected.billId}?tab=revenues`}
+                  >
+                    Doanh thu trên {billLabel}
                   </Link>
                 </li>
               </ul>

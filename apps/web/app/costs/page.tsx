@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { CostListWorkspace } from "@/components/CostListWorkspace";
 import { ListPagination } from "@/components/ListPagination";
+import { AnalyticsRow, AnalyticsPanel } from "@/components/list/AnalyticsRow";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
+import { FinColors, StackedCompositionBar } from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listCosts } from "@/lib/costs-revenues-server";
@@ -69,7 +73,9 @@ export default async function CostsPage({
     listCosts({ attributionType: attributionFilter }),
   ]);
 
-  const kpiItems = kpiRes.ok ? kpiRes.data : [];
+  const kpiItems = kpiRes.ok ? kpiRes.data.items : [];
+  const countByMaturity = (m: string) =>
+    kpiItems.filter((c) => c.financialMaturity?.toLowerCase() === m).length;
   const sumByMaturity = (m: string) =>
     kpiItems
       .filter((c) => c.financialMaturity?.toLowerCase() === m)
@@ -80,75 +86,71 @@ export default async function CostsPage({
   const sumActual = sumByMaturity("actual");
   const sumAll = sumExpected + sumConfirmed + sumActual;
 
-  const allRows = result.ok ? result.data : [];
+  const allRows = result.ok ? result.data.items : [];
   const pageSize = parsePageSize(sp.pageSize);
-  const pages = calcTotalPages(allRows.length, pageSize);
+  const pages = calcTotalPages(
+    result.ok ? result.data.totalCount : allRows.length,
+    pageSize
+  );
   const page = parsePage(sp.page, pages);
   const pageRows = slicePage(allRows, page, pageSize);
+  const totalCount = result.ok ? result.data.totalCount : allRows.length;
   const pageParams = {
     maturity: maturityFilter,
     attribution: attributionFilter,
   };
 
+  const statCards: StatCardModel[] = [
+    {
+      key: "total",
+      label: `Tổng ${costLabel.toLowerCase()}`,
+      value: formatMoney(sumAll, kpiCurrency),
+      hint: `${kpiItems.length} dòng`,
+    },
+    {
+      key: "expected",
+      label: expectedLabel,
+      value: formatMoney(sumExpected, kpiCurrency),
+    },
+    {
+      key: "confirmed",
+      label: confirmedLabel,
+      value: formatMoney(sumConfirmed, kpiCurrency),
+    },
+    {
+      key: "actual",
+      label: actualLabel,
+      value: formatMoney(sumActual, kpiCurrency),
+    },
+    {
+      key: "bill",
+      label: billLabel,
+      value: (
+        <Link className="row-link" href="/bills">
+          Ghi trực tiếp →
+        </Link>
+      ),
+    },
+  ];
+
   return (
     <AppShell terms={terms} active="costs">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          {costLabel}
-        </p>
-        <div className="page-header-row">
-          <div>
-            <h1>Danh sách {costLabel.toLowerCase()}</h1>
-            <p className="lede">
-              Vòng đời {costLabel.toLowerCase()}: {expectedLabel} → {confirmedLabel} →{" "}
-              {actualLabel}. Phân bổ giữ tổng; không ghi đè độ chín. Chọn dòng để xem
-              panel chi tiết.
-            </p>
-          </div>
-          <Link className="btn" href="/costs/shared/new">
-            + Tạo {costLabel.toLowerCase()} {sharedLabel.toLowerCase()}
-          </Link>
-        </div>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: costLabel },
+          ]}
+          title={`Danh sách ${costLabel.toLowerCase()}`}
+          lede={`Vòng đời ${costLabel.toLowerCase()}: ${expectedLabel} → ${confirmedLabel} → ${actualLabel}. Phân bổ giữ tổng; không ghi đè độ chín. Chọn dòng để xem panel chi tiết.`}
+          action={
+            <Link className="btn" href="/costs/shared/new">
+              + Tạo {costLabel.toLowerCase()} {sharedLabel.toLowerCase()}
+            </Link>
+          }
+        />
 
-        {kpiRes.ok ? (
-          <div className="stat-grid" style={{ marginTop: "0.85rem" }}>
-            <div className="stat-card">
-              <span className="stat-label">Tổng {costLabel.toLowerCase()}</span>
-              <strong className="stat-value">
-                {formatMoney(sumAll, kpiCurrency)}
-              </strong>
-              <span className="stat-hint">{kpiItems.length} dòng</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{expectedLabel}</span>
-              <strong className="stat-value">
-                {formatMoney(sumExpected, kpiCurrency)}
-              </strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{confirmedLabel}</span>
-              <strong className="stat-value">
-                {formatMoney(sumConfirmed, kpiCurrency)}
-              </strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{actualLabel}</span>
-              <strong className="stat-value">
-                {formatMoney(sumActual, kpiCurrency)}
-              </strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">{billLabel}</span>
-              <strong className="stat-value">
-                <Link className="row-link" href="/bills">
-                  Ghi trực tiếp →
-                </Link>
-              </strong>
-            </div>
-          </div>
-        ) : null}
+        {kpiRes.ok ? <StatCardGrid cards={statCards} /> : null}
 
         <p className="cta-row" style={{ marginTop: "0.75rem" }}>
           <Link className="btn btn-ghost" href="/bills">
@@ -243,11 +245,41 @@ export default async function CostsPage({
               params={pageParams}
               page={page}
               pageSize={pageSize}
-              totalCount={allRows.length}
+              totalCount={totalCount}
               totalPages={pages}
             />
           </>
         )}
+
+        {kpiRes.ok ? (
+          <AnalyticsRow columns={1}>
+            <AnalyticsPanel>
+              <StackedCompositionBar
+                caption={`Phân tách độ chín ${costLabel.toLowerCase()} (số dòng)`}
+                segments={[
+                  {
+                    key: "e",
+                    label: expectedLabel,
+                    value: countByMaturity("expected"),
+                    color: FinColors.expected,
+                  },
+                  {
+                    key: "c",
+                    label: confirmedLabel,
+                    value: countByMaturity("confirmed"),
+                    color: FinColors.confirmed,
+                  },
+                  {
+                    key: "a",
+                    label: actualLabel,
+                    value: countByMaturity("actual"),
+                    color: FinColors.actual,
+                  },
+                ]}
+              />
+            </AnalyticsPanel>
+          </AnalyticsRow>
+        ) : null}
       </section>
     </AppShell>
   );

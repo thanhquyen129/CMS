@@ -7,7 +7,7 @@ import {
   billTypeLabel,
   operationalStatusLabel,
   type BillListItem,
-} from "@/lib/bills";
+} from "@/lib/bills-shared";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Labels = {

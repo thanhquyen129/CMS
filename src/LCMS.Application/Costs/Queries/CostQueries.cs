@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Common.Paging;
 using LCMS.Application.Identity;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -228,9 +229,11 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
 public sealed record ListCostsQuery(
     Guid? BillId,
     string? FinancialMaturity,
-    string? AttributionType = null) : IRequest<IReadOnlyList<CostListItemDto>>;
+    string? AttributionType = null,
+    int? Page = null,
+    int? PageSize = null) : IRequest<PagedResult<CostListItemDto>>;
 
-public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IReadOnlyList<CostListItemDto>>
+public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, PagedResult<CostListItemDto>>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -252,12 +255,14 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
         _orgHierarchy = orgHierarchy;
     }
 
-    public async Task<IReadOnlyList<CostListItemDto>> Handle(ListCostsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<CostListItemDto>> Handle(ListCostsQuery request, CancellationToken cancellationToken)
     {
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
         }
+
+        var (page, pageSize, applyPaging) = PagingNormalize.Normalize(request.Page, request.PageSize);
 
         var scope = await _permissions.EnsureAndResolveDataScopeAsync(
             PermissionCodes.CostRead,
@@ -286,7 +291,7 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
         {
             if (!_userContext.HasUser)
             {
-                return [];
+                return PagingNormalize.Empty<CostListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(c => c.CreatedBy == _userContext.UserId);
@@ -295,7 +300,7 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
         {
             if (!_userContext.HasUser)
             {
-                return [];
+                return PagingNormalize.Empty<CostListItemDto>(page, pageSize, applyPaging);
             }
 
             var actor = await _db.Users.AsNoTracking()
@@ -303,15 +308,24 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
             var orgSubtree = await _orgHierarchy.GetSubtreeIdsAsync(actor?.OrganizationId, cancellationToken);
             if (orgSubtree.Count == 0)
             {
-                return [];
+                return PagingNormalize.Empty<CostListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(c => c.OrganizationId != null && orgSubtree.Contains(c.OrganizationId.Value));
         }
 
-        return await query
-            .OrderByDescending(c => c.EffectiveDate)
-            .ThenBy(c => c.Id)
+        var ordered = query.OrderByDescending(c => c.EffectiveDate).ThenBy(c => c.Id);
+        var totalCount = await ordered.CountAsync(cancellationToken);
+        if (totalCount == 0)
+        {
+            return PagingNormalize.Empty<CostListItemDto>(page, pageSize, applyPaging);
+        }
+
+        var pageQuery = applyPaging
+            ? ordered.Skip((page - 1) * pageSize).Take(pageSize)
+            : ordered;
+
+        var items = await pageQuery
             .Select(c => new CostListItemDto(
                 c.Id,
                 c.BillId,
@@ -329,5 +343,11 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
                 c.ConfirmedAmount,
                 c.ActualAmount))
             .ToListAsync(cancellationToken);
+
+        return new PagedResult<CostListItemDto>(
+            items,
+            applyPaging ? page : 1,
+            applyPaging ? pageSize : totalCount,
+            totalCount);
     }
 }

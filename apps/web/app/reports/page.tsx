@@ -11,7 +11,7 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { agingBucketLabel, getAgingSummary } from "@/lib/ap-ar";
 import { getDashboardSummary } from "@/lib/control-desk";
-import { formatMoney } from "@/lib/money";
+import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 export default async function ReportsPage() {
   const jar = await cookies();
@@ -81,6 +81,12 @@ export default async function ReportsPage() {
           Read model quản trị — không phải sổ giao dịch. Mọi số liệu có thể truy ngược về{" "}
           {billLabel} và chứng từ nguồn.
         </p>
+        {summary.ok ? (
+          <p className="meta-line muted">
+            Tại thời điểm: {formatDateTimeVi(summary.data.asOfTimestamp)} — số liệu
+            projection, không phải sổ ghi tài chính.
+          </p>
+        ) : null}
 
         {!summary.ok ? (
           <div className="alert alert-error" role="alert">
@@ -170,6 +176,26 @@ export default async function ReportsPage() {
           <Link href="/financial-closes" className="panel">
             <h2 className="section-title">Snapshot chốt kỳ</h2>
             <p className="muted">Báo cáo sau chốt lấy từ snapshot bất biến.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+          <Link href="/costs" className="panel">
+            <h2 className="section-title">Chi tiết {costLabel.toLowerCase()}</h2>
+            <p className="muted">Danh sách + phân tách độ chín theo dòng.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+          <Link href="/revenues" className="panel">
+            <h2 className="section-title">Chi tiết {revenueLabel.toLowerCase()}</h2>
+            <p className="muted">Danh sách + phân tách độ chín theo dòng.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+          <Link href="/ap-ar" className="panel">
+            <h2 className="section-title">{apLabel} / {arLabel}</h2>
+            <p className="muted">Số dư còn lại, tuổi nợ và lịch sử tất toán.</p>
+            <span className="btn btn-ghost btn-sm">Mở →</span>
+          </Link>
+          <Link href="/settlements" className="panel">
+            <h2 className="section-title">Thanh toán &amp; Thu tiền</h2>
+            <p className="muted">Tổng phân bổ, chưa áp dụng theo giao dịch tiền mặt.</p>
             <span className="btn btn-ghost btn-sm">Mở →</span>
           </Link>
         </div>

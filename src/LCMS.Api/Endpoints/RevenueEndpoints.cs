@@ -31,10 +31,19 @@ public static class RevenueEndpoints
         revenues.MapGet("/", async (
             Guid? billId,
             string? financialMaturity,
+            int? page,
+            int? pageSize,
             ISender sender,
             CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListRevenuesQuery(billId, financialMaturity), ct);
+            var list = await sender.Send(
+                new ListRevenuesQuery(billId, financialMaturity, page, pageSize),
+                ct);
+            if (page is null && pageSize is null)
+            {
+                return Results.Ok(list.Items);
+            }
+
             return Results.Ok(list);
         });
 

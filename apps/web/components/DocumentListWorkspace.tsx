@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { DetailDrawer } from "./DetailDrawer";
 import { DocumentStatusTriad } from "./DocumentStatusTriad";
+import { DrawerTabs } from "./list/DrawerTabs";
 import {
   directionLabel,
   documentTypeLabel,
@@ -26,11 +27,15 @@ export function DocumentListWorkspace({
   docLabel,
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState("overview");
   const selected = useMemo(
     () => documents.find((d) => d.id === selectedId) ?? null,
     [documents, selectedId]
   );
-  const close = useCallback(() => setSelectedId(null), []);
+  const close = useCallback(() => {
+    setSelectedId(null);
+    setTab("overview");
+  }, []);
 
   return (
     <>
@@ -60,11 +65,15 @@ export function DocumentListWorkspace({
                   className={active ? "row-selected" : undefined}
                   tabIndex={0}
                   style={{ cursor: "pointer" }}
-                  onClick={() => setSelectedId(d.id)}
+                  onClick={() => {
+                    setSelectedId(d.id);
+                    setTab("overview");
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       setSelectedId(d.id);
+                      setTab("overview");
                     }
                   }}
                 >
@@ -82,6 +91,7 @@ export function DocumentListWorkspace({
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedId(d.id);
+                        setTab("overview");
                       }}
                     >
                       {d.documentNo}
@@ -168,41 +178,118 @@ export function DocumentListWorkspace({
         }
       >
         {selected ? (
-          <div className="stack">
-            <p className="muted small">
-              Received ≠ Accepted ≠ Matched — ba chiều độc lập, không gộp một status.
-            </p>
-            <DocumentStatusTriad
-              terms={terms}
-              receiptStatus={selected.receiptStatus}
-              acceptanceStatus={selected.acceptanceStatus}
-              matchingStatus={selected.matchingStatus}
+          <>
+            <DrawerTabs
+              tabs={[
+                { id: "overview", label: "Tổng quan" },
+                { id: "payment", label: "AP/AR" },
+                { id: "related", label: "Liên quan" },
+              ]}
+              activeId={tab}
+              onChange={setTab}
             />
-            <dl className="metric-grid" style={{ marginTop: "1rem" }}>
-              <div>
-                <dt>Số tiền</dt>
-                <dd>
-                  {formatMoney(selected.totalAmount, selected.currencyCode)}
-                </dd>
+            {tab === "overview" ? (
+              <div className="stack">
+                <p className="muted small">
+                  Received ≠ Accepted ≠ Matched — ba chiều độc lập, không gộp một
+                  status.
+                </p>
+                <DocumentStatusTriad
+                  terms={terms}
+                  receiptStatus={selected.receiptStatus}
+                  acceptanceStatus={selected.acceptanceStatus}
+                  matchingStatus={selected.matchingStatus}
+                />
+                <dl className="metric-grid" style={{ marginTop: "1rem" }}>
+                  <div>
+                    <dt>Số tiền</dt>
+                    <dd>
+                      {formatMoney(selected.totalAmount, selected.currencyCode)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Ngày chứng từ</dt>
+                    <dd>{selected.documentDate}</dd>
+                  </div>
+                  <div>
+                    <dt>{billLabel}</dt>
+                    <dd>
+                      {selected.billId ? (
+                        <Link
+                          className="row-link"
+                          href={`/bills/${selected.billId}`}
+                        >
+                          {selected.billId.slice(0, 8)}…
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </dd>
+                  </div>
+                </dl>
               </div>
-              <div>
-                <dt>Ngày chứng từ</dt>
-                <dd>{selected.documentDate}</dd>
-              </div>
-              <div>
-                <dt>{billLabel}</dt>
-                <dd>
-                  {selected.billId ? (
-                    <Link className="row-link" href={`/bills/${selected.billId}`}>
-                      {selected.billId.slice(0, 8)}…
+            ) : null}
+            {tab === "payment" ? (
+              <ul className="stack-list">
+                <li>
+                  Chiều chứng từ:{" "}
+                  <strong>{directionLabel(terms, selected.direction)}</strong>
+                </li>
+                <li>
+                  <Link
+                    className="row-link"
+                    href={
+                      selected.direction?.toLowerCase() === "receivable"
+                        ? "/ap-ar?tab=ar"
+                        : "/ap-ar?tab=ap"
+                    }
+                  >
+                    Xem sổ{" "}
+                    {selected.direction?.toLowerCase() === "receivable"
+                      ? "phải thu (AR)"
+                      : "phải trả (AP)"}
+                  </Link>
+                </li>
+                {selected.billId ? (
+                  <li>
+                    <Link
+                      className="row-link"
+                      href={`/bills/${selected.billId}?tab=documents`}
+                    >
+                      AP/AR trên {billLabel} liên quan
                     </Link>
-                  ) : (
-                    "—"
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </div>
+                  </li>
+                ) : (
+                  <li className="muted">
+                    Chưa gắn {billLabel} — chưa thể tra AP/AR liên quan.
+                  </li>
+                )}
+              </ul>
+            ) : null}
+            {tab === "related" ? (
+              <ul className="stack-list">
+                {selected.billId ? (
+                  <li>
+                    <Link className="row-link" href={`/bills/${selected.billId}`}>
+                      {billLabel} {selected.billId.slice(0, 8)}…
+                    </Link>
+                  </li>
+                ) : (
+                  <li className="muted">Chưa gắn {billLabel}.</li>
+                )}
+                <li>
+                  <Link className="row-link" href={`/documents/${selected.id}/match`}>
+                    Khớp chứng từ
+                  </Link>
+                </li>
+                <li>
+                  <Link className="row-link" href={`/documents/${selected.id}`}>
+                    Hồ sơ chứng từ đầy đủ
+                  </Link>
+                </li>
+              </ul>
+            ) : null}
+          </>
         ) : null}
       </DetailDrawer>
     </>

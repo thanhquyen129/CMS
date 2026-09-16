@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Common.Paging;
 using LCMS.Application.Identity;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -140,10 +141,13 @@ public sealed class GetRevenueByIdQueryHandler : IRequestHandler<GetRevenueByIdQ
     }
 }
 
-public sealed record ListRevenuesQuery(Guid? BillId, string? FinancialMaturity)
-    : IRequest<IReadOnlyList<RevenueListItemDto>>;
+public sealed record ListRevenuesQuery(
+    Guid? BillId,
+    string? FinancialMaturity,
+    int? Page = null,
+    int? PageSize = null) : IRequest<PagedResult<RevenueListItemDto>>;
 
-public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery, IReadOnlyList<RevenueListItemDto>>
+public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery, PagedResult<RevenueListItemDto>>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -165,7 +169,7 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
         _orgHierarchy = orgHierarchy;
     }
 
-    public async Task<IReadOnlyList<RevenueListItemDto>> Handle(
+    public async Task<PagedResult<RevenueListItemDto>> Handle(
         ListRevenuesQuery request,
         CancellationToken cancellationToken)
     {
@@ -173,6 +177,8 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
         {
             throw new TenantRequiredAppException();
         }
+
+        var (page, pageSize, applyPaging) = PagingNormalize.Normalize(request.Page, request.PageSize);
 
         var (scope, orgSubtree) = await DataScopeFilter.ResolveAsync(
             _permissions, _userContext, _db, _orgHierarchy,
@@ -194,7 +200,7 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
         {
             if (!_userContext.HasUser)
             {
-                return [];
+                return PagingNormalize.Empty<RevenueListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(r => r.CreatedBy == _userContext.UserId);
@@ -204,15 +210,24 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
             var billIds = await DataScopeFilter.BillIdsInOrgSubtreeAsync(_db, orgSubtree, cancellationToken);
             if (billIds.Count == 0)
             {
-                return [];
+                return PagingNormalize.Empty<RevenueListItemDto>(page, pageSize, applyPaging);
             }
 
             query = query.Where(r => billIds.Contains(r.BillId));
         }
 
-        return await query
-            .OrderByDescending(r => r.EffectiveDate)
-            .ThenBy(r => r.Id)
+        var ordered = query.OrderByDescending(r => r.EffectiveDate).ThenBy(r => r.Id);
+        var totalCount = await ordered.CountAsync(cancellationToken);
+        if (totalCount == 0)
+        {
+            return PagingNormalize.Empty<RevenueListItemDto>(page, pageSize, applyPaging);
+        }
+
+        var pageQuery = applyPaging
+            ? ordered.Skip((page - 1) * pageSize).Take(pageSize)
+            : ordered;
+
+        var items = await pageQuery
             .Select(r => new RevenueListItemDto(
                 r.Id,
                 r.BillId,
@@ -223,5 +238,11 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
                 r.RecordStatus,
                 r.EffectiveDate))
             .ToListAsync(cancellationToken);
+
+        return new PagedResult<RevenueListItemDto>(
+            items,
+            applyPaging ? page : 1,
+            applyPaging ? pageSize : totalCount,
+            totalCount);
     }
 }

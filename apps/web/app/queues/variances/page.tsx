@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { EscalateVarianceButton } from "@/components/EscalateVarianceButton";
 import { VarianceTransitionButtons } from "@/components/VarianceTransitionButtons";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -49,25 +50,21 @@ export default async function VarianceQueuePage({
   return (
     <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          {queueTitle}
-        </p>
-        <h1>{queueTitle}</h1>
-        <p className="lede">
-          {varianceLabel} là sự kiện kiểm soát số liệu — không tự mở{" "}
-          {exceptionLabel.toLowerCase()}. CTA mở ngoại lệ thủ công khi cần
-          controller xử lý (giữ tách lớp).
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/control", label: "Kiểm soát tài chính" },
+            { label: queueTitle },
+          ]}
+          title={queueTitle}
+          lede={`${varianceLabel} là sự kiện kiểm soát số liệu — không tự mở ${exceptionLabel.toLowerCase()}. CTA mở ngoại lệ thủ công khi cần controller xử lý (giữ tách lớp).`}
+        />
 
-        <div className="search-bar" role="group" aria-label="Bộ lọc trạng thái">
+        <div className="filter-tabs" role="group" aria-label="Bộ lọc trạng thái">
           {STATUS_FILTERS.map((f) => (
             <Link
               key={f.id}
-              className={
-                status === f.id ? "btn btn-sm" : "btn btn-ghost btn-sm"
-              }
+              className={status === f.id ? "active" : undefined}
               href={
                 f.id === "open"
                   ? "/queues/variances"

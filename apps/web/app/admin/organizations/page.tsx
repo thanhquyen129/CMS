@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { CreateOrganizationForm } from "@/components/CreateOrganizationForm";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listOrganizations } from "@/lib/master-data";
@@ -20,17 +21,15 @@ export default async function AdminOrganizationsPage() {
   return (
     <AppShell terms={terms} active="admin">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          <Link href="/admin">Danh mục</Link>
-          {" / "}
-          Đơn vị
-        </p>
-        <h1>Đơn vị / Tổ chức</h1>
-        <p className="lede">
-          Cây tổ chức phục vụ phạm vi dữ liệu. Thêm đơn vị gốc tại đây.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/admin", label: "Danh mục" },
+            { label: "Đơn vị" },
+          ]}
+          title="Đơn vị / Tổ chức"
+          lede="Cây tổ chức phục vụ phạm vi dữ liệu. Thêm đơn vị gốc tại đây."
+        />
 
         <div className="layout-cols-2">
           <fieldset className="group-box">

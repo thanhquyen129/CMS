@@ -76,33 +76,27 @@ export default async function FinancialClosesPage({
 
         {result.ok ? <StatCardGrid cards={statCards} /> : null}
 
-        <div className="search-bar" role="group" aria-label="Bộ lọc chốt">
+        <div className="filter-tabs" role="group" aria-label="Bộ lọc chốt">
           <Link
-            className={!sp.status ? "btn btn-ghost" : "btn btn-ghost"}
+            className={!sp.status && !sp.scopeType ? "active" : undefined}
             href="/financial-closes"
           >
             Tất cả
           </Link>
           <Link
-            className={
-              sp.status === "open" ? "btn" : "btn btn-ghost"
-            }
+            className={sp.status === "open" ? "active" : undefined}
             href="/financial-closes?status=open"
           >
             Đang mở
           </Link>
           <Link
-            className={
-              sp.status === "locked" ? "btn" : "btn btn-ghost"
-            }
+            className={sp.status === "locked" ? "active" : undefined}
             href="/financial-closes?status=locked"
           >
             Đã khóa
           </Link>
           <Link
-            className={
-              sp.scopeType === "bill" ? "btn" : "btn btn-ghost"
-            }
+            className={sp.scopeType === "bill" ? "active" : undefined}
             href="/financial-closes?scopeType=bill"
           >
             Theo {billLabel}

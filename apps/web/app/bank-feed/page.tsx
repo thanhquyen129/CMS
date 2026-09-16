@@ -5,6 +5,8 @@ import { AppShell } from "@/components/AppShell";
 import { CreateBankFeedLineForm } from "@/components/CreateBankFeedLineForm";
 import { ImportBankFeedCsvForm } from "@/components/ImportBankFeedCsvForm";
 import { IgnoreBankFeedLineButton } from "@/components/IgnoreBankFeedLineButton";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { StatCardGrid } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -35,19 +37,78 @@ export default async function BankFeedPage({
   const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
 
   const result = await listBankFeedLines(status ? { status } : undefined);
+  const allRes = status
+    ? await listBankFeedLines()
+    : result;
+  const allLines = allRes.ok ? allRes.data : [];
+  const unmatchedCount = allLines.filter(
+    (l) => l.status?.toLowerCase() === "unmatched"
+  ).length;
+  const matchedCount = allLines.filter(
+    (l) => l.status?.toLowerCase() === "matched"
+  ).length;
+  const ignoredCount = allLines.filter(
+    (l) => l.status?.toLowerCase() === "ignored"
+  ).length;
 
   return (
     <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
-        <h1>{feedLabel}</h1>
-        <p className="lede">
-          Nhập tay dòng sao kê (ADR-0013). {lineLabel} ≠ {paymentLabel}/
-          {collectionLabel} — khớp qua phiên {reconLabel.toLowerCase()}.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { href: "/control", label: "Kiểm soát tài chính" },
+            { label: feedLabel },
+          ]}
+          title={feedLabel}
+          lede={
+            <>
+              Nhập tay dòng sao kê (ADR-0013). {lineLabel} ≠ {paymentLabel}/
+              {collectionLabel} — khớp qua phiên {reconLabel.toLowerCase()}.
+            </>
+          }
+          action={
+            <Link className="btn" href="/reconciliations/new">
+              + Mở phiên {reconLabel.toLowerCase()}
+            </Link>
+          }
+        />
 
-        <div className="search-bar" role="tablist" aria-label="Lọc trạng thái">
+        {allRes.ok ? (
+          <StatCardGrid
+            cards={[
+              {
+                key: "total",
+                label: `Tổng ${lineLabel.toLowerCase()}`,
+                value: allLines.length,
+              },
+              {
+                key: "unmatched",
+                label: term(terms, "BANK_FEED_UNMATCHED", "Chưa đối soát"),
+                value: unmatchedCount,
+                tone: unmatchedCount > 0 ? "warning" : "default",
+                href: "/bank-feed?status=unmatched",
+              },
+              {
+                key: "matched",
+                label: term(terms, "BANK_FEED_MATCHED", "Đã đối soát"),
+                value: matchedCount,
+                tone: "success",
+                href: "/bank-feed?status=matched",
+              },
+              {
+                key: "ignored",
+                label: "Đã bỏ qua",
+                value: ignoredCount,
+                href: "/bank-feed?status=ignored",
+              },
+            ]}
+          />
+        ) : null}
+
+        <div className="filter-tabs" role="tablist" aria-label="Lọc trạng thái">
           <Link
-            className={!status ? "btn" : "btn btn-ghost"}
+            className={!status ? "active" : undefined}
             href="/bank-feed"
             role="tab"
             aria-selected={!status}
@@ -55,7 +116,7 @@ export default async function BankFeedPage({
             Tất cả
           </Link>
           <Link
-            className={status === "unmatched" ? "btn" : "btn btn-ghost"}
+            className={status === "unmatched" ? "active" : undefined}
             href="/bank-feed?status=unmatched"
             role="tab"
             aria-selected={status === "unmatched"}
@@ -63,15 +124,12 @@ export default async function BankFeedPage({
             {term(terms, "BANK_FEED_UNMATCHED", "Chưa đối soát")}
           </Link>
           <Link
-            className={status === "matched" ? "btn" : "btn btn-ghost"}
+            className={status === "matched" ? "active" : undefined}
             href="/bank-feed?status=matched"
             role="tab"
             aria-selected={status === "matched"}
           >
             {term(terms, "BANK_FEED_MATCHED", "Đã đối soát")}
-          </Link>
-          <Link className="btn btn-ghost" href="/reconciliations/new">
-            Mở phiên {reconLabel.toLowerCase()}
           </Link>
         </div>
 

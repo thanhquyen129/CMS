@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 
@@ -107,16 +108,14 @@ export default async function WorkflowMapPage() {
   return (
     <AppShell terms={terms} active="settings">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          Tổng thể hệ thống
-        </p>
-        <h1>Bản đồ điều hướng &amp; luồng nghiệp vụ</h1>
-        <p className="lede">
-          Bản đồ đào tạo / điều hướng end-to-end. Không tạo trạng thái domain hay workflow
-          song song. {billLabel} là Financial Anchor của CMS.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: "Tổng thể hệ thống" },
+          ]}
+          title="Bản đồ điều hướng & luồng nghiệp vụ"
+          lede={`Bản đồ đào tạo / điều hướng end-to-end. Không tạo trạng thái domain hay workflow song song. ${billLabel} là Financial Anchor của CMS.`}
+        />
 
         <div className="workflow-strip">
           {steps.map((s) => (
@@ -128,32 +127,24 @@ export default async function WorkflowMapPage() {
           ))}
         </div>
 
-        <div className="hub-links">
-          <div className="panel">
-            <h2 className="section-title">Vận hành / tài chính</h2>
-            <p className="muted">
+        <div className="hub-module-tabs">
+          <div className="hub-module-tab">
+            <strong>Vận hành / tài chính</strong>
+            <span>
               Ghi nhận trên {billLabel} → chứng từ → AP/AR → thanh toán/thu → kiểm soát →
               chốt.
-            </p>
+            </span>
           </div>
-          <div className="panel">
-            <h2 className="section-title">Quản trị</h2>
-            <p className="muted">
-              <Link className="row-link" href="/admin">
-                Danh mục dữ liệu
-              </Link>
-              {" · "}
-              <Link className="row-link" href="/settings">
-                Hệ thống &amp; Cài đặt
-              </Link>
-            </p>
-          </div>
-          <div className="panel">
-            <h2 className="section-title">Lưu ý kiến trúc</h2>
-            <p className="muted">
+          <Link href="/admin" className="hub-module-tab">
+            <strong>Quản trị</strong>
+            <span>Danh mục dữ liệu · Hệ thống & Cài đặt</span>
+          </Link>
+          <div className="hub-module-tab">
+            <strong>Lưu ý kiến trúc</strong>
+            <span>
               CMS là lớp kiểm soát tài chính (H-002). Đơn hàng/Shipment vận hành vẫn thuộc
               hệ thống SoT vận hành — không dựng TMS trong CMS.
-            </p>
+            </span>
           </div>
         </div>
       </section>

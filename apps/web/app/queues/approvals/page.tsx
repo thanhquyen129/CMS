@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { DecideApprovalButton } from "@/components/DecideApprovalButton";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -33,17 +34,15 @@ export default async function ApprovalQueuePage() {
   return (
     <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          {queueLabel}
-        </p>
-        <h1>{queueLabel}</h1>
-        <p className="lede">
-          {approvalLabel} đang chờ quyết định. Phê duyệt / từ chối tại đây —{" "}
-          {approvalLabel} ≠ quyền hệ thống. Mở {billLabel} / {docLabel} khi có
-          màn chi tiết.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/control", label: "Kiểm soát tài chính" },
+            { label: queueLabel },
+          ]}
+          title={queueLabel}
+          lede={`${approvalLabel} đang chờ quyết định. Phê duyệt / từ chối tại đây — ${approvalLabel} ≠ quyền hệ thống. Mở ${billLabel} / ${docLabel} khi có màn chi tiết.`}
+        />
 
         {!result.ok ? (
           <div className="alert alert-error" role="alert">

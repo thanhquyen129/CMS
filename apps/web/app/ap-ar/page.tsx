@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { ApArListWorkspace } from "@/components/ApArListWorkspace";
 import { ListPagination } from "@/components/ListPagination";
 import { AnalyticsRow, AnalyticsPanel } from "@/components/list/AnalyticsRow";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
 import { FinColors, HorizontalBarChart } from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -239,14 +240,20 @@ export default async function ApArPage({
   return (
     <AppShell terms={terms} active={navActive}>
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          {activeTab === "ar" ? arLabel : apLabel}
-        </p>
-        <div className="page-header-row">
-          <div>
-            <h1>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            {
+              label:
+                activeTab === "ar"
+                  ? arLabel
+                  : activeTab === "exposure"
+                    ? "Exposure"
+                    : apLabel,
+            },
+          ]}
+          title={
+            <>
               {activeTab === "ar"
                 ? arLabel
                 : activeTab === "exposure"
@@ -257,17 +264,21 @@ export default async function ApArPage({
                 : activeTab === "ar"
                   ? " (AR)"
                   : " (AP)"}
-            </h1>
-            <p className="lede">
+            </>
+          }
+          lede={
+            <>
               Đọc {outstandingLabel} đã ghi nhận và lịch sử {settledLabel.toLowerCase()}.{" "}
               {apLabel} ≠ {costLabel}; {arLabel} ≠ {revenueLabel}. Ghi nhận công nợ không
               tạo Cost/Revenue mới.
-            </p>
-          </div>
-          <Link className="btn btn-sm" href="/ap-ar/aging">
-            Tuổi nợ
-          </Link>
-        </div>
+            </>
+          }
+          action={
+            <Link className="btn" href="/ap-ar/aging">
+              Tuổi nợ
+            </Link>
+          }
+        />
 
         {activeTab !== "exposure" ? <StatCardGrid cards={statCards} /> : null}
 

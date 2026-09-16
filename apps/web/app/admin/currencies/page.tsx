@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { CreateCurrencyForm } from "@/components/CreateCurrencyForm";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listCurrencies } from "@/lib/master-data";
@@ -20,17 +21,15 @@ export default async function AdminCurrenciesPage() {
   return (
     <AppShell terms={terms} active="admin">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          <Link href="/admin">Danh mục</Link>
-          {" / "}
-          Tiền tệ
-        </p>
-        <h1>Tiền tệ</h1>
-        <p className="lede">
-          Danh mục tiền tệ dùng trên chi phí, doanh thu, thanh toán.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/admin", label: "Danh mục" },
+            { label: "Tiền tệ" },
+          ]}
+          title="Tiền tệ"
+          lede="Danh mục tiền tệ dùng trên chi phí, doanh thu, thanh toán."
+        />
 
         <div className="layout-cols-2">
           <fieldset className="group-box">

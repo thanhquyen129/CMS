@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ListPagination } from "@/components/ListPagination";
 import { RateCardListWorkspace } from "@/components/RateCardListWorkspace";
+import {
+  FilterBar,
+  ListPageHeader,
+  StatCardGrid,
+} from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listRateCards } from "@/lib/rate-cards-server";
@@ -74,82 +79,81 @@ export default async function RateCardsPage({
   return (
     <AppShell terms={terms} active="rate-cards">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          Bảng giá &amp; Tính giá
-        </p>
-        <div className="page-header-row">
-          <div>
-            <h1>Danh sách bảng giá</h1>
-            <p className="lede">
-              Rate card → phiên bản → quy tắc → phát hành → tính giá trên {billLabel} →
-              seed {costLabel.toLowerCase()} {expected.toLowerCase()}. Rating tạo kỳ vọng
-              tài chính, không tạo {actual.toLowerCase()}.
-            </p>
-          </div>
-          <Link className="btn" href="/rate-cards/new">
-            + Tạo bảng giá
-          </Link>
-        </div>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: "Bảng giá & Tính giá" },
+          ]}
+          title="Danh sách bảng giá"
+          lede={`Rate card → phiên bản → quy tắc → phát hành → tính giá trên ${billLabel} → seed ${costLabel.toLowerCase()} ${expected.toLowerCase()}. Rating tạo kỳ vọng tài chính, không tạo ${actual.toLowerCase()}.`}
+          action={
+            <Link className="btn" href="/rate-cards/new">
+              + Tạo bảng giá
+            </Link>
+          }
+        />
 
         {kpiRes.ok ? (
-          <div className="stat-grid" style={{ marginTop: "0.85rem" }}>
-            <div className="stat-card">
-              <span className="stat-label">Tổng bảng giá</span>
-              <strong className="stat-value">{allCards.length}</strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Giá mua (NCC)</span>
-              <strong className="stat-value">{buyCount}</strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Giá bán (KH)</span>
-              <strong className="stat-value">{sellCount}</strong>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Đang hiệu lực</span>
-              <strong className="stat-value">{activeCount}</strong>
-            </div>
-          </div>
+          <StatCardGrid
+            cards={[
+              { key: "total", label: "Tổng bảng giá", value: allCards.length },
+              {
+                key: "buy",
+                label: "Giá mua (NCC)",
+                value: buyCount,
+                tone: "warning",
+              },
+              {
+                key: "sell",
+                label: "Giá bán (KH)",
+                value: sellCount,
+                tone: "success",
+              },
+              {
+                key: "active",
+                label: "Đang hiệu lực",
+                value: activeCount,
+                tone: "primary",
+              },
+            ]}
+          />
         ) : null}
 
-        <form
-          className="search-bar denser-filters"
-          method="get"
+        <FilterBar
           action="/rate-cards"
-          style={{ marginTop: "0.85rem" }}
-        >
-          <label className="sr-only" htmlFor="q">
-            Tìm bảng giá
-          </label>
-          <input
-            id="q"
-            name="q"
-            type="search"
-            placeholder="Mã hoặc tên bảng giá…"
-            defaultValue={sp.q ?? ""}
-            autoComplete="off"
-          />
-          <select id="partyType" name="partyType" defaultValue={sp.partyType ?? ""}>
-            <option value="">Tất cả loại giá</option>
-            <option value="vendor">Giá mua (NCC)</option>
-            <option value="customer">Giá bán (KH)</option>
-          </select>
-          <select id="active" name="active" defaultValue={sp.active ?? ""}>
-            <option value="">Mọi trạng thái</option>
-            <option value="1">Đang hiệu lực</option>
-            <option value="0">Ngưng</option>
-          </select>
-          <button className="btn" type="submit">
-            Lọc
-          </button>
-          {sp.q || sp.partyType || sp.active ? (
-            <Link className="btn btn-ghost" href="/rate-cards">
-              Làm mới
-            </Link>
-          ) : null}
-        </form>
+          resetHref={sp.q || sp.partyType || sp.active ? "/rate-cards" : undefined}
+          fields={[
+            {
+              kind: "search",
+              name: "q",
+              label: "Tìm bảng giá",
+              placeholder: "Mã hoặc tên bảng giá…",
+              defaultValue: sp.q,
+            },
+            {
+              kind: "select",
+              name: "partyType",
+              label: "Loại giá",
+              defaultValue: sp.partyType,
+              emptyLabel: "Tất cả loại giá",
+              options: [
+                { value: "vendor", label: "Giá mua (NCC)" },
+                { value: "customer", label: "Giá bán (KH)" },
+              ],
+            },
+            {
+              kind: "select",
+              name: "active",
+              label: "Trạng thái",
+              defaultValue: sp.active,
+              emptyLabel: "Mọi trạng thái",
+              options: [
+                { value: "1", label: "Đang hiệu lực" },
+                { value: "0", label: "Ngưng" },
+              ],
+            },
+          ]}
+        />
 
         <p className="cta-row" style={{ marginTop: "0.75rem" }}>
           <Link className="btn btn-ghost" href="/bills">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ExceptionActionButtons } from "@/components/ExceptionActionButtons";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -43,25 +44,22 @@ export default async function ExceptionQueuePage({
   return (
     <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          {queueLabel}
-        </p>
-        <h1>{queueLabel}</h1>
-        <p className="lede">
-          {exceptionLabel} đang mở / đang xử lý / leo thang cần controller xem
-          xét. Xử lý · leo thang · đóng tại đây. Mở {billLabel} khi có liên kết.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/control", label: "Kiểm soát tài chính" },
+            { label: queueLabel },
+          ]}
+          title={queueLabel}
+          lede={`${exceptionLabel} đang mở / đang xử lý / leo thang cần controller xem xét. Xử lý · leo thang · đóng tại đây. Mở ${billLabel} khi có liên kết.`}
+        />
 
-        <div className="search-bar" role="group" aria-label="Bộ lọc hàng đợi">
+        <div className="filter-tabs" role="group" aria-label="Bộ lọc hàng đợi">
           {overdueFilter ? (
-            <Link className="btn btn-ghost" href="/queues/exceptions">
-              Hiện tất cả đang mở
-            </Link>
+            <Link href="/queues/exceptions">Hiện tất cả đang mở</Link>
           ) : (
             <Link
-              className="btn btn-ghost"
+              className="active"
               href="/queues/exceptions?overdueOnly=1"
             >
               Chỉ {overdueTerm}

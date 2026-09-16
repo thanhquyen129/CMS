@@ -21,4 +21,5 @@ Chuẩn giao diện theo bộ mockup designer UI-01…UI-15. Các preset cũ (Le
 - `data-theme` luôn = `lcms` (migrate cookie theme cũ).
 
 ## Scope
-Skin/shell tokens + status pills + nav active. Không ship chart/widget giả chỉ để giống mockup.
+Skin/shell tokens + status pills + nav active + list/hub chrome (`ListPageHeader`, `FilterBar`, `StatCardGrid`, `hub-module-tabs`, topbar account).
+Không ship chart/widget giả chỉ để giống mockup — KPI và filter chỉ từ dữ liệu API.

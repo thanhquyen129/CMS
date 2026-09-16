@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { CostListWorkspace } from "@/components/CostListWorkspace";
 import { ListPagination } from "@/components/ListPagination";
 import { AnalyticsRow, AnalyticsPanel } from "@/components/list/AnalyticsRow";
+import { FilterBar } from "@/components/list/FilterBar";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
 import { FinColors, StackedCompositionBar } from "@/components/charts/FinanceCharts";
@@ -254,57 +255,42 @@ export default async function CostsPage({
           </Link>
         </div>
 
-        <form className="search-bar denser-filters" method="get" action="/costs">
-          {maturityFilter ? (
-            <input type="hidden" name="maturity" value={maturityFilter} />
-          ) : null}
-          {attributionFilter ? (
-            <input type="hidden" name="attribution" value={attributionFilter} />
-          ) : null}
-          <label className="sr-only" htmlFor="fromDate">
-            Từ ngày
-          </label>
-          <input
-            id="fromDate"
-            name="fromDate"
-            type="date"
-            defaultValue={fromDate ?? ""}
-          />
-          <label className="sr-only" htmlFor="toDate">
-            Đến ngày
-          </label>
-          <input
-            id="toDate"
-            name="toDate"
-            type="date"
-            defaultValue={toDate ?? ""}
-          />
-          <label className="sr-only" htmlFor="vendorPartyId">
-            Nhà cung cấp (UUID)
-          </label>
-          <input
-            id="vendorPartyId"
-            name="vendorPartyId"
-            type="text"
-            placeholder="UUID nhà cung cấp…"
-            defaultValue={vendorPartyId ?? ""}
-            autoComplete="off"
-          />
-          <button className="btn" type="submit">
-            Lọc
-          </button>
-          {denserActive ? (
-            <Link
-              className="btn btn-ghost"
-              href={costsHref({
-                maturity: maturityFilter,
-                attribution: attributionFilter,
-              })}
-            >
-              Làm mới
-            </Link>
-          ) : null}
-        </form>
+        <FilterBar
+          action="/costs"
+          hidden={{
+            maturity: maturityFilter,
+            attribution: attributionFilter,
+          }}
+          resetHref={
+            denserActive
+              ? costsHref({
+                  maturity: maturityFilter,
+                  attribution: attributionFilter,
+                })
+              : undefined
+          }
+          fields={[
+            {
+              kind: "date",
+              name: "fromDate",
+              label: "Từ ngày",
+              defaultValue: fromDate,
+            },
+            {
+              kind: "date",
+              name: "toDate",
+              label: "Đến ngày",
+              defaultValue: toDate,
+            },
+            {
+              kind: "search",
+              name: "vendorPartyId",
+              label: "Nhà cung cấp (UUID)",
+              placeholder: "UUID nhà cung cấp…",
+              defaultValue: vendorPartyId,
+            },
+          ]}
+        />
 
         {!result.ok ? (
           <div className="alert alert-error" role="alert">

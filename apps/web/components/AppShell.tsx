@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ShellChrome } from "./ShellChrome";
 import { NavGroup } from "./NavGroup";
+import { TopbarAccount } from "./TopbarAccount";
+import { DISPLAY_NAME_COOKIE } from "@/lib/auth";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 /** Level-1 modules per PO UI-15 Navigation Contract (14 modules). */
@@ -28,7 +31,9 @@ type AppShellProps = {
   topbarRight?: ReactNode;
 };
 
-export function AppShell({ terms, active, children, topbarRight }: AppShellProps) {
+export async function AppShell({ terms, active, children, topbarRight }: AppShellProps) {
+  const jar = await cookies();
+  const displayName = jar.get(DISPLAY_NAME_COOKIE)?.value?.trim() || "";
   const billLabel = term(terms, "BILL", "Bill");
   const costLabel = term(terms, "COST", "Chi phí");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
@@ -188,7 +193,16 @@ export function AppShell({ terms, active, children, topbarRight }: AppShellProps
   );
 
   return (
-    <ShellChrome brand={brand} nav={nav} topbarRight={topbarRight}>
+    <ShellChrome
+      brand={brand}
+      nav={nav}
+      topbarRight={
+        <>
+          {topbarRight}
+          <TopbarAccount displayName={displayName} roleLabel="Đã đăng nhập" />
+        </>
+      }
+    >
       {children}
     </ShellChrome>
   );

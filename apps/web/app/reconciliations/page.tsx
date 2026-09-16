@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { StatCardGrid } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -29,22 +31,70 @@ export default async function ReconciliationsPage({
   const billLabel = term(terms, "BILL", "Bill");
   const queueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
 
-  const result = await listReconciliations(
-    status ? { status } : undefined
-  );
+  const [result, allRes] = await Promise.all([
+    listReconciliations(status ? { status } : undefined),
+    status ? listReconciliations() : Promise.resolve(null),
+  ]);
+  const kpiSource =
+    allRes && allRes.ok ? allRes.data : result.ok ? result.data : [];
+  const inProgress = kpiSource.filter(
+    (r) => r.status?.toLowerCase() === "in_progress"
+  ).length;
+  const completed = kpiSource.filter(
+    (r) => r.status?.toLowerCase() === "completed"
+  ).length;
 
   return (
     <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
-        <h1>{reconLabel}</h1>
-        <p className="lede">
-          Phiên {reconLabel.toLowerCase()} thủ công. Chênh lệch ≠ ngoại lệ;
-          hoàn tất phiên khi xong.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { href: "/control", label: "Kiểm soát tài chính" },
+            { label: reconLabel },
+          ]}
+          title={reconLabel}
+          lede={`Phiên ${reconLabel.toLowerCase()} thủ công. Chênh lệch ≠ ngoại lệ; hoàn tất phiên khi xong.`}
+          action={
+            <Link className="btn" href="/reconciliations/new">
+              + Mở phiên mới
+            </Link>
+          }
+        />
 
-        <div className="search-bar" role="tablist" aria-label="Lọc trạng thái">
+        <StatCardGrid
+          cards={[
+            {
+              key: "total",
+              label: `Tổng phiên`,
+              value: kpiSource.length,
+            },
+            {
+              key: "progress",
+              label: "Đang đối soát",
+              value: inProgress,
+              tone: inProgress > 0 ? "warning" : "default",
+              href: "/reconciliations?status=in_progress",
+            },
+            {
+              key: "done",
+              label: "Đã hoàn tất",
+              value: completed,
+              tone: "success",
+              href: "/reconciliations?status=completed",
+            },
+            {
+              key: "queue",
+              label: queueLabel,
+              value: "→",
+              href: "/queues/reconciliations",
+            },
+          ]}
+        />
+
+        <div className="filter-tabs" role="tablist" aria-label="Lọc trạng thái">
           <Link
-            className={!status ? "btn" : "btn btn-ghost"}
+            className={!status ? "active" : undefined}
             href="/reconciliations"
             role="tab"
             aria-selected={!status}
@@ -52,7 +102,7 @@ export default async function ReconciliationsPage({
             Tất cả
           </Link>
           <Link
-            className={status === "in_progress" ? "btn" : "btn btn-ghost"}
+            className={status === "in_progress" ? "active" : undefined}
             href="/reconciliations?status=in_progress"
             role="tab"
             aria-selected={status === "in_progress"}
@@ -60,17 +110,14 @@ export default async function ReconciliationsPage({
             Đang đối soát
           </Link>
           <Link
-            className={status === "completed" ? "btn" : "btn btn-ghost"}
+            className={status === "completed" ? "active" : undefined}
             href="/reconciliations?status=completed"
             role="tab"
             aria-selected={status === "completed"}
           >
             Đã hoàn tất
           </Link>
-          <Link className="btn" href="/reconciliations/new">
-            Mở phiên mới
-          </Link>
-          <Link className="btn btn-ghost" href="/queues/reconciliations">
+          <Link className="btn btn-ghost btn-sm" href="/queues/reconciliations">
             {queueLabel}
           </Link>
         </div>

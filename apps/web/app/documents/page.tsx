@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { DocumentListWorkspace } from "@/components/DocumentListWorkspace";
 import { ListPagination } from "@/components/ListPagination";
+import {
+  FilterBar,
+  ListPageHeader,
+  StatCardGrid,
+} from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { getBill } from "@/lib/bills";
@@ -50,7 +55,7 @@ export default async function DocumentsPage({
     Number.parseInt(String(sp.page ?? "1"), 10) || 1
   );
 
-  const [result, billRes] = await Promise.all([
+  const [result, kpiRes, billRes] = await Promise.all([
     listFinancialDocuments({
       receiptStatus: sp.receiptStatus,
       acceptanceStatus: sp.acceptanceStatus,
@@ -60,6 +65,7 @@ export default async function DocumentsPage({
       page: pageHint,
       pageSize,
     }),
+    listFinancialDocuments({ billId, documentType }),
     billId ? getBill(billId) : Promise.resolve(null),
   ]);
 
@@ -89,33 +95,56 @@ export default async function DocumentsPage({
     matchingStatus: sp.matchingStatus,
   };
 
+  const kpiItems = kpiRes.ok ? kpiRes.data.items : [];
+  const receivedCount = kpiItems.filter(
+    (d) => d.receiptStatus?.toLowerCase() === "received"
+  ).length;
+  const acceptedCount = kpiItems.filter(
+    (d) => d.acceptanceStatus?.toLowerCase() === "accepted"
+  ).length;
+  const matchedCount = kpiItems.filter(
+    (d) => d.matchingStatus?.toLowerCase() === "matched"
+  ).length;
+  const awaitAcceptCount = kpiItems.filter(
+    (d) =>
+      d.receiptStatus?.toLowerCase() === "received" &&
+      d.acceptanceStatus?.toLowerCase() === "not_accepted"
+  ).length;
+
+  const resetHref = filterActive
+    ? billId
+      ? `/documents?billId=${encodeURIComponent(billId)}`
+      : "/documents"
+    : undefined;
+
   return (
     <AppShell terms={terms} active="documents">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          {docLabel}
-        </p>
-        <div className="page-header-row">
-          <div>
-            <h1>{docLabel}</h1>
-            <p className="lede">
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: docLabel },
+          ]}
+          title={docLabel}
+          lede={
+            <>
               Ba chiều độc lập: {receivedLabel} ≠ {acceptedLabel} ≠ {matchedLabel}.
               Không gộp thành một trạng thái. Chọn dòng để xem panel chi tiết.
-            </p>
-          </div>
-          <Link
-            className="btn"
-            href={
-              billId
-                ? `/documents/receive?billId=${encodeURIComponent(billId)}`
-                : "/documents/receive"
-            }
-          >
-            + Nhận chứng từ
-          </Link>
-        </div>
+            </>
+          }
+          action={
+            <Link
+              className="btn"
+              href={
+                billId
+                  ? `/documents/receive?billId=${encodeURIComponent(billId)}`
+                  : "/documents/receive"
+              }
+            >
+              + Nhận chứng từ
+            </Link>
+          }
+        />
 
         {billId ? (
           <p className="note" role="status">
@@ -132,85 +161,119 @@ export default async function DocumentsPage({
           </p>
         ) : null}
 
-        <form className="search-bar denser-filters" method="get" action="/documents">
-          {billId ? <input type="hidden" name="billId" value={billId} /> : null}
-          <label className="sr-only" htmlFor="documentType">
-            Loại chứng từ
-          </label>
-          <select
-            id="documentType"
-            name="documentType"
-            defaultValue={documentType ?? ""}
-          >
-            <option value="">Tất cả loại</option>
-            <option value="invoice">Hóa đơn</option>
-            <option value="debit_note">Debit note</option>
-            <option value="credit_note">Credit note</option>
-            <option value="dn">DN</option>
-            <option value="other">Khác</option>
-          </select>
-          <label className="sr-only" htmlFor="receiptStatus">
-            {receivedLabel}
-          </label>
-          <select
-            id="receiptStatus"
-            name="receiptStatus"
-            defaultValue={sp.receiptStatus ?? ""}
-          >
-            <option value="">Mọi trạng thái nhận</option>
-            <option value="received">{receivedLabel}</option>
-            <option value="not_received">Chưa nhận</option>
-          </select>
-          <label className="sr-only" htmlFor="acceptanceStatus">
-            {acceptedLabel}
-          </label>
-          <select
-            id="acceptanceStatus"
-            name="acceptanceStatus"
-            defaultValue={sp.acceptanceStatus ?? ""}
-          >
-            <option value="">Mọi trạng thái chấp nhận</option>
-            <option value="accepted">{acceptedLabel}</option>
-            <option value="not_accepted">Chưa chấp nhận</option>
-          </select>
-          <label className="sr-only" htmlFor="matchingStatus">
-            {matchedLabel}
-          </label>
-          <select
-            id="matchingStatus"
-            name="matchingStatus"
-            defaultValue={sp.matchingStatus ?? ""}
-          >
-            <option value="">Mọi trạng thái khớp</option>
-            <option value="matched">{matchedLabel}</option>
-            <option value="partially_matched">Khớp một phần</option>
-            <option value="unmatched">Chưa khớp</option>
-            <option value="draft">Nháp khớp</option>
-          </select>
-          <button className="btn" type="submit">
-            Lọc
-          </button>
-          {filterActive ? (
-            <Link className="btn btn-ghost" href="/documents">
-              Làm mới
-            </Link>
-          ) : null}
-        </form>
+        {kpiRes.ok ? (
+          <StatCardGrid
+            cards={[
+              {
+                key: "total",
+                label: `Tổng ${docLabel.toLowerCase()}`,
+                value: kpiRes.data.totalCount,
+                hint: billId ? `Theo ${billLabel}` : "Trong phạm vi của bạn",
+              },
+              {
+                key: "received",
+                label: receivedLabel,
+                value: receivedCount,
+                tone: "primary",
+                href: `/documents?receiptStatus=received${billId ? `&billId=${billId}` : ""}`,
+              },
+              {
+                key: "await",
+                label: "Chờ chấp nhận",
+                value: awaitAcceptCount,
+                tone: awaitAcceptCount > 0 ? "warning" : "default",
+                href: `/documents?receiptStatus=received&acceptanceStatus=not_accepted${billId ? `&billId=${billId}` : ""}`,
+              },
+              {
+                key: "accepted",
+                label: acceptedLabel,
+                value: acceptedCount,
+                tone: "success",
+                href: `/documents?acceptanceStatus=accepted${billId ? `&billId=${billId}` : ""}`,
+              },
+              {
+                key: "matched",
+                label: matchedLabel,
+                value: matchedCount,
+                tone: "info",
+                href: `/documents?matchingStatus=matched${billId ? `&billId=${billId}` : ""}`,
+              },
+            ]}
+          />
+        ) : null}
 
-        <div className="filter-tabs" role="group" aria-label="Lọc nhanh">
-          <Link
-            className="btn btn-ghost btn-sm"
-            href={`/documents?receiptStatus=received&acceptanceStatus=not_accepted${billId ? `&billId=${billId}` : ""}`}
-          >
-            Chờ chấp nhận
-          </Link>
-          <Link
-            className="btn btn-ghost btn-sm"
-            href={`/documents?acceptanceStatus=accepted&matchingStatus=unmatched${billId ? `&billId=${billId}` : ""}`}
-          >
-            Đã chấp nhận — chưa khớp
-          </Link>
-        </div>
+        <FilterBar
+          action="/documents"
+          resetHref={resetHref}
+          hidden={{ billId }}
+          fields={[
+            {
+              kind: "select",
+              name: "documentType",
+              label: "Loại chứng từ",
+              defaultValue: documentType,
+              emptyLabel: "Tất cả loại",
+              options: [
+                { value: "invoice", label: "Hóa đơn" },
+                { value: "debit_note", label: "Debit note" },
+                { value: "credit_note", label: "Credit note" },
+                { value: "dn", label: "DN" },
+                { value: "other", label: "Khác" },
+              ],
+            },
+            {
+              kind: "select",
+              name: "receiptStatus",
+              label: receivedLabel,
+              defaultValue: sp.receiptStatus,
+              emptyLabel: "Mọi trạng thái nhận",
+              options: [
+                { value: "received", label: receivedLabel },
+                { value: "not_received", label: "Chưa nhận" },
+              ],
+            },
+            {
+              kind: "select",
+              name: "acceptanceStatus",
+              label: acceptedLabel,
+              defaultValue: sp.acceptanceStatus,
+              emptyLabel: "Mọi trạng thái chấp nhận",
+              options: [
+                { value: "accepted", label: acceptedLabel },
+                { value: "not_accepted", label: "Chưa chấp nhận" },
+              ],
+            },
+            {
+              kind: "select",
+              name: "matchingStatus",
+              label: matchedLabel,
+              defaultValue: sp.matchingStatus,
+              emptyLabel: "Mọi trạng thái khớp",
+              options: [
+                { value: "matched", label: matchedLabel },
+                { value: "partially_matched", label: "Khớp một phần" },
+                { value: "unmatched", label: "Chưa khớp" },
+                { value: "draft", label: "Nháp khớp" },
+              ],
+            },
+          ]}
+          extra={
+            <span className="filter-tabs" role="group" aria-label="Lọc nhanh">
+              <Link
+                className="btn btn-ghost btn-sm"
+                href={`/documents?receiptStatus=received&acceptanceStatus=not_accepted${billId ? `&billId=${billId}` : ""}`}
+              >
+                Chờ chấp nhận
+              </Link>
+              <Link
+                className="btn btn-ghost btn-sm"
+                href={`/documents?acceptanceStatus=accepted&matchingStatus=unmatched${billId ? `&billId=${billId}` : ""}`}
+              >
+                Đã chấp nhận — chưa khớp
+              </Link>
+            </span>
+          }
+        />
 
         {!result.ok ? (
           <div className="alert alert-error" role="alert">

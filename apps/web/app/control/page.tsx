@@ -3,7 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AnalyticsRow, AnalyticsPanel } from "@/components/list/AnalyticsRow";
-import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { StatCardGrid } from "@/components/list/StatCardGrid";
 import { FinColors, HorizontalBarChart } from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -69,16 +70,14 @@ export default async function ControlHubPage() {
   return (
     <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          Kiểm soát tài chính
-        </p>
-        <h1>Kiểm soát tài chính</h1>
-        <p className="lede">
-          Workbench đối soát, chênh lệch, ngoại lệ và phê duyệt — giữ minh bạch dữ liệu
-          trước khi chốt kỳ.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: "Kiểm soát tài chính" },
+          ]}
+          title="Kiểm soát tài chính"
+          lede="Workbench đối soát, chênh lệch, ngoại lệ và phê duyệt — giữ minh bạch dữ liệu trước khi chốt kỳ."
+        />
 
         {!summary.ok ? (
           <div className="alert alert-error" role="alert">
@@ -92,12 +91,14 @@ export default async function ControlHubPage() {
                   key: "approval",
                   label: approvalQueueLabel,
                   value: summary.data.pendingApprovalCount,
+                  tone: "primary",
                   href: "/queues/approvals",
                 },
                 {
                   key: "exception",
                   label: exceptionQueueLabel,
                   value: summary.data.openExceptionCount,
+                  tone: "warning",
                   href: "/queues/exceptions",
                 },
                 {
@@ -111,6 +112,7 @@ export default async function ControlHubPage() {
                   key: "variance",
                   label: `${varianceLabel} đang mở`,
                   value: summary.data.openVarianceCount,
+                  tone: "info",
                   href: "/queues/variances",
                 },
                 {
@@ -123,6 +125,7 @@ export default async function ControlHubPage() {
                   key: "bank",
                   label: `${bankFeedLabel} chưa khớp`,
                   value: summary.data.unmatchedBankFeedCount,
+                  tone: summary.data.unmatchedBankFeedCount > 0 ? "warning" : "default",
                   href: "/bank-feed?status=unmatched",
                 },
               ]}
@@ -176,19 +179,14 @@ export default async function ControlHubPage() {
           </>
         )}
 
-        <div className="hub-links">
+        <div className="hub-module-tabs" role="navigation" aria-label="Hàng đợi kiểm soát">
           {links.map((item) => (
-            <Link key={item.href} href={item.href} className="panel">
-              <h2 className="section-title">
+            <Link key={item.href} href={item.href} className="hub-module-tab">
+              <strong>
                 {item.title}
-                {item.count != null ? (
-                  <span className="muted" style={{ fontWeight: 500, marginLeft: "0.4rem" }}>
-                    ({item.count})
-                  </span>
-                ) : null}
-              </h2>
-              <p className="muted">{item.desc}</p>
-              <span className="btn btn-ghost btn-sm">Mở →</span>
+                {item.count != null ? ` (${item.count})` : ""}
+              </strong>
+              <span>{item.desc}</span>
             </Link>
           ))}
         </div>

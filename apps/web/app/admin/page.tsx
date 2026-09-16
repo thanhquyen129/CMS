@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 
@@ -39,36 +40,20 @@ export default async function AdminHubPage() {
   return (
     <AppShell terms={terms} active="admin">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          Danh mục dữ liệu
-        </p>
-        <h1>Danh mục dữ liệu</h1>
-        <p className="lede">
-          Master data theo tenant — cô lập dữ liệu doanh nghiệp. Không xóa danh mục tại
-          đây — vô hiệu hoá qua API khi cần.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: "Danh mục dữ liệu" },
+          ]}
+          title="Danh mục dữ liệu"
+          lede="Master data theo tenant — cô lập dữ liệu doanh nghiệp. Không xóa danh mục tại đây — vô hiệu hoá qua API khi cần."
+        />
 
-        <div className="filter-tabs" role="tablist" aria-label="Danh mục dữ liệu">
+        <div className="hub-module-tabs" role="navigation" aria-label="Danh mục dữ liệu">
           {links.map((item) => (
-            <Link key={item.href} href={item.href} role="tab" aria-selected="false">
-              {item.title}
-            </Link>
-          ))}
-        </div>
-
-        <div className="card-grid" style={{ marginTop: "1.25rem" }}>
-          {links.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="panel"
-              style={{ textDecoration: "none", display: "block" }}
-            >
-              <h2 className="section-title">{item.title}</h2>
-              <p className="muted">{item.desc}</p>
-              <span className="btn btn-ghost btn-sm">Mở →</span>
+            <Link key={item.href} href={item.href} className="hub-module-tab">
+              <strong>{item.title}</strong>
+              <span>{item.desc}</span>
             </Link>
           ))}
         </div>

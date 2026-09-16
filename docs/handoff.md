@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-16 — Designer layout pass UI-01…UI-15 (all list/hub screens)
+
+### User
+làm lần lượt tất cả các màn đến hết
+
+### Done
+- Shell: `TopbarAccount` (bell → ngoại lệ, help → workflow, VI, avatar) — không badge giả.
+- KPI cards: tone icon + `designer-kpi`; shared `ListPageHeader` / `FilterBar` / `StatCardGrid` / `hub-module-tabs`.
+- Restyle operable lists/hubs: Documents, Costs (FilterBar denser), AP/AR, Settlements, Control, Reports, Bank feed, Reconciliations, queues, Financial closes, Rate cards, Admin (+ parties/access/orgs/currencies), Settings, Integration errors, Workflow.
+- Dữ liệu KPI/filter vẫn từ API thật — không chart/widget trang trí giả.
+
+### Files
+- `apps/web/components/TopbarAccount.tsx`, `AppShell.tsx`, `list/StatCardGrid.tsx`
+- `apps/web/app/globals.css` (topbar + hub tabs + KPI icon)
+- List/hub pages under `apps/web/app/**/page.tsx` (documents, control, admin, settings, reports, settlements, bank-feed, reconciliations, queues, rate-cards, workflow, …)
+
+### Verify
+- `npx tsc --noEmit` apps/web OK
+
+### Follow-up
+- Detail forms (new/edit) giữ pattern cũ — polish chrome nhẹ nếu cần.
+- Dashboard đã có charts thật; không clone mock chart giả.
+
+---
+
 ## 2026-09-16 — Single LCMS Designer theme (purge old skins)
 
 ### User

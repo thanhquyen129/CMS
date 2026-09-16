@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -28,28 +29,29 @@ export default async function ReconciliationQueuePage() {
   return (
     <AppShell terms={terms} active="control">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          {queueLabel}
-        </p>
-        <h1>{queueLabel}</h1>
-        <p className="lede">
-          Phiên {reconLabel.toLowerCase()} đang mở (nháp / đang đối soát). Mở
-          phiên để thêm dòng hoặc hoàn tất.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/control", label: "Kiểm soát tài chính" },
+            { label: queueLabel },
+          ]}
+          title={queueLabel}
+          lede={`Phiên ${reconLabel.toLowerCase()} đang mở (nháp / đang đối soát). Mở phiên để thêm dòng hoặc hoàn tất.`}
+          action={
+            <Link className="btn" href="/reconciliations/new">
+              + Mở phiên mới
+            </Link>
+          }
+        />
 
-        <div className="cta-row">
-          <Link className="btn" href="/reconciliations/new">
-            Mở phiên mới
-          </Link>
+        <p className="cta-row">
           <Link className="btn btn-ghost" href="/reconciliations">
             Tất cả phiên
           </Link>
           <Link className="btn btn-ghost" href="/bank-feed">
             {term(terms, "BANK_FEED", "Sao kê ngân hàng")}
           </Link>
-        </div>
+        </p>
 
         {!result.ok ? (
           <div className="alert alert-error" role="alert">

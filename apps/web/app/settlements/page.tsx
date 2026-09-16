@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { SettlementListWorkspace } from "@/components/SettlementListWorkspace";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -75,22 +76,34 @@ export default async function SettlementsPage({
   return (
     <AppShell terms={terms} active="settlements">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          {paymentLabel} &amp; {collectionLabel}
-        </p>
-        <h1>
-          {paymentLabel} &amp; {collectionLabel}
-        </h1>
-        <p className="lede">
-          {paymentLabel} ≠ {costLabel}; {collectionLabel} ≠ {revenueLabel}. Phân
-          bổ nháp rồi <strong>chốt phân bổ</strong> mới giảm outstanding AP/AR.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: `${paymentLabel} & ${collectionLabel}` },
+          ]}
+          title={`${paymentLabel} & ${collectionLabel}`}
+          lede={
+            <>
+              {paymentLabel} ≠ {costLabel}; {collectionLabel} ≠ {revenueLabel}. Phân
+              bổ nháp rồi <strong>chốt phân bổ</strong> mới giảm outstanding AP/AR.
+            </>
+          }
+          action={
+            activeTab === "payments" ? (
+              <Link className="btn" href="/settlements/payments/new">
+                + Tạo {paymentLabel.toLowerCase()}
+              </Link>
+            ) : (
+              <Link className="btn" href="/settlements/collections/new">
+                + Tạo {collectionLabel.toLowerCase()}
+              </Link>
+            )
+          }
+        />
 
-        <div className="search-bar" role="tablist" aria-label="Loại dòng tiền">
+        <div className="filter-tabs" role="tablist" aria-label="Loại dòng tiền">
           <Link
-            className={activeTab === "payments" ? "btn" : "btn btn-ghost"}
+            className={activeTab === "payments" ? "active" : undefined}
             href="/settlements"
             role="tab"
             aria-selected={activeTab === "payments"}
@@ -98,22 +111,13 @@ export default async function SettlementsPage({
             {paymentLabel}
           </Link>
           <Link
-            className={activeTab === "collections" ? "btn" : "btn btn-ghost"}
+            className={activeTab === "collections" ? "active" : undefined}
             href="/settlements?tab=collections"
             role="tab"
             aria-selected={activeTab === "collections"}
           >
             {collectionLabel}
           </Link>
-          {activeTab === "payments" ? (
-            <Link className="btn" href="/settlements/payments/new">
-              Tạo {paymentLabel.toLowerCase()}
-            </Link>
-          ) : (
-            <Link className="btn" href="/settlements/collections/new">
-              Tạo {collectionLabel.toLowerCase()}
-            </Link>
-          )}
         </div>
 
         {activeRes.ok && activeRows.length > 0 ? (

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { RolePermissionToggleMatrix } from "@/components/RolePermissionToggleMatrix";
 import { UserRoleAssignPanel } from "@/components/UserRoleAssignPanel";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import {
   getRolePermissionMatrix,
@@ -43,14 +44,14 @@ export default async function AdminAccessPage({
     return (
       <AppShell terms={terms} active="admin">
         <section className="panel panel-wide">
-          <p className="breadcrumb">
-            <Link href="/dashboard">{dashboardLabel}</Link>
-            {" / "}
-            <Link href="/admin">Danh mục</Link>
-            {" / "}
-            Phân quyền
-          </p>
-          <h1>Phân quyền</h1>
+          <ListPageHeader
+            breadcrumbs={[
+              { href: "/dashboard", label: dashboardLabel },
+              { href: "/admin", label: "Danh mục" },
+              { label: "Phân quyền" },
+            ]}
+            title="Phân quyền"
+          />
           <div className="alert alert-error" role="alert">
             {message}
           </div>
@@ -80,18 +81,15 @@ export default async function AdminAccessPage({
   return (
     <AppShell terms={terms} active="admin">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          <Link href="/admin">Danh mục</Link>
-          {" / "}
-          Phân quyền
-        </p>
-        <h1>Phân quyền</h1>
-        <p className="lede">
-          Gán vai trò cho thành viên và bật/tắt quyền theo nhóm nghiệp vụ. Chi
-          phí và doanh thu độc lập; phê duyệt không thay thế quyền.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/admin", label: "Danh mục" },
+            { label: "Phân quyền" },
+          ]}
+          title="Phân quyền"
+          lede="Gán vai trò cho thành viên và bật/tắt quyền theo nhóm nghiệp vụ. Chi phí và doanh thu độc lập; phê duyệt không thay thế quyền."
+        />
 
         <UserRoleAssignPanel
           users={users}

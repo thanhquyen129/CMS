@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { IntegrationErrorActions } from "@/components/IntegrationErrorActions";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -42,24 +43,21 @@ export default async function IntegrationErrorsPage({
   return (
     <AppShell terms={terms} active="settings">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">{dashboardLabel}</Link>
-          {" / "}
-          Lỗi tích hợp
-        </p>
-        <h1>Lỗi tích hợp</h1>
-        <p className="lede">
-          Theo dõi lỗi đồng bộ tích hợp và phục hồi thủ công: đánh dấu thử lại
-          hoặc chuyển dead letter. Mặc định hiển thị lỗi đang chờ xử lý.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: dashboardLabel },
+            { href: "/settings", label: "Hệ thống & Cài đặt" },
+            { label: "Lỗi tích hợp" },
+          ]}
+          title="Lỗi tích hợp"
+          lede="Theo dõi lỗi đồng bộ tích hợp và phục hồi thủ công: đánh dấu thử lại hoặc chuyển dead letter. Mặc định hiển thị lỗi đang chờ xử lý."
+        />
 
-        <div className="search-bar" role="tablist" aria-label="Lọc trạng thái phục hồi">
+        <div className="filter-tabs" role="tablist" aria-label="Lọc trạng thái phục hồi">
           {FILTERS.map((f) => (
             <Link
               key={f.value}
-              className={
-                recoveryStatus === f.value ? "btn" : "btn btn-ghost"
-              }
+              className={recoveryStatus === f.value ? "active" : undefined}
               href={`/integration-errors?recoveryStatus=${f.value}`}
               role="tab"
               aria-selected={recoveryStatus === f.value}
@@ -68,7 +66,7 @@ export default async function IntegrationErrorsPage({
             </Link>
           ))}
           <Link
-            className={recoveryStatus === "all" ? "btn" : "btn btn-ghost"}
+            className={recoveryStatus === "all" ? "active" : undefined}
             href="/integration-errors?recoveryStatus=all"
             role="tab"
             aria-selected={recoveryStatus === "all"}

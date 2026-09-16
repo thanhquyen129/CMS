@@ -7,6 +7,8 @@ import {
   GroupedBarChart,
   HorizontalBarChart,
 } from "@/components/charts/FinanceCharts";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { StatCardGrid } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { agingBucketLabel, getAgingSummary } from "@/lib/ap-ar";
@@ -68,19 +70,60 @@ export default async function ReportsPage() {
         }))
       : [];
 
+  const links = [
+    {
+      href: "/dashboard",
+      title: "Trang chủ điều hành",
+      desc: "KPI + việc cần xử lý + phân tách độ chín.",
+    },
+    {
+      href: "/bills",
+      title: `Lợi nhuận theo ${billLabel}`,
+      desc: "Drill-down hồ sơ tài chính từng Bill (Financial Anchor).",
+    },
+    {
+      href: "/financial-closes",
+      title: "Snapshot chốt kỳ",
+      desc: "Báo cáo sau chốt lấy từ snapshot bất biến.",
+    },
+    {
+      href: "/costs",
+      title: `Chi tiết ${costLabel.toLowerCase()}`,
+      desc: "Danh sách + phân tách độ chín theo dòng.",
+    },
+    {
+      href: "/revenues",
+      title: `Chi tiết ${revenueLabel.toLowerCase()}`,
+      desc: "Danh sách + phân tách độ chín theo dòng.",
+    },
+    {
+      href: "/ap-ar",
+      title: `${apLabel} / ${arLabel}`,
+      desc: "Số dư còn lại, tuổi nợ và lịch sử tất toán.",
+    },
+    {
+      href: "/settlements",
+      title: "Thanh toán & Thu tiền",
+      desc: "Tổng phân bổ, chưa áp dụng theo giao dịch tiền mặt.",
+    },
+  ];
+
   return (
     <AppShell terms={terms} active="reports">
       <section className="panel panel-wide">
-        <p className="breadcrumb">
-          <Link href="/dashboard">Trang chủ</Link>
-          {" / "}
-          Báo cáo &amp; Phân tích
-        </p>
-        <h1>Báo cáo &amp; Phân tích</h1>
-        <p className="lede">
-          Read model quản trị — không phải sổ giao dịch. Mọi số liệu có thể truy ngược về{" "}
-          {billLabel} và chứng từ nguồn.
-        </p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { label: "Báo cáo & Phân tích" },
+          ]}
+          title="Báo cáo & Phân tích"
+          lede={
+            <>
+              Read model quản trị — không phải sổ giao dịch. Mọi số liệu có thể truy ngược về{" "}
+              {billLabel} và chứng từ nguồn.
+            </>
+          }
+        />
         {summary.ok ? (
           <p className="meta-line muted">
             Tại thời điểm: {formatDateTimeVi(summary.data.asOfTimestamp)} — số liệu
@@ -94,39 +137,37 @@ export default async function ReportsPage() {
           </div>
         ) : (
           <>
-            <div className="stat-grid" style={{ marginTop: "1rem" }}>
-              <Link href="/costs" className="stat-card" style={{ textDecoration: "none" }}>
-                <span className="stat-label">
-                  {costLabel} ({bestAvailableLabel})
-                </span>
-                <strong className="stat-value">
-                  {formatMoney(cost, currency)}
-                </strong>
-              </Link>
-              <Link href="/revenues" className="stat-card" style={{ textDecoration: "none" }}>
-                <span className="stat-label">
-                  {revenueLabel} ({bestAvailableLabel})
-                </span>
-                <strong className="stat-value">
-                  {formatMoney(revenue, currency)}
-                </strong>
-              </Link>
-              <Link href="/bills" className="stat-card" style={{ textDecoration: "none" }}>
-                <span className="stat-label">{profitLabel}</span>
-                <strong
-                  className="stat-value"
-                  style={{
-                    color: profit < 0 ? "var(--danger)" : undefined,
-                  }}
-                >
-                  {formatMoney(profit, currency)}
-                </strong>
-              </Link>
-              <Link href="/bills" className="stat-card" style={{ textDecoration: "none" }}>
-                <span className="stat-label">Số {billLabel}</span>
-                <strong className="stat-value">{summary.data.billCount}</strong>
-              </Link>
-            </div>
+            <StatCardGrid
+              cards={[
+                {
+                  key: "cost",
+                  label: `${costLabel} (${bestAvailableLabel})`,
+                  value: formatMoney(cost, currency),
+                  tone: "warning",
+                  href: "/costs",
+                },
+                {
+                  key: "revenue",
+                  label: `${revenueLabel} (${bestAvailableLabel})`,
+                  value: formatMoney(revenue, currency),
+                  tone: "success",
+                  href: "/revenues",
+                },
+                {
+                  key: "profit",
+                  label: profitLabel,
+                  value: formatMoney(profit, currency),
+                  tone: profit < 0 ? "danger" : "primary",
+                  href: "/bills",
+                },
+                {
+                  key: "bills",
+                  label: `Số ${billLabel}`,
+                  value: summary.data.billCount,
+                  href: "/bills",
+                },
+              ]}
+            />
 
             <div className="dash-layout" style={{ marginTop: "1.25rem" }}>
               <div className="panel">
@@ -162,42 +203,13 @@ export default async function ReportsPage() {
           </>
         )}
 
-        <div className="hub-links">
-          <Link href="/dashboard" className="panel">
-            <h2 className="section-title">Trang chủ điều hành</h2>
-            <p className="muted">KPI + việc cần xử lý + phân tách độ chín.</p>
-            <span className="btn btn-ghost btn-sm">Mở →</span>
-          </Link>
-          <Link href="/bills" className="panel">
-            <h2 className="section-title">Lợi nhuận theo {billLabel}</h2>
-            <p className="muted">Drill-down hồ sơ tài chính từng Bill (Financial Anchor).</p>
-            <span className="btn btn-ghost btn-sm">Mở →</span>
-          </Link>
-          <Link href="/financial-closes" className="panel">
-            <h2 className="section-title">Snapshot chốt kỳ</h2>
-            <p className="muted">Báo cáo sau chốt lấy từ snapshot bất biến.</p>
-            <span className="btn btn-ghost btn-sm">Mở →</span>
-          </Link>
-          <Link href="/costs" className="panel">
-            <h2 className="section-title">Chi tiết {costLabel.toLowerCase()}</h2>
-            <p className="muted">Danh sách + phân tách độ chín theo dòng.</p>
-            <span className="btn btn-ghost btn-sm">Mở →</span>
-          </Link>
-          <Link href="/revenues" className="panel">
-            <h2 className="section-title">Chi tiết {revenueLabel.toLowerCase()}</h2>
-            <p className="muted">Danh sách + phân tách độ chín theo dòng.</p>
-            <span className="btn btn-ghost btn-sm">Mở →</span>
-          </Link>
-          <Link href="/ap-ar" className="panel">
-            <h2 className="section-title">{apLabel} / {arLabel}</h2>
-            <p className="muted">Số dư còn lại, tuổi nợ và lịch sử tất toán.</p>
-            <span className="btn btn-ghost btn-sm">Mở →</span>
-          </Link>
-          <Link href="/settlements" className="panel">
-            <h2 className="section-title">Thanh toán &amp; Thu tiền</h2>
-            <p className="muted">Tổng phân bổ, chưa áp dụng theo giao dịch tiền mặt.</p>
-            <span className="btn btn-ghost btn-sm">Mở →</span>
-          </Link>
+        <div className="hub-module-tabs" role="navigation" aria-label="Liên kết báo cáo">
+          {links.map((item) => (
+            <Link key={item.href} href={item.href} className="hub-module-tab">
+              <strong>{item.title}</strong>
+              <span>{item.desc}</span>
+            </Link>
+          ))}
         </div>
       </section>
     </AppShell>

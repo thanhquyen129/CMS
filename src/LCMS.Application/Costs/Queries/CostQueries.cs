@@ -78,7 +78,11 @@ public sealed record CostListItemDto(
     string RecordStatus,
     Guid? OrganizationId,
     Guid? CreatedBy,
-    DateOnly EffectiveDate);
+    DateOnly EffectiveDate,
+    Guid? VendorPartyId = null,
+    decimal ExpectedAmount = 0,
+    decimal? ConfirmedAmount = null,
+    decimal? ActualAmount = null);
 
 public sealed record GetCostByIdQuery(Guid Id) : IRequest<CostDto>;
 
@@ -319,7 +323,11 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, IRea
                 c.RecordStatus,
                 c.OrganizationId,
                 c.CreatedBy,
-                c.EffectiveDate))
+                c.EffectiveDate,
+                c.VendorPartyId,
+                c.ExpectedAmount,
+                c.ConfirmedAmount,
+                c.ActualAmount))
             .ToListAsync(cancellationToken);
     }
 }

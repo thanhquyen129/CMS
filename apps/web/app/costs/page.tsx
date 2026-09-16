@@ -2,18 +2,25 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { CostListWorkspace } from "@/components/CostListWorkspace";
+import { ListPagination } from "@/components/ListPagination";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import { listCosts } from "@/lib/costs-revenues-server";
 import {
-  listCosts,
-} from "@/lib/costs-revenues-server";
-import {
-  isSharedCost,
-  maturityLabelKey,
-} from "@/lib/costs-revenues";
-import { formatDateTimeVi, formatMoney } from "@/lib/money";
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
+import { formatMoney } from "@/lib/money";
 
-type SearchParams = Promise<{ maturity?: string; attribution?: string }>;
+type SearchParams = Promise<{
+  maturity?: string;
+  attribution?: string;
+  page?: string;
+  pageSize?: string;
+}>;
 
 function costsHref(opts: { maturity?: string; attribution?: string }): string {
   const p = new URLSearchParams();
@@ -33,13 +40,17 @@ export default async function CostsPage({
     redirect("/login");
   }
 
-  const { maturity, attribution } = await searchParams;
+  const sp = await searchParams;
   const maturityFilter =
-    maturity === "expected" || maturity === "confirmed" || maturity === "actual"
-      ? maturity
+    sp.maturity === "expected" ||
+    sp.maturity === "confirmed" ||
+    sp.maturity === "actual"
+      ? sp.maturity
       : undefined;
   const attributionFilter =
-    attribution === "direct" || attribution === "shared" ? attribution : undefined;
+    sp.attribution === "direct" || sp.attribution === "shared"
+      ? sp.attribution
+      : undefined;
 
   const terms = await fetchTerminology();
   const costLabel = term(terms, "COST", "Chi phí");
@@ -69,6 +80,16 @@ export default async function CostsPage({
   const sumActual = sumByMaturity("actual");
   const sumAll = sumExpected + sumConfirmed + sumActual;
 
+  const allRows = result.ok ? result.data : [];
+  const pageSize = parsePageSize(sp.pageSize);
+  const pages = calcTotalPages(allRows.length, pageSize);
+  const page = parsePage(sp.page, pages);
+  const pageRows = slicePage(allRows, page, pageSize);
+  const pageParams = {
+    maturity: maturityFilter,
+    attribution: attributionFilter,
+  };
+
   return (
     <AppShell terms={terms} active="costs">
       <section className="panel panel-wide">
@@ -82,7 +103,8 @@ export default async function CostsPage({
             <h1>Danh sách {costLabel.toLowerCase()}</h1>
             <p className="lede">
               Vòng đời {costLabel.toLowerCase()}: {expectedLabel} → {confirmedLabel} →{" "}
-              {actualLabel}. Phân bổ giữ tổng; không ghi đè độ chín. Single Economic Cost.
+              {actualLabel}. Phân bổ giữ tổng; không ghi đè độ chín. Chọn dòng để xem
+              panel chi tiết.
             </p>
           </div>
           <Link className="btn" href="/costs/shared/new">
@@ -146,19 +168,28 @@ export default async function CostsPage({
           </Link>
           <Link
             className={maturityFilter === "expected" ? "active" : undefined}
-            href={costsHref({ maturity: "expected", attribution: attributionFilter })}
+            href={costsHref({
+              maturity: "expected",
+              attribution: attributionFilter,
+            })}
           >
             {expectedLabel}
           </Link>
           <Link
             className={maturityFilter === "confirmed" ? "active" : undefined}
-            href={costsHref({ maturity: "confirmed", attribution: attributionFilter })}
+            href={costsHref({
+              maturity: "confirmed",
+              attribution: attributionFilter,
+            })}
           >
             {confirmedLabel}
           </Link>
           <Link
             className={maturityFilter === "actual" ? "active" : undefined}
-            href={costsHref({ maturity: "actual", attribution: attributionFilter })}
+            href={costsHref({
+              maturity: "actual",
+              attribution: attributionFilter,
+            })}
           >
             {actualLabel}
           </Link>
@@ -189,82 +220,33 @@ export default async function CostsPage({
           <div className="alert alert-error" role="alert">
             {result.message}
           </div>
-        ) : result.data.length === 0 ? (
+        ) : allRows.length === 0 ? (
           <div className="empty-state" role="status">
-            Chưa có {costLabel.toLowerCase()} trong phạm vi lọc. Mở một {billLabel} để ghi
-            chi phí trực tiếp, hoặc tạo chi phí chung.
+            Chưa có {costLabel.toLowerCase()} trong phạm vi lọc. Mở một {billLabel} để
+            ghi chi phí trực tiếp, hoặc tạo chi phí chung.
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Mã</th>
-                  <th scope="col">{billLabel}</th>
-                  <th scope="col">Nguồn</th>
-                  <th scope="col">Độ chín</th>
-                  <th scope="col" className="num">
-                    Số tiền
-                  </th>
-                  <th scope="col">Hiệu lực</th>
-                  <th scope="col">
-                    <span className="sr-only">Mở</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.data.map((c) => {
-                  const maturityVi = term(
-                    terms,
-                    maturityLabelKey(c.financialMaturity),
-                    c.financialMaturity === "expected"
-                      ? expectedLabel
-                      : c.financialMaturity === "confirmed"
-                        ? confirmedLabel
-                        : actualLabel
-                  );
-                  const href = isSharedCost(c.attributionType)
-                    ? `/costs/shared/${c.id}`
-                    : `/costs/${c.id}`;
-                  return (
-                    <tr key={c.id}>
-                      <td>
-                        <Link className="row-link" href={href}>
-                          {c.costTypeCode || c.id.slice(0, 8)}
-                        </Link>
-                      </td>
-                      <td>
-                        {c.billId ? (
-                          <Link className="row-link" href={`/bills/${c.billId}`}>
-                            {c.billId.slice(0, 8)}…
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td>
-                        {isSharedCost(c.attributionType) ? sharedLabel : directLabel}
-                      </td>
-                      <td>
-                        <span className={`maturity-pill maturity-${c.financialMaturity?.toLowerCase()}`}>
-                          {maturityVi}
-                        </span>
-                      </td>
-                      <td className="num">
-                        {formatMoney(c.amount, c.currencyCode)}
-                      </td>
-                      <td>{formatDateTimeVi(c.effectiveDate)}</td>
-                      <td>
-                        <Link className="row-link" href={href}>
-                          Mở
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <CostListWorkspace
+              terms={terms}
+              costs={pageRows}
+              billLabel={billLabel}
+              costLabel={costLabel}
+              expectedLabel={expectedLabel}
+              confirmedLabel={confirmedLabel}
+              actualLabel={actualLabel}
+              directLabel={directLabel}
+              sharedLabel={sharedLabel}
+            />
+            <ListPagination
+              basePath="/costs"
+              params={pageParams}
+              page={page}
+              pageSize={pageSize}
+              totalCount={allRows.length}
+              totalPages={pages}
+            />
+          </>
         )}
       </section>
     </AppShell>

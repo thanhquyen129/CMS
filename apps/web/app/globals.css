@@ -749,6 +749,45 @@ html[data-theme="classic"][data-layout="vertical"] .nav-group-toggle:hover {
   outline-offset: -2px;
 }
 
+.list-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+
+.list-pagination-meta {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.list-pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.list-pagination-size select,
+.denser-filters select {
+  min-width: 8.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.denser-filters {
+  flex-wrap: wrap;
+}
+
 /* ——— Dashboard clusters ——— */
 .dash-layout {
   display: grid;

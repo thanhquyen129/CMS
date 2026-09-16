@@ -2,17 +2,37 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPagination } from "@/components/ListPagination";
+import { RateCardListWorkspace } from "@/components/RateCardListWorkspace";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import { partyTypeLabel } from "@/lib/rate-cards";
 import { listRateCards } from "@/lib/rate-cards-server";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 
-export default async function RateCardsPage() {
+type SearchParams = Promise<{
+  partyType?: string;
+  active?: string;
+  q?: string;
+  page?: string;
+  pageSize?: string;
+}>;
+
+export default async function RateCardsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const jar = await cookies();
   if (!jar.get(AUTH_COOKIE)?.value) {
     redirect("/login");
   }
 
+  const sp = await searchParams;
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
   const expected = term(terms, "EXPECTED", "Dự kiến");
@@ -20,12 +40,35 @@ export default async function RateCardsPage() {
   const actual = term(terms, "ACTUAL", "Thực tế");
 
   const listRes = await listRateCards();
-  const cards = listRes.ok ? listRes.data : [];
-  const activeCount = cards.filter((c) => c.isActive).length;
-  const buyCount = cards.filter((c) => c.partyType?.toLowerCase() === "vendor").length;
-  const sellCount = cards.filter(
+  let cards = listRes.ok ? listRes.data : [];
+  if (sp.partyType === "vendor" || sp.partyType === "customer") {
+    cards = cards.filter(
+      (c) => c.partyType?.toLowerCase() === sp.partyType!.toLowerCase()
+    );
+  }
+  if (sp.active === "1") cards = cards.filter((c) => c.isActive);
+  if (sp.active === "0") cards = cards.filter((c) => !c.isActive);
+  if (sp.q?.trim()) {
+    const q = sp.q.trim().toLowerCase();
+    cards = cards.filter(
+      (c) =>
+        c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+    );
+  }
+
+  const allCards = listRes.ok ? listRes.data : [];
+  const activeCount = allCards.filter((c) => c.isActive).length;
+  const buyCount = allCards.filter(
+    (c) => c.partyType?.toLowerCase() === "vendor"
+  ).length;
+  const sellCount = allCards.filter(
     (c) => c.partyType?.toLowerCase() === "customer"
   ).length;
+
+  const pageSize = parsePageSize(sp.pageSize);
+  const pages = calcTotalPages(cards.length, pageSize);
+  const page = parsePage(sp.page, pages);
+  const pageRows = slicePage(cards, page, pageSize);
 
   return (
     <AppShell terms={terms} active="rate-cards">
@@ -53,7 +96,7 @@ export default async function RateCardsPage() {
           <div className="stat-grid" style={{ marginTop: "0.85rem" }}>
             <div className="stat-card">
               <span className="stat-label">Tổng bảng giá</span>
-              <strong className="stat-value">{cards.length}</strong>
+              <strong className="stat-value">{allCards.length}</strong>
             </div>
             <div className="stat-card">
               <span className="stat-label">Giá mua (NCC)</span>
@@ -70,6 +113,43 @@ export default async function RateCardsPage() {
           </div>
         ) : null}
 
+        <form
+          className="search-bar denser-filters"
+          method="get"
+          action="/rate-cards"
+          style={{ marginTop: "0.85rem" }}
+        >
+          <label className="sr-only" htmlFor="q">
+            Tìm bảng giá
+          </label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            placeholder="Mã hoặc tên bảng giá…"
+            defaultValue={sp.q ?? ""}
+            autoComplete="off"
+          />
+          <select id="partyType" name="partyType" defaultValue={sp.partyType ?? ""}>
+            <option value="">Tất cả loại giá</option>
+            <option value="vendor">Giá mua (NCC)</option>
+            <option value="customer">Giá bán (KH)</option>
+          </select>
+          <select id="active" name="active" defaultValue={sp.active ?? ""}>
+            <option value="">Mọi trạng thái</option>
+            <option value="1">Đang hiệu lực</option>
+            <option value="0">Ngưng</option>
+          </select>
+          <button className="btn" type="submit">
+            Lọc
+          </button>
+          {sp.q || sp.partyType || sp.active ? (
+            <Link className="btn btn-ghost" href="/rate-cards">
+              Làm mới
+            </Link>
+          ) : null}
+        </form>
+
         <p className="cta-row" style={{ marginTop: "0.75rem" }}>
           <Link className="btn btn-ghost" href="/bills">
             Tính giá trên {billLabel}
@@ -82,53 +162,26 @@ export default async function RateCardsPage() {
           </div>
         ) : cards.length === 0 ? (
           <div className="empty-state" role="status">
-            Chưa có bảng giá. Tạo mới để bắt đầu tính giá và seed chi phí dự kiến.
+            {sp.q || sp.partyType || sp.active
+              ? "Không có bảng giá khớp bộ lọc."
+              : "Chưa có bảng giá. Tạo mới để bắt đầu tính giá và seed chi phí dự kiến."}
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Mã bảng giá</th>
-                  <th scope="col">Tên bảng giá</th>
-                  <th scope="col">Loại giá</th>
-                  <th scope="col">Tiền tệ</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">
-                    <span className="sr-only">Mở</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {cards.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <Link className="row-link" href={`/rate-cards/${c.id}`}>
-                        <code>{c.code}</code>
-                      </Link>
-                    </td>
-                    <td>{c.name}</td>
-                    <td>
-                      <span className="status-pill">{partyTypeLabel(c.partyType)}</span>
-                    </td>
-                    <td>{c.currencyCode}</td>
-                    <td>
-                      <span
-                        className={`maturity-pill ${c.isActive ? "maturity-confirmed" : ""}`}
-                      >
-                        {c.isActive ? "Đang hiệu lực" : "Ngưng"}
-                      </span>
-                    </td>
-                    <td>
-                      <Link className="btn btn-ghost btn-sm" href={`/rate-cards/${c.id}`}>
-                        Chi tiết
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <RateCardListWorkspace cards={pageRows} billLabel={billLabel} />
+            <ListPagination
+              basePath="/rate-cards"
+              params={{
+                q: sp.q,
+                partyType: sp.partyType,
+                active: sp.active,
+              }}
+              page={page}
+              pageSize={pageSize}
+              totalCount={cards.length}
+              totalPages={pages}
+            />
+          </>
         )}
       </section>
     </AppShell>

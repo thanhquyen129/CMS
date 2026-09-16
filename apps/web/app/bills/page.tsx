@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { BillListWorkspace } from "@/components/BillListWorkspace";
+import { ListPagination } from "@/components/ListPagination";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -10,9 +11,21 @@ import {
   operationalStatusLabel,
   type BillListItem,
 } from "@/lib/bills";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 import { formatMoney } from "@/lib/money";
 
-type SearchParams = Promise<{ q?: string; status?: string; selected?: string }>;
+type SearchParams = Promise<{
+  q?: string;
+  status?: string;
+  selected?: string;
+  page?: string;
+  pageSize?: string;
+}>;
 
 export default async function BillsPage({
   searchParams,
@@ -24,7 +37,8 @@ export default async function BillsPage({
     redirect("/login");
   }
 
-  const { q, status, selected } = await searchParams;
+  const { q, status, selected, page: pageRaw, pageSize: pageSizeRaw } =
+    await searchParams;
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
@@ -40,6 +54,11 @@ export default async function BillsPage({
     const s = status.trim().toLowerCase();
     bills = bills.filter((b) => b.operationalStatus?.toLowerCase() === s);
   }
+
+  const pageSize = parsePageSize(pageSizeRaw);
+  const pages = calcTotalPages(bills.length, pageSize);
+  const page = parsePage(pageRaw, pages);
+  const pageRows = slicePage(bills, page, pageSize);
 
   let sumRevExpected = 0;
   let sumRevConfirmed = 0;
@@ -177,19 +196,29 @@ export default async function BillsPage({
             )}
           </div>
         ) : (
-          <BillListWorkspace
-            bills={bills}
-            initialSelectedId={selected ?? null}
-            labels={{
-              bill: billLabel,
-              revenue: revenueLabel,
-              cost: costLabel,
-              profit: profitLabel,
-              expected: expectedLabel,
-              confirmed: confirmedLabel,
-              actual: actualLabel,
-            }}
-          />
+          <>
+            <BillListWorkspace
+              bills={pageRows}
+              initialSelectedId={selected ?? null}
+              labels={{
+                bill: billLabel,
+                revenue: revenueLabel,
+                cost: costLabel,
+                profit: profitLabel,
+                expected: expectedLabel,
+                confirmed: confirmedLabel,
+                actual: actualLabel,
+              }}
+            />
+            <ListPagination
+              basePath="/bills"
+              params={{ q, status }}
+              page={page}
+              pageSize={pageSize}
+              totalCount={bills.length}
+              totalPages={pages}
+            />
+          </>
         )}
       </section>
     </AppShell>

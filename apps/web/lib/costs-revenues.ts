@@ -10,6 +10,10 @@ export type CostListItem = {
   organizationId: string | null;
   createdBy: string | null;
   effectiveDate: string;
+  vendorPartyId?: string | null;
+  expectedAmount?: number;
+  confirmedAmount?: number | null;
+  actualAmount?: number | null;
 };
 
 export type CostAllocationDetail = {

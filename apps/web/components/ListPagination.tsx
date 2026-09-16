@@ -1,0 +1,93 @@
+"use client";
+
+import Link from "next/link";
+import { hrefWithPage, PAGE_SIZE_OPTIONS } from "@/lib/list-paging";
+
+type Props = {
+  basePath: string;
+  params: Record<string, string | undefined | null>;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+};
+
+export function ListPagination({
+  basePath,
+  params,
+  page,
+  pageSize,
+  totalCount,
+  totalPages: pages,
+}: Props) {
+  if (totalCount === 0) return null;
+
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, totalCount);
+
+  const windowStart = Math.max(1, page - 2);
+  const windowEnd = Math.min(pages, page + 2);
+  const pageNumbers: number[] = [];
+  for (let i = windowStart; i <= windowEnd; i++) pageNumbers.push(i);
+
+  return (
+    <nav className="list-pagination" aria-label="Phân trang">
+      <p className="list-pagination-meta muted">
+        Hiển thị {from}–{to} trong {totalCount} bản ghi
+      </p>
+      <div className="list-pagination-controls">
+        <label className="list-pagination-size">
+          <span className="sr-only">Số dòng mỗi trang</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              window.location.assign(hrefWithPage(basePath, params, 1, next));
+            }}
+            aria-label="Số dòng mỗi trang"
+          >
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n}/trang
+              </option>
+            ))}
+          </select>
+        </label>
+        {page > 1 ? (
+          <Link
+            className="btn btn-ghost btn-sm"
+            href={hrefWithPage(basePath, params, page - 1, pageSize)}
+          >
+            Trước
+          </Link>
+        ) : (
+          <span className="btn btn-ghost btn-sm" aria-disabled="true">
+            Trước
+          </span>
+        )}
+        {pageNumbers.map((n) => (
+          <Link
+            key={n}
+            className={n === page ? "btn btn-sm" : "btn btn-ghost btn-sm"}
+            href={hrefWithPage(basePath, params, n, pageSize)}
+            aria-current={n === page ? "page" : undefined}
+          >
+            {n}
+          </Link>
+        ))}
+        {page < pages ? (
+          <Link
+            className="btn btn-ghost btn-sm"
+            href={hrefWithPage(basePath, params, page + 1, pageSize)}
+          >
+            Sau
+          </Link>
+        ) : (
+          <span className="btn btn-ghost btn-sm" aria-disabled="true">
+            Sau
+          </span>
+        )}
+      </div>
+    </nav>
+  );
+}

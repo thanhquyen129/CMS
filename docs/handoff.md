@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-16 — Drawer Rate/Cost/Document + list pagination + denser filters
+
+### User
+Drawer Rate card / Cost / Document; pagination list; filter denser khi API hỗ trợ.
+
+### Done
+- **Drawers (master-detail):** `RateCardListWorkspace`, `CostListWorkspace`, `DocumentListWorkspace` + reusable `DetailDrawer` (Cost drawer shows Expected/Confirmed/Actual layers from enriched list DTO).
+- **API Cost list:** `CostListItemDto` + `ListCosts` Select thêm `VendorPartyId`, `ExpectedAmount`, `ConfirmedAmount`, `ActualAmount`.
+- **Client pagination:** `lib/list-paging.ts` + `ListPagination` — URL `page`/`pageSize` (API vẫn trả full array; slice phía web). Wired: bills, costs, revenues, documents, rate-cards.
+- **Denser filters (khi API hỗ trợ):** documents — `documentType` + triad `receiptStatus`/`acceptanceStatus`/`matchingStatus`; rate-cards — partyType/active/q client; costs — maturity/attribution đã có.
+
+### Files
+- `CostQueries.cs` (CostListItemDto enrichment)
+- `ListPagination.tsx`, `list-paging.ts`, `RateCardListWorkspace.tsx`, `CostListWorkspace.tsx`, `DocumentListWorkspace.tsx`
+- pages: `bills`, `costs`, `revenues`, `documents`, `rate-cards`; `globals.css` (`.list-pagination`, `.denser-filters`)
+
+### Verify
+- `npx tsc --noEmit` (apps/web) pass
+- `dotnet build` LCMS.Application pass
+
+### Follow-up
+- Server-side skip/take khi list lớn; drawer detail GET nếu list DTO thiếu field; denser cost filters (vendor/date) khi API expose query.
+
+---
+
 ## 2026-09-16 — Bill list financial summary API + drawer + UI-03…14 KPIs
 
 ### User

@@ -2,22 +2,17 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { BillListWorkspace } from "@/components/BillListWorkspace";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
-  getFinancialProfile,
   listBills,
   operationalStatusLabel,
-  billTypeLabel,
-  profileBestRollup,
-  type BillFinancialProfile,
   type BillListItem,
 } from "@/lib/bills";
-import { formatDateTimeVi, formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
-type SearchParams = Promise<{ q?: string; status?: string }>;
-
-const PROFILE_ENRICH_LIMIT = 40;
+type SearchParams = Promise<{ q?: string; status?: string; selected?: string }>;
 
 export default async function BillsPage({
   searchParams,
@@ -29,7 +24,7 @@ export default async function BillsPage({
     redirect("/login");
   }
 
-  const { q, status } = await searchParams;
+  const { q, status, selected } = await searchParams;
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
@@ -38,7 +33,6 @@ export default async function BillsPage({
   const expectedLabel = term(terms, "EXPECTED", "Dự kiến");
   const confirmedLabel = term(terms, "CONFIRMED", "Đã xác nhận");
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
-  const bestLabel = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
 
   const result = await listBills(q);
   let bills: BillListItem[] = result.ok ? result.data : [];
@@ -47,31 +41,23 @@ export default async function BillsPage({
     bills = bills.filter((b) => b.operationalStatus?.toLowerCase() === s);
   }
 
-  const enrichTargets = bills.slice(0, PROFILE_ENRICH_LIMIT);
-  const profiles = await Promise.all(
-    enrichTargets.map((b) => getFinancialProfile(b.id))
-  );
-  const profileById = new Map<string, BillFinancialProfile | null>();
-  enrichTargets.forEach((b, i) => {
-    const res = profiles[i];
-    profileById.set(b.id, res.ok ? res.data : null);
-  });
-
   let sumRevExpected = 0;
   let sumRevConfirmed = 0;
   let sumRevActual = 0;
   let rollCurrency = "VND";
-  for (const b of enrichTargets) {
-    const roll = profileBestRollup(profileById.get(b.id) ?? null);
-    if (!roll) continue;
-    rollCurrency = roll.currencyCode;
-    sumRevExpected += roll.revenueExpected;
-    sumRevConfirmed += roll.revenueConfirmed;
-    sumRevActual += roll.revenueActual;
+  for (const b of bills) {
+    if (b.summaryCurrencyCode) rollCurrency = b.summaryCurrencyCode;
+    sumRevExpected += b.revenueExpectedTotal ?? 0;
+    sumRevConfirmed += b.revenueConfirmedTotal ?? 0;
+    sumRevActual += b.revenueActualTotal ?? 0;
   }
 
   const statusOptions = Array.from(
-    new Set((result.ok ? result.data : []).map((b) => b.operationalStatus).filter(Boolean))
+    new Set(
+      (result.ok ? result.data : [])
+        .map((b) => b.operationalStatus)
+        .filter(Boolean)
+    )
   );
 
   return (
@@ -90,7 +76,7 @@ export default async function BillsPage({
             <p className="lede">
               Quản lý vận đơn ({billLabel}) và thông tin tài chính liên quan —{" "}
               {expectedLabel} / {confirmedLabel} / {actualLabel}. {billLabel} là neo
-              tài chính (Financial Anchor).
+              tài chính (Financial Anchor). Chọn dòng để xem panel chi tiết.
             </p>
           </div>
           <Link className="btn" href="/bills/new">
@@ -149,7 +135,7 @@ export default async function BillsPage({
               <strong className="stat-value">
                 {formatMoney(sumRevExpected, rollCurrency)}
               </strong>
-              <span className="stat-hint">Projection — không phải sổ cái</span>
+              <span className="stat-hint">Projection từ API list</span>
             </div>
             <div className="stat-card">
               <span className="stat-label">
@@ -158,7 +144,7 @@ export default async function BillsPage({
               <strong className="stat-value">
                 {formatMoney(sumRevConfirmed, rollCurrency)}
               </strong>
-              <span className="stat-hint">{bestLabel}</span>
+              <span className="stat-hint">Không cộng gộp đa tiền tệ</span>
             </div>
             <div className="stat-card">
               <span className="stat-label">
@@ -167,11 +153,7 @@ export default async function BillsPage({
               <strong className="stat-value">
                 {formatMoney(sumRevActual, rollCurrency)}
               </strong>
-              <span className="stat-hint">
-                {enrichTargets.length < bills.length
-                  ? `Tối đa ${PROFILE_ENRICH_LIMIT} dòng đầu`
-                  : "Theo hồ sơ tài chính"}
-              </span>
+              <span className="stat-hint">Theo tiền tệ chính từng Bill</span>
             </div>
           </div>
         ) : null}
@@ -195,79 +177,19 @@ export default async function BillsPage({
             )}
           </div>
         ) : (
-          <div className="table-wrap" style={{ marginTop: "1rem" }}>
-            <table className="data-table">
-              <caption className="sr-only">
-                Danh sách {billLabel} ({bills.length})
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">Số {billLabel}</th>
-                  <th scope="col">Loại</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Ngày tạo</th>
-                  <th scope="col" className="num">
-                    {revenueLabel}
-                  </th>
-                  <th scope="col" className="num">
-                    {costLabel}
-                  </th>
-                  <th scope="col" className="num">
-                    {profitLabel}
-                  </th>
-                  <th scope="col">
-                    <span className="sr-only">Mở</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {bills.map((b) => {
-                  const roll = profileById.has(b.id)
-                    ? profileBestRollup(profileById.get(b.id) ?? null)
-                    : null;
-                  return (
-                    <tr key={b.id}>
-                      <td>
-                        <Link className="row-link" href={`/bills/${b.id}`}>
-                          {b.billNo}
-                        </Link>
-                      </td>
-                      <td>{billTypeLabel(b.billType)}</td>
-                      <td>
-                        <span className="status-pill">
-                          {operationalStatusLabel(b.operationalStatus)}
-                        </span>
-                      </td>
-                      <td>{formatDateTimeVi(b.createdAt)}</td>
-                      <td className="num">
-                        {roll
-                          ? formatMoney(roll.revenue, roll.currencyCode)
-                          : "—"}
-                      </td>
-                      <td className="num">
-                        {roll ? formatMoney(roll.cost, roll.currencyCode) : "—"}
-                      </td>
-                      <td
-                        className={`num${roll && roll.profit < 0 ? " neg" : ""}`}
-                      >
-                        {roll
-                          ? formatMoney(roll.profit, roll.currencyCode)
-                          : "—"}
-                      </td>
-                      <td>
-                        <Link
-                          className="btn btn-ghost btn-sm"
-                          href={`/bills/${b.id}`}
-                        >
-                          Mở hồ sơ
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <BillListWorkspace
+            bills={bills}
+            initialSelectedId={selected ?? null}
+            labels={{
+              bill: billLabel,
+              revenue: revenueLabel,
+              cost: costLabel,
+              profit: profitLabel,
+              expected: expectedLabel,
+              confirmed: confirmedLabel,
+              actual: actualLabel,
+            }}
+          />
         )}
       </section>
     </AppShell>

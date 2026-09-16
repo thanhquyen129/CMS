@@ -50,10 +50,24 @@ export default async function CostsPage({
   const sharedLabel = term(terms, "ATTRIBUTION_SHARED", "Chung");
   const directLabel = term(terms, "ATTRIBUTION_DIRECT", "Trực tiếp");
 
-  const result = await listCosts({
-    financialMaturity: maturityFilter,
-    attributionType: attributionFilter,
-  });
+  const [result, kpiRes] = await Promise.all([
+    listCosts({
+      financialMaturity: maturityFilter,
+      attributionType: attributionFilter,
+    }),
+    listCosts({ attributionType: attributionFilter }),
+  ]);
+
+  const kpiItems = kpiRes.ok ? kpiRes.data : [];
+  const sumByMaturity = (m: string) =>
+    kpiItems
+      .filter((c) => c.financialMaturity?.toLowerCase() === m)
+      .reduce((s, c) => s + (c.amount ?? 0), 0);
+  const kpiCurrency = kpiItems[0]?.currencyCode ?? "VND";
+  const sumExpected = sumByMaturity("expected");
+  const sumConfirmed = sumByMaturity("confirmed");
+  const sumActual = sumByMaturity("actual");
+  const sumAll = sumExpected + sumConfirmed + sumActual;
 
   return (
     <AppShell terms={terms} active="costs">
@@ -63,18 +77,63 @@ export default async function CostsPage({
           {" / "}
           {costLabel}
         </p>
-        <h1>Quản lý {costLabel}</h1>
-        <p className="lede">
-          Vòng đời {costLabel.toLowerCase()}: {expectedLabel} → {confirmedLabel} →{" "}
-          {actualLabel}. Phân bổ giữ tổng; không ghi đè độ chín.
-        </p>
-
-        <p className="cta-row" style={{ marginTop: 0 }}>
+        <div className="page-header-row">
+          <div>
+            <h1>Danh sách {costLabel.toLowerCase()}</h1>
+            <p className="lede">
+              Vòng đời {costLabel.toLowerCase()}: {expectedLabel} → {confirmedLabel} →{" "}
+              {actualLabel}. Phân bổ giữ tổng; không ghi đè độ chín. Single Economic Cost.
+            </p>
+          </div>
           <Link className="btn" href="/costs/shared/new">
-            Tạo {costLabel.toLowerCase()} {sharedLabel.toLowerCase()}
+            + Tạo {costLabel.toLowerCase()} {sharedLabel.toLowerCase()}
           </Link>
+        </div>
+
+        {kpiRes.ok ? (
+          <div className="stat-grid" style={{ marginTop: "0.85rem" }}>
+            <div className="stat-card">
+              <span className="stat-label">Tổng {costLabel.toLowerCase()}</span>
+              <strong className="stat-value">
+                {formatMoney(sumAll, kpiCurrency)}
+              </strong>
+              <span className="stat-hint">{kpiItems.length} dòng</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{expectedLabel}</span>
+              <strong className="stat-value">
+                {formatMoney(sumExpected, kpiCurrency)}
+              </strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{confirmedLabel}</span>
+              <strong className="stat-value">
+                {formatMoney(sumConfirmed, kpiCurrency)}
+              </strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{actualLabel}</span>
+              <strong className="stat-value">
+                {formatMoney(sumActual, kpiCurrency)}
+              </strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{billLabel}</span>
+              <strong className="stat-value">
+                <Link className="row-link" href="/bills">
+                  Ghi trực tiếp →
+                </Link>
+              </strong>
+            </div>
+          </div>
+        ) : null}
+
+        <p className="cta-row" style={{ marginTop: "0.75rem" }}>
           <Link className="btn btn-ghost" href="/bills">
             Ghi {costLabel.toLowerCase()} trên {billLabel}
+          </Link>
+          <Link className="btn btn-ghost" href="/costs/shared">
+            {costLabel} {sharedLabel.toLowerCase()}
           </Link>
         </p>
 

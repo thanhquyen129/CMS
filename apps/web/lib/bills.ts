@@ -11,6 +11,14 @@ export type BillListItem = {
   organizationId: string | null;
   createdBy: string | null;
   createdAt: string;
+  /** Primary currency for list financial rollup (from API batch summary). */
+  summaryCurrencyCode?: string | null;
+  revenueBestAvailable?: number | null;
+  costBestAvailable?: number | null;
+  profitBestAvailable?: number | null;
+  revenueExpectedTotal?: number | null;
+  revenueConfirmedTotal?: number | null;
+  revenueActualTotal?: number | null;
 };
 
 export type BillDto = BillListItem & {

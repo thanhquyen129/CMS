@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-16 — Bill list financial summary API + drawer + UI-03…14 KPIs
+
+### User
+API list Bill kèm financial summary (bỏ N+1), drawer master-detail, pixel-match UI-03→UI-14.
+
+### Done
+- **API:** `GET /api/bills` enrich batch: `summaryCurrencyCode`, revenue/cost/profit best-available + revenue Expected/Confirmed/Actual totals (3 queries: revenues, direct costs, finalized allocations) — không N+1 profile.
+- **UI-02:** `BillListWorkspace` + `DetailDrawer` master-detail; KPI dùng summary API.
+- **UI-03…08 KPI/layout:** bảng giá, chi phí, doanh thu, AP/AR (stat cards + header PO).
+- Test: `BillListFinancialSummaryTests`.
+
+### Files
+- `GetBillByIdQuery.cs` (ListBills + summary), `BillListFinancialSummaryTests.cs`
+- `BillListWorkspace.tsx`, `DetailDrawer.tsx`, `bills/page.tsx`, `lib/bills.ts`, `globals.css`
+- `rate-cards`, `costs`, `revenues`, `ap-ar` pages
+
+### Verify
+- `dotnet test --filter BillListFinancialSummaryTests` pass
+- `npx tsc --noEmit` apps/web pass
+
+### Follow-up
+- Drawer cho Rate card / Cost / Document; API list pagination; pixel denser filters (date range, vendor) khi có query hỗ trợ.
+
+---
+
 ## 2026-09-16 — UI-02 Bill list/detail + PO breadcrumbs (slice 2)
 
 ### User

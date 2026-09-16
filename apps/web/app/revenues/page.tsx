@@ -40,6 +40,13 @@ export default async function RevenuesPage({
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
 
   const result = await listRevenues({ financialMaturity: maturityFilter });
+  const kpiRes = await listRevenues();
+  const kpiItems = kpiRes.ok ? kpiRes.data : [];
+  const sumByMaturity = (m: string) =>
+    kpiItems
+      .filter((r) => r.financialMaturity?.toLowerCase() === m)
+      .reduce((s, r) => s + (r.amount ?? 0), 0);
+  const kpiCurrency = kpiItems[0]?.currencyCode ?? "VND";
 
   return (
     <AppShell terms={terms} active="revenues">
@@ -49,19 +56,57 @@ export default async function RevenuesPage({
           {" / "}
           {revenueLabel} &amp; {profitLabel}
         </p>
-        <h1>
-          {revenueLabel} &amp; {profitLabel}
-        </h1>
-        <p className="lede">
-          {revenueLabel} ≠ hóa đơn / AR / thu tiền. {profitLabel} suy ra từ{" "}
-          {term(terms, "COST", "Chi phí")} và {revenueLabel} theo {billLabel} — xem hồ sơ
-          tài chính Bill để drill-down.
-        </p>
-
-        <p className="cta-row" style={{ marginTop: 0 }}>
+        <div className="page-header-row">
+          <div>
+            <h1>
+              {revenueLabel} &amp; {profitLabel}
+            </h1>
+            <p className="lede">
+              {revenueLabel} ≠ hóa đơn / AR / thu tiền. {profitLabel} suy ra từ{" "}
+              {term(terms, "COST", "Chi phí")} và {revenueLabel} theo {billLabel}.
+            </p>
+          </div>
           <Link className="btn" href="/bills">
-            Mở {billLabel} để ghi {revenueLabel.toLowerCase()}
+            + Ghi trên {billLabel}
           </Link>
+        </div>
+
+        {kpiRes.ok ? (
+          <div className="stat-grid" style={{ marginTop: "0.85rem" }}>
+            <div className="stat-card">
+              <span className="stat-label">Số dòng</span>
+              <strong className="stat-value">{kpiItems.length}</strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{expectedLabel}</span>
+              <strong className="stat-value">
+                {formatMoney(sumByMaturity("expected"), kpiCurrency)}
+              </strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{confirmedLabel}</span>
+              <strong className="stat-value">
+                {formatMoney(sumByMaturity("confirmed"), kpiCurrency)}
+              </strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{actualLabel}</span>
+              <strong className="stat-value">
+                {formatMoney(sumByMaturity("actual"), kpiCurrency)}
+              </strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">{profitLabel}</span>
+              <strong className="stat-value">
+                <Link className="row-link" href="/reports">
+                  Xem báo cáo →
+                </Link>
+              </strong>
+            </div>
+          </div>
+        ) : null}
+
+        <p className="cta-row" style={{ marginTop: "0.75rem" }}>
           <Link className="btn btn-ghost" href="/reports">
             Báo cáo &amp; Phân tích
           </Link>

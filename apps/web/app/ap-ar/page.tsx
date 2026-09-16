@@ -231,22 +231,57 @@ export default async function ApArPage({
           {" / "}
           {activeTab === "ar" ? arLabel : apLabel}
         </p>
-        <h1>
-          {activeTab === "ar" ? arLabel : activeTab === "exposure" ? "Exposure" : apLabel}
-          {activeTab === "exposure" ? "" : activeTab === "ar" ? " (AR)" : " (AP)"}
-        </h1>
-        <p className="lede">
-          Đọc {outstandingLabel} đã ghi nhận và lịch sử {settledLabel.toLowerCase()}.{" "}
-          {apLabel} ≠ {costLabel}; {arLabel} ≠ {revenueLabel}. Tất toán qua{" "}
-          <Link className="row-link" href="/settlements">
-            {paymentLabel} / thu tiền
+        <div className="page-header-row">
+          <div>
+            <h1>
+              {activeTab === "ar"
+                ? arLabel
+                : activeTab === "exposure"
+                  ? "Exposure"
+                  : apLabel}
+              {activeTab === "exposure"
+                ? ""
+                : activeTab === "ar"
+                  ? " (AR)"
+                  : " (AP)"}
+            </h1>
+            <p className="lede">
+              Đọc {outstandingLabel} đã ghi nhận và lịch sử {settledLabel.toLowerCase()}.{" "}
+              {apLabel} ≠ {costLabel}; {arLabel} ≠ {revenueLabel}. Ghi nhận công nợ không
+              tạo Cost/Revenue mới.
+            </p>
+          </div>
+          <Link className="btn btn-sm" href="/ap-ar/aging">
+            Tuổi nợ
           </Link>
-          . Xóa nợ phần dư nhỏ = điều chỉnh (không phải {paymentLabel}).
-        </p>
+        </div>
+
+        <div className="stat-grid" style={{ marginTop: "0.5rem" }}>
+          <div className="stat-card">
+            <span className="stat-label">{apLabel} (đang xem)</span>
+            <strong className="stat-value">
+              {activeTab === "ap" ? apItems.length : "—"}
+            </strong>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">{arLabel} (đang xem)</span>
+            <strong className="stat-value">
+              {activeTab === "ar" ? arItems.length : "—"}
+            </strong>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Đã tất toán (AP)</span>
+            <strong className="stat-value">{apSettledCount}</strong>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Đã tất toán (AR)</span>
+            <strong className="stat-value">{arSettledCount}</strong>
+          </div>
+        </div>
 
         <div className="toolbar-row" role="group" aria-label="Thao tác AP/AR">
-          <Link className="btn btn-sm" href="/ap-ar/aging">
-            Tóm tắt tuổi nợ
+          <Link className="btn btn-sm" href="/settlements">
+            {paymentLabel} &amp; thu tiền
           </Link>
           <Link className="btn btn-sm" href="/ap-ar/exposures/new?kind=payable">
             Tạo exposure phải trả

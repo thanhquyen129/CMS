@@ -29,7 +29,15 @@ public sealed record BillListItemDto(
     bool IsActive,
     Guid? OrganizationId,
     Guid? CreatedBy,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    /// <summary>Primary currency for list rollup (alphabetical among currencies with activity).</summary>
+    string? SummaryCurrencyCode = null,
+    decimal? RevenueBestAvailable = null,
+    decimal? CostBestAvailable = null,
+    decimal? ProfitBestAvailable = null,
+    decimal? RevenueExpectedTotal = null,
+    decimal? RevenueConfirmedTotal = null,
+    decimal? RevenueActualTotal = null);
 
 public sealed record GetBillByIdQuery(Guid Id) : IRequest<BillDto>;
 
@@ -204,7 +212,7 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
                 || orderBillIds.Contains(b.Id));
         }
 
-        return await query
+        var bills = await query
             .OrderByDescending(b => b.BillNo)
             .ThenBy(b => b.Id)
             .Select(b => new BillListItemDto(
@@ -215,7 +223,151 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, IRea
                 b.IsActive,
                 b.OrganizationId,
                 b.CreatedBy,
-                b.CreatedAt))
+                b.CreatedAt,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null))
             .ToListAsync(cancellationToken);
+
+        if (bills.Count == 0)
+        {
+            return bills;
+        }
+
+        return await AttachFinancialSummariesAsync(bills, cancellationToken);
     }
+
+    /// <summary>
+    /// Batch financial rollup for list (current maturity; no asOf).
+    /// Best Available = Actual → Confirmed → Expected. Cost includes finalized allocations.
+    /// </summary>
+    private async Task<IReadOnlyList<BillListItemDto>> AttachFinancialSummariesAsync(
+        IReadOnlyList<BillListItemDto> bills,
+        CancellationToken cancellationToken)
+    {
+        var billIds = bills.Select(b => b.Id).ToList();
+
+        var revenues = await _db.Revenues.AsNoTracking()
+            .Where(r => billIds.Contains(r.BillId) && r.RecordStatus == "active")
+            .Select(r => new LineAmount(
+                r.BillId,
+                r.CurrencyCode,
+                r.ExpectedAmount,
+                r.ConfirmedAmount,
+                r.ActualAmount))
+            .ToListAsync(cancellationToken);
+
+        var directCosts = await _db.Costs.AsNoTracking()
+            .Where(c =>
+                c.BillId != null
+                && billIds.Contains(c.BillId.Value)
+                && c.AttributionType == CostAttributionTypes.Direct
+                && c.RecordStatus == "active")
+            .Select(c => new LineAmount(
+                c.BillId!.Value,
+                c.CurrencyCode,
+                c.ExpectedAmount,
+                c.ConfirmedAmount,
+                c.ActualAmount))
+            .ToListAsync(cancellationToken);
+
+        var allocated = await (
+            from d in _db.CostAllocationDetails.AsNoTracking()
+            join a in _db.CostAllocations.AsNoTracking() on d.AllocationId equals a.Id
+            join c in _db.Costs.AsNoTracking() on a.CostId equals c.Id
+            where billIds.Contains(d.BillId)
+                  && a.AllocationStatus == CostAllocationStatuses.Finalized
+                  && c.RecordStatus == "active"
+            select new { d.BillId, c.CurrencyCode, d.AllocatedAmount }
+        ).ToListAsync(cancellationToken);
+
+        var revByBill = revenues.GroupBy(r => r.BillId).ToDictionary(g => g.Key, g => g.ToList());
+        var costByBill = directCosts.GroupBy(c => c.BillId).ToDictionary(g => g.Key, g => g.ToList());
+        var allocByBill = allocated.GroupBy(a => a.BillId).ToDictionary(
+            g => g.Key,
+            g => g.ToList());
+
+        var enriched = new List<BillListItemDto>(bills.Count);
+        foreach (var bill in bills)
+        {
+            revByBill.TryGetValue(bill.Id, out var revLines);
+            costByBill.TryGetValue(bill.Id, out var costLines);
+            allocByBill.TryGetValue(bill.Id, out var allocLines);
+
+            revLines ??= [];
+            costLines ??= [];
+
+            var currencyCodes = revLines.Select(r => r.CurrencyCode)
+                .Concat(costLines.Select(c => c.CurrencyCode))
+                .Concat((allocLines ?? []).Select(a => a.CurrencyCode))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (currencyCodes.Count == 0)
+            {
+                enriched.Add(bill);
+                continue;
+            }
+
+            // Primary currency for list columns = first alphabetical (same as profile bucket order).
+            var code = currencyCodes[0];
+            var rev = revLines
+                .Where(r => string.Equals(r.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var costs = costLines
+                .Where(c => string.Equals(c.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            var allocTotal = (allocLines ?? [])
+                .Where(a => string.Equals(a.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
+                .Sum(a => a.AllocatedAmount);
+
+            var revExpected = rev.Sum(r => r.Expected);
+            var revConfirmed = rev.Sum(r => r.Confirmed ?? 0m);
+            var revActual = rev.Sum(r => r.Actual ?? 0m);
+            var revBest = rev.Sum(r => BestAvailable(r.Expected, r.Confirmed, r.Actual));
+            var directBest = costs.Sum(c => BestAvailable(c.Expected, c.Confirmed, c.Actual));
+            var costBest = decimal.Round(directBest + allocTotal, 4, MidpointRounding.AwayFromZero);
+            var profit = decimal.Round(revBest - costBest, 4, MidpointRounding.AwayFromZero);
+
+            enriched.Add(bill with
+            {
+                SummaryCurrencyCode = code.ToUpperInvariant(),
+                RevenueBestAvailable = decimal.Round(revBest, 4, MidpointRounding.AwayFromZero),
+                CostBestAvailable = costBest,
+                ProfitBestAvailable = profit,
+                RevenueExpectedTotal = decimal.Round(revExpected, 4, MidpointRounding.AwayFromZero),
+                RevenueConfirmedTotal = decimal.Round(revConfirmed, 4, MidpointRounding.AwayFromZero),
+                RevenueActualTotal = decimal.Round(revActual, 4, MidpointRounding.AwayFromZero),
+            });
+        }
+
+        return enriched;
+    }
+
+    private static decimal BestAvailable(decimal expected, decimal? confirmed, decimal? actual)
+    {
+        if (actual.HasValue)
+        {
+            return actual.Value;
+        }
+
+        if (confirmed.HasValue)
+        {
+            return confirmed.Value;
+        }
+
+        return expected;
+    }
+
+    private sealed record LineAmount(
+        Guid BillId,
+        string CurrencyCode,
+        decimal Expected,
+        decimal? Confirmed,
+        decimal? Actual);
 }

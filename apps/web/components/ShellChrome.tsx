@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { GlobalSearch } from "./GlobalSearch";
 import { LogoutButton } from "./LogoutButton";
+import { SidebarCollapseButton } from "./SidebarCollapseButton";
 
 type ShellChromeProps = {
   brand: ReactNode;
@@ -63,9 +64,24 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
 
       <aside className="sidebar" id={sidebarId}>
         <div className="brand sidebar-brand">{brand}</div>
-        {nav}
-        <div className="shell-header-actions sidebar-logout">
-          <LogoutButton />
+        <div className="sidebar-nav-scroll">{nav}</div>
+        <div className="sidebar-footer">
+          <div className="sidebar-footer-visual" aria-hidden="true" />
+          <p className="sidebar-tagline">
+            <em>Kiểm soát chi phí</em>
+            <em>Tối ưu lợi nhuận</em>
+            <em>Phát triển bền vững</em>
+          </p>
+          <div className="sidebar-footer-meta">
+            <div>
+              <p className="sidebar-version">LCMS v1.0.0</p>
+              <p className="sidebar-copy">© 2025. All rights reserved.</p>
+            </div>
+            <SidebarCollapseButton />
+          </div>
+          <div className="sidebar-logout">
+            <LogoutButton />
+          </div>
         </div>
       </aside>
 

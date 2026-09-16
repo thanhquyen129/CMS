@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-16 — Sidebar match designer mockup
+
+### User
+Menu sidebar chưa giống nhé (+ ảnh mockup)
+
+### Done
+- Icon trái từng module; active pill `#1890ff` bo góc; density sát mockup.
+- Brand mark glow; footer port-style + tagline italic 3 dòng + version/© + nút collapse (`data-sidebar` / cookie `lcms_sidebar`).
+- `NavIcon` / `NavLink` / `NavGroup` / `SidebarCollapseButton`; `ShellChrome` footer tách khỏi scroll nav.
+
+### Files
+- `apps/web/components/{AppShell,ShellChrome,NavGroup,NavLink,NavIcon,SidebarCollapseButton}.tsx`
+- `apps/web/app/globals.css`, `lib/ui-preferences.ts` (boot cookie sidebar)
+
+---
+
 ## 2026-09-16 — Designer layout pass UI-01…UI-15 (all list/hub screens)
 
 ### User

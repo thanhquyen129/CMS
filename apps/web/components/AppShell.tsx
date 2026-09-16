@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { ShellChrome } from "./ShellChrome";
 import { NavGroup } from "./NavGroup";
+import { NavLink } from "./NavLink";
 import { TopbarAccount } from "./TopbarAccount";
 import { DISPLAY_NAME_COOKIE } from "@/lib/auth";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -63,132 +63,115 @@ export async function AppShell({ terms, active, children, topbarRight }: AppShel
 
   const nav = (
     <nav className="nav" aria-label="Điều hướng chính">
-      <Link
-        className={active === "dashboard" ? "active" : undefined}
-        href="/dashboard"
-      >
+      <NavLink href="/dashboard" icon="home" active={active === "dashboard"}>
         Trang chủ
-      </Link>
+      </NavLink>
 
       <NavGroup
         label="Đơn hàng vận chuyển"
+        icon="bills"
         openByDefault={active === "bills"}
+        active={active === "bills"}
       >
-        <Link
-          className={active === "bills" ? "active" : undefined}
-          href="/bills"
-        >
+        <NavLink href="/bills" active={active === "bills"}>
           Danh sách {billLabel}
-        </Link>
-        <Link href="/bills/new">Tạo {billLabel}</Link>
+        </NavLink>
+        <NavLink href="/bills/new">Tạo {billLabel}</NavLink>
       </NavGroup>
 
-      <Link
-        className={active === "rate-cards" ? "active" : undefined}
+      <NavLink
         href="/rate-cards"
+        icon="rates"
+        active={active === "rate-cards"}
       >
         Bảng giá &amp; Tính giá
-      </Link>
+      </NavLink>
 
-      <NavGroup label={costLabel} openByDefault={active === "costs"}>
-        <Link
-          className={active === "costs" ? "active" : undefined}
-          href="/costs"
-        >
+      <NavGroup
+        label={costLabel}
+        icon="costs"
+        openByDefault={active === "costs"}
+        active={active === "costs"}
+      >
+        <NavLink href="/costs" active={active === "costs"}>
           Quản lý {costLabel.toLowerCase()}
-        </Link>
-        <Link href="/costs/shared">
+        </NavLink>
+        <NavLink href="/costs/shared">
           {costLabel} {sharedLabel.toLowerCase()}
-        </Link>
+        </NavLink>
       </NavGroup>
 
-      <Link
-        className={active === "revenues" ? "active" : undefined}
-        href="/revenues"
-      >
+      <NavLink href="/revenues" icon="revenues" active={active === "revenues"}>
         {revenueLabel} &amp; Lợi nhuận
-      </Link>
+      </NavLink>
 
-      <Link
-        className={active === "documents" ? "active" : undefined}
-        href="/documents"
-      >
+      <NavLink href="/documents" icon="documents" active={active === "documents"}>
         {docLabel}
-      </Link>
+      </NavLink>
 
-      <Link className={active === "ap" ? "active" : undefined} href="/ap-ar?tab=ap">
+      <NavLink href="/ap-ar?tab=ap" icon="ap" active={active === "ap"}>
         {apLabel} (AP)
-      </Link>
+      </NavLink>
 
-      <Link className={active === "ar" ? "active" : undefined} href="/ap-ar?tab=ar">
+      <NavLink href="/ap-ar?tab=ar" icon="ar" active={active === "ar"}>
         {arLabel} (AR)
-      </Link>
+      </NavLink>
 
-      <Link
-        className={active === "settlements" ? "active" : undefined}
+      <NavLink
         href="/settlements"
+        icon="settlements"
+        active={active === "settlements"}
       >
         {paymentLabel} &amp; {collectionLabel}
-      </Link>
+      </NavLink>
 
       <NavGroup
         label="Kiểm soát tài chính"
+        icon="control"
         openByDefault={active === "control"}
+        active={active === "control"}
       >
-        <Link
-          className={active === "control" ? "active" : undefined}
-          href="/control"
-        >
+        <NavLink href="/control" active={active === "control"}>
           Tổng quan kiểm soát
-        </Link>
-        <Link href="/queues/reconciliations">{reconQueueLabel}</Link>
-        <Link href="/queues/variances">
+        </NavLink>
+        <NavLink href="/queues/reconciliations">{reconQueueLabel}</NavLink>
+        <NavLink href="/queues/variances">
           Hàng đợi {varianceLabel.toLowerCase()}
-        </Link>
-        <Link href="/queues/exceptions">{exceptionQueueLabel}</Link>
-        <Link href="/queues/approvals">{approvalQueueLabel}</Link>
-        <Link href="/bank-feed">{bankFeedLabel}</Link>
-        <Link href="/reconciliations">Đối soát &amp; Matching</Link>
+        </NavLink>
+        <NavLink href="/queues/exceptions">{exceptionQueueLabel}</NavLink>
+        <NavLink href="/queues/approvals">{approvalQueueLabel}</NavLink>
+        <NavLink href="/bank-feed">{bankFeedLabel}</NavLink>
+        <NavLink href="/reconciliations">Đối soát &amp; Matching</NavLink>
       </NavGroup>
 
-      <Link
-        className={active === "financial-closes" ? "active" : undefined}
+      <NavLink
         href="/financial-closes"
+        icon="close"
+        active={active === "financial-closes"}
       >
         {closeLabel}
-      </Link>
+      </NavLink>
 
-      <Link
-        className={active === "reports" ? "active" : undefined}
-        href="/reports"
-      >
+      <NavLink href="/reports" icon="reports" active={active === "reports"}>
         Báo cáo &amp; Phân tích
-      </Link>
+      </NavLink>
 
-      <Link className={active === "admin" ? "active" : undefined} href="/admin">
+      <NavLink href="/admin" icon="admin" active={active === "admin"}>
         Danh mục dữ liệu
-      </Link>
+      </NavLink>
 
       <NavGroup
         label="Hệ thống &amp; Cài đặt"
+        icon="settings"
         openByDefault={active === "settings"}
+        active={active === "settings"}
       >
-        <Link
-          className={active === "settings" ? "active" : undefined}
-          href="/settings"
-        >
+        <NavLink href="/settings" active={active === "settings"}>
           {settingsLabel}
-        </Link>
-        <Link href="/integration-errors">Lỗi tích hợp</Link>
-        <Link href="/workflow">Bản đồ luồng hệ thống</Link>
+        </NavLink>
+        <NavLink href="/integration-errors">Lỗi tích hợp</NavLink>
+        <NavLink href="/workflow">Bản đồ luồng hệ thống</NavLink>
       </NavGroup>
-
-      <div className="sidebar-footer" aria-hidden="true">
-        <p className="sidebar-tagline">
-          Kiểm soát chi phí · Tối ưu lợi nhuận · Phát triển bền vững
-        </p>
-        <p className="sidebar-version">LCMS v1.0.0</p>
-      </div>
     </nav>
   );
 

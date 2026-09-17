@@ -840,7 +840,8 @@ html[data-sidebar="collapsed"] .sidebar-logout {
   margin: 0.85rem 0 1rem;
 }
 
-.filter-tabs a {
+.filter-tabs a,
+.filter-tabs button {
   padding: 0.4rem 0.75rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
@@ -849,14 +850,18 @@ html[data-sidebar="collapsed"] .sidebar-logout {
   font-size: 0.85rem;
   font-weight: 500;
   text-decoration: none;
+  cursor: pointer;
+  font: inherit;
 }
 
-.filter-tabs a:hover {
+.filter-tabs a:hover,
+.filter-tabs button:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-.filter-tabs a.active {
+.filter-tabs a.active,
+.filter-tabs button.active {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent);
@@ -893,6 +898,10 @@ html[data-sidebar="collapsed"] .sidebar-logout {
   flex-direction: column;
   pointer-events: auto;
   animation: detail-drawer-in 0.18s ease-out;
+}
+
+.detail-drawer-wide {
+  width: min(40rem, 100vw);
 }
 
 @keyframes detail-drawer-in {
@@ -1015,6 +1024,64 @@ html[data-sidebar="collapsed"] .sidebar-logout {
   min-width: 4rem;
   padding: 0.2rem 0.35rem;
   font-size: 0.7rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.info-grid > div {
+  min-width: 0;
+}
+
+.info-grid dt {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.info-grid dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.info-grid-span {
+  grid-column: 1 / -1;
+}
+
+.bill-fv-finance {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.bill-fv-finance-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.metric-grid.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.bill-progress-stepper li {
+  font-size: 0.72rem;
+}
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
 }
 
 .analytics-row {

@@ -20,7 +20,16 @@ public sealed record BillDto(
     bool IsActive,
     Guid? OrganizationId,
     Guid? CreatedBy,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    Guid? CustomerPartyId = null,
+    string? CustomerName = null,
+    string? RouteCode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null,
+    Guid? AssignedUserId = null,
+    string? AssignedUserName = null,
+    string? Description = null,
+    string? InternalNote = null);
 
 public sealed record BillListItemDto(
     Guid Id,
@@ -38,7 +47,15 @@ public sealed record BillListItemDto(
     decimal? ProfitBestAvailable = null,
     decimal? RevenueExpectedTotal = null,
     decimal? RevenueConfirmedTotal = null,
-    decimal? RevenueActualTotal = null);
+    decimal? RevenueActualTotal = null,
+    decimal? CostExpectedTotal = null,
+    decimal? CostConfirmedTotal = null,
+    decimal? CostActualTotal = null,
+    string? CustomerName = null,
+    string? RouteCode = null,
+    int? CostLineCount = null,
+    int? RevenueLineCount = null,
+    int? DocumentCount = null);
 
 public sealed record GetBillByIdQuery(Guid Id) : IRequest<BillDto>;
 
@@ -106,10 +123,31 @@ public sealed class GetBillByIdQueryHandler : IRequestHandler<GetBillByIdQuery, 
             throw new NotFoundAppException("Không tìm thấy Bill.");
         }
 
-        return Map(bill);
+        string? customerName = null;
+        if (bill.CustomerPartyId is Guid partyId)
+        {
+            customerName = await _db.BusinessParties.AsNoTracking()
+                .Where(p => p.Id == partyId)
+                .Select(p => p.Name)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        string? assignedName = null;
+        if (bill.AssignedUserId is Guid uid)
+        {
+            assignedName = await _db.Users.AsNoTracking()
+                .Where(u => u.Id == uid)
+                .Select(u => u.DisplayName)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        return Map(bill, customerName, assignedName);
     }
 
-    internal static BillDto Map(Bill bill) => new(
+    internal static BillDto Map(
+        Bill bill,
+        string? customerName = null,
+        string? assignedUserName = null) => new(
         bill.Id,
         bill.TenantId,
         bill.BillNo,
@@ -120,7 +158,16 @@ public sealed class GetBillByIdQueryHandler : IRequestHandler<GetBillByIdQuery, 
         bill.IsActive,
         bill.OrganizationId,
         bill.CreatedBy,
-        bill.CreatedAt);
+        bill.CreatedAt,
+        bill.CustomerPartyId,
+        customerName,
+        bill.RouteCode,
+        bill.EtdAt,
+        bill.EtaAt,
+        bill.AssignedUserId,
+        assignedUserName,
+        bill.Description,
+        bill.InternalNote);
 }
 
 public sealed record ListBillsQuery(
@@ -245,6 +292,14 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                b.RouteCode,
+                null,
+                null,
                 null))
             .ToListAsync(cancellationToken);
 
@@ -266,6 +321,12 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
     {
         var billIds = bills.Select(b => b.Id).ToList();
 
+        var contexts = await _db.Bills.AsNoTracking()
+            .Where(b => billIds.Contains(b.Id))
+            .Select(b => new { b.Id, b.CustomerPartyId, b.RouteCode })
+            .ToListAsync(cancellationToken);
+        var contextById = contexts.ToDictionary(c => c.Id);
+
         var revenues = await _db.Revenues.AsNoTracking()
             .Where(r => billIds.Contains(r.BillId) && r.RecordStatus == "active")
             .Select(r => new LineAmount(
@@ -273,7 +334,8 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 r.CurrencyCode,
                 r.ExpectedAmount,
                 r.ConfirmedAmount,
-                r.ActualAmount))
+                r.ActualAmount,
+                r.CustomerPartyId))
             .ToListAsync(cancellationToken);
 
         var directCosts = await _db.Costs.AsNoTracking()
@@ -287,7 +349,8 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 c.CurrencyCode,
                 c.ExpectedAmount,
                 c.ConfirmedAmount,
-                c.ActualAmount))
+                c.ActualAmount,
+                null))
             .ToListAsync(cancellationToken);
 
         var allocated = await (
@@ -299,6 +362,34 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                   && c.RecordStatus == "active"
             select new { d.BillId, c.CurrencyCode, d.AllocatedAmount }
         ).ToListAsync(cancellationToken);
+
+        var docCounts = await _db.FinancialDocuments.AsNoTracking()
+            .Where(d => d.BillId != null && billIds.Contains(d.BillId.Value))
+            .GroupBy(d => d.BillId!.Value)
+            .Select(g => new { BillId = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+        var docByBill = docCounts.ToDictionary(x => x.BillId, x => x.Count);
+
+        var ratingRoutes = await _db.Ratings.AsNoTracking()
+            .Where(r => billIds.Contains(r.BillId) && r.RouteCode != null && r.RouteCode != "")
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new { r.BillId, r.RouteCode })
+            .ToListAsync(cancellationToken);
+        var routeFromRating = ratingRoutes
+            .GroupBy(r => r.BillId)
+            .ToDictionary(g => g.Key, g => g.First().RouteCode);
+
+        var partyIds = contexts
+            .Where(c => c.CustomerPartyId != null)
+            .Select(c => c.CustomerPartyId!.Value)
+            .Concat(revenues.Where(r => r.CustomerPartyId != null).Select(r => r.CustomerPartyId!.Value))
+            .Distinct()
+            .ToList();
+        var partyNames = partyIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _db.BusinessParties.AsNoTracking()
+                .Where(p => partyIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
         var revByBill = revenues.GroupBy(r => r.BillId).ToDictionary(g => g.Key, g => g.ToList());
         var costByBill = directCosts.GroupBy(c => c.BillId).ToDictionary(g => g.Key, g => g.ToList());
@@ -312,9 +403,32 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
             revByBill.TryGetValue(bill.Id, out var revLines);
             costByBill.TryGetValue(bill.Id, out var costLines);
             allocByBill.TryGetValue(bill.Id, out var allocLines);
+            contextById.TryGetValue(bill.Id, out var ctx);
 
             revLines ??= [];
             costLines ??= [];
+
+            string? customerName = null;
+            if (ctx?.CustomerPartyId is Guid cpid && partyNames.TryGetValue(cpid, out var storedName))
+            {
+                customerName = storedName;
+            }
+            else
+            {
+                var derivedParty = revLines
+                    .Select(r => r.CustomerPartyId)
+                    .FirstOrDefault(id => id != null);
+                if (derivedParty is Guid dpid && partyNames.TryGetValue(dpid, out var derivedName))
+                {
+                    customerName = derivedName;
+                }
+            }
+
+            var routeCode = !string.IsNullOrWhiteSpace(ctx?.RouteCode)
+                ? ctx!.RouteCode
+                : !string.IsNullOrWhiteSpace(bill.RouteCode)
+                    ? bill.RouteCode
+                    : routeFromRating.GetValueOrDefault(bill.Id);
 
             var currencyCodes = revLines.Select(r => r.CurrencyCode)
                 .Concat(costLines.Select(c => c.CurrencyCode))
@@ -323,9 +437,18 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
+            docByBill.TryGetValue(bill.Id, out var docCount);
+
             if (currencyCodes.Count == 0)
             {
-                enriched.Add(bill);
+                enriched.Add(bill with
+                {
+                    CustomerName = customerName,
+                    RouteCode = routeCode,
+                    CostLineCount = costLines.Count,
+                    RevenueLineCount = revLines.Count,
+                    DocumentCount = docCount
+                });
                 continue;
             }
 
@@ -345,6 +468,9 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
             var revConfirmed = rev.Sum(r => r.Confirmed ?? 0m);
             var revActual = rev.Sum(r => r.Actual ?? 0m);
             var revBest = rev.Sum(r => BestAvailable(r.Expected, r.Confirmed, r.Actual));
+            var costExpected = costs.Sum(c => c.Expected) + allocTotal;
+            var costConfirmed = costs.Sum(c => c.Confirmed ?? 0m) + allocTotal;
+            var costActual = costs.Sum(c => c.Actual ?? 0m) + allocTotal;
             var directBest = costs.Sum(c => BestAvailable(c.Expected, c.Confirmed, c.Actual));
             var costBest = decimal.Round(directBest + allocTotal, 4, MidpointRounding.AwayFromZero);
             var profit = decimal.Round(revBest - costBest, 4, MidpointRounding.AwayFromZero);
@@ -358,6 +484,14 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 RevenueExpectedTotal = decimal.Round(revExpected, 4, MidpointRounding.AwayFromZero),
                 RevenueConfirmedTotal = decimal.Round(revConfirmed, 4, MidpointRounding.AwayFromZero),
                 RevenueActualTotal = decimal.Round(revActual, 4, MidpointRounding.AwayFromZero),
+                CostExpectedTotal = decimal.Round(costExpected, 4, MidpointRounding.AwayFromZero),
+                CostConfirmedTotal = decimal.Round(costConfirmed, 4, MidpointRounding.AwayFromZero),
+                CostActualTotal = decimal.Round(costActual, 4, MidpointRounding.AwayFromZero),
+                CustomerName = customerName,
+                RouteCode = routeCode,
+                CostLineCount = costLines.Count,
+                RevenueLineCount = revLines.Count,
+                DocumentCount = docCount
             });
         }
 
@@ -384,5 +518,7 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
         string CurrencyCode,
         decimal Expected,
         decimal? Confirmed,
-        decimal? Actual);
+        decimal? Actual,
+        Guid? CustomerPartyId);
 }
+

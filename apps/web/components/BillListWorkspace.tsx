@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
-import { DetailDrawer } from "./DetailDrawer";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { BillFinancialDrawer } from "./BillFinancialDrawer";
 import {
   billTypeLabel,
   operationalStatusLabel,
   type BillListItem,
 } from "@/lib/bills-shared";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
+import type { TerminologyMap } from "@/lib/terminology";
 
 type Labels = {
   bill: string;
@@ -20,10 +22,19 @@ type Labels = {
   actual: string;
 };
 
+type ListParams = {
+  q?: string;
+  status?: string;
+  page?: string;
+  pageSize?: string;
+};
+
 type Props = {
   bills: BillListItem[];
   labels: Labels;
+  terms: TerminologyMap;
   initialSelectedId?: string | null;
+  listParams?: ListParams;
 };
 
 function money(
@@ -37,16 +48,39 @@ function money(
 export function BillListWorkspace({
   bills,
   labels,
+  terms,
   initialSelectedId = null,
+  listParams = {},
 }: Props) {
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
+  const [, startTransition] = useTransition();
 
   const selected = useMemo(
     () => bills.find((b) => b.id === selectedId) ?? null,
     [bills, selectedId]
   );
 
-  const close = useCallback(() => setSelectedId(null), []);
+  const syncSelected = useCallback(
+    (id: string | null) => {
+      setSelectedId(id);
+      const params = new URLSearchParams();
+      if (listParams.q) params.set("q", listParams.q);
+      if (listParams.status) params.set("status", listParams.status);
+      if (listParams.page && listParams.page !== "1") {
+        params.set("page", listParams.page);
+      }
+      if (listParams.pageSize) params.set("pageSize", listParams.pageSize);
+      if (id) params.set("selected", id);
+      const qs = params.toString();
+      startTransition(() => {
+        router.replace(qs ? `/bills?${qs}` : "/bills", { scroll: false });
+      });
+    },
+    [listParams, router]
+  );
+
+  const close = useCallback(() => syncSelected(null), [syncSelected]);
 
   return (
     <>
@@ -58,9 +92,11 @@ export function BillListWorkspace({
           <thead>
             <tr>
               <th scope="col">Số {labels.bill}</th>
+              <th scope="col">Khách hàng</th>
+              <th scope="col">Tuyến</th>
               <th scope="col">Loại</th>
-              <th scope="col">Trạng thái</th>
               <th scope="col">Ngày tạo</th>
+              <th scope="col">Trạng thái</th>
               <th scope="col" className="num">
                 {labels.revenue}
               </th>
@@ -83,11 +119,11 @@ export function BillListWorkspace({
                 <tr
                   key={b.id}
                   className={active ? "row-selected" : undefined}
-                  onClick={() => setSelectedId(b.id)}
+                  onClick={() => syncSelected(b.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      setSelectedId(b.id);
+                      syncSelected(b.id);
                     }
                   }}
                   tabIndex={0}
@@ -106,19 +142,21 @@ export function BillListWorkspace({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedId(b.id);
+                        syncSelected(b.id);
                       }}
                     >
                       {b.billNo}
                     </button>
                   </td>
+                  <td>{b.customerName || "—"}</td>
+                  <td>{b.routeCode || "—"}</td>
                   <td>{billTypeLabel(b.billType)}</td>
+                  <td>{formatDateTimeVi(b.createdAt)}</td>
                   <td>
                     <span className="status-pill">
                       {operationalStatusLabel(b.operationalStatus)}
                     </span>
                   </td>
-                  <td>{formatDateTimeVi(b.createdAt)}</td>
                   <td className="num">
                     {money(b.revenueBestAvailable, cur)}
                   </td>
@@ -148,143 +186,13 @@ export function BillListWorkspace({
         </table>
       </div>
 
-      <DetailDrawer
+      <BillFinancialDrawer
+        billId={selected?.id ?? null}
         open={Boolean(selected)}
         onClose={close}
-        title={
-          selected ? (
-            <>
-              {labels.bill} {selected.billNo}
-            </>
-          ) : null
-        }
-        subtitle={
-          selected ? (
-            <>
-              <span className="status-pill">
-                {operationalStatusLabel(selected.operationalStatus)}
-              </span>
-              {" · "}
-              {billTypeLabel(selected.billType)}
-            </>
-          ) : null
-        }
-        footer={
-          selected ? (
-            <div className="toolbar-row" style={{ margin: 0 }}>
-              <Link className="btn btn-sm" href={`/bills/${selected.id}`}>
-                Mở hồ sơ đầy đủ
-              </Link>
-              <Link
-                className="btn btn-sm btn-ghost"
-                href={`/bills/${selected.id}?tab=costs`}
-              >
-                {labels.cost}
-              </Link>
-              <Link
-                className="btn btn-sm btn-ghost"
-                href={`/bills/${selected.id}?tab=revenues`}
-              >
-                {labels.revenue}
-              </Link>
-              <Link
-                className="btn btn-sm btn-ghost"
-                href={`/documents?billId=${selected.id}`}
-              >
-                Chứng từ
-              </Link>
-            </div>
-          ) : null
-        }
-      >
-        {selected ? (
-          <div className="stack">
-            <h3 className="section-title sm">Chỉ số tài chính</h3>
-            <p className="muted small">
-              Giá trị tốt nhất hiện có (projection) — không phải sổ cái. Độ chín{" "}
-              {labels.expected} / {labels.confirmed} / {labels.actual} tách riêng.
-            </p>
-            <dl className="metric-grid">
-              <div>
-                <dt>
-                  {labels.revenue} — {labels.expected}
-                </dt>
-                <dd>
-                  {money(
-                    selected.revenueExpectedTotal,
-                    selected.summaryCurrencyCode
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  {labels.revenue} — {labels.confirmed}
-                </dt>
-                <dd>
-                  {money(
-                    selected.revenueConfirmedTotal,
-                    selected.summaryCurrencyCode
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  {labels.revenue} — {labels.actual}
-                </dt>
-                <dd>
-                  {money(
-                    selected.revenueActualTotal,
-                    selected.summaryCurrencyCode
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  {labels.revenue} (tốt nhất)
-                </dt>
-                <dd>
-                  {money(
-                    selected.revenueBestAvailable,
-                    selected.summaryCurrencyCode
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  {labels.cost} (tốt nhất)
-                </dt>
-                <dd>
-                  {money(selected.costBestAvailable, selected.summaryCurrencyCode)}
-                </dd>
-              </div>
-              <div>
-                <dt>
-                  {labels.profit} (tốt nhất)
-                </dt>
-                <dd
-                  className={
-                    selected.profitBestAvailable != null &&
-                    selected.profitBestAvailable < 0
-                      ? "neg"
-                      : undefined
-                  }
-                >
-                  {money(
-                    selected.profitBestAvailable,
-                    selected.summaryCurrencyCode
-                  )}
-                </dd>
-              </div>
-            </dl>
-            <p className="muted small">
-              Tạo: {formatDateTimeVi(selected.createdAt)}
-              {selected.summaryCurrencyCode
-                ? ` · Tiền tệ: ${selected.summaryCurrencyCode}`
-                : ""}
-            </p>
-          </div>
-        ) : null}
-      </DetailDrawer>
+        labels={labels}
+        terms={terms}
+      />
     </>
   );
 }

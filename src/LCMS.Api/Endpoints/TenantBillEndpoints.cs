@@ -51,6 +51,30 @@ public static class TenantBillEndpoints
             var bill = await sender.Send(new GetBillByIdQuery(id), ct);
             return Results.Ok(bill);
         });
+        bills.MapGet("/{id:guid}/financial-view", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var view = await sender.Send(new GetBillFinancialViewQuery(id), ct);
+            return Results.Ok(view);
+        });
+        bills.MapPatch("/{id:guid}/context", async (
+            Guid id,
+            UpdateBillContextRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new UpdateBillContextCommand(
+                    id,
+                    body.CustomerPartyId,
+                    body.RouteCode,
+                    body.EtdAt,
+                    body.EtaAt,
+                    body.AssignedUserId,
+                    body.Description,
+                    body.InternalNote),
+                ct);
+            return Results.NoContent();
+        });
 
         return app;
     }
@@ -64,3 +88,12 @@ public sealed record CreateBillRequest(
     string? SourceSystem,
     string? ExternalId,
     Guid? OrganizationId = null);
+
+public sealed record UpdateBillContextRequest(
+    Guid? CustomerPartyId,
+    string? RouteCode,
+    DateTimeOffset? EtdAt,
+    DateTimeOffset? EtaAt,
+    Guid? AssignedUserId,
+    string? Description,
+    string? InternalNote);

@@ -2,6 +2,43 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { AUTH_COOKIE, getApiInternalUrl } from "./auth";
 
+/** Forward authenticated BFF GET to LCMS API; preserve Vietnamese error body. */
+export async function forwardApiGet(apiPath: string): Promise<NextResponse> {
+  const jar = await cookies();
+  const token = jar.get(AUTH_COOKIE)?.value;
+  if (!token) {
+    return NextResponse.json(
+      { code: "unauthorized", message: "Phiên đăng nhập đã hết. Vui lòng đăng nhập lại." },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const res = await fetch(`${getApiInternalUrl()}${apiPath}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    const text = await res.text();
+    return new NextResponse(text, {
+      status: res.status,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        code: "upstream_unreachable",
+        message: "Không kết nối được máy chủ API. Thử lại sau.",
+      },
+      { status: 502 }
+    );
+  }
+}
+
 /** Forward authenticated BFF mutate to LCMS API; preserve Vietnamese error body. */
 export async function forwardApiMutation(
   method: string,

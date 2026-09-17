@@ -40,6 +40,7 @@ public static class SystemRoleCatalog
             [
                 (PermissionCodes.BillCreate, DataScopes.All),
                 (PermissionCodes.BillRead, DataScopes.All),
+                (PermissionCodes.BillUpdate, DataScopes.All),
                 (PermissionCodes.CostCreate, DataScopes.All),
                 (PermissionCodes.CostRead, DataScopes.All),
                 (PermissionCodes.CostConfirm, DataScopes.All),
@@ -62,6 +63,7 @@ public static class SystemRoleCatalog
             [
                 (PermissionCodes.BillCreate, DataScopes.Organization),
                 (PermissionCodes.BillRead, DataScopes.Organization),
+                (PermissionCodes.BillUpdate, DataScopes.Organization),
                 (PermissionCodes.CostCreate, DataScopes.Organization),
                 (PermissionCodes.CostRead, DataScopes.Organization),
                 (PermissionCodes.CostConfirm, DataScopes.Organization),
@@ -76,6 +78,7 @@ public static class SystemRoleCatalog
             [
                 (PermissionCodes.BillCreate, DataScopes.Organization),
                 (PermissionCodes.BillRead, DataScopes.Organization),
+                (PermissionCodes.BillUpdate, DataScopes.Organization),
                 (PermissionCodes.RevenueRead, DataScopes.Organization),
                 (PermissionCodes.RevenueConfirm, DataScopes.Organization),
                 (PermissionCodes.RevenueActualize, DataScopes.Organization),
@@ -89,6 +92,7 @@ public static class SystemRoleCatalog
             [
                 (PermissionCodes.BillCreate, DataScopes.Organization),
                 (PermissionCodes.BillRead, DataScopes.Organization),
+                (PermissionCodes.BillUpdate, DataScopes.Organization),
                 (PermissionCodes.CostCreate, DataScopes.Organization),
                 (PermissionCodes.CostRead, DataScopes.Organization)
             ]),

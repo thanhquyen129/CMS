@@ -58,7 +58,15 @@ internal sealed class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
         builder.Property(e => e.OrganizationId).HasColumnType("uuid");
+        builder.Property(e => e.CustomerPartyId).HasColumnType("uuid");
+        builder.Property(e => e.RouteCode).HasMaxLength(128);
+        builder.Property(e => e.EtdAt);
+        builder.Property(e => e.EtaAt);
+        builder.Property(e => e.AssignedUserId).HasColumnType("uuid");
+        builder.Property(e => e.Description).HasMaxLength(2000);
+        builder.Property(e => e.InternalNote).HasMaxLength(4000);
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
+        builder.HasIndex(e => new { e.TenantId, e.CustomerPartyId });
 
         // IDX-001
         builder.HasIndex(e => new { e.TenantId, e.BillNo }).IsUnique();

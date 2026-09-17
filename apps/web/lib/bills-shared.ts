@@ -17,12 +17,27 @@ export type BillListItem = {
   revenueExpectedTotal?: number | null;
   revenueConfirmedTotal?: number | null;
   revenueActualTotal?: number | null;
+  costExpectedTotal?: number | null;
+  costConfirmedTotal?: number | null;
+  costActualTotal?: number | null;
+  customerName?: string | null;
+  routeCode?: string | null;
+  costLineCount?: number | null;
+  revenueLineCount?: number | null;
+  documentCount?: number | null;
 };
 
 export type BillDto = BillListItem & {
   tenantId: string;
   sourceSystem: string | null;
   externalId: string | null;
+  customerPartyId?: string | null;
+  etdAt?: string | null;
+  etaAt?: string | null;
+  assignedUserId?: string | null;
+  assignedUserName?: string | null;
+  description?: string | null;
+  internalNote?: string | null;
 };
 
 /** Vietnamese labels for operational status — never show raw enum to end users. */

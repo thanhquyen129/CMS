@@ -214,6 +214,13 @@ export default async function BillsPage({
             <BillListWorkspace
               bills={pageRows}
               initialSelectedId={selected ?? null}
+              terms={terms}
+              listParams={{
+                q,
+                status,
+                page: pageRaw,
+                pageSize: pageSizeRaw,
+              }}
               labels={{
                 bill: billLabel,
                 revenue: revenueLabel,

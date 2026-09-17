@@ -23,7 +23,8 @@ export function DetailDrawer({
   children,
   footer,
   labelledById = "detail-drawer-title",
-}: DetailDrawerProps) {
+  wide = false,
+}: DetailDrawerProps & { wide?: boolean }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -49,7 +50,7 @@ export function DetailDrawer({
         onClick={onClose}
       />
       <aside
-        className="detail-drawer"
+        className={wide ? "detail-drawer detail-drawer-wide" : "detail-drawer"}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledById}

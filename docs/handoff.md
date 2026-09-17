@@ -1,5 +1,91 @@
 # Handoff
 
+## 2026-09-17 — UI-02 Bill Financial View (drawer đầy đủ)
+
+### User
+triển khai làm đầy đủ chức năng theo hình (mockup UI-02 panel chi tiết Bill)
+
+### Done
+- **API:** `GET /api/bills/{id}/financial-view` — Bill + profile + graph + progress + costs/revenues/docs (gated CostRead/RevenueRead).
+- **API:** `PATCH /api/bills/{id}/context` — customer/route/ETD/ETA/assignee/description/internalNote (`bill.update` hoặc `bill.create`).
+- **Schema:** bills thêm CustomerPartyId, RouteCode, EtdAt, EtaAt, AssignedUserId, Description, InternalNote — migration `UI02_BillFinancialContext`.
+- **List enrichment:** khách hàng, tuyến, cost E/C/A, counts; cột bảng khớp mockup.
+- **Web:** `BillFinancialDrawer` master-detail: tab Tổng quan / Chi phí / Doanh thu / Chứng từ / Lịch sử / Liên quan; chỉ số maturity; tiến độ; hành động nhanh; lưu ghi chú.
+- **BFF:** `/bff/bills/[id]/financial-view`, `/bff/bills/[id]/context`.
+
+### Files
+- `src/LCMS.Domain/Entities/Bill.cs`, `PermissionCodes`, `SystemRoleCatalog`
+- `src/LCMS.Application/Bills/Queries/GetBillFinancialViewQuery.cs`, `GetBillByIdQuery.cs` (list enrich)
+- `src/LCMS.Application/Bills/Commands/UpdateBillContextCommand.cs`
+- `src/LCMS.Api/Endpoints/TenantBillEndpoints.cs`
+- `src/LCMS.Infrastructure/.../20260917130144_UI02_BillFinancialContext*.cs`
+- `apps/web/components/BillFinancialDrawer.tsx`, `BillListWorkspace.tsx`, `DetailDrawer.tsx`
+- `apps/web/lib/bill-financial-view.ts`, `bills-shared.ts`, `bff-api.ts`
+- `apps/web/app/bff/bills/[id]/financial-view/route.ts`, `context/route.ts`
+- `apps/web/app/globals.css`, `app/bills/page.tsx`
+
+### Follow-up
+- Form tạo/sửa Bill nhập đủ khách hàng/tuyến/ETD/ETA (hiện drawer lưu note + API context sẵn).
+- Seed `bill.update` vào role Ops/Cost/Revenue đã tồn tại (Admin tự nhận qua catalog).
+- Pixel polish UI-02 (widget Bill đến hạn / Top KH dưới list — ngoài scope drawer).
+
+---
+
+### User
+Tổng hợp lại riêng 1 file các việc chưa làm/chưa xong
+
+### Done
+- Xuất Word chỉ residual (đã loại trùng Phần 1–3): P0 UAT quyền; P1 components/seed revenue/search; P2 polish; P3 optional; chờ PO/ADR/Ops.
+- File: `docs/reports/CMS_Viec_Chua_Xong_2026-09-17.docx`
+- Generator: `docs/reports/_gen_open_items_docx.py`
+
+### Follow-up (cùng ngày)
+- Viết lại file: tối thiểu tiếng Anh; bảng chú giải viết tắt + nghĩa VI; SoT = Source of Truth (Nguồn dữ liệu gốc).
+- File mới (bản cũ đang mở bị khóa): `docs/reports/CMS_Viec_Chua_Xong_TIENG_VIET_2026-09-17.docx` — đóng Word rồi chạy lại generator để ghi đè tên gốc nếu cần.
+
+---
+
+## 2026-09-17 — Báo cáo Word Phần 3 (BR CP1–CP5 + UI mockup)
+
+### User
+làm luôn phần 3
+
+### Done
+- Xuất Word Phần 3: CST/REV/PROF/BR-FIN/BR-FC/BR-SEC + UI-01…15 vs mockup + UX-01…14 acceptance + checklist 15 việc.
+- File: `docs/reports/CMS_PO_YeuCau_vs_TienDo_Phan3_BR_UI_2026-09-17.docx`
+- Generator: `docs/reports/_gen_po_status_part3_docx.py`
+- Bộ đủ 3 phần: Epic → Domain CP6/TD1 → BR+UI.
+
+---
+
+## 2026-09-17 — Báo cáo Word Phần 2 (domain CP6 + TD1)
+
+### User
+ok, làm luôn phần 2
+
+### Done
+- Xuất Word Phần 2: Process P01–P15, UC-001…017, FR-*, SCR-001…017, VAL-001…012, TD1 D01–D12, UI-001…008, checklist 15 việc domain.
+- File: `docs/reports/CMS_PO_YeuCau_vs_TienDo_Phan2_Domain_2026-09-17.docx`
+- Generator: `docs/reports/_gen_po_status_part2_docx.py`
+- Điểm nổi bật chưa làm: CP6 **P13 Budget/Forecast**; UI pricing components + seed Expected Revenue; Ops sync UI; UAT 2-user Cost≠Revenue.
+
+---
+
+## 2026-09-17 — Báo cáo Word PO yêu cầu vs tiến độ
+
+### User
+Lập bảng báo cáo 2 cột (Word): yêu cầu PO đầy đủ vs đã/chưa làm + lý do; checklist phần còn thiếu. Hỏi nếu vượt ngữ cảnh thì chia phần.
+
+### Done
+- Xuất 1 file Word tổng hợp (không cần chia phần): Epic E01–E16, H-001…H-012, AC-001…AC-015, M01–M15, non-goals, checklist triển khai còn thiếu.
+- File: `docs/reports/CMS_PO_YeuCau_vs_TienDo_2026-09-17.docx`
+- Generator: `docs/reports/_gen_po_status_docx.py` (nguồn trích `LCMS_BA_docs` + UAT/P-series/go-live-checklist).
+
+### Note
+- Mức chi tiết = Epic/Gate/Module (đủ PO review). Chưa bung từng dòng Data Dictionary TD1 / mọi use case CP6 — có thể xuất Phần 2 theo domain nếu PO yêu cầu.
+
+---
+
 ## 2026-09-16 — Sidebar match designer mockup
 
 ### User

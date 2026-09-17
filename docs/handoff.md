@@ -1,6 +1,16 @@
 # Handoff
 
-## 2026-09-17 — UI-02 Bill Financial View (drawer đầy đủ)
+## 2026-09-17 — Fix CI: SQLite ORDER BY DateTimeOffset on Ratings
+
+### User
+CI run #169 failed (test ✕, deploy skipped) after UI-02 Bill Financial View.
+
+### Done
+- Root cause: `AttachFinancialSummariesAsync` / financial-view ordered Ratings by `CreatedAt` in SQL — SQLite rejects DateTimeOffset in ORDER BY → GET `/api/bills` 500 (5 tests).
+- Fix: load then order in-memory in `GetBillByIdQuery.cs` and `GetBillFinancialViewQuery.cs`.
+- Verified locally: BillListFinancialSummary + Sprint1/2 filters pass.
+
+---
 
 ### User
 triển khai làm đầy đủ chức năng theo hình (mockup UI-02 panel chi tiết Bill)

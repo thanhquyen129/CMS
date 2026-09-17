@@ -148,11 +148,15 @@ public sealed class GetBillFinancialViewQueryHandler
 
         if (string.IsNullOrWhiteSpace(enrichedBill.RouteCode))
         {
-            var route = await _db.Ratings.AsNoTracking()
+            // Order CreatedAt in-memory — SQLite rejects DateTimeOffset in SQL ORDER BY.
+            var ratingRoutes = await _db.Ratings.AsNoTracking()
                 .Where(r => r.BillId == request.BillId && r.RouteCode != null && r.RouteCode != "")
+                .Select(r => new { r.RouteCode, r.CreatedAt })
+                .ToListAsync(cancellationToken);
+            var route = ratingRoutes
                 .OrderByDescending(r => r.CreatedAt)
                 .Select(r => r.RouteCode)
-                .FirstOrDefaultAsync(cancellationToken);
+                .FirstOrDefault();
             if (!string.IsNullOrWhiteSpace(route))
             {
                 enrichedBill = enrichedBill with { RouteCode = route };

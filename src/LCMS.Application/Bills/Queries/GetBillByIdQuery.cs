@@ -370,12 +370,13 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
             .ToListAsync(cancellationToken);
         var docByBill = docCounts.ToDictionary(x => x.BillId, x => x.Count);
 
+        // Order CreatedAt in-memory — SQLite rejects DateTimeOffset in SQL ORDER BY.
         var ratingRoutes = await _db.Ratings.AsNoTracking()
             .Where(r => billIds.Contains(r.BillId) && r.RouteCode != null && r.RouteCode != "")
-            .OrderByDescending(r => r.CreatedAt)
-            .Select(r => new { r.BillId, r.RouteCode })
+            .Select(r => new { r.BillId, r.RouteCode, r.CreatedAt })
             .ToListAsync(cancellationToken);
         var routeFromRating = ratingRoutes
+            .OrderByDescending(r => r.CreatedAt)
             .GroupBy(r => r.BillId)
             .ToDictionary(g => g.Key, g => g.First().RouteCode);
 

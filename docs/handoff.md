@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-09-18 — PO/BA confirm D03 relationships + TD2 integration + UI feasibility
+
+### User
+PO/BA thống nhất: Ops System = Operational SoT; LCMS ≠ TMS. D03 vẫn gồm Order/Bill/Shipment/Leg/Movement + relationships. Trước khi PO chốt phạm vi, xác nhận 3 điểm: (1) Relationship Matrix IMPLEMENTED/PARTIAL/MISSING; (2) extract/orchestrator/webhook/integration_records — bắt buộc TD2 baseline vs chỉ khi có Ops cụ thể; (3) UI LIST/SEARCH/DETAIL/RELATIONSHIP/CROSS-NAV khả thi trên API hiện có (không bàn CRUD Order/Shipment; chưa mở TMS).
+
+### Answer (team)
+1. **Matrix (domain+DB+link/graph API):** cả 6 quan hệ = **IMPLEMENTED** (`order_bill_links`, `bill_shipment_links`, `transport_legs.shipment_id`, `bill_leg_links`, `leg_movement_links`, `bill_movement_links`). Gap chung: không unlink; UI Bill drawer chỉ hiện Order/Shipment; entity thin (C-002).
+2. **Integration:** TD2 baseline = E03 push upsert/link + C-002 + D12 `integration_records`/`errors` skeleton (+ outbox stub). **Không bắt buộc** extract / webhook / Ops orchestrator / broker đầy đủ cho đến khi PO chọn Ops SoT cụ thể.
+3. **UI (trước Ops prod):** Bill-centric RELATIONSHIP VIEW **Ready** (`GET /api/bills/{id}/graph`). Order LIST/DETAIL Ready. Shipment/Leg/Movement LIST/DETAIL/SEARCH = cần thin Get/List/search (+ seed demo). Entity-centric CROSS-NAV = cần include related ids. **Không blocked** bởi Ops Sync.
+
+### Files referenced
+- `OperationalReferenceEndpoints.cs`, link entities, `GetBillGraphQuery`, Sprint2* tests
+- D12: `IntegrationRecord`, `AuditIntegrationEndpoints`, Sprint 12 DoD
+- UI: `BillFinancialDrawer` related tab; no `/orders|/shipments` pages
+- Blocker Ops SoT: `docs/implementation-plan.md`
+
+### Follow-up
+PO/BA quyết định scope hoàn thiện (API list/get, Bill drawer legs/movements, search đa entity, demo seed) — chưa TMS.
+
+---
+
 ## 2026-09-17 — Fix CI: SQLite ORDER BY DateTimeOffset on Ratings
 
 ### User

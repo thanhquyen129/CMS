@@ -21,6 +21,17 @@ PO/BA quyết định scope hoàn thiện (API list/get, Bill drawer legs/moveme
 
 ---
 
+## 2026-09-18 — Export Word xác nhận D03/TD2/UI cho PO
+
+### User
+xuất câu trả lời sang file word
+
+### Done
+- Generator: `docs/reports/_gen_d03_td2_ui_confirm_docx.py`
+- File: `docs/reports/CMS_XacNhan_D03_TD2_UI_2026-09-18.docx`
+
+---
+
 ## 2026-09-17 — Fix CI: SQLite ORDER BY DateTimeOffset on Ratings
 
 ### User

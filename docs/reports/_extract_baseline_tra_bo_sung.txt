@@ -1,0 +1,156 @@
+===== LCMS_Standalone_Commercial_Product_Architecture_Addendum_v1.0.docx =====
+LCMS — STANDALONE COMMERCIAL PRODUCT
+ARCHITECTURE ADDENDUM v1.0
+Bổ sung kiến trúc & đặc tả điều chỉnh cho DEV • D01–D12
+1. Mục tiêu và trạng thái
+Tài liệu này là Addendum/Correction Baseline cho bộ BA/TD LCMS đã khóa. Mục tiêu là loại bỏ sự phụ thuộc bắt buộc vào hệ thống nguồn bên ngoài đối với các Business Object cần thiết để LCMS có thể vận hành như một sản phẩm thương mại độc lập. Tài liệu không thay thế CP1–CP7/TD1–TD6 và không làm thay đổi các nguyên tắc tài chính đã khóa.
+[PO CONFIRMED / ARCHITECTURE AGREED] — Standalone Commercial Product Principle
+LCMS phải có khả năng vận hành độc lập. Với các dữ liệu phù hợp, hệ thống phải hỗ trợ một hoặc nhiều phương thức Manual Entry / Import / API-Integration theo capability và Source-of-Truth policy của Tenant. Các object do LCMS derive/control không được cho nhập tay tùy ý.
+2. Quy tắc phân loại nguồn dữ liệu
+3. Kết quả rà soát D01–D12
+4. Ma trận Business Object cần DEV áp dụng
+5. Yêu cầu triển khai bắt buộc cho DEV
+DEV phải bổ sung source_type/source_system/external identity/import batch/manual provenance phù hợp để mọi dữ liệu nhập vào đều truy vết được nguồn.
+Manual Entry và Import phải gọi cùng canonical application command/domain validation với API integration; không tạo đường tắt ghi DB.
+Tenant capability quyết định phương thức input được bật; không fork business model theo Small/Medium/Large.
+Nếu Tenant cấu hình external system là Source of Truth, dữ liệu manual phải tuân policy: có thể bị hạn chế sửa các field do external source sở hữu, nhưng LCMS vẫn phải có chế độ standalone khi không có source đó.
+Import phải có validate → preview/error report → idempotency/deduplication → commit; không silently guess mapping.
+D03 Manual Reference Entry chỉ tạo tham chiếu và relationship cần cho tài chính; không bổ sung dispatch/planning/tracking operational workflow.
+D04 phải có UI/API quản trị Rate Card/Version/Rule trực tiếp trong LCMS; Rating Result vẫn system-generated.
+D09 phải cho phép ghi nhận Payment/Collection thủ công có kiểm soát khi không tích hợp Bank/ERP; việc tồn tại cash transaction không tự động đồng nghĩa đã settlement.
+Derived/control objects D05/D08/D10/D11 không được biến thành CRUD tự do.
+Audit/permission/Vietnamese UX Language Rule áp dụng đồng nhất cho mọi phương thức Manual/Import/API.
+6. Acceptance Criteria tổng quát
+AC-SCP-01: Một Tenant mới không tích hợp TMS/ERP/CRM/Rate/Bank vẫn cấu hình được Master Data tối thiểu, tạo Operational References cần thiết, Rate, Cost, Revenue, Document và Payment/Collection để chạy luồng LCMS.
+AC-SCP-02: Không có màn hình/chức năng core nào bị vô hiệu chỉ vì thiếu connector bên ngoài, trừ capability được PO/Tenant chủ động tắt.
+AC-SCP-03: Manual/Import/API tạo cùng semantic business object, cùng validation/invariant và có source provenance.
+AC-SCP-04: Khi external source được cấu hình là SoT, ownership và conflict policy được enforce; không silent overwrite.
+AC-SCP-05: Các object derive/control không có generic CRUD endpoint/UI cho phép tạo economic/control fact tùy ý.
+AC-SCP-06: D03 có LIST/SEARCH/DETAIL/RELATIONSHIP/CROSS-NAV và Manual/Import/API input; không mở rộng thành TMS.
+AC-SCP-07: D04 Rate master có Manual/Import/API; Rating snapshot immutable.
+AC-SCP-08: D09 Payment/Collection hỗ trợ manual capture + import/API với audit và settlement tách biệt.
+AC-SCP-09: Import lỗi phải trả lỗi theo dòng/field và không commit một phần ngoài policy transaction được định nghĩa.
+AC-SCP-10: Permission/Data Scope/Audit/Close protection áp dụng cho mọi input channel.
+7. Ưu tiên fix đề xuất
+P0 — Kiến trúc/capability: D02, D03, D04, D09 và shared input-source framework.
+P1 — UI/API completeness: Master Data CRUD/import, Operational Reference workspace, Rate master management, Payment/Collection manual capture.
+P2 — Import UX, source ownership/conflict policy, integration adapters và monitoring hoàn thiện theo từng Tenant.
+Không yêu cầu ADR mở rộng sang TMS/ERP. Đây là completion/correction của LCMS standalone baseline.
+8. Decision Log bổ sung
+[PO CONFIRMED] SCP-001 — LCMS là standalone commercial product.
+[ARCHITECTURE AGREED] SCP-002 — Manual / Import / API-Integration là input channels theo object/capability/SoT policy.
+[ARCHITECTURE AGREED] SCP-003 — D03 Operational References hỗ trợ Manual Reference Entry nhưng không trở thành TMS.
+[ARCHITECTURE AGREED] SCP-004 — Derived/control/system objects không được CRUD tự do.
+[ARCHITECTURE AGREED] SCP-005 — External system là SoT chỉ khi Tenant cấu hình/tích hợp nguồn đó; absence of connector không được khóa core LCMS.
+Standalone Architecture Review D01–D12: 100% — COMPLETED / PACKAGED. Không còn [CẦN QUYẾT ĐỊNH].
+--- TABLE 1 ---
+Nhóm || Quy tắc
+A — Reference/Master/Input Object || Cho phép tạo/nhận dữ liệu bằng Manual Entry, Import và/hoặc API-Integration theo capability. Không được khóa LCMS chỉ vì thiếu hệ thống nguồn.
+B — Economic Transaction Object || Cho phép người dùng có quyền tạo trực tiếp và/hoặc Import/API nếu nghiệp vụ cho phép; phải chống duplicate economic fact và giữ source traceability.
+C — Derived/Control Object || Không cho nhập tay như một record tự do. Chỉ được tạo qua command/business process hợp lệ của LCMS; người dùng có thể trigger/review/approve theo quyền.
+D — Snapshot/Audit/System Object || System-generated, immutable/append-only theo thiết kế; không Manual Entry.
+--- TABLE 2 ---
+Domain || Tên || Object chính || Input/Creation baseline mới || Điều chỉnh/Guardrail || Kết quả
+D01 || Nền tảng & Tenant || Tenant, Organization, User/Role/Permission || Manual/Admin + Import/Identity Integration || Cần bảo đảm bootstrap tenant/admin không phụ thuộc external IAM; user sync có thể tùy chọn. || ADJUST
+D02 || Danh mục & Cấu hình || Business Party, Customer/Vendor roles, Currency, FX, Service/Cost/Revenue Type, Pricing Component, Policies || Manual + Import + API (tùy object) || Master/config phải quản trị được trực tiếp trong LCMS; external master chỉ là nguồn tùy chọn. || ADJUST
+D03 || Tham chiếu vận hành || Order, Bill, Shipment, Chặng, Chuyến + relationships || Manual Reference Entry + Import + API || Đã PO khóa. Khi có Operational System tích hợp thì hệ thống đó là SoT; manual không biến LCMS thành TMS. || ADJUST
+D04 || Bảng giá & Tính giá || Rate Card, Version, Pricing Rule/Component; Rating || Rate master: Manual + Import + API; Rating: system command || Không được bắt buộc Rate System ngoài. Published version immutable; Rating result là system-generated snapshot. || ADJUST
+D05 || Chi phí & Phân bổ || Cost, Cost Adjustment; Allocation || Cost: Manual + Import + API; Allocation: system workflow || CP6/TD2 đã có Create/Import Cost. Allocation không phải manual free-entry. || OK/GUARD
+D06 || Doanh thu || Revenue, Revenue Adjustment || Manual + Import + API theo Revenue SoT policy || CP6/TD2 đã có Create/Import Revenue; giữ Single Economic Revenue và recognition policy. || OK/GUARD
+D07 || Chứng từ tài chính || DN/Invoice/Other Document + lines; Matches || Document: Manual/Create + Import + API; Match: workflow || Không phụ thuộc ERP/document source; Received ≠ Accepted; matching N:N theo detail. || OK/GUARD
+D08 || Exposure & AP/AR || Payable/Receivable Exposure, AP, AR || Derived/recognized qua policy; external refs có thể Import/API || Không tạo AP/AR như transaction tự do để né recognition; cho phép user trigger recognition nếu đủ điều kiện. || OK/GUARD
+D09 || Thanh toán & Thu tiền || Payment, Collection; allocations; bank/cash refs || Manual capture + Import + API; allocation workflow || Bổ sung rõ manual cash entry có kiểm soát khi không có Bank/ERP; cash existence ≠ settlement. || ADJUST
+D10 || Kiểm soát tài chính || Reconciliation, Variance, Exception, Approval || System/workflow generated; manual trigger/decision || Không manual free-entry cho derived facts; cho phép manual match/resolve/approve theo workflow. || OK/GUARD
+D11 || Chốt tài chính || Financial Close, Snapshot || Close/Reopen command; snapshot system-generated || Không manual snapshot; immutable as-closed history. || OK/GUARD
+D12 || Tích hợp & Audit || Integration Record/Error, Audit Event || System-generated || Không là dependency để core LCMS chạy; integration adapter là optional theo Tenant/source. || ADJUST
+--- TABLE 3 ---
+Object || Domain || Class || Manual || Import || API || SoT || Guardrail
+Tenant/Organization || D01 || A || Manual/Admin || Import optional || API/Identity optional || LCMS/configured || Không khóa bootstrap.
+User/Role/Permission || D01 || A/C || Manual/Admin || Import optional || Identity integration optional || LCMS/configured || Permission ≠ Approval.
+Business Party / Customer / Vendor || D02 || A || Có || Có || Có || Configured master source || Canonical party + roles.
+Currency || D02 || A || Có || Có || Có || LCMS/standard master || Không phụ thuộc API.
+FX Rate || D02 || A || Có kiểm soát || Có || Có || Configured FX source || Lưu source/date/version; không recalc lịch sử.
+Service/Cost/Revenue Type || D02 || A || Có || Có || Có || LCMS/configured || Effective-dated/versioned.
+Pricing Component / Document Type / Payment Terms || D02 || A || Có || Có || Có || LCMS/configured || Configurable taxonomy.
+Order || D03 || A || Có || Có || Có || Operational System nếu tích hợp; nếu không LCMS manual/import || Reference only.
+Bill || D03 || A || Có || Có || Có || Operational System nếu tích hợp; nếu không LCMS manual/import || Financial Anchor.
+Shipment || D03 || A || Có || Có || Có || Operational System nếu tích hợp; nếu không LCMS manual/import || Optional operational depth.
+Transport Leg / Chặng || D03 || A || Có || Có || Có || Operational System nếu tích hợp; nếu không LCMS manual/import || Không điều phối.
+Transport Movement / Chuyến || D03 || A || Có || Có || Có || Operational System nếu tích hợp; nếu không LCMS manual/import || Số chuyến + ngày khi áp dụng.
+Rate Card / Rate Version / Pricing Rule || D04 || A || Có || Có || Có || Configured source || Published version immutable.
+Rating / Rating Detail || D04 || C/D || Không || Batch input context || API command || LCMS || System-generated result/snapshot.
+Cost || D05 || B || Có || Có || Có || LCMS + integrated source || Single Economic Cost.
+Cost Allocation || D05 || C || Không || Không như record tự do || Command/API workflow || LCMS || Conservation + finalize/supersede.
+Revenue || D06 || B || Có || Có || Có || Configured Revenue SoT || Single Economic Revenue.
+Financial Document / DN / Invoice || D07 || B/A || Có || Có || Có || Configured document/finance source || Receive/Create; Accepted riêng.
+Document Match || D07 || C || Manual match workflow || Candidate import không tạo final fact || Command/API || LCMS || N:N detail matching.
+Exposure / AP / AR || D08 || C || Không free-entry || External refs optional || Recognition command/API || LCMS policy/configured source || Recognition không tạo Cost/Revenue.
+Payment / Collection || D09 || B || Có kiểm soát || Có || Có || Bank/Cash/LCMS manual source || Manual khi không có bank integration.
+Payment/Collection Allocation || D09 || C || Không free-entry || Không || Command/API || LCMS || N:N settlement allocation.
+Reconciliation / Variance || D10 || C || Manual trigger/match only || Không free-entry || Command/API || LCMS || Variance derived.
+Exception / Approval || D10 || C || Raise/resolve/decision theo workflow || Không free-entry || Command/API || LCMS || Maker-checker.
+Financial Close / Snapshot || D11 || C/D || Close/Reopen command || Không || Command/API || LCMS || Snapshot immutable.
+Integration Record/Error / Audit Event || D12 || D || Không || Không || System integration || LCMS || Append-only/traceable.
+
+===== LCMS_Standalone_Input_Source_Implementation_Fix_Matrix_v1.0.xlsx =====
+--- SHEET: Object Input Matrix ---
+ID | Domain | Business Object | Class | Manual Entry | Import | API/Integration | Source of Truth baseline | DEV Action | Priority | Acceptance / Guardrail
+OBJ-001 | D01 | Tenant/Organization | A | Manual/Admin | Import optional | API/Identity optional | LCMS/configured | Bổ sung/xác nhận | P1 | Không khóa bootstrap.
+OBJ-002 | D01 | User/Role/Permission | A/C | Manual/Admin | Import optional | Identity integration optional | LCMS/configured | Bổ sung/xác nhận | P1 | Permission ≠ Approval.
+OBJ-003 | D02 | Business Party / Customer / Vendor | A | Có | Có | Có | Configured master source | Bổ sung/xác nhận | P0 | Canonical party + roles.
+OBJ-004 | D02 | Currency | A | Có | Có | Có | LCMS/standard master | Bổ sung/xác nhận | P0 | Không phụ thuộc API.
+OBJ-005 | D02 | FX Rate | A | Có kiểm soát | Có | Có | Configured FX source | Bổ sung/xác nhận | P0 | Lưu source/date/version; không recalc lịch sử.
+OBJ-006 | D02 | Service/Cost/Revenue Type | A | Có | Có | Có | LCMS/configured | Bổ sung/xác nhận | P0 | Effective-dated/versioned.
+OBJ-007 | D02 | Pricing Component / Document Type / Payment Terms | A | Có | Có | Có | LCMS/configured | Bổ sung/xác nhận | P0 | Configurable taxonomy.
+OBJ-008 | D03 | Order | A | Có | Có | Có | Operational System nếu tích hợp; nếu không LCMS manual/import | Bổ sung/xác nhận | P0 | Reference only.
+OBJ-009 | D03 | Bill | A | Có | Có | Có | Operational System nếu tích hợp; nếu không LCMS manual/import | Bổ sung/xác nhận | P0 | Financial Anchor.
+OBJ-010 | D03 | Shipment | A | Có | Có | Có | Operational System nếu tích hợp; nếu không LCMS manual/import | Bổ sung/xác nhận | P0 | Optional operational depth.
+OBJ-011 | D03 | Transport Leg / Chặng | A | Có | Có | Có | Operational System nếu tích hợp; nếu không LCMS manual/import | Bổ sung/xác nhận | P0 | Không điều phối.
+OBJ-012 | D03 | Transport Movement / Chuyến | A | Có | Có | Có | Operational System nếu tích hợp; nếu không LCMS manual/import | Bổ sung/xác nhận | P0 | Số chuyến + ngày khi áp dụng.
+OBJ-013 | D04 | Rate Card / Rate Version / Pricing Rule | A | Có | Có | Có | Configured source | Bổ sung/xác nhận | P0 | Published version immutable.
+OBJ-014 | D04 | Rating / Rating Detail | C/D | Không | Batch input context | API command | LCMS | Bổ sung/xác nhận | P0 | System-generated result/snapshot.
+OBJ-015 | D05 | Cost | B | Có | Có | Có | LCMS + integrated source | Xác nhận giữ đúng baseline | P2 | Single Economic Cost.
+OBJ-016 | D05 | Cost Allocation | C | Không | Không như record tự do | Command/API workflow | LCMS | Xác nhận giữ đúng baseline | P2 | Conservation + finalize/supersede.
+OBJ-017 | D06 | Revenue | B | Có | Có | Có | Configured Revenue SoT | Xác nhận giữ đúng baseline | P2 | Single Economic Revenue.
+OBJ-018 | D07 | Financial Document / DN / Invoice | B/A | Có | Có | Có | Configured document/finance source | Xác nhận giữ đúng baseline | P2 | Receive/Create; Accepted riêng.
+OBJ-019 | D07 | Document Match | C | Manual match workflow | Candidate import không tạo final fact | Command/API | LCMS | Xác nhận giữ đúng baseline | P2 | N:N detail matching.
+OBJ-020 | D08 | Exposure / AP / AR | C | Không free-entry | External refs optional | Recognition command/API | LCMS policy/configured source | Xác nhận giữ đúng baseline | P2 | Recognition không tạo Cost/Revenue.
+OBJ-021 | D09 | Payment / Collection | B | Có kiểm soát | Có | Có | Bank/Cash/LCMS manual source | Bổ sung/xác nhận | P0 | Manual khi không có bank integration.
+OBJ-022 | D09 | Payment/Collection Allocation | C | Không free-entry | Không | Command/API | LCMS | Bổ sung/xác nhận | P0 | N:N settlement allocation.
+OBJ-023 | D10 | Reconciliation / Variance | C | Manual trigger/match only | Không free-entry | Command/API | LCMS | Xác nhận giữ đúng baseline | P2 | Variance derived.
+OBJ-024 | D10 | Exception / Approval | C | Raise/resolve/decision theo workflow | Không free-entry | Command/API | LCMS | Xác nhận giữ đúng baseline | P2 | Maker-checker.
+OBJ-025 | D11 | Financial Close / Snapshot | C/D | Close/Reopen command | Không | Command/API | LCMS | Xác nhận giữ đúng baseline | P2 | Snapshot immutable.
+OBJ-026 | D12 | Integration Record/Error / Audit Event | D | Không | Không | System integration | LCMS | Bổ sung/xác nhận | P1 | Append-only/traceable.
+--- SHEET: Domain Review D01-D12 ---
+Domain | Tên domain | Object chính | Baseline input/creation sau review | Finding / Adjustment | Status | Priority
+D01 | Nền tảng & Tenant | Tenant, Organization, User/Role/Permission | Manual/Admin + Import/Identity Integration | Bảo đảm bootstrap không phụ thuộc external IAM. | ADJUST | P1
+D02 | Danh mục & Cấu hình | Business Party, Currency, FX, taxonomy, policies | Manual + Import + API | Master/config quản trị trực tiếp trong LCMS; external source tùy chọn. | ADJUST | P0
+D03 | Tham chiếu vận hành | Order, Bill, Shipment, Chặng, Chuyến | Manual Reference Entry + Import + API | PO đã khóa; không biến LCMS thành TMS. | ADJUST | P0
+D04 | Bảng giá & Tính giá | Rate master + Rating | Rate: Manual + Import + API; Rating: system command | Không bắt buộc Rate System ngoài. | ADJUST | P0
+D05 | Chi phí & Phân bổ | Cost, Adjustment, Allocation | Cost Manual/Import/API; Allocation workflow | Giữ Single Economic Cost. | OK/GUARD | P2
+D06 | Doanh thu | Revenue, Adjustment | Manual + Import + API theo policy | Giữ Single Economic Revenue. | OK/GUARD | P2
+D07 | Chứng từ tài chính | DN/Invoice/Document/Match | Document Manual/Import/API; Match workflow | Received ≠ Accepted; N:N detail matching. | OK/GUARD | P2
+D08 | Exposure & AP/AR | Exposure, AP, AR | Derived/recognition workflow | Không free CRUD AP/AR. | OK/GUARD | P2
+D09 | Thanh toán & Thu tiền | Payment, Collection, allocations | Manual + Import + API; allocation workflow | Manual cash capture khi không có Bank/ERP. | ADJUST | P0
+D10 | Kiểm soát tài chính | Reconciliation, Variance, Exception, Approval | System/workflow generated | Manual trigger/decision, không free-entry derived facts. | OK/GUARD | P2
+D11 | Chốt tài chính | Close, Snapshot | Command + system snapshot | Snapshot immutable. | OK/GUARD | P2
+D12 | Tích hợp & Audit | Integration records/errors, audit | System-generated | Connector không là điều kiện để core LCMS chạy. | ADJUST | P1
+--- SHEET: DEV Acceptance ---
+AC ID | Requirement | Domain/Scope | Priority | DEV Status | Evidence/PR | PO Verify
+AC-SCP-01 | Tenant không tích hợp TMS/ERP/CRM/Rate/Bank vẫn chạy được core LCMS bằng manual/import phù hợp. | Cross-domain | P0 | TODO |  | 
+AC-SCP-02 | Core function không bị khóa vì thiếu connector, trừ capability chủ động tắt. | Cross-domain | P0 | TODO |  | 
+AC-SCP-03 | Manual/Import/API dùng cùng canonical validation/invariant và source provenance. | D01-D12 | P0 | TODO |  | 
+AC-SCP-04 | External SoT ownership/conflict policy được enforce, không silent overwrite. | D02-D09 | P0 | TODO |  | 
+AC-SCP-05 | Derived/control object không có generic free CRUD. | D05/D08/D10/D11 | P0 | TODO |  | 
+AC-SCP-06 | D03 có LIST/SEARCH/DETAIL/RELATIONSHIP/CROSS-NAV + Manual/Import/API, không TMS. | D03 | P0 | TODO |  | 
+AC-SCP-07 | Rate master có Manual/Import/API; Rating result immutable/system-generated. | D04 | P0 | TODO |  | 
+AC-SCP-08 | Payment/Collection có manual capture + import/API; cash transaction tách settlement. | D09 | P0 | TODO |  | 
+AC-SCP-09 | Import có validate/preview/error/idempotency và transaction policy rõ. | Shared | P1 | TODO |  | 
+AC-SCP-10 | Permission/Data Scope/Audit/Close protection áp dụng cho mọi input channel. | Cross-domain | P0 | TODO |  | 
+--- SHEET: Decision Log ---
+Decision | Status | Nội dung
+SCP-001 | PO CONFIRMED | LCMS là standalone commercial product.
+SCP-002 | ARCHITECTURE AGREED | Manual / Import / API-Integration là input channels theo object/capability/SoT policy.
+SCP-003 | ARCHITECTURE AGREED | D03 hỗ trợ Manual Reference Entry nhưng không trở thành TMS.
+SCP-004 | ARCHITECTURE AGREED | Derived/control/system objects không được CRUD tự do.
+SCP-005 | ARCHITECTURE AGREED | External system là SoT khi được cấu hình/tích hợp; thiếu connector không khóa core LCMS.

@@ -21,6 +21,35 @@ PO/BA quyết định scope hoàn thiện (API list/get, Bill drawer legs/moveme
 
 ---
 
+## 2026-09-18 — PO Baseline_tra_bo_sung (Standalone Addendum) ingested
+
+### User
+@Baseline_fix_bo_sung PO trả lời trong folder này
+
+### PO package
+- `docs/po/Baseline_fix_bo_sung/LCMS_Standalone_Commercial_Product_Architecture_Addendum_v1.0.docx`
+- `docs/po/Baseline_fix_bo_sung/LCMS_Standalone_Input_Source_Implementation_Fix_Matrix_v1.0.xlsx`
+- Extract: `docs/reports/_extract_baseline_tra_bo_sung.txt`
+
+### Decision (SCP-001…005)
+- LCMS = **standalone commercial product**; thiếu connector không khóa core.
+- Input channels: Manual / Import / API theo object + Tenant capability + SoT policy; cùng canonical command.
+- D03: Manual Reference Entry + LIST/SEARCH/DETAIL/RELATIONSHIP/CROSS-NAV; **không TMS**.
+- Derived/control ≠ free CRUD. External SoT chỉ khi Tenant cấu hình.
+- P0: D02, D03, D04, D09 + shared input-source framework. AC-SCP-01…10 (DEV Status TODO).
+
+### ADR
+- `docs/adr/ADR-0017-standalone-commercial-product-input-channels.md`
+
+### Implication vs prior H-002 note
+- H-002 vẫn: Ops = Operational SoT khi tích hợp; LCMS ≠ TMS.
+- **Narrow:** Order/Shipment Manual Reference Entry + read UI **vào baseline** (không còn “CRUD Order/Shipment out of scope” theo nghĩa khóa core).
+
+### Next slice đề xuất
+AC-SCP-06 P0: D03 List/Get/Search + Bill relationship UI + Manual Reference Entry (thin) — chưa import UX đầy đủ / chưa connector.
+
+---
+
 ## 2026-09-18 — Export Word xác nhận D03/TD2/UI cho PO
 
 ### User

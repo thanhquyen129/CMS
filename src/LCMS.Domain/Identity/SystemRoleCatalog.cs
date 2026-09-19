@@ -53,6 +53,7 @@ public static class SystemRoleCatalog
                 (PermissionCodes.MasterOrgManage, DataScopes.All),
                 (PermissionCodes.MasterPartyManage, DataScopes.All),
                 (PermissionCodes.MasterCurrencyManage, DataScopes.All),
+                (PermissionCodes.MasterCatalogManage, DataScopes.All),
                 (PermissionCodes.SettingsManage, DataScopes.All)
             ]),
 
@@ -100,12 +101,13 @@ public static class SystemRoleCatalog
         new(
             MasterData,
             "Quản trị danh mục",
-            "Tổ chức, đối tác, tiền tệ. Chỉ xem Bill để đối chiếu — không sửa số tiền.",
+            "Tổ chức, đối tác, tiền tệ, danh mục loại. Chỉ xem Bill để đối chiếu — không sửa số tiền.",
             [
                 (PermissionCodes.BillRead, DataScopes.All),
                 (PermissionCodes.MasterOrgManage, DataScopes.All),
                 (PermissionCodes.MasterPartyManage, DataScopes.All),
-                (PermissionCodes.MasterCurrencyManage, DataScopes.All)
+                (PermissionCodes.MasterCurrencyManage, DataScopes.All),
+                (PermissionCodes.MasterCatalogManage, DataScopes.All)
             ]),
 
         new(

@@ -66,6 +66,23 @@ export type BillGraphShipmentRef = {
   operationalStatus: string;
 };
 
+export type BillGraphLegRef = {
+  id: string;
+  legNo: string;
+  shipmentId: string;
+  sourceSystem: string;
+  externalId: string;
+  operationalStatus: string;
+};
+
+export type BillGraphMovementRef = {
+  id: string;
+  movementNo: string;
+  sourceSystem: string;
+  externalId: string;
+  operationalStatus: string;
+};
+
 export type BillGraphDto = {
   billId: string;
   billNo: string;
@@ -73,8 +90,8 @@ export type BillGraphDto = {
   operationalStatus: string;
   orders: BillGraphOrderRef[];
   shipments: BillGraphShipmentRef[];
-  legs: unknown[];
-  movements: unknown[];
+  legs: BillGraphLegRef[];
+  movements: BillGraphMovementRef[];
 };
 
 export type BillFinancialView = {

@@ -47,7 +47,6 @@ public static class TenantAccessSeeder
             var role = await db.Roles
                 .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.Code == def.Code, cancellationToken);
 
-            var isNew = role is null;
             if (role is null)
             {
                 role = new Role
@@ -66,12 +65,10 @@ public static class TenantAccessSeeder
                 await db.SaveChangesAsync(cancellationToken);
             }
 
-            // Admin: always grant new catalog actions. Other roles: defaults only on first create.
-            if (def.Code == SystemRoleCatalog.Admin || isNew)
-            {
-                await EnsureRolePermissionsAsync(
-                    db, tenantId, role.Id, def.Permissions, permissions, cancellationToken);
-            }
+            // Insert missing default grants for every system role (new catalog actions on existing tenants).
+            // Does not restore rows an Admin already revoked (match by permission id).
+            await EnsureRolePermissionsAsync(
+                db, tenantId, role.Id, def.Permissions, permissions, cancellationToken);
         }
     }
 

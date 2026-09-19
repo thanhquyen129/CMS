@@ -1,5 +1,7 @@
 using LCMS.Application.BusinessParties.Commands;
 using LCMS.Application.BusinessParties.Queries;
+using LCMS.Application.Catalog.Commands;
+using LCMS.Application.Catalog.Queries;
 using LCMS.Application.Currencies.Commands;
 using LCMS.Application.Currencies.Queries;
 using LCMS.Application.Fx.Commands;
@@ -349,6 +351,26 @@ public static class MasterDataEndpoints
             return Results.NoContent();
         });
 
+        var catalog = app.MapGroup("/api/master-catalog").WithTags("MasterCatalog");
+        catalog.MapGet("/", async (string? kind, bool? activeOnly, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListMasterCatalogItemsQuery(kind, activeOnly), ct);
+            return Results.Ok(list);
+        });
+        catalog.MapPut("/", async (UpsertMasterCatalogItemRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(
+                new UpsertMasterCatalogItemCommand(
+                    body.Kind,
+                    body.Code,
+                    body.Name,
+                    body.Description,
+                    body.IsActive ?? true,
+                    body.SortOrder),
+                ct);
+            return Results.Ok(new { id });
+        });
+
         return app;
     }
 }
@@ -361,6 +383,14 @@ public sealed record UpsertFxRateRequest(
     string? Source,
     int? Version,
     string? Note);
+
+public sealed record UpsertMasterCatalogItemRequest(
+    string Kind,
+    string Code,
+    string Name,
+    string? Description,
+    bool? IsActive,
+    int? SortOrder);
 
 public sealed record CreateOrganizationRequest(string Code, string Name, Guid? ParentId);
 public sealed record UpdateOrganizationRequest(string Name, Guid? ParentId, bool IsActive);

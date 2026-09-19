@@ -18,7 +18,8 @@ public sealed record CreateRatingCommand(
     string? RouteCode,
     decimal? BaseAmount,
     Guid? SupersedesRatingId,
-    bool SeedExpectedCosts = false) : IRequest<Guid>;
+    bool SeedExpectedCosts = false,
+    bool SeedExpectedRevenues = false) : IRequest<Guid>;
 
 public sealed class CreateRatingCommandValidator : AbstractValidator<CreateRatingCommand>
 {
@@ -258,6 +259,13 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         if (request.SeedExpectedCosts)
         {
             await _sender.Send(new SeedExpectedCostsFromRatingCommand(rating.Id), cancellationToken);
+        }
+
+        if (request.SeedExpectedRevenues)
+        {
+            await _sender.Send(
+                new LCMS.Application.Revenues.Commands.SeedExpectedRevenuesFromRatingCommand(rating.Id),
+                cancellationToken);
         }
 
         return rating.Id;

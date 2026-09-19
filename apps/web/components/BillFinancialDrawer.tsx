@@ -511,16 +511,18 @@ export function BillFinancialDrawer({
             />
           ) : null}
 
-          {tab === "related" ? (
+              {tab === "related" ? (
             <div className="stack">
-              <h3 className="section-title sm">Đơn hàng (Order)</h3>
+              <h3 className="section-title sm">Đơn hàng</h3>
               {view.graph.orders.length === 0 ? (
-                <p className="muted small">Chưa liên kết Order.</p>
+                <p className="muted small">Chưa liên kết đơn hàng.</p>
               ) : (
                 <ul className="stack-list">
                   {view.graph.orders.map((o) => (
                     <li key={o.id}>
-                      <strong>{o.orderNo}</strong>
+                      <Link href={`/operations/orders/${o.id}`}>
+                        <strong>{o.orderNo}</strong>
+                      </Link>
                       <div className="muted small">
                         {operationalStatusLabel(o.operationalStatus)}
                         {o.sourceSystem ? ` · ${o.sourceSystem}` : ""}
@@ -530,14 +532,16 @@ export function BillFinancialDrawer({
                   ))}
                 </ul>
               )}
-              <h3 className="section-title sm">Shipment</h3>
+              <h3 className="section-title sm">Lô hàng</h3>
               {view.graph.shipments.length === 0 ? (
-                <p className="muted small">Chưa liên kết Shipment.</p>
+                <p className="muted small">Chưa liên kết lô hàng.</p>
               ) : (
                 <ul className="stack-list">
                   {view.graph.shipments.map((s) => (
                     <li key={s.id}>
-                      <strong>{s.shipmentNo}</strong>
+                      <Link href={`/operations/shipments/${s.id}`}>
+                        <strong>{s.shipmentNo}</strong>
+                      </Link>
                       <div className="muted small">
                         {operationalStatusLabel(s.operationalStatus)}
                         {s.sourceSystem ? ` · ${s.sourceSystem}` : ""}
@@ -546,9 +550,42 @@ export function BillFinancialDrawer({
                   ))}
                 </ul>
               )}
+              <h3 className="section-title sm">Chặng</h3>
+              {(view.graph.legs ?? []).length === 0 ? (
+                <p className="muted small">Chưa liên kết chặng.</p>
+              ) : (
+                <ul className="stack-list">
+                  {view.graph.legs.map((l) => (
+                    <li key={l.id}>
+                      <Link href={`/operations/legs/${l.id}`}>
+                        <strong>{l.legNo}</strong>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <h3 className="section-title sm">Chuyến</h3>
+              {(view.graph.movements ?? []).length === 0 ? (
+                <p className="muted small">Chưa liên kết chuyến.</p>
+              ) : (
+                <ul className="stack-list">
+                  {view.graph.movements.map((m) => (
+                    <li key={m.id}>
+                      <Link href={`/operations/movements/${m.id}`}>
+                        <strong>{m.movementNo}</strong>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <p className="muted small">
-                CMS là lớp kiểm soát tài chính — Order/Shipment là tham chiếu vận
-                hành (H-002), không thay SoT TMS.
+                CMS là lớp kiểm soát tài chính — đây là tham chiếu vận hành
+                (H-002), không thay SoT TMS.
+              </p>
+              <p>
+                <Link className="row-link" href="/operations">
+                  Mở workspace tham chiếu
+                </Link>
               </p>
             </div>
           ) : null}

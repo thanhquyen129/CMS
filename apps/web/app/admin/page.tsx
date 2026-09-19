@@ -35,6 +35,16 @@ export default async function AdminHubPage() {
       title: "Tiền tệ",
       desc: "Danh mục tiền tệ và số lẻ thập phân cho số tiền.",
     },
+    {
+      href: "/admin/fx-rates",
+      title: "Tỷ giá ngoại tệ",
+      desc: "Tỷ giá theo ngày — không tính lại lịch sử chứng từ.",
+    },
+    {
+      href: "/admin/catalog",
+      title: "Loại chi phí / doanh thu / dịch vụ",
+      desc: "Danh mục loại dùng trên chi phí, bảng giá và chứng từ.",
+    },
   ];
 
   return (

@@ -1698,3 +1698,23 @@ internal sealed class BankFeedLineConfiguration : IEntityTypeConfiguration<BankF
         builder.HasIndex(e => new { e.TenantId, e.MatchedReconciliationDetailId });
     }
 }
+
+internal sealed class MasterCatalogItemConfiguration : IEntityTypeConfiguration<MasterCatalogItem>
+{
+    public void Configure(EntityTypeBuilder<MasterCatalogItem> builder)
+    {
+        builder.ToTable("master_catalog_items");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Kind).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.Description).HasMaxLength(512);
+        builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.SortOrder).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.Kind, e.Code }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.Kind, e.IsActive });
+    }
+}

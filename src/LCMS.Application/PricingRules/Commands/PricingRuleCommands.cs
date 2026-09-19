@@ -256,6 +256,18 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
     }
 }
 
+public sealed record PricingRuleComponentDto(
+    Guid Id,
+    Guid PricingRuleId,
+    string Code,
+    string Name,
+    string FinancialNature,
+    string? CostTypeCode,
+    string? RevenueTypeCode,
+    decimal Amount,
+    string CurrencyCode,
+    int SortOrder);
+
 public sealed record PricingRuleDto(
     Guid Id,
     Guid RateVersionId,
@@ -271,7 +283,8 @@ public sealed record PricingRuleDto(
     decimal? MinAmount,
     decimal? MaxAmount,
     int SortOrder,
-    bool IsActive);
+    bool IsActive,
+    IReadOnlyList<PricingRuleComponentDto> Components);
 
 public sealed record ListPricingRulesQuery(Guid RateVersionId) : IRequest<IReadOnlyList<PricingRuleDto>>;
 
@@ -301,16 +314,34 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
             throw new NotFoundAppException("Không tìm thấy phiên bản bảng giá.");
         }
 
-        return await _db.PricingRules
+        var rules = await _db.PricingRules
             .AsNoTracking()
             .Where(r => r.RateVersionId == request.RateVersionId)
             .OrderBy(r => r.SortOrder)
             .ThenBy(r => r.Code)
+            .ToListAsync(cancellationToken);
+
+        var ruleIds = rules.Select(r => r.Id).ToList();
+        var components = await _db.PricingRuleComponents
+            .AsNoTracking()
+            .Where(c => ruleIds.Contains(c.PricingRuleId))
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Code)
+            .ToListAsync(cancellationToken);
+        var byRule = components
+            .GroupBy(c => c.PricingRuleId)
+            .ToDictionary(g => g.Key, g => g.Select(c => new PricingRuleComponentDto(
+                c.Id, c.PricingRuleId, c.Code, c.Name, c.FinancialNature,
+                c.CostTypeCode, c.RevenueTypeCode, c.Amount, c.CurrencyCode, c.SortOrder))
+                .ToList());
+
+        return rules
             .Select(r => new PricingRuleDto(
                 r.Id, r.RateVersionId, r.Code, r.Name, r.CalcMethod,
                 r.UnitAmount, r.CurrencyCode, r.Applicability,
                 r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode,
-                r.MinAmount, r.MaxAmount, r.SortOrder, r.IsActive))
-            .ToListAsync(cancellationToken);
+                r.MinAmount, r.MaxAmount, r.SortOrder, r.IsActive,
+                byRule.TryGetValue(r.Id, out var list) ? list : []))
+            .ToList();
     }
 }

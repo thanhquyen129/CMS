@@ -46,6 +46,9 @@ public sealed class DemoDataSeeder
 
         var exists = await _db.Bills.IgnoreQueryFilters()
             .AnyAsync(b => b.TenantId == tenant.Id && b.BillNo == MarkerBillNo && b.DeletedAt == null, cancellationToken);
+
+        await EnsureDefaultCatalogAsync(tenant.Id, cancellationToken);
+
         if (exists)
         {
             _logger.LogInformation("Demo seed skipped (marker {Marker} already present for tenant {Code}).", MarkerBillNo, code);
@@ -689,6 +692,59 @@ public sealed class DemoDataSeeder
         }
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()))).ToLowerInvariant();
+    }
+
+    /// <summary>Seeds baseline Cost/Revenue/Service types so standalone tenants can pick from a catalog.</summary>
+    private async Task EnsureDefaultCatalogAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var defaults = new (string Kind, string Code, string Name, int Sort)[]
+        {
+            (MasterCatalogKinds.CostType, "FREIGHT", "Cước vận chuyển", 10),
+            (MasterCatalogKinds.CostType, "AP-FREIGHT", "Cước phải trả", 20),
+            (MasterCatalogKinds.CostType, "FUEL", "Phụ phí nhiên liệu", 30),
+            (MasterCatalogKinds.RevenueType, "FREIGHT-REV", "Doanh thu cước", 10),
+            (MasterCatalogKinds.RevenueType, "AR-FREIGHT", "Doanh thu phải thu", 20),
+            (MasterCatalogKinds.ServiceType, "FREIGHT", "Vận tải hàng", 10),
+            (MasterCatalogKinds.ServiceType, "AIR", "Hàng không", 20),
+            (MasterCatalogKinds.PricingComponent, "FREIGHT", "Cước chính", 10),
+            (MasterCatalogKinds.DocumentType, "invoice", "Hóa đơn", 10),
+            (MasterCatalogKinds.DocumentType, "debit_note", "Debit note", 20),
+            (MasterCatalogKinds.PaymentTerm, "NET15", "Net 15 ngày", 10),
+            (MasterCatalogKinds.PaymentTerm, "NET30", "Net 30 ngày", 20)
+        };
+
+        var existing = await _db.MasterCatalogItems
+            .IgnoreQueryFilters()
+            .Where(i => i.TenantId == tenantId && i.DeletedAt == null)
+            .Select(i => i.Kind + ":" + i.Code)
+            .ToListAsync(cancellationToken);
+        var set = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var added = 0;
+        foreach (var (kind, code, name, sort) in defaults)
+        {
+            var key = kind + ":" + code;
+            if (set.Contains(key))
+            {
+                continue;
+            }
+
+            _db.MasterCatalogItems.Add(new MasterCatalogItem
+            {
+                TenantId = tenantId,
+                Kind = kind,
+                Code = code,
+                Name = name,
+                IsActive = true,
+                SortOrder = sort
+            });
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private static Bill Bill(Guid tid, string no, Guid? orgId, string? _) => new()

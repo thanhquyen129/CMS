@@ -20,6 +20,8 @@ public static class PermissionCodes
     public const string MasterOrgManage = "master.org.manage";
     public const string MasterPartyManage = "master.party.manage";
     public const string MasterCurrencyManage = "master.currency.manage";
+    /// <summary>Manage Cost/Revenue/Service type catalogs (D02).</summary>
+    public const string MasterCatalogManage = "master.catalog.manage";
     public const string UserManage = "user.manage";
     public const string RoleManage = "role.manage";
     public const string SettingsManage = "settings.manage";
@@ -41,6 +43,7 @@ public static class PermissionCodes
         (MasterOrgManage, "Quản lý tổ chức"),
         (MasterPartyManage, "Quản lý đối tác"),
         (MasterCurrencyManage, "Quản lý tiền tệ"),
+        (MasterCatalogManage, "Quản lý danh mục loại"),
         (UserManage, "Quản lý người dùng"),
         (RoleManage, "Quản lý vai trò"),
         (SettingsManage, "Quản lý cài đặt thuê bao")
@@ -63,6 +66,7 @@ public static class PermissionCodes
         MasterOrgManage,
         MasterPartyManage,
         MasterCurrencyManage,
+        MasterCatalogManage,
         UserManage,
         RoleManage,
         SettingsManage

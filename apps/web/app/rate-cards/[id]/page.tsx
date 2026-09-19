@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AddPricingRuleForm } from "@/components/AddPricingRuleForm";
+import { AddPricingRuleComponentForm } from "@/components/AddPricingRuleComponentForm";
 import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -187,6 +188,19 @@ export default async function RateCardDetailPage({
                                 ]
                                   .filter(Boolean)
                                   .join(" · ") || "—"}
+                                {(r.components ?? []).length > 0 ? (
+                                  <div>
+                                    {(r.components ?? []).map((c) => (
+                                      <div key={c.id}>
+                                        {c.code} ·{" "}
+                                        {c.financialNature === "revenue"
+                                          ? "Doanh thu"
+                                          : "Chi phí"}{" "}
+                                        · {formatMoney(c.amount, c.currencyCode)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </td>
                             </tr>
                           ))}
@@ -201,6 +215,13 @@ export default async function RateCardDetailPage({
                         versionId={v.id}
                         defaultCurrency={card.currencyCode}
                       />
+                      {rules.map((r) => (
+                        <AddPricingRuleComponentForm
+                          key={r.id}
+                          ruleId={r.id}
+                          defaultCurrency={r.currencyCode || card.currencyCode}
+                        />
+                      ))}
                       {rules.length > 0 ? (
                         <PublishRateVersionButton
                           versionId={v.id}

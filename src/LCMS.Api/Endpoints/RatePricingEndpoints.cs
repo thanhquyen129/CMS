@@ -176,7 +176,8 @@ public static class RatePricingEndpoints
                     body.RouteCode,
                     body.BaseAmount,
                     body.SupersedesRatingId,
-                    body.SeedExpectedCosts ?? false),
+                    body.SeedExpectedCosts ?? false,
+                    body.SeedExpectedRevenues ?? false),
                 ct);
             return Results.Created($"/api/ratings/{id}", new { id });
         });
@@ -250,4 +251,5 @@ public sealed record CreateRatingRequest(
     string? RouteCode,
     decimal? BaseAmount,
     Guid? SupersedesRatingId,
-    bool? SeedExpectedCosts);
+    bool? SeedExpectedCosts,
+    bool? SeedExpectedRevenues);

@@ -21,6 +21,19 @@ export type RateVersion = {
   createdAt: string;
 };
 
+export type PricingRuleComponent = {
+  id: string;
+  pricingRuleId: string;
+  code: string;
+  name: string;
+  financialNature: string;
+  costTypeCode: string | null;
+  revenueTypeCode: string | null;
+  amount: number;
+  currencyCode: string;
+  sortOrder: number;
+};
+
 export type PricingRule = {
   id: string;
   rateVersionId: string;
@@ -36,6 +49,7 @@ export type PricingRule = {
   minAmount: number | null;
   maxAmount: number | null;
   sortOrder: number;
+  components?: PricingRuleComponent[];
 };
 
 export type RatingHistoryItem = {

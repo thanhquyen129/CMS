@@ -4,8 +4,11 @@ using LCMS.Application.Orders.Commands;
 using LCMS.Application.Orders.Queries;
 using LCMS.Application.Search.Queries;
 using LCMS.Application.Shipments.Commands;
+using LCMS.Application.Shipments.Queries;
 using LCMS.Application.TransportLegs.Commands;
+using LCMS.Application.TransportLegs.Queries;
 using LCMS.Application.TransportMovements.Commands;
+using LCMS.Application.TransportMovements.Queries;
 using MediatR;
 
 namespace LCMS.Api.Endpoints;
@@ -28,9 +31,9 @@ public static class OperationalReferenceEndpoints
                 ct);
             return Results.Ok(new { id });
         });
-        orders.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        orders.MapGet("/", async (string? q, ISender sender, CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListOrdersQuery(), ct);
+            var list = await sender.Send(new ListOrdersQuery(q), ct);
             return Results.Ok(list);
         });
         orders.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -62,6 +65,16 @@ public static class OperationalReferenceEndpoints
                 ct);
             return Results.Ok(new { id });
         });
+        shipments.MapGet("/", async (string? q, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListShipmentsQuery(q), ct);
+            return Results.Ok(list);
+        });
+        shipments.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var shipment = await sender.Send(new GetShipmentByIdQuery(id), ct);
+            return Results.Ok(shipment);
+        });
         shipments.MapPost("/{shipmentId:guid}/bills/{billId:guid}", async (
             Guid shipmentId,
             Guid billId,
@@ -86,6 +99,16 @@ public static class OperationalReferenceEndpoints
                     body.IsActive ?? true),
                 ct);
             return Results.Ok(new { id });
+        });
+        legs.MapGet("/", async (string? q, Guid? shipmentId, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListTransportLegsQuery(q, shipmentId), ct);
+            return Results.Ok(list);
+        });
+        legs.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var leg = await sender.Send(new GetTransportLegByIdQuery(id), ct);
+            return Results.Ok(leg);
         });
         legs.MapPost("/{legId:guid}/bills/{billId:guid}", async (
             Guid legId,
@@ -119,6 +142,16 @@ public static class OperationalReferenceEndpoints
                     body.IsActive ?? true),
                 ct);
             return Results.Ok(new { id });
+        });
+        movements.MapGet("/", async (string? q, ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListTransportMovementsQuery(q), ct);
+            return Results.Ok(list);
+        });
+        movements.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var movement = await sender.Send(new GetTransportMovementByIdQuery(id), ct);
+            return Results.Ok(movement);
         });
         movements.MapPost("/{movementId:guid}/bills/{billId:guid}", async (
             Guid movementId,
@@ -171,6 +204,11 @@ public static class OperationalReferenceEndpoints
             var hits = await sender.Send(new SearchOperationalQuery(q ?? string.Empty), ct);
             return Results.Ok(hits);
         });
+        app.MapGet("/api/search", async (string? q, ISender sender, CancellationToken ct) =>
+        {
+            var hits = await sender.Send(new SearchGlobalQuery(q ?? string.Empty), ct);
+            return Results.Ok(hits);
+        }).WithTags("Search");
 
         return app;
     }

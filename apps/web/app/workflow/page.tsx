@@ -32,6 +32,12 @@ export default async function WorkflowMapPage() {
       href: "/bills",
     },
     {
+      no: "01b",
+      title: "Tham chiếu vận hành",
+      desc: "Đơn hàng / lô / chặng / chuyến — neo Bill, không TMS",
+      href: "/operations",
+    },
+    {
       no: "02",
       title: "Tính giá",
       desc: "Rate card tạo kỳ vọng tài chính, không tạo Thực tế",

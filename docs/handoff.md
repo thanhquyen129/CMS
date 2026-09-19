@@ -1,6 +1,47 @@
 # Handoff
 
+## 2026-09-19 — UI gaps vs PO: D03 refs, D02 catalog, D04 components, global search
+
+### User
+Rà soát toàn bộ hệ thống vs yêu cầu PO; chức năng nào chưa có UI thì triển khai. Chuyên gia tự đề xuất khi gặp vấn đề.
+
+### Decision (operable slice)
+Không mở TMS / Budget-Forecast / OIDC. Làm P0 standalone (AC-SCP-06/07, UI-03/13, tìm kiếm):
+- D03 Manual Reference Entry + LIST/DETAIL/RELATIONSHIP/CROSS-NAV cho Order/Lô/Chặng/Chuyến.
+- D02 danh mục loại (cost/revenue/service/document/payment term) + UI tỷ giá (API sẵn).
+- D04 thành phần quy tắc bảng giá + seed Doanh thu dự kiến từ rating (song song Chi phí dự kiến).
+- Tìm kiếm toàn cục đa đối tượng (gated Cost ≠ Revenue).
+
+### API
+- `GET /api/orders|shipments|transport-legs|transport-movements` (+ `/{id}` với related Bills)
+- `GET /api/search` (global); giữ `/api/search/operational`
+- `GET/PUT /api/master-catalog`
+- `POST /api/ratings/{id}/seed-expected-revenues`
+- `PricingRuleDto.components` trên `GET /api/rate-versions/{id}/rules`
+
+### Web
+- `/operations` (+ `/operations/{orders|shipments|legs|movements}/{id}`)
+- `/admin/catalog`, `/admin/fx-rates`
+- Thành phần giá trên `/rate-cards/[id]`; seed doanh thu trên Bill rating panel
+- Top-bar search typeahead; Bill drawer tab Liên quan cross-nav
+
+### Schema
+- `master_catalog_items` — migration `20260919145247_D02_MasterCatalog`
+- Permission `master.catalog.manage` (Admin + MasterData + FinancialController)
+
+### Tests
+- `StandalonePoUiGapTests` + full API suite 134 passed (SQLite: không ORDER BY DateTimeOffset trên search cost/revenue)
+
+### Follow-up
+- Import CSV/preview (AC-SCP-09) P1
+- Unlink relationship
+- Ngân sách/Dự báo (P13) khi PO mở hạng mục
+- UAT 2 user Cost ≠ Revenue trên dashboard/aging
+
+---
+
 ## 2026-09-18 — PO/BA confirm D03 relationships + TD2 integration + UI feasibility
+
 
 ### User
 PO/BA thống nhất: Ops System = Operational SoT; LCMS ≠ TMS. D03 vẫn gồm Order/Bill/Shipment/Leg/Movement + relationships. Trước khi PO chốt phạm vi, xác nhận 3 điểm: (1) Relationship Matrix IMPLEMENTED/PARTIAL/MISSING; (2) extract/orchestrator/webhook/integration_records — bắt buộc TD2 baseline vs chỉ khi có Ops cụ thể; (3) UI LIST/SEARCH/DETAIL/RELATIONSHIP/CROSS-NAV khả thi trên API hiện có (không bàn CRUD Order/Shipment; chưa mở TMS).

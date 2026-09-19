@@ -1,5 +1,6 @@
 using LCMS.Application.Costs.Commands;
 using LCMS.Application.Costs.Queries;
+using LCMS.Application.Revenues.Commands;
 using MediatR;
 
 namespace LCMS.Api.Endpoints;
@@ -128,6 +129,11 @@ public static class CostEndpoints
         ratings.MapPost("/{id:guid}/seed-expected-costs", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new SeedExpectedCostsFromRatingCommand(id), ct);
+            return Results.Ok(result);
+        });
+        ratings.MapPost("/{id:guid}/seed-expected-revenues", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SeedExpectedRevenuesFromRatingCommand(id), ct);
             return Results.Ok(result);
         });
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { RateBillForm } from "@/components/RateBillForm";
 import { SeedExpectedCostsButton } from "@/components/SeedExpectedCostsButton";
+import { SeedExpectedRevenuesButton } from "@/components/SeedExpectedRevenuesButton";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import type { RateCard, RateVersion } from "@/lib/rate-cards";
 import {
@@ -18,7 +19,6 @@ type Props = {
 export async function BillRatingPanel({ terms, billId }: Props) {
   const billLabel = term(terms, "BILL", "Bill");
   const expected = term(terms, "EXPECTED", "Dự kiến");
-  const costLabel = term(terms, "COST", "Chi phí");
 
   const [cardsRes, ratingsRes] = await Promise.all([
     fetchRateCards(),
@@ -44,8 +44,8 @@ export async function BillRatingPanel({ terms, billId }: Props) {
     <div className="stack" style={{ marginTop: "1.5rem" }}>
       <h2 className="section-title">Tính giá / Rating</h2>
       <p className="note">
-        Áp bảng giá đã phát hành lên {billLabel} này. Seed tạo{" "}
-        {costLabel.toLowerCase()} lớp {expected} (không ghi đè dòng đã seed).{" "}
+        Áp bảng giá đã phát hành lên {billLabel} này.         Seed tạo chi phí / doanh thu lớp {expected} từ thành phần bảng giá
+        (không ghi đè dòng đã seed).{" "}
         <Link className="row-link" href="/rate-cards">
           Quản lý bảng giá
         </Link>
@@ -102,6 +102,10 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                       <span className="muted">—</span>
                     ) : (
                       <SeedExpectedCostsButton terms={terms} ratingId={r.id} />
+                      <SeedExpectedRevenuesButton
+                        terms={terms}
+                        ratingId={r.id}
+                      />
                     )}
                   </td>
                 </tr>

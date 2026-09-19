@@ -66,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<ICloseEligibilityChecker, CloseEligibilityChecker>();
         services.AddScoped<IPeriodLockGate, PeriodLockGate>();
         services.AddScoped<IReconciliationDetailWriter, ReconciliationDetailWriter>();
+        services.AddScoped<LCMS.Application.Bills.Waybills.WaybillEconomicSeeder>();
         return services;
     }
 }

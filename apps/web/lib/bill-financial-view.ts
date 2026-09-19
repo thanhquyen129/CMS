@@ -3,6 +3,7 @@
 import type { BillDto } from "./bills-shared";
 import type { CostListItem, RevenueListItem } from "./costs-revenues";
 import type { FinancialDocumentListItem } from "./documents-shared";
+import type { BillWaybill } from "./waybill";
 
 export type MaturityBreakdown = {
   expectedTotal: number;
@@ -105,6 +106,7 @@ export type BillFinancialView = {
   costCount: number;
   revenueCount: number;
   documentCount: number;
+  waybill?: BillWaybill | null;
 };
 
 export type UpdateBillContextBody = {

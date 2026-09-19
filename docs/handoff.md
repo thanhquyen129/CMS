@@ -1,6 +1,43 @@
 # Handoff
 
+## 2026-09-19 — Waybill capture on Bill (not TMS)
+
+### User
+Nhờ chuyên gia tham khảo bill này và triển khai module TMS đầy đủ. (Ảnh vận đơn Vietnam Post EE5556576340VN)
+
+### Decision
+Không mở TMS (H-002 / ADR-0017 SCP-003). Vận đơn giấy = form nhập Bill neo tài chính (ADR-0018).
+- Hồ sơ 1:1 `bill_waybills`: người gửi/nhận, kiện, cước, thu hộ, điểm chấp nhận.
+- Dòng cước → Chi phí dự kiến (mặc định) hoặc Doanh thu dự kiến. Tổng giấy lệch dòng (56.700 vs 42.000+10.500) → phần dư vào Thu khác.
+- Thu hộ ≠ doanh thu. Cước GET ẩn nếu thiếu CostRead/RevenueRead.
+- Upsert Shipment mỏng + link. Không GPS / điều vận / e-POD.
+
+### API
+- `POST /api/bills/waybills` — tạo Bill + hồ sơ + Shipment + Expected costs
+- `GET/PUT /api/bills/{id}/waybill`
+- `GET /api/bills/{id}/financial-view` thêm `waybill`
+
+### Web
+- `/bills/new` — form vận đơn (mục 1–14). CTA: Lưu vận đơn
+- Drawer Bill tab **Vận đơn**
+- BFF: `/bff/bills/waybills`, `/bff/bills/{id}/waybill`
+
+### Schema
+- `bill_waybills` — migration `20260919160816_BillWaybillProfile`
+
+### Tests
+- `BillWaybillApiTests` (case VNPost EE5556576340VN) + full API **139 passed**
+- `npm run build` OK
+
+### Follow-up
+- Import ảnh/OCR vận đơn
+- Connector VNPost
+- Gắn party master từ snapshot người gửi/nhận
+
+---
+
 ## 2026-09-19 — UI gaps vs PO: D03 refs, D02 catalog, D04 components, global search
+
 
 ### User
 Rà soát toàn bộ hệ thống vs yêu cầu PO; chức năng nào chưa có UI thì triển khai. Chuyên gia tự đề xuất khi gặp vấn đề.

@@ -22,6 +22,7 @@ import {
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { maturityLabelKey, type CostListItem } from "@/lib/costs-revenues";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { WaybillProfilePanel } from "./WaybillProfilePanel";
 
 type Labels = {
   bill: string;
@@ -217,6 +218,7 @@ export function BillFinancialDrawer({
           <DrawerTabs
             tabs={[
               { id: "overview", label: "Tổng quan" },
+              { id: "waybill", label: "Vận đơn" },
               {
                 id: "costs",
                 label: labels.cost,
@@ -452,6 +454,14 @@ export function BillFinancialDrawer({
                 ) : null}
               </div>
             </div>
+          ) : null}
+
+          {tab === "waybill" ? (
+            <WaybillProfilePanel
+              waybill={view.waybill}
+              costLabel={labels.cost}
+              revenueLabel={labels.revenue}
+            />
           ) : null}
 
           {tab === "costs" ? (

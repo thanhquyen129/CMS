@@ -76,4 +76,6 @@ public static class CostSourceTypes
 {
     public const string RatingDetail = "rating_detail";
     public const string Manual = "manual";
+    /// <summary>Postage line seeded from bill_waybills (ADR-0018). Full value is waybill.{code}.</summary>
+    public const string WaybillPrefix = "waybill.";
 }

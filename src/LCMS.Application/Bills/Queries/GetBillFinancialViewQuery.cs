@@ -1,4 +1,5 @@
 using LCMS.Application.Abstractions;
+using LCMS.Application.Bills.Waybills;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Queries;
 using LCMS.Application.FinancialDocuments.Queries;
@@ -24,7 +25,8 @@ public sealed record BillFinancialViewDto(
     IReadOnlyList<FinancialDocumentListItemDto> Documents,
     int CostCount,
     int RevenueCount,
-    int DocumentCount);
+    int DocumentCount,
+    BillWaybillDto? Waybill = null);
 
 public sealed record GetBillFinancialViewQuery(Guid BillId) : IRequest<BillFinancialViewDto>;
 
@@ -191,6 +193,23 @@ public sealed class GetBillFinancialViewQueryHandler
             || string.Equals(enrichedBill.OperationalStatus, "closed", StringComparison.OrdinalIgnoreCase)
             || string.Equals(enrichedBill.OperationalStatus, "delivered", StringComparison.OrdinalIgnoreCase));
 
+        BillWaybillDto? waybillDto = null;
+        var waybill = await _db.BillWaybills.AsNoTracking()
+            .FirstOrDefaultAsync(w => w.BillId == request.BillId, cancellationToken);
+        if (waybill is not null)
+        {
+            var canSee = await BillWaybillMapper.CanSeeChargesAsync(
+                _permissions,
+                waybill.ChargeEconomicRole,
+                cancellationToken);
+            waybillDto = BillWaybillMapper.ToDto(waybill, enrichedBill.BillNo, canSee);
+            if (string.IsNullOrWhiteSpace(enrichedBill.CustomerName)
+                && !string.IsNullOrWhiteSpace(waybill.SenderName))
+            {
+                enrichedBill = enrichedBill with { CustomerName = waybill.SenderName };
+            }
+        }
+
         return new BillFinancialViewDto(
             enrichedBill,
             profile,
@@ -201,7 +220,8 @@ public sealed class GetBillFinancialViewQueryHandler
             documents,
             costs.Count,
             revenues.Count,
-            documents.Count);
+            documents.Count,
+            waybillDto);
     }
 
     private static IReadOnlyList<BillProgressStepDto> BuildProgress(

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { CreateBillForm } from "@/components/CreateBillForm";
+import { WaybillCaptureForm } from "@/components/WaybillCaptureForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 
@@ -23,8 +24,15 @@ export default async function NewBillPage() {
           {" / "}
           Tạo mới
         </p>
-        <h1>Tạo {billLabel}</h1>
-        <CreateBillForm terms={terms} />
+        <h1>Tạo vận đơn ({billLabel})</h1>
+        <p className="lede muted">
+          Nhập như vận đơn giấy: người gửi, người nhận, kiện, cước. Hệ thống tạo {billLabel} neo tài chính — không phải điều vận TMS.
+        </p>
+        <WaybillCaptureForm terms={terms} />
+        <details className="waybill-simple-create">
+          <summary>Chỉ tạo số {billLabel} (không nhập vận đơn giấy)</summary>
+          <CreateBillForm terms={terms} />
+        </details>
       </section>
     </AppShell>
   );

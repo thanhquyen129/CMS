@@ -1,0 +1,93 @@
+namespace LCMS.Application.Bills.Waybills;
+
+/// <summary>Party snapshot as printed on the waybill (not master-data SoT).</summary>
+public sealed record WaybillPartyDto(
+    string? Name,
+    string? Phone,
+    string? Email,
+    string? Address,
+    string? CustomerCode,
+    string? PostalCode,
+    string? DeliveryCode = null);
+
+/// <summary>Postage breakdown as printed. Totals are documentary; economic lines are seeded separately.</summary>
+public sealed record WaybillChargesDto(
+    decimal BasePostage,
+    decimal VatPostage,
+    decimal Surcharge,
+    decimal CodFee,
+    decimal OtherFee,
+    decimal TotalPostageInclVat,
+    decimal TotalCollect,
+    decimal GrandTotal,
+    string CurrencyCode,
+    string PostagePayer,
+    string ChargeEconomicRole,
+    decimal CodCollectAmount,
+    bool AmountsRedacted);
+
+/// <summary>Bill-owned waybill profile (ADR-0018).</summary>
+public sealed record BillWaybillDto(
+    Guid Id,
+    Guid BillId,
+    string BillNo,
+    string? CarrierName,
+    string? ItemFormCode,
+    WaybillPartyDto Sender,
+    WaybillPartyDto Consignee,
+    string PackageKind,
+    string? ContentsDescription,
+    int? ContentsQuantity,
+    decimal? DeclaredValue,
+    string? AccompanyingDocs,
+    string? VatServicesNote,
+    string? NonDeliveryAction,
+    bool SenderCommitAccepted,
+    DateTimeOffset? SentAt,
+    int ParcelCount,
+    decimal? ActualWeightKg,
+    decimal? ChargeableWeightKg,
+    WaybillChargesDto Charges,
+    string? OperationsNote,
+    string? AcceptingOffice,
+    DateTimeOffset? AcceptedAt,
+    string? AcceptedBy,
+    DateTimeOffset? ReceivedAt,
+    string? ReceivedBy);
+
+/// <summary>Request body shared by capture and upsert.</summary>
+public sealed record WaybillWriteBody(
+    string? CarrierName,
+    string? ItemFormCode,
+    WaybillPartyDto? Sender,
+    WaybillPartyDto? Consignee,
+    string? PackageKind,
+    string? ContentsDescription,
+    int? ContentsQuantity,
+    decimal? DeclaredValue,
+    string? AccompanyingDocs,
+    string? VatServicesNote,
+    string? NonDeliveryAction,
+    bool SenderCommitAccepted,
+    DateTimeOffset? SentAt,
+    int? ParcelCount,
+    decimal? ActualWeightKg,
+    decimal? ChargeableWeightKg,
+    decimal? BasePostage,
+    decimal? VatPostage,
+    decimal? Surcharge,
+    decimal? CodFee,
+    decimal? OtherFee,
+    decimal? TotalPostageInclVat,
+    decimal? TotalCollect,
+    decimal? GrandTotal,
+    string? CurrencyCode,
+    string? PostagePayer,
+    string? ChargeEconomicRole,
+    decimal? CodCollectAmount,
+    string? OperationsNote,
+    string? AcceptingOffice,
+    DateTimeOffset? AcceptedAt,
+    string? AcceptedBy,
+    DateTimeOffset? ReceivedAt,
+    string? ReceivedBy);

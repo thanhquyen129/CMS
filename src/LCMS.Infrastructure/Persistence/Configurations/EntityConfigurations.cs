@@ -80,6 +80,65 @@ internal sealed class BillConfiguration : IEntityTypeConfiguration<Bill>
     }
 }
 
+internal sealed class BillWaybillConfiguration : IEntityTypeConfiguration<BillWaybill>
+{
+    public void Configure(EntityTypeBuilder<BillWaybill> builder)
+    {
+        builder.ToTable("bill_waybills");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.BillId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.CarrierName).HasMaxLength(128);
+        builder.Property(e => e.ItemFormCode).HasMaxLength(16);
+        builder.Property(e => e.SenderName).HasMaxLength(256);
+        builder.Property(e => e.SenderPhone).HasMaxLength(32);
+        builder.Property(e => e.SenderEmail).HasMaxLength(128);
+        builder.Property(e => e.SenderAddress).HasMaxLength(512);
+        builder.Property(e => e.SenderCustomerCode).HasMaxLength(64);
+        builder.Property(e => e.SenderPostalCode).HasMaxLength(32);
+        builder.Property(e => e.ConsigneeName).HasMaxLength(256);
+        builder.Property(e => e.ConsigneePhone).HasMaxLength(32);
+        builder.Property(e => e.ConsigneeEmail).HasMaxLength(128);
+        builder.Property(e => e.ConsigneeAddress).HasMaxLength(512);
+        builder.Property(e => e.ConsigneeDeliveryCode).HasMaxLength(64);
+        builder.Property(e => e.ConsigneePostalCode).HasMaxLength(32);
+        builder.Property(e => e.PackageKind).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ContentsDescription).HasMaxLength(512);
+        builder.Property(e => e.DeclaredValue).HasPrecision(18, 4);
+        builder.Property(e => e.AccompanyingDocs).HasMaxLength(256);
+        builder.Property(e => e.VatServicesNote).HasMaxLength(512);
+        builder.Property(e => e.NonDeliveryAction).HasMaxLength(32);
+        builder.Property(e => e.ActualWeightKg).HasPrecision(12, 3);
+        builder.Property(e => e.ChargeableWeightKg).HasPrecision(12, 3);
+        builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.BasePostage).HasPrecision(18, 4);
+        builder.Property(e => e.VatPostage).HasPrecision(18, 4);
+        builder.Property(e => e.Surcharge).HasPrecision(18, 4);
+        builder.Property(e => e.CodFee).HasPrecision(18, 4);
+        builder.Property(e => e.OtherFee).HasPrecision(18, 4);
+        builder.Property(e => e.TotalPostageInclVat).HasPrecision(18, 4);
+        builder.Property(e => e.TotalCollect).HasPrecision(18, 4);
+        builder.Property(e => e.GrandTotal).HasPrecision(18, 4);
+        builder.Property(e => e.PostagePayer).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ChargeEconomicRole).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.CodCollectAmount).HasPrecision(18, 4);
+        builder.Property(e => e.OperationsNote).HasMaxLength(512);
+        builder.Property(e => e.AcceptingOffice).HasMaxLength(256);
+        builder.Property(e => e.AcceptedBy).HasMaxLength(128);
+        builder.Property(e => e.ReceivedBy).HasMaxLength(128);
+
+        builder.HasIndex(e => new { e.TenantId, e.BillId }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.SenderName });
+        builder.HasIndex(e => new { e.TenantId, e.ConsigneeName });
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organization>
 {
     public void Configure(EntityTypeBuilder<Organization> builder)

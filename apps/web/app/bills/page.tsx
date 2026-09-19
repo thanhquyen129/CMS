@@ -124,7 +124,7 @@ export default async function BillsPage({
           }
           action={
             <Link className="btn" href="/bills/new">
-              + Tạo {billLabel}
+              + Tạo vận đơn
             </Link>
           }
         />
@@ -203,7 +203,7 @@ export default async function BillsPage({
               <>
                 Chưa có {billLabel} nào trong phạm vi của bạn.{" "}
                 <Link className="row-link" href="/bills/new">
-                  Tạo {billLabel} mới
+                  Tạo vận đơn
                 </Link>
                 .
               </>

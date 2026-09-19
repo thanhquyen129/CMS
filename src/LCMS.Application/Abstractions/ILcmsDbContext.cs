@@ -7,6 +7,7 @@ public interface ILcmsDbContext
 {
     DbSet<Tenant> Tenants { get; }
     DbSet<Bill> Bills { get; }
+    DbSet<BillWaybill> BillWaybills { get; }
     DbSet<Organization> Organizations { get; }
     DbSet<User> Users { get; }
     DbSet<BusinessParty> BusinessParties { get; }

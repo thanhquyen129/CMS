@@ -259,10 +259,20 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
+            var waybillBillIds = await _db.BillWaybills.AsNoTracking()
+                .Where(w =>
+                    (w.SenderName != null && w.SenderName.ToLower().Contains(pattern))
+                    || (w.ConsigneeName != null && w.ConsigneeName.ToLower().Contains(pattern))
+                    || (w.SenderCustomerCode != null && w.SenderCustomerCode.ToLower().Contains(pattern)))
+                .Select(w => w.BillId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
             query = query.Where(b =>
                 b.BillNo.ToLower().Contains(pattern)
                 || (b.ExternalId != null && b.ExternalId.ToLower().Contains(pattern))
-                || orderBillIds.Contains(b.Id));
+                || orderBillIds.Contains(b.Id)
+                || waybillBillIds.Contains(b.Id));
         }
 
         var ordered = query.OrderByDescending(b => b.BillNo).ThenBy(b => b.Id);
@@ -392,6 +402,14 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 .Where(p => partyIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken);
 
+        var senderByBill = await _db.BillWaybills.AsNoTracking()
+            .Where(w => billIds.Contains(w.BillId) && w.SenderName != null && w.SenderName != "")
+            .Select(w => new { w.BillId, w.SenderName })
+            .ToListAsync(cancellationToken);
+        var senderNameByBill = senderByBill
+            .GroupBy(x => x.BillId)
+            .ToDictionary(g => g.Key, g => g.First().SenderName);
+
         var revByBill = revenues.GroupBy(r => r.BillId).ToDictionary(g => g.Key, g => g.ToList());
         var costByBill = directCosts.GroupBy(c => c.BillId).ToDictionary(g => g.Key, g => g.ToList());
         var allocByBill = allocated.GroupBy(a => a.BillId).ToDictionary(
@@ -422,6 +440,10 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 if (derivedParty is Guid dpid && partyNames.TryGetValue(dpid, out var derivedName))
                 {
                     customerName = derivedName;
+                }
+                else if (senderNameByBill.TryGetValue(bill.Id, out var senderName))
+                {
+                    customerName = senderName;
                 }
             }
 

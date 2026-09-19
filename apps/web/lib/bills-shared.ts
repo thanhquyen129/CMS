@@ -81,6 +81,10 @@ export function billTypeLabel(billType: string): string {
       return "Đường sắt";
     case "multimodal":
       return "Đa phương thức";
+    case "parcel":
+    case "postal":
+    case "courier":
+      return "Bưu kiện";
     default:
       return billType || "—";
   }

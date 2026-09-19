@@ -76,7 +76,7 @@ export async function AppShell({ terms, active, children, topbarRight }: AppShel
         <NavLink href="/bills" active={active === "bills"}>
           Danh sách {billLabel}
         </NavLink>
-        <NavLink href="/bills/new">Tạo {billLabel}</NavLink>
+        <NavLink href="/bills/new">Tạo vận đơn</NavLink>
         <NavLink href="/operations">Tham chiếu vận hành</NavLink>
       </NavGroup>
 

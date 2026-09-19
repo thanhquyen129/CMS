@@ -22,6 +22,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Bill> Bills => Set<Bill>();
+    public DbSet<BillWaybill> BillWaybills => Set<BillWaybill>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<User> Users => Set<User>();
     public DbSet<BusinessParty> BusinessParties => Set<BusinessParty>();

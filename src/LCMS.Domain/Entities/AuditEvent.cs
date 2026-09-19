@@ -53,6 +53,8 @@ public static class AuditActions
     public const string DocumentMatchDetailAdd = "document_match.detail_add";
     public const string DocumentMatchConfirm = "document_match.confirm";
     public const string FinancialCloseSnapshotCreate = "financial_close_snapshot.create";
+    public const string WaybillCapture = "bill_waybill.capture";
+    public const string WaybillUpdate = "bill_waybill.update";
 }
 
 public static class AuditObjectTypes
@@ -67,4 +69,5 @@ public static class AuditObjectTypes
     public const string FinancialDocumentLine = "financial_document_line";
     public const string DocumentMatch = "document_match";
     public const string FinancialCloseSnapshot = "financial_close_snapshot";
+    public const string BillWaybill = "bill_waybill";
 }

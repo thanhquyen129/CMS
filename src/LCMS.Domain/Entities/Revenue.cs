@@ -69,4 +69,6 @@ public static class RevenueSourceTypes
     public const string Document = "document";
     public const string AccountsReceivable = "accounts_receivable";
     public const string RatingDetail = "rating_detail";
+    /// <summary>Postage line seeded from bill_waybills when economic role is revenue (ADR-0018).</summary>
+    public const string WaybillPrefix = "waybill.";
 }

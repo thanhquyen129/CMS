@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CATALOG_KINDS } from "@/lib/catalog";
+import { CATALOG_KINDS } from "@/lib/catalog-kinds";
 
 export function UpsertCatalogItemForm() {
   const router = useRouter();

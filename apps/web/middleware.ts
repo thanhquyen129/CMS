@@ -8,33 +8,7 @@ export function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get(AUTH_COOKIE)?.value;
-  const needsAuth =
-    pathname === "/" ||
-    pathname === "/dashboard" ||
-    pathname.startsWith("/dashboard/") ||
-    pathname === "/bills" ||
-    pathname.startsWith("/bills/") ||
-    pathname === "/documents" ||
-    pathname.startsWith("/documents/") ||
-    pathname === "/ap-ar" ||
-    pathname.startsWith("/ap-ar/") ||
-    pathname === "/settlements" ||
-    pathname.startsWith("/settlements/") ||
-    pathname === "/financial-closes" ||
-    pathname.startsWith("/financial-closes/") ||
-    pathname === "/reconciliations" ||
-    pathname.startsWith("/reconciliations/") ||
-    pathname === "/bank-feed" ||
-    pathname.startsWith("/bank-feed/") ||
-    pathname === "/settings" ||
-    pathname.startsWith("/settings/") ||
-    pathname === "/integration-errors" ||
-    pathname.startsWith("/integration-errors/") ||
-    pathname === "/admin" ||
-    pathname.startsWith("/admin/") ||
-    pathname.startsWith("/queues/");
-
-  if (!token && needsAuth) {
+  if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
@@ -45,30 +19,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/",
-    "/login",
-    "/dashboard",
-    "/dashboard/:path*",
-    "/bills",
-    "/bills/:path*",
-    "/documents",
-    "/documents/:path*",
-    "/ap-ar",
-    "/ap-ar/:path*",
-    "/settlements",
-    "/settlements/:path*",
-    "/financial-closes",
-    "/financial-closes/:path*",
-    "/reconciliations",
-    "/reconciliations/:path*",
-    "/bank-feed",
-    "/bank-feed/:path*",
-    "/settings",
-    "/settings/:path*",
-    "/integration-errors",
-    "/integration-errors/:path*",
-    "/admin",
-    "/admin/:path*",
-    "/queues/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

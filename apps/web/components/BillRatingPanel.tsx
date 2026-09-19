@@ -101,11 +101,13 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                     {r.status?.toLowerCase() === "superseded" ? (
                       <span className="muted">—</span>
                     ) : (
-                      <SeedExpectedCostsButton terms={terms} ratingId={r.id} />
-                      <SeedExpectedRevenuesButton
-                        terms={terms}
-                        ratingId={r.id}
-                      />
+                      <div className="row-actions">
+                        <SeedExpectedCostsButton terms={terms} ratingId={r.id} />
+                        <SeedExpectedRevenuesButton
+                          terms={terms}
+                          ratingId={r.id}
+                        />
+                      </div>
                     )}
                   </td>
                 </tr>

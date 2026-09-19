@@ -173,3 +173,12 @@ export function sourceSystemLabel(source: string): string {
   if (source?.toLowerCase() === "lcms_manual") return "Nhập tay LCMS";
   return source || "—";
 }
+
+export function operationalRefCode(row: {
+  orderNo?: string | null;
+  shipmentNo?: string | null;
+  legNo?: string | null;
+  movementNo?: string | null;
+}): string {
+  return row.orderNo || row.shipmentNo || row.legNo || row.movementNo || "—";
+}

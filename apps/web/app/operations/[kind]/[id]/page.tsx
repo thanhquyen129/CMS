@@ -12,6 +12,7 @@ import {
   getMovement,
   getOrder,
   getShipment,
+  operationalRefCode,
   sourceSystemLabel,
 } from "@/lib/operational-refs";
 
@@ -80,14 +81,7 @@ export default async function OperationalDetailPage({
   }
 
   const row = loaded.data;
-  const code =
-    "orderNo" in row
-      ? row.orderNo
-      : "shipmentNo" in row
-        ? row.shipmentNo
-        : "legNo" in row
-          ? row.legNo
-          : row.movementNo;
+  const code = operationalRefCode(row);
 
   const linkEndpoint =
     kind === "orders"

@@ -24,6 +24,7 @@ Không mở TMS / Budget-Forecast / OIDC. Làm P0 standalone (AC-SCP-06/07, UI-0
 - `/admin/catalog`, `/admin/fx-rates`
 - Thành phần giá trên `/rate-cards/[id]`; seed doanh thu trên Bill rating panel
 - Top-bar search typeahead; Bill drawer tab Liên quan cross-nav
+- Middleware: mọi route app (trừ login/BFF/static) yêu cầu cookie — không sót `/operations` `/costs` `/rate-cards`
 
 ### Schema
 - `master_catalog_items` — migration `20260919145247_D02_MasterCatalog`
@@ -31,6 +32,11 @@ Không mở TMS / Budget-Forecast / OIDC. Làm P0 standalone (AC-SCP-06/07, UI-0
 
 ### Tests
 - `StandalonePoUiGapTests` + full API suite 134 passed (SQLite: không ORDER BY DateTimeOffset trên search cost/revenue)
+- `npm run build` (Next.js) — bắt buộc: CI #174 deploy fail vì `next build` (client import `next/headers` qua `catalog.ts` + JSX kề nhau ở `BillRatingPanel`)
+
+### Ship
+- Commit `01eb920` — API/UI slice. CI [run #174](https://github.com/thanhquyen129/CMS/actions/runs/35450577515): **test OK**, **deploy fail** (`Compose up` / `next build`).
+- Follow-up commit: sửa build web + middleware; push lại để Actions deploy.
 
 ### Follow-up
 - Import CSV/preview (AC-SCP-09) P1

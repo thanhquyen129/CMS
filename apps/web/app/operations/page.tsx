@@ -72,7 +72,7 @@ export default async function OperationsPage({
           ))}
         </div>
 
-        <form className="filter-bar" method="get" role="search">
+        <form className="search-bar denser-filters" method="get" role="search">
           <input type="hidden" name="tab" value={tab} />
           <label className="sr-only" htmlFor="ops-q">
             Tìm

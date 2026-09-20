@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-21 — Sửa UI hàng loạt: khóa primitive KPI / tab / ô tìm
+
+### User
+Sao UI nhiều lỗi vặt? Có cách sửa hàng loạt một lần trên toàn hệ thống không?
+
+### Answer
+Có. Lỗi vặt vì 4–5 class làm cùng một việc; reskin form/dashboard đè class list (`.po-kpi` 124px, `.filter-bar` mất flex). Đã: (1) `po-kpi` 124px chỉ khi `.po-card`; `.po-kpi:not(.po-card)` + `.po-kpi-row` thành card gọn; (2) `.search-bar`/`.filter-bar` cùng hợp đồng flex; (3) `stat-grid` `auto-fit`; (4) rule `ux-ui.mdc` — list KPI = StatCardGrid, dashboard = po-card po-kpi. Không push/deploy.
+
+### Files
+- `apps/web/app/globals.css`
+- `apps/web/app/operations/page.tsx`
+- `.cursor/rules/ux-ui.mdc`
+
+---
+
 ## 2026-09-21 — KPI đối tác: hết dùng po-kpi dashboard (bung dọc)
 
 ### User

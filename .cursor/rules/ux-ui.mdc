@@ -12,6 +12,22 @@ alwaysApply: false
 - Vietnamese UI Term (CP6.5) is mandatory on user-facing labels; Canonical English/Code Key must not leak to end users.
 - Nhãn UI tiếng Việt (CP6.5) bắt buộc; Canonical English/Code Key không lộ cho end user.
 
+## List chrome primitives / Primitive khung danh sách
+- One primitive per job. Do not invent a parallel class for the same control.
+- Mỗi việc một primitive. Không invent class song song cho cùng một control.
+- **List KPI** → `StatCardGrid` (`stat-card` + tone). Never `po-kpi` / `po-kpi-row` on list pages.
+- **KPI danh sách** → `StatCardGrid`. Cấm `po-kpi` trên trang list (class đó là tile dashboard 124px).
+- **Dashboard hero KPI** → only `po-card po-kpi` inside `po-grid5`.
+- **KPI trang chủ** → chỉ `po-card po-kpi` trong `po-grid5`.
+- **GET filters** → `FilterBar` / `search-bar`. Never a 3-column `form-grid` for search+button.
+- **Lọc GET** → `FilterBar` / `search-bar`. Cấm `form-grid` 3 cột cho ô tìm + nút.
+- **Segmented filters** (maturity, status) → `filter-tabs`.
+- **Lọc dạng đoạn** → `filter-tabs`.
+- **Hub / module tiles** (title + one-line desc) → `hub-module-tabs`.
+- **Ô module hub** → `hub-module-tabs`.
+- Do not restyle a shared class (`.filter-bar`, `.po-kpi`, `fieldset.group-box`) for a form without checking list pages that already use it.
+- Không restyle class dùng chung cho form nếu chưa kiểm tra trang list đang dùng class đó.
+
 ## Clarity first / Rõ ràng trước
 - One primary action per screen/section. Reduce cognitive load.
 - Mỗi màn/section một hành động chính. Giảm tải nhận thức.

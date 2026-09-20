@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-21 — Sidebar footer ảnh cảng thấp lại, nhường chỗ menu
+
+### User
+Phần hình ảnh cố định dưới menu quá cao làm giới hạn tầm nhìn menu. Trong chat này không deploy.
+
+### Answer
+Footer sidebar bỏ `padding-top: 130px` + `min-height: 205px` (ảnh cảng chiếm ~280px cùng tagline/logout). Ảnh giữ làm nền khối nội dung gọn (~137px): slogan, version, nút thu gọn, Đăng xuất. Menu nhìn thêm ~3 mục trước khi phải cuộn. **Không push/deploy** theo yêu cầu lượt này.
+
+### Files
+- `apps/web/app/globals.css` — `.sidebar-footer`, `.sidebar-footer-visual`, `.sidebar-tagline`, `.sidebar-logout`
+
+---
+
 ## 2026-09-20 — Fix form layout: legend float tràn mép phải
 
 ### User

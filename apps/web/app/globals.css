@@ -722,19 +722,19 @@ button, input, select, textarea { font: inherit; }
   position: relative;
   flex-shrink: 0;
   margin-top: auto;
-  padding: 130px 20px 18px;
+  padding: 10px 16px 12px;
   overflow: hidden;
   border-top: none;
-  min-height: 205px;
+  min-height: 0;
 }
 
 .sidebar-footer-visual {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(0deg, rgba(5, 29, 52, 0.96), rgba(11, 39, 67, 0.42)),
+    linear-gradient(0deg, rgba(5, 29, 52, 0.94), rgba(11, 39, 67, 0.58)),
     url("https://images.unsplash.com/photo-1494412651409-8963ce7935a7?auto=format&fit=crop&w=500&q=60")
-      center / cover;
+      center 40% / cover;
   pointer-events: none;
 }
 
@@ -746,12 +746,12 @@ button, input, select, textarea { font: inherit; }
 .sidebar-tagline {
   position: relative;
   z-index: 1;
-  margin: 0 0 0.85rem;
+  margin: 0 0 0.4rem;
   display: flex;
   flex-direction: column;
   gap: 0;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 11px;
+  line-height: 1.45;
   color: #c9d8e8;
 }
 
@@ -818,7 +818,7 @@ html[data-sidebar="collapsed"] .sidebar-collapse-icon {
 .sidebar-logout {
   position: relative;
   z-index: 1;
-  margin-top: 0.65rem;
+  margin-top: 0.4rem;
   display: flex;
   justify-content: flex-end;
 }

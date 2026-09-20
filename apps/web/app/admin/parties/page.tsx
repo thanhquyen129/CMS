@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AdminPartyListWorkspace } from "@/components/AdminPartyListWorkspace";
-import { FilterBar, ListPageHeader } from "@/components/list";
+import { FilterBar, ListPageHeader, StatCardGrid, type StatCardModel } from "@/components/list";
 import { ListPagination } from "@/components/ListPagination";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -112,24 +112,35 @@ export default async function AdminPartiesPage({
         </div>
 
         {summaryResult.ok ? (
-          <div className="po-kpi-row" role="list" style={{ margin: "1rem 0" }}>
-            <div className="po-kpi" role="listitem">
-              <span className="muted">Tổng hồ sơ</span>
-              <strong>{summaryResult.data.total}</strong>
-            </div>
-            <div className="po-kpi po-kpi-rev" role="listitem">
-              <span className="muted">Đang dùng</span>
-              <strong>{summaryResult.data.active}</strong>
-            </div>
-            <div className="po-kpi" role="listitem">
-              <span className="muted">Ngừng</span>
-              <strong>{summaryResult.data.inactive}</strong>
-            </div>
-            <div className="po-kpi po-kpi-cost" role="listitem">
-              <span className="muted">Bị chặn giao dịch</span>
-              <strong>{summaryResult.data.blocked}</strong>
-            </div>
-          </div>
+          <StatCardGrid
+            cards={
+              [
+                {
+                  key: "total",
+                  label: "Tổng hồ sơ",
+                  value: summaryResult.data.total,
+                },
+                {
+                  key: "active",
+                  label: "Đang dùng",
+                  value: summaryResult.data.active,
+                  tone: "success",
+                },
+                {
+                  key: "inactive",
+                  label: "Ngừng",
+                  value: summaryResult.data.inactive,
+                  tone: "warning",
+                },
+                {
+                  key: "blocked",
+                  label: "Bị chặn giao dịch",
+                  value: summaryResult.data.blocked,
+                  tone: summaryResult.data.blocked > 0 ? "danger" : "default",
+                },
+              ] satisfies StatCardModel[]
+            }
+          />
         ) : null}
 
         <FilterBar

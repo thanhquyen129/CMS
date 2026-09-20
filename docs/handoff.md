@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-21 — KPI đối tác: hết dùng po-kpi dashboard (bung dọc)
+
+### User
+Các ô card và Tổng hồ sơ / Đang dùng / Ngừng / Bị chặn giao dịch bị lỗi hiển thị.
+
+### Answer
+Trang `/admin/parties` gắn `po-kpi` (dashboard: flex ngang + min-height 124px) nhưng không có `.po-kpi-row` / `po-card` — bốn số xếp dọc, khoảng trống lớn, đẩy thanh lọc xuống đáy. Đổi sang `StatCardGrid` (cùng KPI thanh toán). `.filter-field` flex để ô lọc không tràn. Không push/deploy.
+
+### Files
+- `apps/web/app/admin/parties/page.tsx`
+- `apps/web/app/globals.css`
+
+---
+
 ## 2026-09-21 — Tab tham chiếu vận hành + ô tìm không đè nút
 
 ### User

@@ -2304,6 +2304,24 @@ a.stat-card:hover {
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
+.filter-field {
+  display: flex;
+  flex: 1 1 10rem;
+  min-width: 8rem;
+}
+
+.filter-field input,
+.filter-field select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
 /* ——— Tables ——— */
 .table-wrap { overflow-x: auto; margin-top: 0.35rem; }
 

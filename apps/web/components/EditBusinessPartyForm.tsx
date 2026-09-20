@@ -283,7 +283,7 @@ export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
               disabled={busy}
             />
           </div>
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div className="field-span">
             <PartyTypeahead
               name="parentPartyId"
               label="Công ty mẹ / nhóm"
@@ -465,7 +465,7 @@ export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
               disabled={busy}
             />
           </div>
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <div className="field field-span">
             <label htmlFor="editCreditMode">Chế độ hạn mức</label>
             <select
               id="editCreditMode"
@@ -480,7 +480,7 @@ export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
               ))}
             </select>
           </div>
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <div className="field field-span">
             <label htmlFor="editNotes">Ghi chú</label>
             <textarea
               id="editNotes"

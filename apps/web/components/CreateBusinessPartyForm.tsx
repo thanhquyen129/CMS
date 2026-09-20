@@ -245,7 +245,7 @@ export function CreateBusinessPartyForm() {
             <label htmlFor="partyIndustry">Ngành hàng</label>
             <input id="partyIndustry" name="industryCode" maxLength={64} disabled={busy} />
           </div>
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div className="field-span">
             <PartyTypeahead
               name="parentPartyId"
               label="Công ty mẹ / nhóm"
@@ -350,7 +350,7 @@ export function CreateBusinessPartyForm() {
               disabled={busy}
             />
           </div>
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <div className="field field-span">
             <label htmlFor="partyCreditMode">Chế độ hạn mức</label>
             <select
               id="partyCreditMode"
@@ -365,7 +365,7 @@ export function CreateBusinessPartyForm() {
               ))}
             </select>
           </div>
-          <div className="field" style={{ gridColumn: "1 / -1" }}>
+          <div className="field field-span">
             <label htmlFor="partyNotes">Ghi chú nội bộ</label>
             <textarea id="partyNotes" name="notes" rows={3} maxLength={2000} disabled={busy} />
           </div>
@@ -377,7 +377,7 @@ export function CreateBusinessPartyForm() {
         <p className="muted" style={{ marginTop: 0 }}>
           Bắt buộc có vai trò phù hợp trước khi gắn lên Bill / chi phí / chứng từ.
         </p>
-        <div className="form-grid">
+        <div className="form-grid cols-2">
           {PARTY_ROLE_OPTIONS.map((r) => (
             <label key={r.code} className="field checkbox-field">
               <input type="checkbox" name={`role_${r.code}`} disabled={busy} /> {r.label}

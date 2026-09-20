@@ -1,6 +1,24 @@
 # Handoff
 
+## 2026-09-20 — Reskin toàn bộ form (bố cục 3 cột / card)
+
+### User
+bố cục và reskin lại tất cả các giao diện form cho đẹp và chuyên nghiệp hơn nhé
+
+### Answer
+Skin form dùng chung trong `globals.css` (mọi `form-grid` / `group-box` / `receive-form`): lưới mặc định **3 cột** (2 cột ≤1100px, 1 cột ≤520px) — hết hàng 5–6 ô 180px. Nhãn sentence-case, fieldset dạng card + tiêu đề gạch chân, input focus ring, checkbox/radio/địa chỉ kiểu chip, CTA dính đáy form. Vận đơn: 2 cột người gửi/nhận, lưới trong card 2 cột, viền accent trên. Không invent skin catalog thứ hai.
+
+### Files
+- `apps/web/app/globals.css` — form tokens + grid + waybill/address/checkbox/radio.
+- `CreateBusinessPartyForm.tsx`, `EditBusinessPartyForm.tsx`, `PartyRolesPanel.tsx`, `VnAddressFields.tsx`, `CreateSharedCostForm.tsx` — `field-span` / `cols-2`.
+
+### Verify
+- `/admin/parties/new` và `/bills/new` trên production sau CI.
+
+---
+
 ## 2026-09-20 — Deploy CI fail: client import `next/headers`
+
 
 ### User
 deploy bị lỗi. Từ nay sau khi deploy thì đợi vài phút kiểm tra xem có lỗi hay không nhé.

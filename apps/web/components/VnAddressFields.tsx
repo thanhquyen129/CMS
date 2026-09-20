@@ -66,7 +66,7 @@ export function VnAddressFields({ disabled, defaults }: Props) {
       </div>
 
       <div className="form-grid">
-        <div className="field">
+        <div className="field field-span">
           <label htmlFor="editAddr1">Số nhà, đường</label>
           <input
             id="editAddr1"

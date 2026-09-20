@@ -59,7 +59,7 @@ export function PartyRolesPanel({
         Một đối tác có thể vừa là khách hàng vừa là nhà cung cấp (canonical +
         roles).
       </p>
-      <div className="form-grid">
+      <div className="form-grid cols-2">
         {PARTY_ROLE_OPTIONS.map((r) => {
           const on = roleCodes.includes(r.code);
           const busy = busyCode === r.code || isPending;

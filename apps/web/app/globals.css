@@ -55,6 +55,21 @@ html[data-density="compact"] .data-table td {
   padding: 0.45rem 0.55rem;
 }
 
+html[data-density="compact"] .field input,
+html[data-density="compact"] .field select,
+html[data-density="compact"] .field textarea {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem;
+}
+
+html[data-density="compact"] fieldset.group-box {
+  padding: 0.8rem 0.9rem 0.95rem;
+}
+
+html[data-density="compact"] .form-grid {
+  gap: 0.65rem 0.85rem;
+}
+
 * { box-sizing: border-box; }
 
 html, body {
@@ -1988,15 +2003,26 @@ a.stat-card:hover {
 .radio-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem 1.25rem;
-  margin-top: 0.35rem;
+  gap: 0.55rem;
+  margin-top: 0.15rem;
 }
 
 .radio-row label {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #f7f9fc;
   font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.radio-row label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .inline-list {
@@ -2333,32 +2359,55 @@ a.stat-card:hover {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.9rem;
+  gap: 0.32rem;
+  margin-bottom: 0;
+  min-width: 0;
 }
 
 .field label {
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #3d4654;
+}
+
+.field:has(input:required) > label::after,
+.field:has(select:required) > label::after,
+.field:has(textarea:required) > label::after {
+  content: " *";
+  color: var(--danger);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6b7385;
 }
 
 .field input,
 .field select,
 .field textarea {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  padding: 0.65rem 1rem;
+  width: 100%;
+  min-height: 2.55rem;
+  border: 1px solid #d9dee7;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.8rem;
   background: #fff;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  color: var(--ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .field textarea {
-  border-radius: var(--radius-sm);
-  min-height: 5rem;
+  min-height: 5.5rem;
   resize: vertical;
+  line-height: 1.45;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: #9aa3b2;
+}
+
+.field input:hover:not(:disabled):not(:focus),
+.field select:hover:not(:disabled):not(:focus),
+.field textarea:hover:not(:disabled):not(:focus) {
+  border-color: #c3cad6;
 }
 
 .field input:focus,
@@ -2369,10 +2418,19 @@ a.stat-card:hover {
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background: #f5f7fa;
+  color: #5c6573;
+  cursor: not-allowed;
+}
+
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.35rem 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem 1rem;
+  align-items: start;
 }
 
 .form-grid.cols-1 {
@@ -2388,7 +2446,40 @@ a.stat-card:hover {
 }
 
 .field-span { grid-column: 1 / -1; }
-.receive-form { margin-top: 0.5rem; }
+.field-span-2 { grid-column: span 2; }
+
+.receive-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+  margin-top: 0.35rem;
+}
+
+.receive-form > .note {
+  margin: 0 !important;
+  padding: 0.7rem 0.9rem;
+  background: #f7f9fc;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: #5a6472;
+}
+
+.receive-form > .cta-row {
+  position: sticky;
+  bottom: 0.65rem;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.15rem !important;
+  padding: 0.75rem 0.95rem;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
 
 /* Compact multi-column + fieldset groups (reduce vertical scroll) */
 .layout-cols-2 {
@@ -2430,28 +2521,41 @@ a.stat-card:hover {
 
 fieldset.group-box {
   margin: 0;
-  padding: 0.75rem 0.95rem 0.85rem;
+  padding: 1rem 1.1rem 1.15rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface, #fff);
+  box-shadow: var(--shadow);
   min-width: 0;
 }
 
 fieldset.group-box > legend {
-  padding: 0 0.4rem;
-  font-size: 0.78rem;
+  float: left;
+  width: 100%;
+  margin: 0 0 0.9rem;
+  padding: 0 0 0.65rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.95rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6b7385;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--ink);
+}
+
+fieldset.group-box::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+fieldset.group-box > .muted,
+fieldset.group-box > .note {
+  margin: 0 0 0.85rem !important;
+  max-width: 48rem;
 }
 
 fieldset.group-box .form-grid {
-  margin-top: 0.25rem;
-}
-
-fieldset.group-box .field:last-child {
-  margin-bottom: 0;
+  margin-top: 0;
 }
 
 .filter-bar {
@@ -2470,35 +2574,77 @@ fieldset.group-box .field:last-child {
 
 .checkbox-field {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 0.4rem;
-  padding-top: 1.4rem;
+  gap: 0.55rem;
+  min-height: 2.55rem;
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #f7f9fc;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.checkbox-field input {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.checkbox-field:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .address-scheme {
   display: grid;
-  gap: 0.45rem;
-  margin: 0.65rem 0 0.85rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin: 0.85rem 0 1rem;
 }
 
 .address-scheme-option {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.55rem 0.7rem;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: var(--bg);
+  background: #f7f9fc;
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.address-scheme-option:hover {
+  border-color: #c3cad6;
 }
 
 .address-scheme-option:has(input:checked) {
   border-color: var(--accent);
   background: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 .address-scheme-option input {
   margin-top: 0.2rem;
+  accent-color: var(--accent);
+}
+
+.address-scheme-option strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.address-scheme-option .muted {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
 }
 
 .vn-bank-ac {
@@ -2597,11 +2743,16 @@ fieldset.group-box .field:last-child {
 
 .form-sections {
   display: grid;
-  gap: 0.85rem 1rem;
-  margin-top: 0.5rem;
+  gap: 1.05rem 1.15rem;
+  margin-top: 0;
 }
 
 .form-sections.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-sections.cols-2 .form-grid,
+.layout-cols-2 .form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -3464,19 +3615,23 @@ html[data-layout="horizontal"] .login-page {
   }
 
   .form-grid,
+  .form-grid.cols-3,
   .settings-grid {
     grid-template-columns: 1fr 1fr;
   }
 
-  .form-grid.cols-2,
-  .form-grid.cols-3,
   .form-sections.cols-2,
   .layout-cols-2,
   .layout-cols-3,
   .perm-group-grid,
   .settings-toggles,
-  .dash-layout {
+  .dash-layout,
+  .address-scheme {
     grid-template-columns: 1fr;
+  }
+
+  .field-span-2 {
+    grid-column: 1 / -1;
   }
 
   .theme-picker {
@@ -3490,8 +3645,15 @@ html[data-layout="horizontal"] .login-page {
 
 @media (max-width: 520px) {
   .form-grid,
-  .settings-grid {
+  .form-grid.cols-2,
+  .form-grid.cols-3,
+  .settings-grid,
+  .waybill-sheet .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .field-span-2 {
+    grid-column: 1 / -1;
   }
 }
 
@@ -3506,8 +3668,16 @@ html[data-layout="horizontal"] .login-page {
 .waybill-sheet {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem 1.25rem;
-  margin-top: 0.75rem;
+  gap: 1.05rem 1.15rem;
+  margin-top: 0;
+}
+
+.waybill-sheet .form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.waybill-sheet .group-box {
+  border-top: 3px solid var(--accent);
 }
 
 .waybill-sheet-readonly {
@@ -3515,7 +3685,7 @@ html[data-layout="horizontal"] .login-page {
 }
 
 .waybill-form .cta-row {
-  margin-top: 1.25rem;
+  margin-top: 0.15rem;
 }
 
 .waybill-simple-create {
@@ -3540,16 +3710,32 @@ html[data-layout="horizontal"] .login-page {
 
 .field-static-label {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: #6b7385;
-  margin-bottom: 0.25rem;
+  color: #3d4654;
+  margin-bottom: 0.32rem;
 }
 
 .field-static-value {
   margin: 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+  font-size: 1.02rem;
+}
+
+@media (max-width: 1100px) {
+  .form-grid,
+  .form-grid.cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field-span-2 {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 900px) {
@@ -3570,6 +3756,7 @@ html[data-layout="horizontal"] .login-page {
 
 .party-typeahead-row input[type="search"] {
   flex: 1;
+  min-width: 0;
 }
 
 .party-typeahead-list {

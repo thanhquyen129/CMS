@@ -166,7 +166,7 @@ export function CreateSharedCostForm({
                 autoComplete="off"
               />
             </div>
-            <div style={{ gridColumn: "1 / -1" }}>
+            <div className="field-span">
               <PartyTypeahead
                 name="vendorPartyId"
                 label="Nhà cung cấp"

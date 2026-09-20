@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-09-21 — Deploy UI chrome (sidebar, KPI, tab, filter)
+
+### User
+deploy
+
+### Answer
+Push `main` (5 commit UI: sidebar footer, StatCardGrid tone, ops tabs, party KPI, primitive containment). GitHub Actions `CI` test → deploy `/opt/cms`. Không scp. Không ghi đè `infra/.env`.
+
+### Commits
+- `08ef47c` sidebar footer thấp hơn
+- `98c2c31` KPI tone nền cả card
+- `777ac42` tab vận hành + ô tìm
+- `314ee4d` KPI đối tác StatCardGrid
+- `4bce613` khóa primitive CSS + ux-ui.mdc
+
+---
+
 ## 2026-09-21 — Sửa UI hàng loạt: khóa primitive KPI / tab / ô tìm
 
 ### User

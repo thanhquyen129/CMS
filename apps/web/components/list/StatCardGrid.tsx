@@ -31,9 +31,9 @@ export function StatCardGrid({
     <div className={className}>
       {cards.map((c) => {
         const tone = c.tone ?? "default";
+        const cardClass = `stat-card ${TONE_CLASS[tone]}`;
         const inner = (
           <>
-            <span className={`stat-card-icon ${TONE_CLASS[tone]}`} aria-hidden="true" />
             <span className="stat-label">{c.label}</span>
             <strong
               className={
@@ -48,11 +48,11 @@ export function StatCardGrid({
           </>
         );
         return c.href ? (
-          <Link key={c.key} className="stat-card" href={c.href}>
+          <Link key={c.key} className={cardClass} href={c.href}>
             {inner}
           </Link>
         ) : (
-          <div key={c.key} className="stat-card">
+          <div key={c.key} className={cardClass}>
             {inner}
           </div>
         );

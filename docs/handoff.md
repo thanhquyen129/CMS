@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-21 — KPI card: nền cả khối theo màu ô vuông tone
+
+### User
+Các khối KPI có ô vuông nhỏ góc phải — cho màu nền toàn khối như màu ô đó.
+
+### Answer
+Ô vuông là chip `tone` trên `StatCardGrid` (xanh `#e6f4ff` / đỏ `#ffccc7`…). Bỏ chip; gán class tone lên cả card. Cùng bộ KPI (thanh toán, AP/AR, chứng từ…). Không push/deploy.
+
+### Files
+- `apps/web/components/list/StatCardGrid.tsx`
+- `apps/web/app/globals.css`
+
+---
+
 ## 2026-09-21 — Sidebar footer ảnh cảng thấp lại, nhường chỗ menu
 
 ### User

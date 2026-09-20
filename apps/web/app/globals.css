@@ -506,22 +506,6 @@ button, input, select, textarea { font: inherit; }
   margin-top: 0.85rem;
 }
 
-.stat-card-icon {
-  position: absolute;
-  top: 0.85rem;
-  right: 0.85rem;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.55rem;
-}
-
-.stat-card-tone-default { background: #e6f4ff; }
-.stat-card-tone-primary { background: #bae0ff; }
-.stat-card-tone-success { background: #d9f7be; }
-.stat-card-tone-warning { background: #ffe58f; }
-.stat-card-tone-danger { background: #ffccc7; }
-.stat-card-tone-info { background: #efdbff; }
-
 .hub-module-tabs {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -2110,7 +2094,7 @@ html[data-sidebar="collapsed"] .sidebar-logout {
   gap: 0.3rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem 2.75rem 1rem 1.1rem;
+  padding: 1rem 1.1rem;
   background: var(--surface);
   box-shadow: var(--shadow);
   color: inherit;
@@ -2121,6 +2105,13 @@ a.stat-card:hover {
   border-color: var(--accent);
   box-shadow: 0 4px 16px var(--accent-shadow, rgba(10, 179, 156, 0.18));
 }
+
+.stat-card.stat-card-tone-default { background: #e6f4ff; border-color: #bae0ff; }
+.stat-card.stat-card-tone-primary { background: #bae0ff; border-color: #91caff; }
+.stat-card.stat-card-tone-success { background: #d9f7be; border-color: #b7eb8f; }
+.stat-card.stat-card-tone-warning { background: #ffe58f; border-color: #ffd666; }
+.stat-card.stat-card-tone-danger { background: #ffccc7; border-color: #ffa39e; }
+.stat-card.stat-card-tone-info { background: #efdbff; border-color: #d3adf7; }
 
 .stat-card-static { cursor: default; }
 

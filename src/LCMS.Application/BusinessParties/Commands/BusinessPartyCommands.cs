@@ -1,5 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -29,14 +31,24 @@ public sealed record CreateBusinessPartyCommand(
     decimal? CreditLimit = null,
     string? CreditLimitCurrencyCode = null,
     string? Notes = null,
-    IReadOnlyList<string>? RoleCodes = null) : IRequest<Guid>;
+    IReadOnlyList<string>? RoleCodes = null,
+    string? PartyKind = null,
+    string? ShortName = null,
+    string? LegalType = null,
+    string? GroupCode = null,
+    string? ExternalCode = null,
+    string? IndustryCode = null,
+    string? InvoiceEmail = null,
+    bool? VatRegistered = null,
+    Guid? AssignedUserId = null,
+    Guid? ParentPartyId = null,
+    string? CreditControlMode = null) : IRequest<Guid>;
 
 public sealed class CreateBusinessPartyCommandValidator : AbstractValidator<CreateBusinessPartyCommand>
 {
     public CreateBusinessPartyCommandValidator()
     {
         RuleFor(x => x.Code)
-            .NotEmpty().WithMessage("Mã đối tác không được để trống.")
             .MaximumLength(64).WithMessage("Mã đối tác không được vượt quá 64 ký tự.");
 
         RuleFor(x => x.Name)
@@ -52,15 +64,18 @@ public sealed class CreateBusinessPartyCommandHandler : IRequestHandler<CreateBu
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly IAuditWriter _audit;
 
     public CreateBusinessPartyCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(CreateBusinessPartyCommand request, CancellationToken cancellationToken)
@@ -76,10 +91,11 @@ public sealed class CreateBusinessPartyCommandHandler : IRequestHandler<CreateBu
             cancellationToken);
 
         var tenantId = _tenantContext.TenantId!.Value;
-        var code = request.Code.Trim();
+        var code = await BusinessPartyFieldRules.AllocateCodeAsync(_db, tenantId, request.Code, cancellationToken);
         var taxId = BusinessPartyFieldRules.NormalizeTaxId(request.TaxId);
 
-        if (await _db.BusinessParties.AnyAsync(p => p.TenantId == tenantId && p.Code == code, cancellationToken))
+        if (await _db.BusinessParties.IgnoreQueryFilters()
+                .AnyAsync(p => p.TenantId == tenantId && p.Code == code, cancellationToken))
         {
             throw new ConflictAppException("Mã đối tác đã tồn tại trong thuê bao này.");
         }
@@ -96,6 +112,15 @@ public sealed class CreateBusinessPartyCommandHandler : IRequestHandler<CreateBu
             _db,
             request.DefaultCurrencyCode,
             request.CreditLimitCurrencyCode,
+            cancellationToken);
+
+        await BusinessPartyFieldRules.EnsureRelationsAsync(
+            _db,
+            tenantId,
+            request.AssignedUserId,
+            request.ParentPartyId,
+            excludePartyId: null,
+            request.ExternalCode,
             cancellationToken);
 
         var roleCodes = BusinessPartyFieldRules.NormalizeRoleCodes(request.RoleCodes);
@@ -121,6 +146,20 @@ public sealed class CreateBusinessPartyCommandHandler : IRequestHandler<CreateBu
                 IsActive = true
             });
         }
+
+        _audit.Append(
+            AuditActions.BusinessPartyCreate,
+            AuditObjectTypes.BusinessParty,
+            party.Id,
+            afterJson: AuditJson.Serialize(new
+            {
+                party.Id,
+                party.Code,
+                party.Name,
+                party.TaxId,
+                party.PartyKind,
+                roles = roleCodes
+            }));
 
         try
         {
@@ -156,7 +195,18 @@ public sealed record UpdateBusinessPartyCommand(
     int? PaymentTermDays = null,
     decimal? CreditLimit = null,
     string? CreditLimitCurrencyCode = null,
-    string? Notes = null) : IRequest;
+    string? Notes = null,
+    string? PartyKind = null,
+    string? ShortName = null,
+    string? LegalType = null,
+    string? GroupCode = null,
+    string? ExternalCode = null,
+    string? IndustryCode = null,
+    string? InvoiceEmail = null,
+    bool? VatRegistered = null,
+    Guid? AssignedUserId = null,
+    Guid? ParentPartyId = null,
+    string? CreditControlMode = null) : IRequest;
 
 public sealed class UpdateBusinessPartyCommandValidator : AbstractValidator<UpdateBusinessPartyCommand>
 {
@@ -176,15 +226,18 @@ public sealed class UpdateBusinessPartyCommandHandler : IRequestHandler<UpdateBu
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly IAuditWriter _audit;
 
     public UpdateBusinessPartyCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _audit = audit;
     }
 
     public async Task Handle(UpdateBusinessPartyCommand request, CancellationToken cancellationToken)
@@ -221,9 +274,43 @@ public sealed class UpdateBusinessPartyCommandHandler : IRequestHandler<UpdateBu
             request.CreditLimitCurrencyCode,
             cancellationToken);
 
+        await BusinessPartyFieldRules.EnsureRelationsAsync(
+            _db,
+            tenantId,
+            request.AssignedUserId,
+            request.ParentPartyId,
+            party.Id,
+            request.ExternalCode,
+            cancellationToken);
+
+        var before = AuditJson.Serialize(new
+        {
+            party.Name,
+            party.TaxId,
+            party.IsActive,
+            party.CreditLimit,
+            party.PaymentTermDays,
+            party.CreditControlMode
+        });
+
         party.Name = request.Name.Trim();
         party.IsActive = request.IsActive;
         BusinessPartyFieldRules.ApplyFields(party, request);
+
+        _audit.Append(
+            AuditActions.BusinessPartyUpdate,
+            AuditObjectTypes.BusinessParty,
+            party.Id,
+            beforeJson: before,
+            afterJson: AuditJson.Serialize(new
+            {
+                party.Name,
+                party.TaxId,
+                party.IsActive,
+                party.CreditLimit,
+                party.PaymentTermDays,
+                party.CreditControlMode
+            }));
 
         try
         {
@@ -244,17 +331,23 @@ public sealed class SoftDeleteBusinessPartyCommandHandler : IRequestHandler<Soft
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
     private readonly ICurrentUserContext _userContext;
+    private readonly IAuditWriter _audit;
+    private readonly IPartyDirectoryService _directory;
 
     public SoftDeleteBusinessPartyCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IPermissionService permissions,
-        ICurrentUserContext userContext)
+        ICurrentUserContext userContext,
+        IAuditWriter audit,
+        IPartyDirectoryService directory)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
         _userContext = userContext;
+        _audit = audit;
+        _directory = directory;
     }
 
     public async Task Handle(SoftDeleteBusinessPartyCommand request, CancellationToken cancellationToken)
@@ -275,7 +368,22 @@ public sealed class SoftDeleteBusinessPartyCommandHandler : IRequestHandler<Soft
             throw new NotFoundAppException("Không tìm thấy đối tác.");
         }
 
+        var (apOpen, arOpen, apCount, arCount) = await _directory.GetOpenExposureTotalsAsync(party.Id, cancellationToken);
+        if (apCount > 0 || arCount > 0)
+        {
+            throw new ConflictAppException(
+                $"Không xóa mềm đối tác {party.Code} khi còn công nợ mở " +
+                $"(AP {apCount} dòng / {apOpen:0.##}, AR {arCount} dòng / {arOpen:0.##}). " +
+                "Hãy ngừng dùng hoặc chặn giao dịch.");
+        }
+
         var actorId = _userContext.UserId;
+        _audit.Append(
+            AuditActions.BusinessPartyDelete,
+            AuditObjectTypes.BusinessParty,
+            party.Id,
+            beforeJson: AuditJson.Serialize(new { party.Code, party.Name, party.IsActive }),
+            reason: "soft-delete");
         party.SoftDelete(actorId);
 
         var roles = await _db.PartyRoles.Where(r => r.PartyId == party.Id).ToListAsync(cancellationToken);
@@ -345,6 +453,33 @@ internal static class BusinessPartyFieldRules
             .Must(PartyRoleCodes.IsKnown)
             .When(x => x.RoleCodes is { Count: > 0 })
             .WithMessage("Mã vai trò đối tác phải là customer, vendor, payer hoặc payee.");
+        validator.RuleFor(x => x.PartyKind)
+            .Must(k => string.IsNullOrWhiteSpace(k) || PartyKinds.IsKnown(k))
+            .WithMessage("Loại đối tác phải là tổ chức hoặc cá nhân.");
+        validator.RuleFor(x => x.ShortName).MaximumLength(128);
+        validator.RuleFor(x => x.LegalType)
+            .Must(PartyLegalTypes.IsKnown)
+            .WithMessage("Loại pháp lý không hợp lệ.");
+        validator.RuleFor(x => x.GroupCode).MaximumLength(64);
+        validator.RuleFor(x => x.ExternalCode).MaximumLength(64);
+        validator.RuleFor(x => x.IndustryCode).MaximumLength(64);
+        validator.RuleFor(x => x.InvoiceEmail).MaximumLength(256);
+        validator.RuleFor(x => x.CreditControlMode)
+            .Must(m => string.IsNullOrWhiteSpace(m) || PartyCreditControlModes.IsKnown(m))
+            .WithMessage("Chế độ hạn mức phải là advisory, warn hoặc block.");
+        validator.RuleFor(x => x.Email)
+            .EmailAddress()
+            .When(x => !string.IsNullOrWhiteSpace(x.Email))
+            .WithMessage("Email không hợp lệ.");
+        validator.RuleFor(x => x.InvoiceEmail)
+            .EmailAddress()
+            .When(x => !string.IsNullOrWhiteSpace(x.InvoiceEmail))
+            .WithMessage("Email hóa đơn không hợp lệ.");
+        validator.RuleFor(x => x.TaxId)
+            .Must(t => BusinessPartyFieldRules.IsValidVnTaxId(t))
+            .When(x => !string.IsNullOrWhiteSpace(x.TaxId)
+                       && string.Equals(x.CountryCode?.Trim(), "VN", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("MST Việt Nam phải gồm 10 hoặc 13 chữ số.");
     }
 
     public static void Apply(AbstractValidator<UpdateBusinessPartyCommand> validator)
@@ -386,6 +521,33 @@ internal static class BusinessPartyFieldRules
             .WithMessage("Mã tiền tệ hạn mức phải đúng 3 chữ cái ISO 4217.");
         validator.RuleFor(x => x.Notes).MaximumLength(2000)
             .WithMessage("Ghi chú không được vượt quá 2000 ký tự.");
+        validator.RuleFor(x => x.PartyKind)
+            .Must(k => string.IsNullOrWhiteSpace(k) || PartyKinds.IsKnown(k))
+            .WithMessage("Loại đối tác phải là tổ chức hoặc cá nhân.");
+        validator.RuleFor(x => x.ShortName).MaximumLength(128);
+        validator.RuleFor(x => x.LegalType)
+            .Must(PartyLegalTypes.IsKnown)
+            .WithMessage("Loại pháp lý không hợp lệ.");
+        validator.RuleFor(x => x.GroupCode).MaximumLength(64);
+        validator.RuleFor(x => x.ExternalCode).MaximumLength(64);
+        validator.RuleFor(x => x.IndustryCode).MaximumLength(64);
+        validator.RuleFor(x => x.InvoiceEmail).MaximumLength(256);
+        validator.RuleFor(x => x.CreditControlMode)
+            .Must(m => string.IsNullOrWhiteSpace(m) || PartyCreditControlModes.IsKnown(m))
+            .WithMessage("Chế độ hạn mức phải là advisory, warn hoặc block.");
+        validator.RuleFor(x => x.Email)
+            .EmailAddress()
+            .When(x => !string.IsNullOrWhiteSpace(x.Email))
+            .WithMessage("Email không hợp lệ.");
+        validator.RuleFor(x => x.InvoiceEmail)
+            .EmailAddress()
+            .When(x => !string.IsNullOrWhiteSpace(x.InvoiceEmail))
+            .WithMessage("Email hóa đơn không hợp lệ.");
+        validator.RuleFor(x => x.TaxId)
+            .Must(t => BusinessPartyFieldRules.IsValidVnTaxId(t))
+            .When(x => !string.IsNullOrWhiteSpace(x.TaxId)
+                       && string.Equals(x.CountryCode?.Trim(), "VN", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("MST Việt Nam phải gồm 10 hoặc 13 chữ số.");
     }
 
     public static string? NormalizeTaxId(string? taxId)
@@ -451,6 +613,21 @@ internal static class BusinessPartyFieldRules
         party.CreditLimit = request.CreditLimit;
         party.CreditLimitCurrencyCode = NormalizeCurrency(request.CreditLimitCurrencyCode);
         party.Notes = Normalize(request.Notes);
+        party.PartyKind = string.IsNullOrWhiteSpace(request.PartyKind)
+            ? PartyKinds.Organization
+            : request.PartyKind.Trim().ToLowerInvariant();
+        party.ShortName = Normalize(request.ShortName);
+        party.LegalType = Normalize(request.LegalType)?.ToLowerInvariant();
+        party.GroupCode = Normalize(request.GroupCode);
+        party.ExternalCode = Normalize(request.ExternalCode);
+        party.IndustryCode = Normalize(request.IndustryCode);
+        party.InvoiceEmail = Normalize(request.InvoiceEmail);
+        party.VatRegistered = request.VatRegistered;
+        party.AssignedUserId = request.AssignedUserId;
+        party.ParentPartyId = request.ParentPartyId;
+        party.CreditControlMode = string.IsNullOrWhiteSpace(request.CreditControlMode)
+            ? PartyCreditControlModes.Advisory
+            : request.CreditControlMode.Trim().ToLowerInvariant();
     }
 
     public static void ApplyFields(BusinessParty party, UpdateBusinessPartyCommand request)
@@ -473,6 +650,24 @@ internal static class BusinessPartyFieldRules
         party.CreditLimit = request.CreditLimit;
         party.CreditLimitCurrencyCode = NormalizeCurrency(request.CreditLimitCurrencyCode);
         party.Notes = Normalize(request.Notes);
+        if (!string.IsNullOrWhiteSpace(request.PartyKind))
+        {
+            party.PartyKind = request.PartyKind.Trim().ToLowerInvariant();
+        }
+
+        party.ShortName = Normalize(request.ShortName);
+        party.LegalType = Normalize(request.LegalType)?.ToLowerInvariant();
+        party.GroupCode = Normalize(request.GroupCode);
+        party.ExternalCode = Normalize(request.ExternalCode);
+        party.IndustryCode = Normalize(request.IndustryCode);
+        party.InvoiceEmail = Normalize(request.InvoiceEmail);
+        party.VatRegistered = request.VatRegistered;
+        party.AssignedUserId = request.AssignedUserId;
+        party.ParentPartyId = request.ParentPartyId;
+        if (!string.IsNullOrWhiteSpace(request.CreditControlMode))
+        {
+            party.CreditControlMode = request.CreditControlMode.Trim().ToLowerInvariant();
+        }
     }
 
     public static async Task EnsureCurrencyExistsAsync(
@@ -497,6 +692,96 @@ internal static class BusinessPartyFieldRules
                 {
                     ["currencyCode"] = [$"Tiền tệ {code} không tồn tại hoặc đã ngừng dùng."]
                 });
+            }
+        }
+    }
+
+    public static bool IsValidVnTaxId(string? taxId)
+    {
+        if (string.IsNullOrWhiteSpace(taxId))
+        {
+            return true;
+        }
+
+        var digits = new string(taxId.Where(char.IsDigit).ToArray());
+        return digits.Length is 10 or 13;
+    }
+
+    public static async Task<string> AllocateCodeAsync(
+        ILcmsDbContext db,
+        Guid tenantId,
+        string? requested,
+        CancellationToken cancellationToken)
+    {
+        var code = Normalize(requested);
+        if (code is not null)
+        {
+            return code;
+        }
+
+        for (var i = 0; i < 25; i++)
+        {
+            var candidate = $"DT-{DateTime.UtcNow:yyMMdd}-{Random.Shared.Next(1000, 9999)}";
+            var exists = await db.BusinessParties.IgnoreQueryFilters()
+                .AnyAsync(p => p.TenantId == tenantId && p.Code == candidate, cancellationToken);
+            if (!exists)
+            {
+                return candidate;
+            }
+        }
+
+        throw new ConflictAppException("Không cấp được mã đối tác tự động. Hãy nhập mã thủ công.");
+    }
+
+    public static async Task EnsureRelationsAsync(
+        ILcmsDbContext db,
+        Guid tenantId,
+        Guid? assignedUserId,
+        Guid? parentPartyId,
+        Guid? excludePartyId,
+        string? externalCode,
+        CancellationToken cancellationToken)
+    {
+        if (assignedUserId is Guid userId)
+        {
+            var userOk = await db.Users.AsNoTracking().AnyAsync(u => u.Id == userId, cancellationToken);
+            if (!userOk)
+            {
+                throw new NotFoundAppException("Không tìm thấy người phụ trách.");
+            }
+        }
+
+        if (parentPartyId is Guid parentId)
+        {
+            if (excludePartyId == parentId)
+            {
+                throw new ValidationAppException(new Dictionary<string, string[]>
+                {
+                    ["parentPartyId"] = ["Đối tác không thể là công ty mẹ của chính mình."]
+                });
+            }
+
+            var parentOk = await db.BusinessParties.AsNoTracking()
+                .AnyAsync(p => p.Id == parentId, cancellationToken);
+            if (!parentOk)
+            {
+                throw new NotFoundAppException("Không tìm thấy đối tác mẹ.");
+            }
+        }
+
+        var ext = Normalize(externalCode);
+        if (ext is not null)
+        {
+            var dup = await db.BusinessParties.IgnoreQueryFilters()
+                .AnyAsync(
+                    p => p.TenantId == tenantId
+                         && p.ExternalCode == ext
+                         && p.DeletedAt == null
+                         && (excludePartyId == null || p.Id != excludePartyId),
+                    cancellationToken);
+            if (dup)
+            {
+                throw new ConflictAppException("Mã đối chiếu ngoài đã tồn tại trên đối tác khác.");
             }
         }
     }

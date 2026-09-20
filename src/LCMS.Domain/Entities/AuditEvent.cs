@@ -55,6 +55,17 @@ public static class AuditActions
     public const string FinancialCloseSnapshotCreate = "financial_close_snapshot.create";
     public const string WaybillCapture = "bill_waybill.capture";
     public const string WaybillUpdate = "bill_waybill.update";
+    public const string BusinessPartyCreate = "business_party.create";
+    public const string BusinessPartyUpdate = "business_party.update";
+    public const string BusinessPartyDelete = "business_party.delete";
+    public const string BusinessPartyBlock = "business_party.block";
+    public const string BusinessPartyUnblock = "business_party.unblock";
+    public const string PartyRoleAssign = "party_role.assign";
+    public const string PartyRoleRevoke = "party_role.revoke";
+    public const string PartyBankAccountUpsert = "party_bank_account.upsert";
+    public const string PartyBankAccountDelete = "party_bank_account.delete";
+    public const string PartyContactUpsert = "party_contact.upsert";
+    public const string PartyContactDelete = "party_contact.delete";
 }
 
 public static class AuditObjectTypes
@@ -70,4 +81,8 @@ public static class AuditObjectTypes
     public const string DocumentMatch = "document_match";
     public const string FinancialCloseSnapshot = "financial_close_snapshot";
     public const string BillWaybill = "bill_waybill";
+    public const string BusinessParty = "business_party";
+    public const string PartyBankAccount = "party_bank_account";
+    public const string PartyContact = "party_contact";
+    public const string PartyRole = "party_role";
 }

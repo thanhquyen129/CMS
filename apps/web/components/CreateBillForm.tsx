@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -45,6 +46,7 @@ export function CreateBillForm({
       billType,
       sourceSystem: String(fd.get("sourceSystem") ?? "").trim() || null,
       externalId: String(fd.get("externalId") ?? "").trim() || null,
+      customerPartyId: String(fd.get("customerPartyId") ?? "").trim() || null,
     };
 
     try {
@@ -159,6 +161,13 @@ export function CreateBillForm({
                 autoComplete="off"
               />
             </div>
+            <PartyTypeahead
+              name="customerPartyId"
+              label="Khách hàng"
+              roleCode="customer"
+              disabled={busy}
+              hint="Tìm theo mã, tên, MST hoặc SĐT. Bắt buộc vai trò khách hàng."
+            />
           </div>
         </fieldset>
       </div>

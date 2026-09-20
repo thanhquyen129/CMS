@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Identity;
 using LCMS.Domain.Entities;
@@ -52,19 +53,22 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
     private readonly ICurrentUserContext _userContext;
     private readonly IPermissionService _permissions;
     private readonly IOrganizationHierarchyService _orgHierarchy;
+    private readonly IPartyDirectoryService _parties;
 
     public UpdateBillContextCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext userContext,
         IPermissionService permissions,
-        IOrganizationHierarchyService orgHierarchy)
+        IOrganizationHierarchyService orgHierarchy,
+        IPartyDirectoryService parties)
     {
         _db = db;
         _tenantContext = tenantContext;
         _userContext = userContext;
         _permissions = permissions;
         _orgHierarchy = orgHierarchy;
+        _parties = parties;
     }
 
     public async Task Handle(UpdateBillContextCommand request, CancellationToken cancellationToken)
@@ -119,12 +123,11 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
 
         if (request.CustomerPartyId is Guid partyId)
         {
-            var partyOk = await _db.BusinessParties.AsNoTracking()
-                .AnyAsync(p => p.Id == partyId && p.IsActive, cancellationToken);
-            if (!partyOk)
-            {
-                throw new NotFoundAppException("Không tìm thấy khách hàng.");
-            }
+            await _parties.EnsureUsableAsync(
+                partyId,
+                [PartyRoleCodes.Customer],
+                "gắn khách hàng lên Bill",
+                cancellationToken);
         }
 
         if (request.AssignedUserId is Guid userId)

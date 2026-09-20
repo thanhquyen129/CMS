@@ -194,11 +194,29 @@ internal sealed class BusinessPartyConfiguration : IEntityTypeConfiguration<Busi
         builder.Property(e => e.CreditLimit).HasPrecision(18, 4);
         builder.Property(e => e.CreditLimitCurrencyCode).HasMaxLength(3);
         builder.Property(e => e.Notes).HasMaxLength(2000);
+        builder.Property(e => e.PartyKind).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.ShortName).HasMaxLength(128);
+        builder.Property(e => e.LegalType).HasMaxLength(32);
+        builder.Property(e => e.GroupCode).HasMaxLength(64);
+        builder.Property(e => e.ExternalCode).HasMaxLength(64);
+        builder.Property(e => e.IndustryCode).HasMaxLength(64);
+        builder.Property(e => e.InvoiceEmail).HasMaxLength(256);
+        builder.Property(e => e.CreditControlMode).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.BlockedReason).HasMaxLength(512);
+        builder.Property(e => e.AssignedUserId).HasColumnType("uuid");
+        builder.Property(e => e.ParentPartyId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.TaxId })
             .IsUnique()
             .HasFilter("tax_id IS NOT NULL AND deleted_at IS NULL");
+        builder.HasIndex(e => new { e.TenantId, e.ExternalCode })
+            .IsUnique()
+            .HasFilter("external_code IS NOT NULL AND deleted_at IS NULL");
         builder.HasIndex(e => new { e.TenantId, e.IsActive });
+        builder.HasIndex(e => new { e.TenantId, e.IsBlocked });
+        builder.HasIndex(e => new { e.TenantId, e.Phone });
+        builder.HasIndex(e => new { e.TenantId, e.GroupCode });
+        builder.HasIndex(e => new { e.TenantId, e.ParentPartyId });
     }
 }
 
@@ -227,6 +245,8 @@ internal sealed class PartyBankAccountConfiguration : IEntityTypeConfiguration<P
         builder.Property(e => e.PartyId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.BankName).HasMaxLength(256).IsRequired();
         builder.Property(e => e.BankBranch).HasMaxLength(256);
+        builder.Property(e => e.BankCode).HasMaxLength(32);
+        builder.Property(e => e.SwiftBic).HasMaxLength(16);
         builder.Property(e => e.AccountNumber).HasMaxLength(64).IsRequired();
         builder.Property(e => e.AccountName).HasMaxLength(256);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
@@ -248,6 +268,7 @@ internal sealed class PartyContactConfiguration : IEntityTypeConfiguration<Party
         builder.Property(e => e.PartyId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.FullName).HasMaxLength(256).IsRequired();
         builder.Property(e => e.Title).HasMaxLength(128);
+        builder.Property(e => e.FunctionCode).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Phone).HasMaxLength(64);
         builder.Property(e => e.Email).HasMaxLength(256);
         builder.Property(e => e.Note).HasMaxLength(512);

@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
@@ -65,19 +66,22 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
     private readonly IAuditWriter _audit;
     private readonly IRevenueFxStub _fx;
     private readonly IRevenueApprovalGate _approvalGate;
+    private readonly IPartyDirectoryService _parties;
 
     public CreateRevenueCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IAuditWriter audit,
         IRevenueFxStub fx,
-        IRevenueApprovalGate approvalGate)
+        IRevenueApprovalGate approvalGate,
+        IPartyDirectoryService parties)
     {
         _db = db;
         _tenantContext = tenantContext;
         _audit = audit;
         _fx = fx;
         _approvalGate = approvalGate;
+        _parties = parties;
     }
 
     public async Task<Guid> Handle(CreateRevenueCommand request, CancellationToken cancellationToken)
@@ -135,6 +139,15 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
             {
                 return existing.Id;
             }
+        }
+
+        if (request.CustomerPartyId is Guid customerId)
+        {
+            await _parties.EnsureUsableAsync(
+                customerId,
+                PartyRoleCodes.CustomerSide,
+                "ghi nhận doanh thu",
+                cancellationToken);
         }
 
         var revenue = new Revenue

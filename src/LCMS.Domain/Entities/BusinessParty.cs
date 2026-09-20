@@ -41,4 +41,41 @@ public sealed class BusinessParty : TenantEntityBase
     public string? Notes { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    /// <summary>organization | individual</summary>
+    public string PartyKind { get; set; } = PartyKinds.Organization;
+
+    /// <summary>Trade / short name used on bills and typeahead.</summary>
+    public string? ShortName { get; set; }
+
+    /// <summary>company | llc | jsc | individual | household | foreign | other</summary>
+    public string? LegalType { get; set; }
+
+    /// <summary>Tenant grouping (VIP, tuyến bắc, …).</summary>
+    public string? GroupCode { get; set; }
+
+    /// <summary>External TMS/ERP code — unique per tenant when set.</summary>
+    public string? ExternalCode { get; set; }
+
+    public string? IndustryCode { get; set; }
+
+    public string? InvoiceEmail { get; set; }
+
+    public bool? VatRegistered { get; set; }
+
+    public Guid? AssignedUserId { get; set; }
+
+    public Guid? ParentPartyId { get; set; }
+
+    /// <summary>advisory | warn | block — ADR-0020.</summary>
+    public string CreditControlMode { get; set; } = PartyCreditControlModes.Advisory;
+
+    /// <summary>Credit/compliance hold — cannot attach to new financial facts.</summary>
+    public bool IsBlocked { get; set; }
+
+    public string? BlockedReason { get; set; }
+
+    public DateTimeOffset? BlockedAt { get; set; }
+
+    public bool CanTransact() => IsActive && !IsBlocked;
 }

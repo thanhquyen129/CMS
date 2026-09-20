@@ -888,6 +888,13 @@ html[data-sidebar="collapsed"] .sidebar-logout {
   max-width: 42rem;
 }
 
+.page-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .search-bar select {
   min-width: 10rem;
   padding: 0.55rem 0.75rem;
@@ -3550,4 +3557,74 @@ html[data-layout="horizontal"] .login-page {
     grid-template-columns: 1fr;
   }
 }
+
+.party-typeahead {
+  position: relative;
+}
+
+.party-typeahead-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.party-typeahead-row input[type="search"] {
+  flex: 1;
+}
+
+.party-typeahead-list {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  margin: 0.2rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.party-typeahead-list li button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+}
+
+.party-typeahead-list li button:hover,
+.party-typeahead-list li button:focus-visible {
+  background: var(--accent-soft);
+}
+
+.status-pill.status-blocked {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+
+.status-pill.status-inactive {
+  background: #f5f5f5;
+  color: #595959;
+}
+
+.status-pill.credit-over {
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+}
+
+.status-pill.credit-watch {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+
 

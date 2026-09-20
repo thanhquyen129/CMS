@@ -31,6 +31,7 @@ export function PartyBankAccountsPanel({
     const matched = findVnBank(rawBank);
     const body = {
       bankName: matched?.shortName ?? rawBank,
+      bankCode: matched?.code ?? null,
       bankBranch: String(fd.get("bankBranch") ?? "").trim() || null,
       accountNumber: String(fd.get("accountNumber") ?? "").trim(),
       accountName: String(fd.get("accountName") ?? "").trim() || null,

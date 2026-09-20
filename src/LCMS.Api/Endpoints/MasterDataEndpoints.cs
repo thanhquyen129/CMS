@@ -68,6 +68,76 @@ public static class MasterDataEndpoints
         });
 
         var parties = app.MapGroup("/api/business-parties").WithTags("BusinessParties");
+        parties.MapGet("/lookup", async (
+            string? q,
+            string? roleCode,
+            bool? usableOnly,
+            int? take,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var list = await sender.Send(
+                new LookupBusinessPartiesQuery(q, roleCode, usableOnly ?? true, take ?? 20),
+                ct);
+            return Results.Ok(list);
+        });
+        parties.MapGet("/directory", async (
+            string? search,
+            string? roleCode,
+            string? status,
+            string? kind,
+            string? groupCode,
+            int? page,
+            int? pageSize,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var list = await sender.Send(
+                new ListBusinessPartyDirectoryQuery(search, roleCode, status, kind, groupCode, page, pageSize),
+                ct);
+            return Results.Ok(list);
+        });
+        parties.MapGet("/summary", async (
+            string? search,
+            string? roleCode,
+            string? status,
+            string? kind,
+            string? groupCode,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var summary = await sender.Send(
+                new GetBusinessPartyDirectorySummaryQuery(search, roleCode, status, kind, groupCode),
+                ct);
+            return Results.Ok(summary);
+        });
+        parties.MapGet("/duplicates", async (
+            string? taxId,
+            string? phone,
+            string? email,
+            Guid? excludeId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var list = await sender.Send(
+                new GetBusinessPartyDuplicatesQuery(taxId, phone, email, excludeId),
+                ct);
+            return Results.Ok(list);
+        });
+        parties.MapGet("/export", async (
+            string? search,
+            string? roleCode,
+            string? status,
+            string? kind,
+            string? groupCode,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var csv = await sender.Send(
+                new ExportBusinessPartyDirectoryQuery(search, roleCode, status, kind, groupCode),
+                ct);
+            return Results.File(csv, "text/csv; charset=utf-8", $"doi-tac-{DateTime.UtcNow:yyyyMMdd}.csv");
+        });
         parties.MapPost("/", async (CreateBusinessPartyRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
@@ -92,7 +162,18 @@ public static class MasterDataEndpoints
                     body.CreditLimit,
                     body.CreditLimitCurrencyCode,
                     body.Notes,
-                    body.RoleCodes),
+                    body.RoleCodes,
+                    body.PartyKind,
+                    body.ShortName,
+                    body.LegalType,
+                    body.GroupCode,
+                    body.ExternalCode,
+                    body.IndustryCode,
+                    body.InvoiceEmail,
+                    body.VatRegistered,
+                    body.AssignedUserId,
+                    body.ParentPartyId,
+                    body.CreditControlMode),
                 ct);
             return Results.Created($"/api/business-parties/{id}", new { id });
         });
@@ -110,6 +191,29 @@ public static class MasterDataEndpoints
         {
             var party = await sender.Send(new GetBusinessPartyByIdQuery(id), ct);
             return Results.Ok(party);
+        });
+        parties.MapGet("/{id:guid}/financial", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var view = await sender.Send(new GetBusinessPartyFinancialQuery(id), ct);
+            return Results.Ok(view);
+        });
+        parties.MapPost("/{id:guid}/block", async (
+            Guid id,
+            BlockBusinessPartyRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new BlockBusinessPartyCommand(id, body.Reason), ct);
+            return Results.NoContent();
+        });
+        parties.MapPost("/{id:guid}/unblock", async (
+            Guid id,
+            UnblockBusinessPartyRequest? body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UnblockBusinessPartyCommand(id, body?.Reason), ct);
+            return Results.NoContent();
         });
         parties.MapPut("/{id:guid}", async (
             Guid id,
@@ -139,7 +243,18 @@ public static class MasterDataEndpoints
                     body.PaymentTermDays,
                     body.CreditLimit,
                     body.CreditLimitCurrencyCode,
-                    body.Notes),
+                    body.Notes,
+                    body.PartyKind,
+                    body.ShortName,
+                    body.LegalType,
+                    body.GroupCode,
+                    body.ExternalCode,
+                    body.IndustryCode,
+                    body.InvoiceEmail,
+                    body.VatRegistered,
+                    body.AssignedUserId,
+                    body.ParentPartyId,
+                    body.CreditControlMode),
                 ct);
             return Results.NoContent();
         });
@@ -189,6 +304,8 @@ public static class MasterDataEndpoints
                     null,
                     body.BankName,
                     body.BankBranch,
+                    body.BankCode,
+                    body.SwiftBic,
                     body.AccountNumber,
                     body.AccountName,
                     body.CurrencyCode,
@@ -211,6 +328,8 @@ public static class MasterDataEndpoints
                     bankAccountId,
                     body.BankName,
                     body.BankBranch,
+                    body.BankCode,
+                    body.SwiftBic,
                     body.AccountNumber,
                     body.AccountName,
                     body.CurrencyCode,
@@ -247,6 +366,7 @@ public static class MasterDataEndpoints
                     null,
                     body.FullName,
                     body.Title,
+                    body.FunctionCode,
                     body.Phone,
                     body.Email,
                     body.IsPrimary,
@@ -268,6 +388,7 @@ public static class MasterDataEndpoints
                     contactId,
                     body.FullName,
                     body.Title,
+                    body.FunctionCode,
                     body.Phone,
                     body.Email,
                     body.IsPrimary,
@@ -415,7 +536,18 @@ public sealed record CreateBusinessPartyRequest(
     decimal? CreditLimit = null,
     string? CreditLimitCurrencyCode = null,
     string? Notes = null,
-    IReadOnlyList<string>? RoleCodes = null);
+    IReadOnlyList<string>? RoleCodes = null,
+    string? PartyKind = null,
+    string? ShortName = null,
+    string? LegalType = null,
+    string? GroupCode = null,
+    string? ExternalCode = null,
+    string? IndustryCode = null,
+    string? InvoiceEmail = null,
+    bool? VatRegistered = null,
+    Guid? AssignedUserId = null,
+    Guid? ParentPartyId = null,
+    string? CreditControlMode = null);
 public sealed record UpdateBusinessPartyRequest(
     string Name,
     bool IsActive,
@@ -436,8 +568,21 @@ public sealed record UpdateBusinessPartyRequest(
     int? PaymentTermDays = null,
     decimal? CreditLimit = null,
     string? CreditLimitCurrencyCode = null,
-    string? Notes = null);
+    string? Notes = null,
+    string? PartyKind = null,
+    string? ShortName = null,
+    string? LegalType = null,
+    string? GroupCode = null,
+    string? ExternalCode = null,
+    string? IndustryCode = null,
+    string? InvoiceEmail = null,
+    bool? VatRegistered = null,
+    Guid? AssignedUserId = null,
+    Guid? ParentPartyId = null,
+    string? CreditControlMode = null);
 public sealed record AssignPartyRoleRequest(string RoleCode);
+public sealed record BlockBusinessPartyRequest(string Reason);
+public sealed record UnblockBusinessPartyRequest(string? Reason = null);
 public sealed record UpsertPartyBankAccountRequest(
     string BankName,
     string? BankBranch,
@@ -446,7 +591,9 @@ public sealed record UpsertPartyBankAccountRequest(
     string CurrencyCode,
     bool IsDefault,
     bool IsActive,
-    string? Note);
+    string? Note,
+    string? BankCode = null,
+    string? SwiftBic = null);
 public sealed record UpsertPartyContactRequest(
     string FullName,
     string? Title,
@@ -454,5 +601,6 @@ public sealed record UpsertPartyContactRequest(
     string? Email,
     bool IsPrimary,
     bool IsActive,
-    string? Note);
+    string? Note,
+    string? FunctionCode = null);
 public sealed record UpsertCurrencyRequest(string Code, string Name, int DecimalPlaces, bool IsActive);

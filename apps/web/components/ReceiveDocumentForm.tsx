@@ -3,21 +3,17 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { partyLabel, type BusinessParty } from "@/lib/party";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
   terms: TerminologyMap;
   defaultBillId?: string;
-  parties: BusinessParty[];
-  partiesError?: string | null;
 };
 
 export function ReceiveDocumentForm({
   terms,
   defaultBillId,
-  parties,
-  partiesError,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -214,24 +210,12 @@ export function ReceiveDocumentForm({
               />
             </div>
 
-            <div className="field">
-              <label htmlFor="counterpartyId">Đối tác (tuỳ chọn)</label>
-              {partiesError ? (
-                <p className="muted small" role="alert">
-                  {partiesError} — vẫn nhận được không chọn đối tác.
-                </p>
-              ) : null}
-              <select id="counterpartyId" name="counterpartyId" disabled={busy}>
-                <option value="">— Không chọn —</option>
-                {parties
-                  .filter((p) => p.isActive)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {partyLabel(p)}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            <PartyTypeahead
+              name="counterpartyId"
+              label="Đối tác (tìm mã / tên / MST / SĐT)"
+              disabled={busy}
+              hint="Phải trả cần vai trò nhà cung cấp hoặc bên nhận tiền; phải thu cần khách hàng hoặc bên trả tiền."
+            />
 
             <div className="field field-span">
               <label htmlFor="notes">Ghi chú</label>

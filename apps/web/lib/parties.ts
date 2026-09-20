@@ -2,14 +2,37 @@ import { redirect } from "next/navigation";
 import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
 import type { ApiResult } from "./bills";
-import type { BusinessParty, PartyBankAccount, PartyContact } from "./party";
+import type {
+  BusinessParty,
+  PartyBankAccount,
+  PartyContact,
+  PartyDirectoryPage,
+  PartyDirectorySummary,
+  PartyDuplicateHit,
+  PartyFinancialView,
+  PartyLookupItem,
+} from "./party";
 
-export type { BusinessParty, PartyBankAccount, PartyContact } from "./party";
+export type {
+  BusinessParty,
+  PartyBankAccount,
+  PartyContact,
+  PartyLookupItem,
+  PartyDuplicateHit,
+} from "./party";
 export {
   partyLabel,
   partyRoleLabel,
+  partyKindLabel,
+  partyStatusLabel,
+  partyCreditModeLabel,
   formatCreditLimit,
+  creditStatusLabel,
   PARTY_ROLE_OPTIONS,
+  PARTY_KIND_OPTIONS,
+  PARTY_LEGAL_TYPE_OPTIONS,
+  PARTY_CREDIT_MODE_OPTIONS,
+  PARTY_CONTACT_FUNCTION_OPTIONS,
 } from "./party";
 
 function qs(params: Record<string, string | undefined>): string {
@@ -95,4 +118,89 @@ export function listPartyContacts(
   partyId: string
 ): Promise<ApiResult<PartyContact[]>> {
   return apiGet<PartyContact[]>(`/api/business-parties/${partyId}/contacts`);
+}
+
+export function listPartyDirectory(opts?: {
+  search?: string;
+  roleCode?: string;
+  status?: string;
+  kind?: string;
+  groupCode?: string;
+  page?: string;
+  pageSize?: string;
+}): Promise<ApiResult<PartyDirectoryPage>> {
+  return apiGet<PartyDirectoryPage>(
+    `/api/business-parties/directory${qs({
+      search: opts?.search,
+      roleCode: opts?.roleCode,
+      status: opts?.status,
+      kind: opts?.kind,
+      groupCode: opts?.groupCode,
+      page: opts?.page,
+      pageSize: opts?.pageSize,
+    })}`
+  );
+}
+
+export function getPartyDirectorySummary(opts?: {
+  search?: string;
+  roleCode?: string;
+  status?: string;
+  kind?: string;
+  groupCode?: string;
+}): Promise<ApiResult<PartyDirectorySummary>> {
+  return apiGet<PartyDirectorySummary>(
+    `/api/business-parties/summary${qs({
+      search: opts?.search,
+      roleCode: opts?.roleCode,
+      status: opts?.status,
+      kind: opts?.kind,
+      groupCode: opts?.groupCode,
+    })}`
+  );
+}
+
+export function getPartyFinancial(
+  id: string
+): Promise<ApiResult<PartyFinancialView>> {
+  return apiGet<PartyFinancialView>(`/api/business-parties/${id}/financial`);
+}
+
+export function lookupPartiesClient(opts: {
+  q?: string;
+  roleCode?: string;
+  usableOnly?: boolean;
+  take?: number;
+}): Promise<PartyLookupItem[]> {
+  const sp = new URLSearchParams();
+  if (opts.q) sp.set("q", opts.q);
+  if (opts.roleCode) sp.set("roleCode", opts.roleCode);
+  if (opts.usableOnly === false) sp.set("usableOnly", "false");
+  if (opts.take) sp.set("take", String(opts.take));
+  return fetch(`/bff/admin/parties/lookup?${sp.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  }).then(async (res) => {
+    if (!res.ok) return [];
+    return (await res.json()) as PartyLookupItem[];
+  });
+}
+
+export async function findPartyDuplicates(opts: {
+  taxId?: string;
+  phone?: string;
+  email?: string;
+  excludeId?: string;
+}): Promise<PartyDuplicateHit[]> {
+  const sp = new URLSearchParams();
+  if (opts.taxId) sp.set("taxId", opts.taxId);
+  if (opts.phone) sp.set("phone", opts.phone);
+  if (opts.email) sp.set("email", opts.email);
+  if (opts.excludeId) sp.set("excludeId", opts.excludeId);
+  const res = await fetch(`/bff/admin/parties/duplicates?${sp.toString()}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) return [];
+  return (await res.json()) as PartyDuplicateHit[];
 }

@@ -23,7 +23,7 @@ export default async function AdminHubPage() {
     {
       href: "/admin/parties",
       title: "Đối tác kinh doanh",
-      desc: "Khách hàng / NCC — mã và hồ sơ dùng trên chứng từ, AP/AR, thanh toán.",
+      desc: "Khách hàng / NCC — MST, vai trò, hạn mức AR, ngân hàng, 360° công nợ.",
     },
     {
       href: "/admin/organizations",

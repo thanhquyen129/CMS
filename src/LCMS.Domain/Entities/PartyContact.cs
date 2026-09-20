@@ -9,6 +9,9 @@ public sealed class PartyContact : TenantEntityBase
 
     public string FullName { get; set; } = string.Empty;
     public string? Title { get; set; }
+
+    /// <summary>general | billing | ops | legal</summary>
+    public string FunctionCode { get; set; } = PartyContactFunctions.General;
     public string? Phone { get; set; }
     public string? Email { get; set; }
 

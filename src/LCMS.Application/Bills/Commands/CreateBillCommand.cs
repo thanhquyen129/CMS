@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -14,7 +15,8 @@ public sealed record CreateBillCommand(
     string BillType,
     string? SourceSystem,
     string? ExternalId,
-    Guid? OrganizationId) : IRequest<Guid>;
+    Guid? OrganizationId,
+    Guid? CustomerPartyId = null) : IRequest<Guid>;
 
 public sealed class CreateBillCommandValidator : AbstractValidator<CreateBillCommand>
 {
@@ -48,17 +50,20 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _userContext;
     private readonly IPermissionService _permissions;
+    private readonly IPartyDirectoryService _parties;
 
     public CreateBillCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext userContext,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IPartyDirectoryService parties)
     {
         _db = db;
         _tenantContext = tenantContext;
         _userContext = userContext;
         _permissions = permissions;
+        _parties = parties;
     }
 
     public async Task<Guid> Handle(CreateBillCommand request, CancellationToken cancellationToken)
@@ -106,6 +111,15 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
             throw new ConflictAppException("Số Bill đã tồn tại trong thuê bao này.");
         }
 
+        if (request.CustomerPartyId is Guid customerId)
+        {
+            await _parties.EnsureUsableAsync(
+                customerId,
+                [PartyRoleCodes.Customer],
+                "gắn khách hàng lên Bill",
+                cancellationToken);
+        }
+
         var bill = new Bill
         {
             TenantId = tenantId,
@@ -115,7 +129,8 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
             ExternalId = string.IsNullOrWhiteSpace(request.ExternalId) ? null : request.ExternalId.Trim(),
             OperationalStatus = "active",
             IsActive = true,
-            OrganizationId = organizationId
+            OrganizationId = organizationId,
+            CustomerPartyId = request.CustomerPartyId
         };
 
         _db.Bills.Add(bill);

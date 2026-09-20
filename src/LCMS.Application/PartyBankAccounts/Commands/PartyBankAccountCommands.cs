@@ -13,6 +13,8 @@ public sealed record UpsertPartyBankAccountCommand(
     Guid? Id,
     string BankName,
     string? BankBranch,
+    string? BankCode,
+    string? SwiftBic,
     string AccountNumber,
     string? AccountName,
     string CurrencyCode,
@@ -29,6 +31,8 @@ public sealed class UpsertPartyBankAccountCommandValidator : AbstractValidator<U
             .NotEmpty().WithMessage("Tên ngân hàng không được để trống.")
             .MaximumLength(256);
         RuleFor(x => x.BankBranch).MaximumLength(256);
+        RuleFor(x => x.BankCode).MaximumLength(32);
+        RuleFor(x => x.SwiftBic).MaximumLength(16);
         RuleFor(x => x.AccountNumber)
             .NotEmpty().WithMessage("Số tài khoản không được để trống.")
             .MaximumLength(64);
@@ -113,6 +117,8 @@ public sealed class UpsertPartyBankAccountCommandHandler : IRequestHandler<Upser
 
         row.BankName = request.BankName.Trim();
         row.BankBranch = string.IsNullOrWhiteSpace(request.BankBranch) ? null : request.BankBranch.Trim();
+        row.BankCode = string.IsNullOrWhiteSpace(request.BankCode) ? null : request.BankCode.Trim().ToUpperInvariant();
+        row.SwiftBic = string.IsNullOrWhiteSpace(request.SwiftBic) ? null : request.SwiftBic.Trim().ToUpperInvariant();
         row.AccountNumber = accountNumber;
         row.AccountName = string.IsNullOrWhiteSpace(request.AccountName) ? null : request.AccountName.Trim();
         row.CurrencyCode = currency;

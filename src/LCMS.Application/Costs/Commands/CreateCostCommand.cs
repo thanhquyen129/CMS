@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
@@ -54,6 +55,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
     private readonly IAuditWriter _audit;
     private readonly ICostFxStub _fx;
     private readonly ICostApprovalGate _approvalGate;
+    private readonly IPartyDirectoryService _parties;
 
     public CreateCostCommandHandler(
         ILcmsDbContext db,
@@ -61,7 +63,8 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         ICurrentUserContext userContext,
         IAuditWriter audit,
         ICostFxStub fx,
-        ICostApprovalGate approvalGate)
+        ICostApprovalGate approvalGate,
+        IPartyDirectoryService parties)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -69,6 +72,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         _audit = audit;
         _fx = fx;
         _approvalGate = approvalGate;
+        _parties = parties;
     }
 
     public async Task<Guid> Handle(CreateCostCommand request, CancellationToken cancellationToken)
@@ -139,6 +143,15 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             {
                 return existing.Id;
             }
+        }
+
+        if (request.VendorPartyId is Guid vendorId)
+        {
+            await _parties.EnsureUsableAsync(
+                vendorId,
+                PartyRoleCodes.VendorSide,
+                "ghi nhận chi phí",
+                cancellationToken);
         }
 
         var cost = new Cost

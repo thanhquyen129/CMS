@@ -9,6 +9,12 @@ public sealed class PartyBankAccount : TenantEntityBase
 
     public string BankName { get; set; } = string.Empty;
     public string? BankBranch { get; set; }
+
+    /// <summary>VietQR / NAPAS bank code when known.</summary>
+    public string? BankCode { get; set; }
+
+    public string? SwiftBic { get; set; }
+
     public string AccountNumber { get; set; } = string.Empty;
     public string? AccountName { get; set; }
 

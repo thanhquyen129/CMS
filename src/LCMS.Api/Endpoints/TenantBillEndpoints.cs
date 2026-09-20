@@ -32,7 +32,8 @@ public static class TenantBillEndpoints
                     body.BillType,
                     body.SourceSystem,
                     body.ExternalId,
-                    body.OrganizationId),
+                    body.OrganizationId,
+                    body.CustomerPartyId),
                 ct);
             return Results.Created($"/api/bills/{id}", new { id });
         });
@@ -115,7 +116,8 @@ public sealed record CreateBillRequest(
     string BillType,
     string? SourceSystem,
     string? ExternalId,
-    Guid? OrganizationId = null);
+    Guid? OrganizationId = null,
+    Guid? CustomerPartyId = null);
 
 public sealed record UpdateBillContextRequest(
     Guid? CustomerPartyId,

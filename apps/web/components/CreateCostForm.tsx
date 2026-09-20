@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -41,6 +42,7 @@ export function CreateCostForm({
     }
 
     const effectiveDateRaw = String(fd.get("effectiveDate") ?? "").trim();
+    const vendorPartyId = String(fd.get("vendorPartyId") ?? "").trim() || null;
     const body = {
       billId,
       attributionType: "direct",
@@ -50,7 +52,7 @@ export function CreateCostForm({
         .toUpperCase(),
       effectiveDate: effectiveDateRaw || null,
       costTypeCode: String(fd.get("costTypeCode") ?? "").trim() || null,
-      vendorPartyId: null,
+      vendorPartyId,
       sourceType: null,
       sourceId: null,
     };
@@ -163,6 +165,12 @@ export function CreateCostForm({
                 autoComplete="off"
               />
             </div>
+            <PartyTypeahead
+              name="vendorPartyId"
+              label="Nhà cung cấp"
+              disabled={busy}
+              hint="Cần vai trò nhà cung cấp hoặc bên nhận tiền."
+            />
           </div>
         </fieldset>
       </div>

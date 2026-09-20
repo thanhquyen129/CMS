@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -66,17 +67,20 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly DocumentOptions _options;
+    private readonly IPartyDirectoryService _parties;
 
     public ReceiveFinancialDocumentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IOptions<DocumentOptions> options)
+        IOptions<DocumentOptions> options,
+        IPartyDirectoryService parties)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _options = options.Value;
+        _parties = parties;
     }
 
     public async Task<Guid> Handle(ReceiveFinancialDocumentCommand request, CancellationToken cancellationToken)
@@ -102,17 +106,18 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
 
         if (request.CounterpartyId.HasValue)
         {
-            var party = await _db.BusinessParties.AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == request.CounterpartyId, cancellationToken);
-            if (party is null)
-            {
-                throw new NotFoundAppException("Không tìm thấy đối tác.");
-            }
-
-            if (!party.IsActive)
-            {
-                throw new ConflictAppException("Đối tác không còn hiệu lực.");
-            }
+            var direction = request.Direction.Trim().ToLowerInvariant();
+            var roles = direction == FinancialDocumentDirections.Payable
+                ? PartyRoleCodes.VendorSide
+                : PartyRoleCodes.CustomerSide;
+            var purpose = direction == FinancialDocumentDirections.Payable
+                ? "nhận chứng từ phải trả"
+                : "nhận chứng từ phải thu";
+            await _parties.EnsureUsableAsync(
+                request.CounterpartyId.Value,
+                roles,
+                purpose,
+                cancellationToken);
         }
 
         if (!string.IsNullOrWhiteSpace(request.SourceSystem) && !string.IsNullOrWhiteSpace(request.ExternalId))

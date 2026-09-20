@@ -1427,6 +1427,19 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("address_line2");
 
+                    b.Property<Guid?>("AssignedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_user_id");
+
+                    b.Property<DateTimeOffset?>("BlockedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("blocked_at");
+
+                    b.Property<string>("BlockedReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("blocked_reason");
+
                     b.Property<string>("City")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
@@ -1450,6 +1463,12 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
+
+                    b.Property<string>("CreditControlMode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("credit_control_mode");
 
                     b.Property<decimal?>("CreditLimit")
                         .HasPrecision(18, 4)
@@ -1484,14 +1503,43 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("email");
 
+                    b.Property<string>("ExternalCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("external_code");
+
+                    b.Property<string>("GroupCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("group_code");
+
+                    b.Property<string>("IndustryCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("industry_code");
+
+                    b.Property<string>("InvoiceEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("invoice_email");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_blocked");
 
                     b.Property<string>("LegalName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("legal_name");
+
+                    b.Property<string>("LegalType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("legal_type");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1503,6 +1551,16 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("notes");
+
+                    b.Property<Guid?>("ParentPartyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_party_id");
+
+                    b.Property<string>("PartyKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("party_kind");
 
                     b.Property<int?>("PaymentTermDays")
                         .HasColumnType("integer")
@@ -1529,6 +1587,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("bytea")
                         .HasColumnName("row_version");
 
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("short_name");
+
                     b.Property<string>("TaxId")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
@@ -1545,6 +1608,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
+
+                    b.Property<bool?>("VatRegistered")
+                        .HasColumnType("boolean")
+                        .HasColumnName("vat_registered");
 
                     b.Property<string>("Ward")
                         .HasMaxLength(128)
@@ -1563,8 +1630,25 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_business_parties_tenant_id_code");
 
+                    b.HasIndex("TenantId", "ExternalCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_business_parties_tenant_id_external_code")
+                        .HasFilter("external_code IS NOT NULL AND deleted_at IS NULL");
+
+                    b.HasIndex("TenantId", "GroupCode")
+                        .HasDatabaseName("ix_business_parties_tenant_id_group_code");
+
                     b.HasIndex("TenantId", "IsActive")
                         .HasDatabaseName("ix_business_parties_tenant_id_is_active");
+
+                    b.HasIndex("TenantId", "IsBlocked")
+                        .HasDatabaseName("ix_business_parties_tenant_id_is_blocked");
+
+                    b.HasIndex("TenantId", "ParentPartyId")
+                        .HasDatabaseName("ix_business_parties_tenant_id_parent_party_id");
+
+                    b.HasIndex("TenantId", "Phone")
+                        .HasDatabaseName("ix_business_parties_tenant_id_phone");
 
                     b.HasIndex("TenantId", "TaxId")
                         .IsUnique()
@@ -4112,6 +4196,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("bank_branch");
 
+                    b.Property<string>("BankCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("bank_code");
+
                     b.Property<string>("BankName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -4162,6 +4251,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("row_version");
+
+                    b.Property<string>("SwiftBic")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("swift_bic");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -4221,6 +4315,12 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("full_name");
+
+                    b.Property<string>("FunctionCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("function_code");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")

@@ -31,4 +31,16 @@ public static class PartyRoleCodes
     public static bool IsKnown(string? code) =>
         !string.IsNullOrWhiteSpace(code)
         && Catalog.Contains(code.Trim().ToLowerInvariant());
+
+    public static readonly IReadOnlyList<string> CustomerSide =
+    [
+        Customer,
+        Payer
+    ];
+
+    public static readonly IReadOnlyList<string> VendorSide =
+    [
+        Vendor,
+        Payee
+    ];
 }

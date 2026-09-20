@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
@@ -39,19 +40,22 @@ public sealed class RecognizeReceivableExposureCommandHandler
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
     private readonly TenantFinancialOptionsResolver _financial;
+    private readonly IPartyDirectoryService _parties;
 
     public RecognizeReceivableExposureCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IAuditWriter audit,
-        TenantFinancialOptionsResolver financial)
+        TenantFinancialOptionsResolver financial,
+        IPartyDirectoryService parties)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
         _financial = financial;
+        _parties = parties;
     }
 
     public async Task<Guid> Handle(RecognizeReceivableExposureCommand request, CancellationToken cancellationToken)
@@ -86,6 +90,12 @@ public sealed class RecognizeReceivableExposureCommandHandler
         }
 
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
+
+        await _parties.EnsureCreditAllowsArRecognizeAsync(
+            exposure.CounterpartyId,
+            amount,
+            exposure.CurrencyCode,
+            cancellationToken);
 
         // SoT for recognized_amount = sum of AR recognition slices (cache kept in sync).
         var recognizedSum = await _db.AccountsReceivable

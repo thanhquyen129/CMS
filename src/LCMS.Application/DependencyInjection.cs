@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Approvals;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
 using LCMS.Application.Demo;
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddScoped<IOrganizationHierarchyService, OrganizationHierarchyService>();
+        services.AddScoped<IPartyDirectoryService, PartyDirectoryService>();
         services.AddScoped<ITenantSettingsService, TenantSettingsService>();
         services.AddScoped<TenantFinancialOptionsResolver>();
 

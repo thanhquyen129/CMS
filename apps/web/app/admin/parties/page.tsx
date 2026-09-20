@@ -3,17 +3,25 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AdminPartyListWorkspace } from "@/components/AdminPartyListWorkspace";
-import { CreateBusinessPartyForm } from "@/components/CreateBusinessPartyForm";
 import { FilterBar, ListPageHeader } from "@/components/list";
+import { ListPagination } from "@/components/ListPagination";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import { listAdminParties } from "@/lib/master-data";
-import { PARTY_ROLE_OPTIONS } from "@/lib/party";
+import {
+  getPartyDirectorySummary,
+  listPartyDirectory,
+} from "@/lib/parties";
+import { PARTY_KIND_OPTIONS, PARTY_ROLE_OPTIONS } from "@/lib/party";
+import { parsePage, parsePageSize, totalPages } from "@/lib/list-paging";
 
 type Search = {
   q?: string;
   role?: string;
   status?: string;
+  kind?: string;
+  group?: string;
+  page?: string;
+  pageSize?: string;
 };
 
 export default async function AdminPartiesPage({
@@ -29,16 +37,37 @@ export default async function AdminPartiesPage({
   const sp = await searchParams;
   const terms = await fetchTerminology();
   const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
-  const result = await listAdminParties({
-    search: sp.q,
-    roleCode: sp.role,
-    isActive:
-      sp.status === "active"
-        ? "true"
-        : sp.status === "inactive"
-          ? "false"
-          : undefined,
-  });
+  const pageSize = parsePageSize(sp.pageSize);
+  const requestedPage = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+  const [result, summaryResult] = await Promise.all([
+    listPartyDirectory({
+      search: sp.q,
+      roleCode: sp.role,
+      status: sp.status,
+      kind: sp.kind,
+      groupCode: sp.group,
+      page: String(requestedPage),
+      pageSize: String(pageSize),
+    }),
+    getPartyDirectorySummary({
+      search: sp.q,
+      roleCode: sp.role,
+      status: sp.status,
+      kind: sp.kind,
+      groupCode: sp.group,
+    }),
+  ]);
+
+  const totalCount = result.ok ? result.data.totalCount : 0;
+  const pages = totalPages(totalCount, pageSize);
+  const page = parsePage(sp.page, pages);
+  const exportQs = new URLSearchParams();
+  if (sp.q) exportQs.set("search", sp.q);
+  if (sp.role) exportQs.set("roleCode", sp.role);
+  if (sp.status) exportQs.set("status", sp.status);
+  if (sp.kind) exportQs.set("kind", sp.kind);
+  if (sp.group) exportQs.set("groupCode", sp.group);
+  const exportHref = `/bff/admin/parties/export${exportQs.toString() ? `?${exportQs}` : ""}`;
 
   return (
     <AppShell terms={terms} active="admin">
@@ -49,8 +78,18 @@ export default async function AdminPartiesPage({
             { href: "/admin", label: "Danh mục" },
             { label: "Đối tác" },
           ]}
-          title="Đối tác kinh doanh"
-          lede="Hồ sơ đối tác chuẩn tài chính: MST, vai trò, điều khoản thanh toán, hạn mức công nợ, tài khoản ngân hàng và người liên hệ."
+          title="Khách hàng & đối tác"
+          lede="Hồ sơ chuẩn tài chính: MST, vai trò, điều khoản, hạn mức, tài khoản ngân hàng, liên hệ và công nợ. Một đối tác có thể vừa là khách hàng vừa là nhà cung cấp."
+          action={
+            <div className="page-header-actions">
+              <a className="btn btn-ghost" href={exportHref}>
+                Xuất CSV
+              </a>
+              <Link className="btn" href="/admin/parties/new">
+                Thêm đối tác
+              </Link>
+            </div>
+          }
         />
 
         <div className="hub-module-tabs" role="tablist" aria-label="Danh mục dữ liệu">
@@ -72,15 +111,40 @@ export default async function AdminPartiesPage({
           </Link>
         </div>
 
+        {summaryResult.ok ? (
+          <div className="po-kpi-row" role="list" style={{ margin: "1rem 0" }}>
+            <div className="po-kpi" role="listitem">
+              <span className="muted">Tổng hồ sơ</span>
+              <strong>{summaryResult.data.total}</strong>
+            </div>
+            <div className="po-kpi po-kpi-rev" role="listitem">
+              <span className="muted">Đang dùng</span>
+              <strong>{summaryResult.data.active}</strong>
+            </div>
+            <div className="po-kpi" role="listitem">
+              <span className="muted">Ngừng</span>
+              <strong>{summaryResult.data.inactive}</strong>
+            </div>
+            <div className="po-kpi po-kpi-cost" role="listitem">
+              <span className="muted">Bị chặn giao dịch</span>
+              <strong>{summaryResult.data.blocked}</strong>
+            </div>
+          </div>
+        ) : null}
+
         <FilterBar
           action="/admin/parties"
-          resetHref={sp.q || sp.role || sp.status ? "/admin/parties" : undefined}
+          resetHref={
+            sp.q || sp.role || sp.status || sp.kind || sp.group
+              ? "/admin/parties"
+              : undefined
+          }
           fields={[
             {
               kind: "search",
               name: "q",
               label: "Tìm kiếm",
-              placeholder: "Mã, tên, MST…",
+              placeholder: "Mã, tên, MST, SĐT, email…",
               defaultValue: sp.q,
             },
             {
@@ -103,32 +167,61 @@ export default async function AdminPartiesPage({
               options: [
                 { value: "active", label: "Đang dùng" },
                 { value: "inactive", label: "Ngừng" },
+                { value: "blocked", label: "Bị chặn" },
               ],
+            },
+            {
+              kind: "select",
+              name: "kind",
+              label: "Loại",
+              defaultValue: sp.kind,
+              emptyLabel: "Tất cả loại",
+              options: PARTY_KIND_OPTIONS.map((k) => ({
+                value: k.code,
+                label: k.label,
+              })),
+            },
+            {
+              kind: "search",
+              name: "group",
+              label: "Nhóm",
+              placeholder: "Nhóm đối tác",
+              defaultValue: sp.group,
             },
           ]}
         />
 
-        <div className="layout-cols-2" style={{ marginTop: "1rem" }}>
-          <fieldset className="group-box">
-            <legend>Danh sách</legend>
-            {!result.ok ? (
-              <div className="alert alert-error" role="alert">
-                {result.message}
-              </div>
-            ) : result.data.length === 0 ? (
-              <div className="empty-state" role="status">
-                Chưa có đối tác khớp bộ lọc.
-              </div>
-            ) : (
-              <AdminPartyListWorkspace parties={result.data} />
-            )}
-          </fieldset>
-
-          <fieldset className="group-box">
-            <legend>Thêm đối tác</legend>
-            <CreateBusinessPartyForm />
-          </fieldset>
-        </div>
+        <fieldset className="group-box" style={{ marginTop: "1rem" }}>
+          <legend>Danh sách</legend>
+          {!result.ok ? (
+            <div className="alert alert-error" role="alert">
+              {result.message}
+            </div>
+          ) : result.data.items.length === 0 ? (
+            <div className="empty-state" role="status">
+              Chưa có đối tác khớp bộ lọc.{" "}
+              <Link href="/admin/parties/new">Thêm đối tác mới</Link>.
+            </div>
+          ) : (
+            <AdminPartyListWorkspace parties={result.data.items} />
+          )}
+          {result.ok ? (
+            <ListPagination
+              basePath="/admin/parties"
+              params={{
+                q: sp.q,
+                role: sp.role,
+                status: sp.status,
+                kind: sp.kind,
+                group: sp.group,
+              }}
+              page={page}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              totalPages={pages}
+            />
+          ) : null}
+        </fieldset>
       </section>
     </AppShell>
   );

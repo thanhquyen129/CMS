@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { DetailDrawer } from "./DetailDrawer";
 import {
+  creditStatusLabel,
   formatCreditLimit,
   partyLabel,
   partyRoleLabel,
-  type BusinessParty,
+  partyStatusLabel,
+  type PartyDirectoryItem,
 } from "@/lib/party";
 
 type Props = {
-  parties: BusinessParty[];
+  parties: PartyDirectoryItem[];
 };
 
 export function AdminPartyListWorkspace({ parties }: Props) {
@@ -31,8 +33,10 @@ export function AdminPartyListWorkspace({ parties }: Props) {
               <th scope="col">Mã</th>
               <th scope="col">Tên</th>
               <th scope="col">MST</th>
+              <th scope="col">SĐT</th>
               <th scope="col">Vai trò</th>
               <th scope="col">Hạn mức</th>
+              <th scope="col">Công nợ</th>
               <th scope="col">Trạng thái</th>
             </tr>
           </thead>
@@ -54,33 +58,52 @@ export function AdminPartyListWorkspace({ parties }: Props) {
                   }}
                 >
                   <td className="mono-id">
-                    <button
-                      type="button"
-                      className="row-link"
-                      style={{
-                        background: "none",
-                        border: "none",
-                        padding: 0,
-                        font: "inherit",
-                        cursor: "pointer",
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedId(p.id);
-                      }}
-                    >
-                      {p.code}
-                    </button>
+                    <Link href={`/admin/parties/${p.id}`}>{p.code}</Link>
                   </td>
-                  <td>{p.name}</td>
+                  <td>
+                    {p.name}
+                    {p.shortName ? (
+                      <div className="muted small">{p.shortName}</div>
+                    ) : null}
+                  </td>
                   <td className="mono-id">{p.taxId || "—"}</td>
+                  <td>{p.phone || "—"}</td>
                   <td>
                     {(p.roleCodes ?? []).length === 0
                       ? "—"
                       : (p.roleCodes ?? []).map(partyRoleLabel).join(", ")}
                   </td>
-                  <td>{formatCreditLimit(p.creditLimit, p.creditLimitCurrencyCode)}</td>
-                  <td>{p.isActive ? "Đang dùng" : "Ngừng"}</td>
+                  <td>
+                    {formatCreditLimit(p.creditLimit, p.creditLimitCurrencyCode)}
+                  </td>
+                  <td>
+                    {p.arOutstanding != null
+                      ? formatCreditLimit(
+                          p.arOutstanding,
+                          p.creditLimitCurrencyCode || p.defaultCurrencyCode
+                        )
+                      : p.apOutstanding != null
+                        ? formatCreditLimit(
+                            p.apOutstanding,
+                            p.defaultCurrencyCode
+                          )
+                        : "—"}
+                  </td>
+                  <td>
+                    <span className={`status-pill status-${p.statusCode}`}>
+                      {partyStatusLabel(p.statusCode, p.isActive)}
+                    </span>
+                    {p.creditStatus &&
+                    p.creditStatus !== "none" &&
+                    p.creditStatus !== "ok" ? (
+                      <>
+                        {" "}
+                        <span className={`status-pill credit-${p.creditStatus}`}>
+                          {creditStatusLabel(p.creditStatus)}
+                        </span>
+                      </>
+                    ) : null}
+                  </td>
                 </tr>
               );
             })}
@@ -92,7 +115,11 @@ export function AdminPartyListWorkspace({ parties }: Props) {
         open={Boolean(selected)}
         onClose={close}
         title={selected ? partyLabel(selected) : null}
-        subtitle={selected ? (selected.isActive ? "Đang dùng" : "Ngừng") : null}
+        subtitle={
+          selected
+            ? partyStatusLabel(selected.statusCode, selected.isActive)
+            : null
+        }
         footer={
           selected ? (
             <Link className="btn btn-sm" href={`/admin/parties/${selected.id}`}>
@@ -130,12 +157,34 @@ export function AdminPartyListWorkspace({ parties }: Props) {
             <div>
               <dt>Hạn mức công nợ</dt>
               <dd>
-                {formatCreditLimit(selected.creditLimit, selected.creditLimitCurrencyCode)}
+                {formatCreditLimit(
+                  selected.creditLimit,
+                  selected.creditLimitCurrencyCode
+                )}
               </dd>
             </div>
             <div>
-              <dt>Tiền tệ mặc định</dt>
-              <dd>{selected.defaultCurrencyCode || "—"}</dd>
+              <dt>Phải thu đang mở</dt>
+              <dd>
+                {selected.arOutstanding != null
+                  ? formatCreditLimit(
+                      selected.arOutstanding,
+                      selected.creditLimitCurrencyCode ||
+                        selected.defaultCurrencyCode
+                    )
+                  : "Không có quyền xem doanh thu"}
+              </dd>
+            </div>
+            <div>
+              <dt>Phải trả đang mở</dt>
+              <dd>
+                {selected.apOutstanding != null
+                  ? formatCreditLimit(
+                      selected.apOutstanding,
+                      selected.defaultCurrencyCode
+                    )
+                  : "Không có quyền xem chi phí"}
+              </dd>
             </div>
           </dl>
         ) : null}

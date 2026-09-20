@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 
 type Props = {
   terms: TerminologyMap;
@@ -50,7 +51,7 @@ export function CreateSharedCostForm({
         .toUpperCase(),
       effectiveDate: effectiveDateRaw || null,
       costTypeCode: String(fd.get("costTypeCode") ?? "").trim() || null,
-      vendorPartyId: null,
+      vendorPartyId: String(fd.get("vendorPartyId") ?? "").trim() || null,
       sourceType: null,
       sourceId: null,
     };
@@ -163,6 +164,14 @@ export function CreateSharedCostForm({
                 disabled={busy}
                 placeholder="VD: SHARED-FUEL"
                 autoComplete="off"
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <PartyTypeahead
+                name="vendorPartyId"
+                label="Nhà cung cấp"
+                disabled={busy}
+                hint="Không bắt buộc. Phải có vai trò nhà cung cấp hoặc bên nhận tiền."
               />
             </div>
           </div>

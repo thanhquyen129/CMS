@@ -13,6 +13,7 @@ public sealed record UpsertPartyContactCommand(
     Guid? Id,
     string FullName,
     string? Title,
+    string? FunctionCode,
     string? Phone,
     string? Email,
     bool IsPrimary,
@@ -28,6 +29,9 @@ public sealed class UpsertPartyContactCommandValidator : AbstractValidator<Upser
             .NotEmpty().WithMessage("Tên người liên hệ không được để trống.")
             .MaximumLength(256);
         RuleFor(x => x.Title).MaximumLength(128);
+        RuleFor(x => x.FunctionCode)
+            .Must(c => string.IsNullOrWhiteSpace(c) || PartyContactFunctions.IsKnown(c))
+            .WithMessage("Chức năng liên hệ phải là general, billing, ops hoặc legal.");
         RuleFor(x => x.Phone).MaximumLength(64);
         RuleFor(x => x.Email).MaximumLength(256);
         RuleFor(x => x.Note).MaximumLength(512);
@@ -86,6 +90,9 @@ public sealed class UpsertPartyContactCommandHandler : IRequestHandler<UpsertPar
 
         row.FullName = request.FullName.Trim();
         row.Title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
+        row.FunctionCode = string.IsNullOrWhiteSpace(request.FunctionCode)
+            ? PartyContactFunctions.General
+            : request.FunctionCode.Trim().ToLowerInvariant();
         row.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
         row.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
         row.IsPrimary = request.IsPrimary;

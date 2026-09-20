@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { PartyContact } from "@/lib/party";
+import { PARTY_CONTACT_FUNCTION_OPTIONS, partyContactFunctionLabel } from "@/lib/party";
 
 export function PartyContactsPanel({
   partyId,
@@ -25,6 +26,7 @@ export function PartyContactsPanel({
     const body = {
       fullName: String(fd.get("fullName") ?? "").trim(),
       title: String(fd.get("title") ?? "").trim() || null,
+      functionCode: String(fd.get("functionCode") ?? "general"),
       phone: String(fd.get("phone") ?? "").trim() || null,
       email: String(fd.get("email") ?? "").trim() || null,
       isPrimary: fd.get("isPrimary") === "on",
@@ -101,6 +103,7 @@ export function PartyContactsPanel({
             <thead>
               <tr>
                 <th>Họ tên</th>
+                <th>Chức năng</th>
                 <th>Chức vụ</th>
                 <th>Liên hệ</th>
                 <th>Chính</th>
@@ -111,6 +114,7 @@ export function PartyContactsPanel({
               {contacts.map((c) => (
                 <tr key={c.id}>
                   <td>{c.fullName}</td>
+                  <td>{partyContactFunctionLabel(c.functionCode)}</td>
                   <td>{c.title || "—"}</td>
                   <td>
                     {[c.phone, c.email].filter(Boolean).join(" · ") || "—"}
@@ -142,6 +146,16 @@ export function PartyContactsPanel({
           <div className="field">
             <label htmlFor="contactTitle">Chức vụ</label>
             <input id="contactTitle" name="title" disabled={busy} />
+          </div>
+          <div className="field">
+            <label htmlFor="contactFn">Chức năng</label>
+            <select id="contactFn" name="functionCode" disabled={busy} defaultValue="general">
+              {PARTY_CONTACT_FUNCTION_OPTIONS.map((f) => (
+                <option key={f.code} value={f.code}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label htmlFor="contactPhone">Điện thoại</label>

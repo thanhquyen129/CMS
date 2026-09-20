@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -42,6 +43,8 @@ export function CreateRevenueForm({
     }
 
     const effectiveDateRaw = String(fd.get("effectiveDate") ?? "").trim();
+    const customerPartyId =
+      String(fd.get("customerPartyId") ?? "").trim() || null;
     const body = {
       billId,
       amount,
@@ -50,7 +53,7 @@ export function CreateRevenueForm({
         .toUpperCase(),
       effectiveDate: effectiveDateRaw || null,
       revenueTypeCode: String(fd.get("revenueTypeCode") ?? "").trim() || null,
-      customerPartyId: null,
+      customerPartyId,
       sourceType: null,
       sourceId: null,
       recognitionPolicyVersion: null,
@@ -166,6 +169,12 @@ export function CreateRevenueForm({
                 autoComplete="off"
               />
             </div>
+            <PartyTypeahead
+              name="customerPartyId"
+              label="Khách hàng"
+              disabled={busy}
+              hint="Cần vai trò khách hàng hoặc bên trả tiền."
+            />
           </div>
         </fieldset>
       </div>

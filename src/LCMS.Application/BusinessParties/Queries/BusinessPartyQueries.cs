@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +12,10 @@ public sealed record BusinessPartyListItemDto(
     string Name,
     string? LegalName,
     string? TaxId,
+    string? Phone,
     bool IsActive,
+    bool IsBlocked,
+    string StatusCode,
     string? DefaultCurrencyCode,
     int? PaymentTermDays,
     decimal? CreditLimit,
@@ -42,6 +46,23 @@ public sealed record BusinessPartyDetailDto(
     string? CreditLimitCurrencyCode,
     string? Notes,
     bool IsActive,
+    bool IsBlocked,
+    string StatusCode,
+    string PartyKind,
+    string? ShortName,
+    string? LegalType,
+    string? GroupCode,
+    string? ExternalCode,
+    string? IndustryCode,
+    string? InvoiceEmail,
+    bool? VatRegistered,
+    Guid? AssignedUserId,
+    Guid? ParentPartyId,
+    string? ParentPartyCode,
+    string? ParentPartyName,
+    string CreditControlMode,
+    string? BlockedReason,
+    DateTimeOffset? BlockedAt,
     IReadOnlyList<string> RoleCodes,
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt);
@@ -89,12 +110,26 @@ public sealed class GetBusinessPartyByIdQueryHandler : IRequestHandler<GetBusine
             .Select(r => r.RoleCode)
             .ToListAsync(cancellationToken);
 
-        return MapDetail(party, roles);
+        string? parentCode = null;
+        string? parentName = null;
+        if (party.ParentPartyId is Guid parentId)
+        {
+            var parent = await _db.BusinessParties.AsNoTracking()
+                .Where(p => p.Id == parentId)
+                .Select(p => new { p.Code, p.Name })
+                .FirstOrDefaultAsync(cancellationToken);
+            parentCode = parent?.Code;
+            parentName = parent?.Name;
+        }
+
+        return MapDetail(party, roles, parentCode, parentName);
     }
 
     internal static BusinessPartyDetailDto MapDetail(
-        Domain.Entities.BusinessParty party,
-        IReadOnlyList<string> roles) =>
+        BusinessParty party,
+        IReadOnlyList<string> roles,
+        string? parentCode = null,
+        string? parentName = null) =>
         new(
             party.Id,
             party.Code,
@@ -118,6 +153,23 @@ public sealed class GetBusinessPartyByIdQueryHandler : IRequestHandler<GetBusine
             party.CreditLimitCurrencyCode,
             party.Notes,
             party.IsActive,
+            party.IsBlocked,
+            PartyStatusCodes.FromFlags(party.IsActive, party.IsBlocked),
+            party.PartyKind,
+            party.ShortName,
+            party.LegalType,
+            party.GroupCode,
+            party.ExternalCode,
+            party.IndustryCode,
+            party.InvoiceEmail,
+            party.VatRegistered,
+            party.AssignedUserId,
+            party.ParentPartyId,
+            parentCode,
+            parentName,
+            party.CreditControlMode,
+            party.BlockedReason,
+            party.BlockedAt,
             roles,
             party.CreatedAt,
             party.UpdatedAt);
@@ -158,12 +210,7 @@ public sealed class ListBusinessPartiesQueryHandler
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var q = request.Search.Trim().ToLowerInvariant();
-            query = query.Where(p =>
-                p.Code.ToLower().Contains(q)
-                || p.Name.ToLower().Contains(q)
-                || (p.LegalName != null && p.LegalName.ToLower().Contains(q))
-                || (p.TaxId != null && p.TaxId.ToLower().Contains(q)));
+            query = PartySearch.Apply(query, request.Search);
         }
 
         if (!string.IsNullOrWhiteSpace(request.RoleCode))
@@ -202,7 +249,10 @@ public sealed class ListBusinessPartiesQueryHandler
             p.Name,
             p.LegalName,
             p.TaxId,
+            p.Phone,
             p.IsActive,
+            p.IsBlocked,
+            PartyStatusCodes.FromFlags(p.IsActive, p.IsBlocked),
             p.DefaultCurrencyCode,
             p.PaymentTermDays,
             p.CreditLimit,

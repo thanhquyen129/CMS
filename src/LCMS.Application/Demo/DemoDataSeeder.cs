@@ -784,7 +784,9 @@ public sealed class DemoDataSeeder
         PaymentTermDays = paymentTermDays,
         CreditLimit = creditLimit,
         CreditLimitCurrencyCode = creditLimit.HasValue ? "VND" : null,
-        IsActive = active
+        IsActive = active,
+        PartyKind = PartyKinds.Organization,
+        CreditControlMode = PartyCreditControlModes.Advisory
     };
 
     private static PartyRole Role(Guid tid, Guid partyId, string code) => new()

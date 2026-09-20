@@ -1,5 +1,69 @@
 # Handoff
 
+## 2026-09-20 — Module khách hàng–đối tác đầy đủ (D02 / ADR-0020)
+
+### User
+Phân tích và triển khai phát triển, hoàn thiện module khách hàng-đối tác. phiên bản đầy đủ nhất. Làm bản đầy đủ tính năng, không làm qua loa tối thiểu hoặc vừa đủ dùng.
+
+### Answer
+Không tách bảng Customer/Vendor. Một `BusinessParty` + `party_roles` (`customer`/`vendor`/`payer`/`payee`). Transactability: `IsActive` và không `IsBlocked` mới được gắn Bill / chi phí / doanh thu / chứng từ mới. Hạn mức AR theo ADR-0020: `advisory` | `warn` | `block` — chặn cứng chỉ khi **ghi nhận phải thu** cùng tiền tệ với hạn mức (không quy đổi FX im lặng; không chặn lúc tạo Revenue — C-004). Soft-delete từ chối khi còn AP/AR mở. View Cost ≠ View Revenue trên 360°.
+
+### ADR / schema
+- `docs/adr/ADR-0020-party-transactability-credit-control.md` — Accepted.
+- Migration `20260920140048_P27_BusinessPartyDirectoryFull` — `party_kind`, `short_name`, `legal_type`, `group_code`, `external_code`, `industry_code`, `invoice_email`, `vat_registered`, `assigned_user_id`, `parent_party_id`, `credit_control_mode`, `is_blocked` + bank `bank_code`/`swift_bic`, contact `function_code`.
+
+### API
+- `GET /api/business-parties/lookup?q=&roleCode=&usableOnly=&take=` — typeahead mã/tên/MST/SĐT.
+- `GET /api/business-parties/directory` + `/summary` — KPI + phân trang + AP/AR nếu có quyền.
+- `GET /api/business-parties/duplicates?taxId=&phone=&email=&excludeId=`
+- `GET /api/business-parties/export` — CSV UTF-8 BOM (tối đa 5000 dòng; AP/AR theo quyền).
+- `GET /api/business-parties/{id}/financial` — 360° hạn mức, AP/AR, Bill, chứng từ.
+- `POST /api/business-parties/{id}/block|unblock`
+- Create tự cấp mã `DT-yyMMdd-xxxx` nếu để trống. MST VN 10/13 số, unique theo tenant.
+
+### Web
+- `/admin/parties` danh sách + KPI + lọc vai trò/trạng thái/loại/nhóm + xuất CSV.
+- `/admin/parties/new` hồ sơ đầy đủ + cảnh báo trùng.
+- `/admin/parties/{id}` tab: hồ sơ / tài chính / vai trò / TKNH / liên hệ / nhật ký + chặn giao dịch.
+- Typeahead trên tạo Bill, chi phí (kể cả chi phí chung), doanh thu, nhận chứng từ.
+
+### Tests
+- `BusinessPartyDirectoryFullTests` + `BusinessPartyMasterFullTests` (lookup SĐT, chặn, NCC ngừng, hạn mức AR, role-gate chi phí, xóa mềm khi còn AR, export CSV).
+- Full suite: 140 pass; 2 fail `SprintP10ReverseRecognizeTests` do SQLite file lock Windows (không liên quan module này).
+
+### Follow-up
+- Merge trùng party (P1 ADR-0019) — chưa làm; cảnh báo trùng MST/SĐT/email trên form.
+- Gán người phụ trách (`assignedUserId`) chưa có UI chọn user.
+- Import Excel danh sách đối tác — chưa.
+
+---
+
+## 2026-09-19 — PO: “thêm TMS” vì khách chưa có hệ thống (Word/Excel)
+
+
+### User
+Khách chưa có hệ thống, thao tác tay Word/Excel. Yêu cầu thêm TMS: quản lý khách hàng (autocomplete tên/SĐT khi tạo Bill); quản lý cước (mode air/sea/truck/train, loại hàng, chặng, giá Q, giá kg bước 0.5). Chuyên gia bổ sung điểm mấu chốt còn thiếu.
+
+### Decision (proposed — ADR-0019)
+Không mở TMS. Đây là **D02 Party + D04 Bảng cước** cho tenant standalone (ADR-0017). Excel cước của khách = SoT rating, không phải điều vận.
+- Giữ H-002 / SCP-003 / ADR-0018: không GPS, xe, tài xế, e-POD, kho, matching xe trống.
+- Party master đã có (`BusinessParty` + roles). Gap: tìm theo SĐT, typeahead trên form Bill, snapshot, bắt trùng MST/SĐT.
+- Rating đã có (fixed / unit_rate / % / min-max, RouteCode free-text). Gap: Q-break + pivot, kg-step 0.5, catalog mode/loại hàng/chặng, chargeable weight round-up, buy≠sell, import Excel.
+
+### ADR
+- `docs/adr/ADR-0019-freight-tariff-not-tms.md` — **Proposed**, chờ PO chốt 3 câu.
+
+### Blockers (hỏi PO)
+1. Forwarder (bán + mua cước) hay tự vận hành (có xe)?
+2. File Excel cước thật: Q-break hàng không, kg-step chuyển phát, hay đường bộ/biển theo chuyến/CBM?
+3. Bill bắt buộc 3 bên (gửi / nhận / trả cước) hay 1 khách hàng đủ cho P0?
+
+### Follow-up (sau khi PO chốt)
+P0: typeahead Party trên Bill; catalog mode/cargo/lane; chargeable kg + round 0.5; calc `weight_break` + `weight_step`; import Excel; rate → Expected Revenue/Cost.
+P1: volumetric, sea W/M, FSC/SSC, rate card theo khách, merge trùng party.
+
+---
+
 ## 2026-09-19 — Waybill capture on Bill (not TMS)
 
 ### User

@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-21 — Tab tham chiếu vận hành + ô tìm không đè nút
+
+### User
+Chỉnh lại các ô Đơn hàng / Lô hàng / Chặng / Chuyến cho đẹp.
+
+### Answer
+`hub-module-tab` chỉ có nhãn: căn giữa, cao ~41px, 4 cột đều; tab có mô tả giữ layout cũ. `.filter-bar` thành hàng flex — input và nút Tìm không còn đè nhau. Không push/deploy.
+
+### Files
+- `apps/web/app/globals.css`
+- `apps/web/app/operations/page.tsx`
+
+---
+
 ## 2026-09-21 — KPI card: nền cả khối theo màu ô vuông tone
 
 ### User

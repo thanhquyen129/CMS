@@ -508,7 +508,7 @@ button, input, select, textarea { font: inherit; }
 
 .hub-module-tabs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
   gap: 0.65rem;
   margin: 1rem 0 1.25rem;
 }
@@ -516,19 +516,31 @@ button, input, select, textarea { font: inherit; }
 .hub-module-tab {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 0.35rem;
-  padding: 0.85rem 0.9rem;
+  padding: 0.85rem 1rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
   box-shadow: var(--shadow);
   color: var(--ink);
   text-decoration: none;
+  text-align: center;
+  min-height: 3.15rem;
+}
+
+.hub-module-tab:has(span) {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
   min-height: 4.5rem;
 }
 
 .hub-module-tab strong {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .hub-module-tab span {
@@ -538,11 +550,19 @@ button, input, select, textarea { font: inherit; }
 
 .hub-module-tab:hover {
   border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .hub-module-tab.is-active {
   background: var(--accent);
   border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--accent-shadow);
+}
+
+.hub-module-tab.is-active:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
   color: #fff;
 }
 
@@ -2782,11 +2802,37 @@ fieldset.group-box .form-grid {
 }
 
 .filter-bar {
-  margin: 0.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0.5rem 0 1rem;
   padding: 0.75rem 0.95rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface, #fff);
+}
+
+.filter-bar input[type="search"],
+.filter-bar input[type="text"] {
+  flex: 1 1 16rem;
+  min-width: 12rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: #fff;
+}
+
+.filter-bar input[type="search"]:focus,
+.filter-bar input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.filter-bar .btn {
+  flex: 0 0 auto;
 }
 
 .stack-panels {

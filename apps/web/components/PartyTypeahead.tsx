@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   lookupPartiesClient,
   type PartyLookupItem,
-} from "@/lib/parties";
+} from "@/lib/parties-client";
 import { creditStatusLabel, partyLabel, partyRoleLabel } from "@/lib/party";
 
 type Props = {

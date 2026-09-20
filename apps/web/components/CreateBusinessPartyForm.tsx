@@ -9,7 +9,7 @@ import {
   PARTY_LEGAL_TYPE_OPTIONS,
   PARTY_ROLE_OPTIONS,
 } from "@/lib/party";
-import { findPartyDuplicates, type PartyDuplicateHit } from "@/lib/parties";
+import { findPartyDuplicates, type PartyDuplicateHit } from "@/lib/parties-client";
 import { VnAddressFields } from "@/components/VnAddressFields";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 

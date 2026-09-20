@@ -40,8 +40,8 @@ alwaysApply: true
 - Không tar/scp từ máy operator trừ khi job `deploy` fail hoặc runner chết.
 - The VPS copy is **not** a git clone. Do not `git pull` on the host. Never overwrite `infra/.env`.
 - Bản trên VPS **không** phải git clone. Không `git pull` trên máy. **Không ghi đè** `infra/.env`.
-- After push: wait for workflow `CI` (job `test` then `deploy`). Verify `http://194.233.89.26/health` and `/ready`. Report the Actions URL + health URL.
-- Sau push: chờ workflow `CI`. Kiểm tra `/health` và `/ready`. Báo URL Actions + health.
+- After push: wait for workflow `CI` (job `test` then `deploy`) to finish — typically several minutes. Confirm the run is **success**, not just that `/health` still answers (old containers keep serving). Then re-check `/health`, `/ready`, `/`→login, and that host containers restarted.
+- Sau push: **đợi CI xong** (vài phút). Xác nhận run **success**; `/health` cũ không đủ vì container cũ vẫn sống. Rồi kiểm tra `/health` `/ready` `/`→login và container host đã recreate.
 - If tests on the money/auth/cost-financial critical path failed, **do not deploy**; fix or report.
 - Test đường tiền/auth/chi phí-tài chính tới hạn fail thì **không deploy**; sửa hoặc báo.
 - Fallback runbook: `docs/ops/vps-bootstrap.md` + `docs/ops/github-actions.md`.

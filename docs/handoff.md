@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-20 — Deploy CI fail: client import `next/headers`
+
+### User
+deploy bị lỗi. Từ nay sau khi deploy thì đợi vài phút kiểm tra xem có lỗi hay không nhé.
+
+### Answer
+Job `test` pass; `deploy` fail lúc `docker compose --build` vì `next build`: `EditBusinessPartyForm` / typeahead import `@/lib/parties` (server, `cookies` từ `next/headers`). Host đã rsync source nhưng container **không** recreate (vẫn bản 22h). Sửa: `lib/parties-client.ts` cho fetch BFF; CI thêm `npm run build` trước deploy. Sau mỗi push: đợi run CI **success**, rồi mới tin `/health`.
+
+### Verify
+- Actions: https://github.com/thanhquyen129/CMS/actions/runs/35516034801 (fail)
+- Fix follow-up run after this commit.
+
+---
+
 ## 2026-09-20 — Module khách hàng–đối tác đầy đủ (D02 / ADR-0020)
 
 ### User

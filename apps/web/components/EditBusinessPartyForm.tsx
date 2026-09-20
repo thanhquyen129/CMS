@@ -11,7 +11,7 @@ import {
 } from "@/lib/party";
 import { VnAddressFields } from "@/components/VnAddressFields";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
-import { findPartyDuplicates, type PartyDuplicateHit } from "@/lib/parties";
+import { findPartyDuplicates, type PartyDuplicateHit } from "@/lib/parties-client";
 
 export function EditBusinessPartyForm({ party }: { party: BusinessParty }) {
   const router = useRouter();

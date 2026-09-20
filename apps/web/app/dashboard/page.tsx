@@ -2,41 +2,16 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import {
-  FinColors,
-  GroupedBarChart,
-  StackedCompositionBar,
-} from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE, DISPLAY_NAME_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import {
-  agingBucketLabel,
-  getAgingSummary,
-  type AgingBucketSummary,
-} from "@/lib/ap-ar";
 import {
   billTypeLabel,
   listBills,
   operationalStatusLabel,
 } from "@/lib/bills";
 import { getDashboardSummary } from "@/lib/control-desk";
-import { formatDateTimeVi, formatMoney } from "@/lib/money";
-
-const AGING_BUCKET_ORDER = [
-  "current",
-  "1_30",
-  "31_60",
-  "61_90",
-  "90_plus",
-  "no_due_date",
-] as const;
-
-function orderedBuckets(buckets: AgingBucketSummary[] | undefined) {
-  const map = new Map((buckets ?? []).map((b) => [b.bucket.toLowerCase(), b]));
-  return AGING_BUCKET_ORDER.map((key) => map.get(key)).filter(
-    (b): b is AgingBucketSummary => Boolean(b)
-  );
-}
+import { formatMoney } from "@/lib/money";
+import { listOrders } from "@/lib/operational-refs";
 
 function weekdayVi(d: Date): string {
   const names = [
@@ -51,13 +26,56 @@ function weekdayVi(d: Date): string {
   return names[d.getDay()] ?? "";
 }
 
-function compactMoney(n: number, currency: string): string {
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "−" : "";
-  if (abs >= 1_000_000_000) return `${sign}${(abs / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(0)}k`;
-  return formatMoney(n, currency);
+function statusPillClass(status: string): string {
+  const s = (status || "").toLowerCase();
+  if (s.includes("confirm") || s === "active") return "po-pill ok";
+  if (s.includes("pending") || s.includes("await") || s.includes("document"))
+    return "po-pill warn";
+  return "po-pill";
+}
+
+/** Month bars: current month uses real CP/DT heights; other months stay empty (no fake series). */
+function YearBars({
+  costAmt,
+  revAmt,
+  canCost,
+  canRev,
+}: {
+  costAmt: number;
+  revAmt: number;
+  canCost: boolean;
+  canRev: boolean;
+}) {
+  const now = new Date();
+  const month = now.getMonth();
+  const max = Math.max(Math.abs(costAmt), Math.abs(revAmt), 1);
+  const costH = canCost ? Math.max(4, Math.round((Math.abs(costAmt) / max) * 88)) : 0;
+  const revH = canRev ? Math.max(4, Math.round((Math.abs(revAmt) / max) * 88)) : 0;
+
+  return (
+    <div className="po-bars" aria-hidden="true">
+      {Array.from({ length: 12 }, (_, i) => (
+        <div className="po-month" key={i}>
+          {i === month ? (
+            <>
+              {canCost ? (
+                <i className="po-bar b1" style={{ height: `${costH}%` }} />
+              ) : null}
+              {canRev ? (
+                <i className="po-bar b2" style={{ height: `${revH}%` }} />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <i className="po-bar b1" style={{ height: "0%" }} />
+              <i className="po-bar b2" style={{ height: "0%" }} />
+            </>
+          )}
+          <span>Th{String(i + 1).padStart(2, "0")}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default async function DashboardPage() {
@@ -71,15 +89,11 @@ export default async function DashboardPage() {
   const billLabel = term(terms, "BILL", "Bill");
   const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
-  const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
-  const overdueLabel = term(terms, "OVERDUE_EXCEPTION_COUNT", "Số ngoại lệ quá hạn");
-  const openVarianceLabel = term(terms, "OPEN_VARIANCE_COUNT", "Số chênh lệch đang mở");
   const bestAvailableLabel = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
   const costLabel = term(terms, "COST", "Chi phí");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
   const profitLabel = term(terms, "PROFIT", "Lợi nhuận");
   const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
-  const asOfLabel = term(terms, "AS_OF", "Tại thời điểm");
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Công nợ phải trả");
@@ -88,18 +102,18 @@ export default async function DashboardPage() {
   const confirmedLabel = term(terms, "CONFIRMED", "Đã xác nhận");
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
   const maturityLabel = term(terms, "MATURITY_BREAKDOWN", "Phân tách độ chín");
-  const bankUnmatchedLabel = term(terms, "BANK_FEED_UNMATCHED", "Chưa đối soát");
-  const agingLabel = term(terms, "AGING", "Tuổi nợ");
+  const varianceLabel = term(terms, "VARIANCE", "Chênh lệch");
 
-  const [result, agingRes, billsRes] = await Promise.all([
+  const [result, billsRes, ordersRes] = await Promise.all([
     getDashboardSummary(),
-    getAgingSummary(),
     listBills(),
+    listOrders(),
   ]);
 
   const now = new Date();
   const greetingName = displayName ? `Xin chào, ${displayName}!` : "Xin chào!";
   const dateLine = `${weekdayVi(now)}, ${now.toLocaleDateString("vi-VN")}`;
+  const year = now.getFullYear();
 
   const vis = result.ok
     ? result.data.financialVisibility ?? {
@@ -107,64 +121,68 @@ export default async function DashboardPage() {
         canViewRevenue: true,
         canViewMargin: true,
       }
-    : null;
+    : { canViewCost: false, canViewRevenue: false, canViewMargin: false };
 
   const roll = result.ok ? result.data.baseCurrencyRollUp : null;
   const row0 = result.ok ? result.data.totalsByCurrency[0] : null;
-  const currency =
-    roll?.baseCurrency ?? row0?.currencyCode ?? "VND";
-  const costAmt = Number(
-    roll?.costBestAvailableBase ?? row0?.costBestAvailable ?? 0
-  );
+  const currency = roll?.baseCurrency ?? row0?.currencyCode ?? "VND";
+  const costAmt = Number(roll?.costBestAvailableBase ?? row0?.costBestAvailable ?? 0);
   const revAmt = Number(
     roll?.revenueBestAvailableBase ?? row0?.revenueBestAvailable ?? 0
   );
   const profitAmt = Number(
     roll?.profitBestAvailableBase ?? row0?.profitBestAvailable ?? 0
   );
+  const marginPct =
+    vis.canViewMargin && revAmt !== 0
+      ? ((profitAmt / Math.abs(revAmt)) * 100).toFixed(1).replace(".", ",")
+      : null;
 
-  const recentBills = billsRes.ok ? billsRes.data.items.slice(0, 6) : [];
+  const recentBills = billsRes.ok ? billsRes.data.items.slice(0, 4) : [];
   const mat = result.ok ? result.data.maturityPipeline : null;
+  const orderCount = ordersRes.ok ? ordersRes.data.length : 0;
+  const billCount = result.ok ? result.data.billCount : 0;
 
-  const notifs: { tone: "ok" | "warn" | "info"; text: string; href: string }[] =
-    [];
+  const taskTotal = result.ok
+    ? result.data.openExceptionCount +
+      result.data.pendingApprovalCount +
+      result.data.overdueExceptionCount +
+      result.data.openVarianceCount +
+      result.data.unmatchedBankFeedCount +
+      result.data.openCloseCount
+    : 0;
+
+  const notifs: { color: string; text: string; href: string }[] = [];
   if (result.ok) {
-    if (result.data.overdueExceptionCount > 0) {
-      notifs.push({
-        tone: "warn",
-        text: `${result.data.overdueExceptionCount} ngoại lệ quá hạn cần xử lý`,
-        href: "/queues/exceptions?overdueOnly=1",
-      });
-    }
-    if (result.data.unmatchedBankFeedCount > 0) {
-      notifs.push({
-        tone: "warn",
-        text: `${result.data.unmatchedBankFeedCount} dòng ${bankFeedLabel.toLowerCase()} chưa đối soát`,
-        href: "/bank-feed?status=unmatched",
-      });
-    }
-    if (result.data.pendingApprovalCount > 0) {
-      notifs.push({
-        tone: "info",
-        text: `${result.data.pendingApprovalCount} yêu cầu chờ phê duyệt`,
-        href: "/queues/approvals",
-      });
-    }
     if (result.data.openCloseCount > 0) {
       notifs.push({
-        tone: "ok",
+        color: "#10b981",
         text: `${result.data.openCloseCount} kỳ ${closeLabel.toLowerCase()} đang mở`,
         href: "/financial-closes",
       });
     }
+    if (result.data.pendingApprovalCount > 0) {
+      notifs.push({
+        color: "#1677e8",
+        text: `Có ${result.data.pendingApprovalCount} yêu cầu chờ phê duyệt`,
+        href: "/queues/approvals",
+      });
+    }
+    if (result.data.unmatchedBankFeedCount > 0) {
+      notifs.push({
+        color: "#ff8500",
+        text: `${result.data.unmatchedBankFeedCount} dòng ${bankFeedLabel.toLowerCase()} chưa đối soát`,
+        href: "/bank-feed?status=unmatched",
+      });
+    }
+    if (result.data.overdueExceptionCount > 0) {
+      notifs.push({
+        color: "#f32945",
+        text: `${result.data.overdueExceptionCount} ngoại lệ quá hạn cần xử lý`,
+        href: "/queues/exceptions?overdueOnly=1",
+      });
+    }
   }
-
-  const apBuckets = agingRes.ok
-    ? orderedBuckets(agingRes.data.payable?.buckets)
-    : [];
-  const arBuckets = agingRes.ok
-    ? orderedBuckets(agingRes.data.receivable?.buckets)
-    : [];
 
   return (
     <AppShell terms={terms} active="dashboard">
@@ -176,309 +194,342 @@ export default async function DashboardPage() {
         </section>
       ) : (
         <div className="po-dash">
-          {/* Hero */}
-          <header className="po-dash-hero">
+          <div className="po-dash-welcome">
             <div>
-              <p className="po-dash-hello">{greetingName}</p>
-              <p className="po-dash-sub">
-                Trung tâm điều hành tài chính quanh {billLabel} — việc cần xử lý,
-                Best Available, chứng từ, AP/AR và chốt kỳ.
+              <h1>{greetingName}</h1>
+              <p>
+                Chào mừng bạn quay trở lại hệ thống Quản lý Chi phí Logistics
+                (LCMS)
               </p>
             </div>
-            <div className="po-dash-hero-meta">
-              <p className="po-dash-date">{dateLine}</p>
-              <p className="muted">
-                {asOfLabel}: {formatDateTimeVi(result.data.asOfTimestamp)}
-              </p>
-              <p className="po-dash-slogan muted">
-                Kiểm soát chi phí hôm nay · tạo lợi nhuận ngày mai
-              </p>
+            <div className="po-dash-quote">
+              <div className="date">{dateLine}</div>
+              “Kiểm soát chi phí hôm nay, tạo lợi nhuận ngày mai”
             </div>
-          </header>
+          </div>
 
-          {/* KPI strip — no fake TMS "đơn hàng" (H-002) */}
-          <div className="po-kpi-row" role="list">
-            {vis?.canViewCost ? (
-              <div className="po-kpi po-kpi-cost" role="listitem">
-                <span className="po-kpi-icon" aria-hidden="true" />
-                <span className="po-kpi-label">Tổng {costLabel.toLowerCase()}</span>
-                <strong className="po-kpi-value">
-                  {formatMoney(costAmt, currency)}
-                </strong>
-                <span className="po-kpi-hint">Best Available · {currency}</span>
+          <div className="po-grid5">
+            <Link className="po-card po-kpi" href="/operations?tab=orders">
+              <div className="po-kicon" style={{ background: "#1677e8" }}>
+                <svg viewBox="0 0 24 24">
+                  <path d="M6 2.5h8l4 4V21H6z" />
+                  <path d="M14 2.5V7h4M9 11h6M9 15h6M9 19h4" />
+                </svg>
+              </div>
+              <div>
+                <h4>Tổng đơn hàng</h4>
+                <div className="big">{orderCount.toLocaleString("vi-VN")}</div>
+                <small>Tham chiếu vận hành · LCMS</small>
+              </div>
+            </Link>
+
+            {vis.canViewCost ? (
+              <div className="po-card po-kpi">
+                <div className="po-kicon" style={{ background: "#0aae7b" }}>
+                  <svg viewBox="0 0 24 24">
+                    <ellipse cx="9" cy="6" rx="5.5" ry="2.5" />
+                    <path d="M3.5 6v4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V6" />
+                    <path d="M3.5 10v4c0 1.4 2.5 2.5 5.5 2.5 1 0 2-.1 2.8-.4" />
+                    <ellipse cx="16.5" cy="15.5" rx="4" ry="2" />
+                    <path d="M12.5 15.5v3c0 1.1 1.8 2 4 2s4-.9 4-2v-3" />
+                  </svg>
+                </div>
+                <div>
+                  <h4>Tổng {costLabel.toLowerCase()}</h4>
+                  <div className="big">{formatMoney(costAmt, currency)}</div>
+                  <small>Best Available · {currency}</small>
+                </div>
               </div>
             ) : null}
-            {vis?.canViewRevenue ? (
-              <div className="po-kpi po-kpi-rev" role="listitem">
-                <span className="po-kpi-icon" aria-hidden="true" />
-                <span className="po-kpi-label">Tổng {revenueLabel.toLowerCase()}</span>
-                <strong className="po-kpi-value">
-                  {formatMoney(revAmt, currency)}
-                </strong>
-                <span className="po-kpi-hint">Best Available · {currency}</span>
+
+            {vis.canViewRevenue ? (
+              <div className="po-card po-kpi">
+                <div className="po-kicon" style={{ background: "#ff8500" }}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M4 20V10M10 20V5M16 20v-8M22 20V2" />
+                    <path d="m3 8 6-4 6 5 6-7" />
+                  </svg>
+                </div>
+                <div>
+                  <h4>Tổng {revenueLabel.toLowerCase()}</h4>
+                  <div className="big">{formatMoney(revAmt, currency)}</div>
+                  <small>Best Available · {currency}</small>
+                </div>
               </div>
             ) : null}
-            {vis?.canViewMargin ? (
-              <div
-                className={`po-kpi po-kpi-profit${profitAmt < 0 ? " is-neg" : ""}`}
-                role="listitem"
-              >
-                <span className="po-kpi-icon" aria-hidden="true" />
-                <span className="po-kpi-label">{profitLabel}</span>
-                <strong className="po-kpi-value">
-                  {formatMoney(profitAmt, currency)}
-                </strong>
-                <span className="po-kpi-hint">DT − CP (Best Available)</span>
+
+            {vis.canViewMargin ? (
+              <div className="po-card po-kpi">
+                <div className="po-kicon" style={{ background: "#f44e65" }}>
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 4v8h8" />
+                  </svg>
+                </div>
+                <div>
+                  <h4>{profitLabel}</h4>
+                  <div className={`big${profitAmt < 0 ? " is-neg" : ""}`}>
+                    {formatMoney(profitAmt, currency)}
+                  </div>
+                  <small>DT − CP (Best Available)</small>
+                </div>
               </div>
             ) : null}
-            <Link className="po-kpi po-kpi-bill" href="/bills" role="listitem">
-              <span className="po-kpi-icon" aria-hidden="true" />
-              <span className="po-kpi-label">Số {billLabel}</span>
-              <strong className="po-kpi-value">{result.data.billCount}</strong>
-              <span className="po-kpi-hint">Neo tài chính trong phạm vi</span>
+
+            <Link className="po-card po-kpi" href="/bills">
+              <div className="po-kicon" style={{ background: "#7045d8" }}>
+                <svg viewBox="0 0 24 24">
+                  <path d="M6 2.5h8l4 4V21H6z" />
+                  <path d="M14 2.5V7h4M9 11h6M9 15h6M9 19h4" />
+                </svg>
+              </div>
+              <div>
+                <h4>Số {billLabel}</h4>
+                <div className="big">{billCount.toLocaleString("vi-VN")}</div>
+                <small>Neo tài chính trong phạm vi</small>
+              </div>
             </Link>
           </div>
 
-          {/* Task strip */}
-          <section className="po-task-panel" aria-labelledby="po-tasks">
+          <section className="po-card po-section" aria-labelledby="po-tasks">
             <div className="po-section-head">
-              <h2 id="po-tasks">Việc cần xử lý của bạn</h2>
-              <Link className="row-link" href="/control">
+              <b id="po-tasks">
+                Việc cần xử lý của bạn{" "}
+                {taskTotal > 0 ? (
+                  <span className="po-pill count">{taskTotal}</span>
+                ) : null}
+              </b>
+              <Link className="po-link" href="/control">
                 Xem tất cả →
               </Link>
             </div>
-            <div className="po-task-strip">
+            <div className="po-tasks">
               <Link className="po-task" href="/queues/exceptions">
-                <strong>{result.data.openExceptionCount}</strong>
-                <span>{exceptionQueueLabel}</span>
+                <strong className="po-text-red">
+                  {result.data.openExceptionCount}
+                </strong>
+                {exceptionQueueLabel}
+                <small>Mã hàng đợi ngoại lệ</small>
               </Link>
               <Link className="po-task" href="/queues/approvals">
-                <strong>{result.data.pendingApprovalCount}</strong>
-                <span>Chờ phê duyệt</span>
+                <strong className="po-text-orange">
+                  {result.data.pendingApprovalCount}
+                </strong>
+                Chờ phê duyệt
+                <small>{approvalQueueLabel}</small>
               </Link>
               <Link
-                className={`po-task${result.data.overdueExceptionCount > 0 ? " is-warn" : ""}`}
+                className="po-task"
                 href="/queues/exceptions?overdueOnly=1"
               >
-                <strong>{result.data.overdueExceptionCount}</strong>
-                <span>{overdueLabel}</span>
-              </Link>
-              <Link className="po-task" href="/queues/reconciliations">
-                <strong>{result.data.openReconciliationCount}</strong>
-                <span>{reconQueueLabel}</span>
+                <strong className="po-text-red">
+                  {result.data.overdueExceptionCount}
+                </strong>
+                Quá hạn thanh toán
+                <small className="po-text-red">Xem chi tiết</small>
               </Link>
               <Link className="po-task" href="/queues/variances">
-                <strong>{result.data.openVarianceCount}</strong>
-                <span>{openVarianceLabel}</span>
+                <strong className="po-text-orange">
+                  {result.data.openVarianceCount}
+                </strong>
+                Chênh lệch đối soát
+                <small>Hàng đợi {varianceLabel.toLowerCase()}</small>
               </Link>
-              <Link
-                className={`po-task${result.data.unmatchedBankFeedCount > 0 ? " is-warn" : ""}`}
-                href="/bank-feed?status=unmatched"
-              >
-                <strong>{result.data.unmatchedBankFeedCount}</strong>
-                <span>
-                  {bankFeedLabel} · {bankUnmatchedLabel}
-                </span>
+              <Link className="po-task" href="/bank-feed?status=unmatched">
+                <strong className="po-text-red">
+                  {result.data.unmatchedBankFeedCount}
+                </strong>
+                Sao kê chưa đối soát
+                <small>Đang chờ đối soát</small>
               </Link>
               <Link className="po-task" href="/financial-closes">
-                <strong>{result.data.openCloseCount}</strong>
-                <span>{closeLabel} đang mở</span>
+                <strong className="po-text-green">
+                  {result.data.openCloseCount}
+                </strong>
+                {closeLabel}
+                <small className="po-text-green">Kỳ đang mở</small>
               </Link>
               <Link className="po-task" href="/bills">
-                <strong>{result.data.billCount}</strong>
-                <span>{billLabel} cần theo dõi</span>
+                <strong className="po-text-blue">{billCount}</strong>
+                {billLabel} cần kiểm tra
+                <small className="po-text-blue">Xem danh sách</small>
               </Link>
             </div>
           </section>
 
-          {/* Chart + Best available */}
-          <div className="po-mid-grid">
-            <section className="po-card" aria-labelledby="po-chart">
-              <div className="po-section-head">
-                <h2 id="po-chart">
+          <div className="po-mid">
+            <section className="po-card po-chart-card" aria-labelledby="po-chart">
+              <div className="po-chart-head">
+                <b id="po-chart">
                   {costLabel}, {revenueLabel.toLowerCase()} và{" "}
                   {profitLabel.toLowerCase()}
-                </h2>
-                <span className="muted">Kỳ hiện tại · Best Available</span>
+                </b>
+                <span className="muted">Năm {year}</span>
               </div>
-              {(vis?.canViewCost || vis?.canViewRevenue) &&
-              (costAmt !== 0 || revAmt !== 0 || profitAmt !== 0) ? (
-                <GroupedBarChart
-                  caption={`${bestAvailableLabel} (${currency})`}
-                  series={[
-                    ...(vis?.canViewCost
-                      ? [
-                          {
-                            key: "cost",
-                            label: costLabel,
-                            value: costAmt,
-                            color: "#3b82f6",
-                          },
-                        ]
-                      : []),
-                    ...(vis?.canViewRevenue
-                      ? [
-                          {
-                            key: "rev",
-                            label: revenueLabel,
-                            value: revAmt,
-                            color: "#22c55e",
-                          },
-                        ]
-                      : []),
-                    ...(vis?.canViewMargin
-                      ? [
-                          {
-                            key: "pnl",
-                            label: profitLabel,
-                            value: profitAmt,
-                            color:
-                              profitAmt < 0 ? FinColors.profitNeg : "#f59e0b",
-                          },
-                        ]
-                      : []),
-                  ]}
-                  valueFormatter={(n) => compactMoney(n, currency)}
-                />
+              <div className="po-chart-legend">
+                {vis.canViewCost ? "▰ Chi phí" : null}
+                {vis.canViewCost && vis.canViewRevenue ? "  " : null}
+                {vis.canViewRevenue ? "▰ Doanh thu" : null}
+                {vis.canViewMargin ? "  ● Lợi nhuận (Best Available)" : null}
+              </div>
+              {(vis.canViewCost || vis.canViewRevenue) &&
+              (costAmt !== 0 || revAmt !== 0) ? (
+                <div className="po-chart">
+                  <YearBars
+                    costAmt={costAmt}
+                    revAmt={revAmt}
+                    canCost={!!vis.canViewCost}
+                    canRev={!!vis.canViewRevenue}
+                  />
+                </div>
               ) : (
-                <p className="empty-state" role="status">
+                <p className="empty-state" role="status" style={{ margin: "1rem" }}>
                   Chưa có số CP/DT để vẽ. Ghi dòng trên {billLabel} rồi quay lại.
                 </p>
               )}
             </section>
 
-            <section className="po-card" aria-labelledby="po-ba">
-              <div className="po-section-head">
-                <h2 id="po-ba">{bestAvailableLabel}</h2>
-                <span className="muted">{currency}</span>
+            <section className="po-card po-best" aria-labelledby="po-ba">
+              <div className="po-section-head" style={{ padding: "0 0 10px" }}>
+                <b id="po-ba">
+                  {bestAvailableLabel} ({currency})
+                </b>
+                <Link className="po-link" href="/reports">
+                  Xem chi tiết →
+                </Link>
               </div>
-              <p className="cluster-lede" style={{ marginTop: 0 }}>
-                {actualLabel} → {confirmedLabel} → {expectedLabel}. Projection —
-                không phải sổ cái.
-              </p>
-              <div className="po-ba-stack">
-                {vis?.canViewCost ? (
-                  <div className="po-ba-block">
-                    <div className="po-ba-head">
-                      <span>{costLabel}</span>
-                      <strong>{formatMoney(costAmt, currency)}</strong>
+              <small className="muted">
+                Theo dữ liệu: {actualLabel} → {confirmedLabel} → {expectedLabel}.
+                Projection read-only.
+              </small>
+              <div className="po-bestgrid">
+                {vis.canViewCost ? (
+                  <div className="po-bestbox">
+                    <b>{costLabel}</b>
+                    <strong>{formatMoney(costAmt, currency)}</strong>
+                    <div className="po-rows">
+                      <div>
+                        <span>{expectedLabel}</span>
+                        <b>{mat?.costExpectedOnlyCount ?? "—"}</b>
+                      </div>
+                      <div>
+                        <span>{confirmedLabel}</span>
+                        <b>{mat?.costConfirmedOnlyCount ?? "—"}</b>
+                      </div>
+                      <div>
+                        <span>{actualLabel}</span>
+                        <b>{mat?.costActualCount ?? "—"}</b>
+                      </div>
                     </div>
-                    {mat ? (
-                      <ul className="po-ba-maturity">
-                        <li>
-                          <span>{expectedLabel}</span>
-                          <strong>{mat.costExpectedOnlyCount} dòng</strong>
-                        </li>
-                        <li>
-                          <span>{confirmedLabel}</span>
-                          <strong>{mat.costConfirmedOnlyCount} dòng</strong>
-                        </li>
-                        <li>
-                          <span>{actualLabel}</span>
-                          <strong>{mat.costActualCount} dòng</strong>
-                        </li>
-                      </ul>
-                    ) : null}
                   </div>
                 ) : null}
-                {vis?.canViewRevenue ? (
-                  <div className="po-ba-block">
-                    <div className="po-ba-head">
-                      <span>{revenueLabel}</span>
-                      <strong>{formatMoney(revAmt, currency)}</strong>
+                {vis.canViewRevenue ? (
+                  <div className="po-bestbox">
+                    <b>{revenueLabel}</b>
+                    <strong>{formatMoney(revAmt, currency)}</strong>
+                    <div className="po-rows">
+                      <div>
+                        <span>{expectedLabel}</span>
+                        <b>{mat?.revenueExpectedOnlyCount ?? "—"}</b>
+                      </div>
+                      <div>
+                        <span>{confirmedLabel}</span>
+                        <b>{mat?.revenueConfirmedOnlyCount ?? "—"}</b>
+                      </div>
+                      <div>
+                        <span>{actualLabel}</span>
+                        <b>{mat?.revenueActualCount ?? "—"}</b>
+                      </div>
                     </div>
-                    {mat ? (
-                      <ul className="po-ba-maturity">
-                        <li>
-                          <span>{expectedLabel}</span>
-                          <strong>{mat.revenueExpectedOnlyCount} dòng</strong>
-                        </li>
-                        <li>
-                          <span>{confirmedLabel}</span>
-                          <strong>{mat.revenueConfirmedOnlyCount} dòng</strong>
-                        </li>
-                        <li>
-                          <span>{actualLabel}</span>
-                          <strong>{mat.revenueActualCount} dòng</strong>
-                        </li>
-                      </ul>
-                    ) : null}
                   </div>
                 ) : null}
-                {vis?.canViewMargin ? (
-                  <div className="po-ba-block">
-                    <div className="po-ba-head">
-                      <span>{profitLabel}</span>
-                      <strong className={profitAmt < 0 ? "neg" : undefined}>
-                        {formatMoney(profitAmt, currency)}
-                      </strong>
+                {vis.canViewMargin ? (
+                  <div className="po-bestbox">
+                    <b>{profitLabel}</b>
+                    <strong className={profitAmt < 0 ? "po-text-red" : undefined}>
+                      {formatMoney(profitAmt, currency)}
+                    </strong>
+                    <div className="po-rows">
+                      <div>
+                        <span>Tỷ suất lợi nhuận</span>
+                        <b className={profitAmt < 0 ? "po-text-red" : undefined}>
+                          {marginPct != null ? `${marginPct}%` : "—"}
+                        </b>
+                      </div>
+                      <div>
+                        <span>Biên lợi nhuận</span>
+                        <b>—</b>
+                      </div>
+                      <div>
+                        <span>Số {billLabel}</span>
+                        <b>{billCount}</b>
+                      </div>
                     </div>
-                    <p className="muted" style={{ margin: "0.35rem 0 0", fontSize: "0.82rem" }}>
-                      Biên = Best Available DT − CP
-                    </p>
                   </div>
                 ) : null}
               </div>
             </section>
           </div>
 
-          {/* Maturity + recent bills */}
-          <div className="po-mid-grid">
-            <section className="po-card" aria-labelledby="po-mat">
-              <div className="po-section-head">
-                <h2 id="po-mat">{maturityLabel}</h2>
+          <div className="po-lower">
+            <section className="po-card po-maturity" aria-labelledby="po-mat">
+              <div className="po-section-head" style={{ padding: 0 }}>
+                <div>
+                  <b id="po-mat">{maturityLabel}</b>
+                  <br />
+                  <small className="muted">
+                    Số dòng {costLabel}/{revenueLabel} theo lớp độ chín – không
+                    phải số tiền.
+                  </small>
+                </div>
               </div>
-              {mat && (vis?.canViewCost || vis?.canViewRevenue) ? (
-                <div className="po-mat-cols">
-                  {vis?.canViewCost ? (
-                    <StackedCompositionBar
-                      caption={`${costLabel} (số dòng)`}
-                      segments={[
-                        {
-                          key: "e",
-                          label: expectedLabel,
-                          value: mat.costExpectedOnlyCount,
-                          color: FinColors.expected,
-                        },
-                        {
-                          key: "c",
-                          label: confirmedLabel,
-                          value: mat.costConfirmedOnlyCount,
-                          color: FinColors.confirmed,
-                        },
-                        {
-                          key: "a",
-                          label: actualLabel,
-                          value: mat.costActualCount,
-                          color: FinColors.actual,
-                        },
-                      ]}
-                    />
+              {mat && (vis.canViewCost || vis.canViewRevenue) ? (
+                <div className="po-maturity-grid">
+                  {vis.canViewCost ? (
+                    <div className="po-mblock">
+                      <b>{costLabel}</b>
+                      <div className="po-mcols">
+                        <div className="po-mcol">
+                          <strong>{mat.costExpectedOnlyCount}</strong>
+                          {expectedLabel}
+                          <br />
+                          <small>Chờ xử lý</small>
+                        </div>
+                        <div className="po-mcol">
+                          <strong>{mat.costConfirmedOnlyCount}</strong>
+                          {confirmedLabel}
+                          <br />
+                          <small>Chưa thực tế</small>
+                        </div>
+                        <div className="po-mcol">
+                          <strong>{mat.costActualCount}</strong>
+                          {actualLabel}
+                          <br />
+                          <small className="po-text-blue">Đã có thực tế</small>
+                        </div>
+                      </div>
+                    </div>
                   ) : null}
-                  {vis?.canViewRevenue ? (
-                    <StackedCompositionBar
-                      caption={`${revenueLabel} (số dòng)`}
-                      segments={[
-                        {
-                          key: "e",
-                          label: expectedLabel,
-                          value: mat.revenueExpectedOnlyCount,
-                          color: FinColors.expected,
-                        },
-                        {
-                          key: "c",
-                          label: confirmedLabel,
-                          value: mat.revenueConfirmedOnlyCount,
-                          color: FinColors.confirmed,
-                        },
-                        {
-                          key: "a",
-                          label: actualLabel,
-                          value: mat.revenueActualCount,
-                          color: FinColors.actual,
-                        },
-                      ]}
-                    />
+                  {vis.canViewRevenue ? (
+                    <div className="po-mblock">
+                      <b>{revenueLabel}</b>
+                      <div className="po-mcols">
+                        <div className="po-mcol">
+                          <strong>{mat.revenueExpectedOnlyCount}</strong>
+                          {expectedLabel}
+                        </div>
+                        <div className="po-mcol">
+                          <strong>{mat.revenueConfirmedOnlyCount}</strong>
+                          {confirmedLabel}
+                        </div>
+                        <div className="po-mcol">
+                          <strong>{mat.revenueActualCount}</strong>
+                          {actualLabel}
+                          <br />
+                          <small className="po-text-green">Đã có thực tế</small>
+                        </div>
+                      </div>
+                    </div>
                   ) : null}
                 </div>
               ) : (
@@ -488,143 +539,173 @@ export default async function DashboardPage() {
               )}
             </section>
 
-            <section className="po-card" aria-labelledby="po-recent">
-              <div className="po-section-head">
-                <h2 id="po-recent">{billLabel} gần đây</h2>
-                <Link className="row-link" href="/bills">
+            <section className="po-card po-tablecard" aria-labelledby="po-recent">
+              <div className="po-section-head" style={{ padding: "0 0 8px" }}>
+                <b id="po-recent">
+                  Đơn hàng / {billLabel} gần đây
+                </b>
+                <Link className="po-link" href="/bills">
                   Xem tất cả →
                 </Link>
               </div>
               {recentBills.length === 0 ? (
                 <p className="empty-state" role="status">
                   Chưa có {billLabel}.{" "}
-                  <Link className="row-link" href="/bills/new">
+                  <Link className="po-link" href="/bills/new">
                     Tạo mới
                   </Link>
                 </p>
               ) : (
-                <div className="table-wrap">
-                  <table className="data-table po-recent-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Mã {billLabel}</th>
-                        <th scope="col">Loại</th>
-                        <th scope="col">Ngày tạo</th>
-                        <th scope="col">Trạng thái</th>
+                <table className="po-tbl">
+                  <thead>
+                    <tr>
+                      <th scope="col">Mã {billLabel}</th>
+                      <th scope="col">Loại</th>
+                      <th scope="col">Ngày tạo</th>
+                      <th scope="col">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentBills.map((b) => (
+                      <tr key={b.id}>
+                        <td>
+                          <Link href={`/bills/${b.id}`}>{b.billNo}</Link>
+                        </td>
+                        <td>{billTypeLabel(b.billType)}</td>
+                        <td>
+                          {new Date(b.createdAt).toLocaleDateString("vi-VN")}
+                        </td>
+                        <td>
+                          <span className={statusPillClass(b.operationalStatus)}>
+                            {operationalStatusLabel(b.operationalStatus)}
+                          </span>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {recentBills.map((b) => (
-                        <tr key={b.id}>
-                          <td>
-                            <Link className="row-link" href={`/bills/${b.id}`}>
-                              {b.billNo}
-                            </Link>
-                          </td>
-                          <td>{billTypeLabel(b.billType)}</td>
-                          <td>{formatDateTimeVi(b.createdAt)}</td>
-                          <td>
-                            <span
-                              className={`status-pill status-${b.operationalStatus?.toLowerCase() || "active"}`}
-                            >
-                              {operationalStatusLabel(b.operationalStatus)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </section>
           </div>
 
-          {/* Bottom: docs / AP-AR / notifications */}
-          <div className="po-bottom-grid">
-            <section className="po-card" aria-labelledby="po-docs">
-              <div className="po-section-head">
-                <h2 id="po-docs">{docLabel}</h2>
-                <Link className="row-link" href="/documents">
-                  Xem →
+          <div className="po-bottom">
+            <section className="po-card po-mini" aria-labelledby="po-docs">
+              <div className="po-section-head" style={{ padding: "0 0 8px" }}>
+                <b id="po-docs">{docLabel}</b>
+                <Link className="po-link" href="/documents">
+                  Xem chi tiết →
                 </Link>
               </div>
               {result.data.documents ? (
-                <ul className="po-mini-stats">
-                  <li>
-                    <span>Chờ chấp nhận</span>
-                    <strong>{result.data.documents.awaitingAcceptanceCount}</strong>
-                  </li>
-                  <li>
-                    <span>Đã chấp nhận · chưa khớp</span>
-                    <strong>{result.data.documents.acceptedUnmatchedCount}</strong>
-                  </li>
-                  <li>
-                    <span>Khớp nháp</span>
-                    <strong>{result.data.documents.draftMatchCount}</strong>
-                  </li>
-                </ul>
+                <div className="po-mini3">
+                  <div className="po-minibox">
+                    <strong className="po-text-blue">
+                      {result.data.documents.awaitingAcceptanceCount}
+                    </strong>
+                    Đã nhận,
+                    <br />
+                    chờ hạch toán
+                  </div>
+                  <div className="po-minibox">
+                    <strong className="po-text-orange">
+                      {result.data.documents.acceptedUnmatchedCount}
+                    </strong>
+                    Đã chấp nhận,
+                    <br />
+                    chưa khớp đủ
+                  </div>
+                  <div className="po-minibox">
+                    <strong className="po-text-red">
+                      {result.data.documents.draftMatchCount}
+                    </strong>
+                    Khớp nháp /
+                    <br />
+                    chờ xử lý
+                  </div>
+                </div>
               ) : (
                 <p className="muted">Không có quyền xem cụm chứng từ.</p>
               )}
             </section>
 
-            <section className="po-card" aria-labelledby="po-apar">
-              <div className="po-section-head">
-                <h2 id="po-apar">
-                  {apLabel} / {arLabel}
-                </h2>
-                <Link className="row-link" href="/ap-ar">
-                  Xem →
+            <section className="po-card po-mini" aria-labelledby="po-apar">
+              <div className="po-section-head" style={{ padding: "0 0 8px" }}>
+                <b id="po-apar">
+                  Khoản phải trả / Khoản phải thu
+                </b>
+                <Link className="po-link" href="/ap-ar">
+                  Xem chi tiết →
                 </Link>
               </div>
               {result.data.apAr ? (
-                <ul className="po-mini-stats">
-                  <li>
-                    <span>{apLabel} còn dư</span>
-                    <strong>{result.data.apAr.openAccountsPayableCount}</strong>
-                  </li>
-                  <li>
-                    <span>{arLabel} còn dư</span>
-                    <strong>
-                      {result.data.apAr.openAccountsReceivableCount}
-                    </strong>
-                  </li>
-                </ul>
+                <div className="po-bestgrid">
+                  <div className="po-bestbox">
+                    <b>{apLabel} (AP)</b>
+                    <div className="po-mini3" style={{ marginTop: 8 }}>
+                      <div>
+                        <strong>
+                          {result.data.apAr.openAccountsPayableCount}
+                        </strong>
+                        <small>Chưa tất toán hết</small>
+                      </div>
+                      <div>
+                        <strong>
+                          {result.data.apAr.openPayableExposureCount}
+                        </strong>
+                        <small>Exposure mở</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="po-bestbox" style={{ gridColumn: "span 2" }}>
+                    <b className="po-text-green">{arLabel} (AR)</b>
+                    <div className="po-mini3" style={{ marginTop: 8 }}>
+                      <div>
+                        <strong className="po-text-green">
+                          {result.data.apAr.openAccountsReceivableCount}
+                        </strong>
+                        <small>Chưa ghi nhận đủ</small>
+                      </div>
+                      <div>
+                        <strong className="po-text-green">
+                          {result.data.apAr.openReceivableExposureCount}
+                        </strong>
+                        <small>Exposure mở</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <p className="muted">Không có quyền xem AP/AR.</p>
               )}
-              {(apBuckets.length > 0 || arBuckets.length > 0) && (
-                <p className="muted" style={{ marginTop: "0.65rem", fontSize: "0.8rem" }}>
-                  {agingLabel}:{" "}
-                  {[...apBuckets, ...arBuckets]
-                    .slice(0, 3)
-                    .map((b) => `${agingBucketLabel(b.bucket)} ${b.count}`)
-                    .join(" · ")}
-                </p>
-              )}
             </section>
 
-            <section className="po-card" aria-labelledby="po-notif">
-              <div className="po-section-head">
-                <h2 id="po-notif">Thông báo hệ thống</h2>
+            <section className="po-card po-mini" aria-labelledby="po-notif">
+              <div className="po-section-head" style={{ padding: 0 }}>
+                <b id="po-notif">Thông báo hệ thống</b>
+                <Link className="po-link" href="/control">
+                  Xem tất cả →
+                </Link>
               </div>
               {notifs.length === 0 ? (
-                <p className="muted" role="status">
+                <div className="po-notice">
+                  <span className="po-dot" />
                   Không có cảnh báo từ hàng đợi hiện tại.
-                </p>
+                </div>
               ) : (
-                <ul className="po-notif-list">
-                  {notifs.map((n) => (
-                    <li key={n.href + n.text} className={`tone-${n.tone}`}>
-                      <Link href={n.href}>{n.text}</Link>
-                    </li>
-                  ))}
-                </ul>
+                notifs.map((n) => (
+                  <div className="po-notice" key={n.href + n.text}>
+                    <span
+                      className="po-dot"
+                      style={{ background: n.color }}
+                    />
+                    <Link href={n.href}>{n.text}</Link>
+                  </div>
+                ))
               )}
             </section>
           </div>
 
-          <p className="note po-dash-note">{result.data.note}</p>
+          <p className="po-dash-note">{result.data.note}</p>
         </div>
       )}
     </AppShell>

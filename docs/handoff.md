@@ -132,7 +132,27 @@ Không mở TMS (H-002 / ADR-0017 SCP-003). Vận đơn giấy = form nhập Bil
 
 ---
 
-## 2026-09-19 — UI gaps vs PO: D03 refs, D02 catalog, D04 components, global search
+## 2026-09-20 — UI-01 Dashboard V2 skin (system-wide + home 1:1)
+
+### User
+Áp skin `docs/po/LCMS_UI01_Dashboard_V2_Mockup.html` toàn hệ thống; trang chủ làm lại giống demo 100%.
+
+### Done
+- Token CSS V2: navy sidebar gradient, `#1677e8`, `#f5f8fc`, card `#dfe7f1`, semantic green/red/orange/purple.
+- Shell: topbar full-bleed + hamburger, search mockup-style, footer ảnh logistics, nav active gradient.
+- Dashboard `/dashboard`: welcome + quote, KPI 5 ô, việc cần xử lý 7 ô, chart tháng (tháng hiện tại = Best Available thật; không bịa chuỗi 12 tháng), Best Available, độ chín, Bill gần đây, chứng từ / AP-AR / thông báo — layout khớp mockup; số liệu từ API (Cost ≠ Revenue vẫn gate).
+- “Tổng đơn hàng” = count tham chiếu Order LCMS (`/operations`), không phải TMS.
+
+### Files
+- `apps/web/app/globals.css`, `ShellChrome.tsx`, `GlobalSearch.tsx`, `NavIcon.tsx`, `app/dashboard/page.tsx`
+
+### Follow-up
+- Chuỗi CP/DT theo tháng khi API series có sẵn.
+- Skin login page tinh chỉnh nếu PO muốn 1:1 luôn màn auth.
+
+---
+
+
 
 
 ### User

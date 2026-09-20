@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>LCMS — Dashboard V2</title>
+<style>
+:root{--nav:#102b49;--blue:#1677e8;--line:#dfe7f1;--text:#10254a;--muted:#667899;--bg:#f5f8fc;--green:#0aae7b;--red:#f32945;--orange:#ff7a00;--purple:#7145dc}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}.sidebar{background:linear-gradient(180deg,#142f4d,#0d2946);color:#fff;position:sticky;top:0;height:100vh;overflow:hidden}
+.brand{padding:20px 20px 13px}.brand b{font-size:28px;letter-spacing:.5px}.brand small{display:block;margin-top:4px;color:#d8e5f5}
+.nav{padding:3px 11px 235px;overflow-y:auto;height:calc(100vh - 78px);scrollbar-width:thin}.nav a{display:flex;gap:12px;align-items:center;color:#f4f8ff;text-decoration:none;padding:10px 11px;border-radius:6px;margin:1px 0;min-height:43px;white-space:nowrap}.nav a.active{background:linear-gradient(90deg,#1677d7,#258de7);font-weight:600}.ico{width:24px;height:24px;display:grid;place-items:center;flex:0 0 24px;color:#c6d7ea}.ico svg{width:21px;height:21px;display:block;fill:currentColor;stroke:currentColor}.nav a.active .ico{color:#fff}.chev{margin-left:auto;font-size:16px;font-weight:400}
+.side-foot{position:absolute;z-index:2;bottom:0;left:0;right:0;height:205px;pointer-events:none;background:linear-gradient(0deg,rgba(5,29,52,.96),rgba(11,39,67,.42)),url('https://images.unsplash.com/photo-1494412651409-8963ce7935a7?auto=format&fit=crop&w=500&q=60') center/cover;padding:130px 20px 18px;color:#c9d8e8;font-size:12px;line-height:1.6}
+.main{min-width:0}.topbar{height:65px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:18px}.hamb{font-size:24px}.search{height:40px;width:640px;border:1px solid #d8e2ef;background:#f8fbff;border-radius:6px;display:flex;align-items:center;padding:0 13px;color:#7b8ba7}.topright{margin-left:auto;display:flex;align-items:center;gap:22px}.avatar{width:38px;height:38px;border-radius:50%;background:#1677e8;color:#fff;display:grid;place-items:center;font-weight:700}
+.content{padding:14px 14px 28px}.welcome{display:flex;justify-content:space-between;align-items:flex-start;padding:0 4px 10px}.welcome h1{font-size:24px;margin:0 0 4px}.welcome p{margin:0;color:#597099}.quote{text-align:right;color:#0868d9;font-style:italic}.quote .date{color:#405779;font-style:normal;margin-bottom:8px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.card{background:#fff;border:1px solid var(--line);border-radius:7px;box-shadow:0 1px 4px #183b6310}.kpi{padding:14px 12px;display:flex;gap:14px;min-height:124px}.kicon{width:50px;height:50px;border-radius:8px;display:grid;place-items:center;color:white;font-size:23px;flex:none}.kpi h4{margin:2px 0 7px;font-size:13px;font-weight:500}.big{font-size:23px;font-weight:750;color:#071b44}.trend{margin-top:8px;font-weight:700}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}.orange{color:var(--orange)}
+.section{margin-top:10px}.section-head{padding:12px 14px 8px;display:flex;justify-content:space-between;align-items:center}.section-head b{font-size:15px}.link{color:#0874e8;font-size:12px}.tasks{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:0 12px 12px}.task{border:1px solid var(--line);border-radius:5px;padding:10px 11px;min-height:78px}.task strong{display:block;font-size:22px;margin-bottom:4px}
+.mid{display:grid;grid-template-columns:1.04fr 1fr;gap:10px;margin-top:10px}.chart-card{padding-bottom:12px}.chart-head{display:flex;justify-content:space-between;padding:12px 14px}.chart{height:175px;margin:0 14px;position:relative;border-bottom:1px solid #d9e4ef;background:repeating-linear-gradient(to top,transparent 0,transparent 31px,#e7eef6 32px)}.bars{position:absolute;inset:18px 8px 0;display:flex;align-items:flex-end;justify-content:space-around}.month{width:6.5%;height:100%;display:flex;gap:3px;align-items:flex-end;position:relative}.bar{width:42%;border-radius:2px 2px 0 0}.b1{background:#2385e8}.b2{background:#16bd8b}.month span{position:absolute;bottom:-20px;left:-2px;font-size:10px;color:#61728e}.legend{font-size:11px;text-align:center;color:#425b7d}
+.best{padding:12px}.bestgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bestbox{border:1px solid var(--line);border-radius:6px;padding:11px}.bestbox strong{font-size:19px}.rows{margin-top:9px}.rows div{display:flex;justify-content:space-between;border-top:1px solid #edf1f6;padding:7px 0;font-size:11px}
+.lower{display:grid;grid-template-columns:1.02fr .98fr;gap:10px;margin-top:10px}.maturity{padding:12px}.maturity-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mblock{border:1px solid var(--line);padding:10px;border-radius:6px}.mcols{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:8px}.mcol{background:#f2f7fd;border-radius:5px;padding:12px 10px;min-height:78px}.mcol strong{font-size:19px;display:block}.tablecard{padding:12px}.tbl{width:100%;border-collapse:collapse;font-size:11px}.tbl th,.tbl td{padding:7px;border-bottom:1px solid #e5ebf3;text-align:left}.pill{padding:3px 7px;border-radius:10px;background:#e9f4ff;color:#0874e8}.pill.ok{background:#dcf7eb;color:#008b62}.pill.warn{background:#fff0d8;color:#c56a00}
+.bottom{display:grid;grid-template-columns:.82fr 1.1fr .98fr;gap:10px;margin-top:10px}.mini{padding:12px}.mini3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.minibox{border:1px solid var(--line);border-radius:5px;padding:10px;min-height:80px}.minibox strong{display:block;font-size:20px}.notice{padding:7px 0;border-bottom:1px solid #edf1f6;font-size:11px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;margin-right:8px}
+@media(max-width:1100px){.app{grid-template-columns:80px 1fr}.brand small,.brand b,.nav span:not(.ico),.chev,.side-foot{display:none}.grid5{grid-template-columns:repeat(2,1fr)}.tasks{grid-template-columns:repeat(3,1fr)}.mid,.lower,.bottom{grid-template-columns:1fr}.search{width:45vw}}
+/* SIDEBAR REFERENCE:
+01 Trang chủ
+02 Đơn hàng vận chuyển
+03 Bảng giá & Tính giá
+04 Chi phí
+05 Doanh thu
+06 Chứng từ tài chính
+07 Công nợ phải trả (AP)
+08 Công nợ phải thu (AR)
+09 Thanh toán & Thu tiền
+10 Kiểm soát tài chính
+11 Báo cáo & Phân tích
+12 Danh mục dữ liệu
+13 Hệ thống & Cài đặt
+*/
+
+.icon{width:20px;height:20px;display:inline-block;flex:0 0 20px;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;fill:none}
+.brand-cube{width:32px;height:32px;vertical-align:-8px;margin-right:8px;stroke:#dceeff;fill:#dceeff}
+.kicon .icon{width:25px;height:25px;stroke:#fff}
+.topicon{width:20px;height:20px;stroke:#173a63}
+
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+ <div class="brand"><b><span style="display:inline-block;vertical-align:-4px;margin-right:7px;color:#b8d8ff"><svg viewBox="0 0 24 24" width="25" height="25" fill="currentColor"><path d="m12 2 9 5-9 5-9-5zm-9 7 8 4.4V22l-8-4.5zm18 0-8 4.4V22l8-4.5z"/></svg></span>LCMS</b><small>Logistics Cost Management System</small></div>
+ <nav class="nav" aria-label="Điều hướng chính LCMS">
+  <a class="active" href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.7 12 3l9 7.7v9.1a1.2 1.2 0 0 1-1.2 1.2h-5.1v-6.2H9.3V21H4.2A1.2 1.2 0 0 1 3 19.8z"/></svg></span><span>Trang chủ</span></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a2 2 0 0 1 2 2v2h1.2A1.8 1.8 0 0 1 21 9.8V16h-2.1a3 3 0 0 0-5.8 0H9a3 3 0 0 0-5.8 0H2V8a2 2 0 0 1 2-2h1zm1 2v4h8V6zm.1 9a2.1 2.1 0 1 1 0 4.2 2.1 2.1 0 0 1 0-4.2zm9.9 0a2.1 2.1 0 1 1 0 4.2 2.1 2.1 0 0 1 0-4.2z"/></svg></span><span>Đơn hàng vận chuyển</span><b class="chev">⌄</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2 4v2h10V7zm0 4v2h4v-2zm0 4v2h4v-2zm6-4v6h4v-6z"/></svg></span><span>Bảng giá &amp; Tính giá</span><b class="chev">⌄</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10l8.7-5A10 10 0 0 0 12 2zm-2 2.2A10 10 0 1 0 21.8 10H10z"/><path d="M13.5 13.5 21 9.2A10 10 0 0 1 14.2 21z" opacity=".65"/></svg></span><span>Chi phí</span><b class="chev">⌄</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h3v-7H3zm5 0h3V8H8zm5 0h3V11h-3zm5 0h3V5h-3z"/><path d="m4 9 5-4 4 2 6-5 1.3 1.5L13.2 9.5 9.2 7.4 5.3 10.6z"/></svg></span><span>Doanh thu</span><b class="chev">⌄</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2h11l4 4v16H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm10 1.5V8h4.5zM7 11v2h10v-2zm0 4v2h10v-2z"/></svg></span><span>Chứng từ tài chính</span><b class="chev">›</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2 5v8h12V8z"/><path d="M12 9.5 16 13h-2.5v2.5h-3V13H8z"/></svg></span><span>Công nợ phải trả (AP)</span><b class="chev">›</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 5v4.1l3 1.8-1 1.7-4-2.4V7z"/></svg></span><span>Công nợ phải thu (AR)</span><b class="chev">›</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3zM5 9v6h14V9z"/><path d="M10 11h4v2h-4zM1 11h5v2H1zm17 0h5v2h-5z"/></svg></span><span>Thanh toán &amp; Thu tiền</span><b class="chev">›</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 21 6v6c0 5.2-3.7 8.8-9 10-5.3-1.2-9-4.8-9-10V6zm-1.2 13.8 6-6-1.6-1.6-4.4 4.4-2-2-1.6 1.6z"/></svg></span><span>Kiểm soát tài chính</span><b class="chev">›</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v16H2V5a2 2 0 0 1 2-2zm2 14h2v-5H6zm5 0h2V8h-2zm5 0h2v-9h-2z"/></svg></span><span>Báo cáo &amp; Phân tích</span><b class="chev">›</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c5 0 9 1.6 9 3.5S17 9 12 9 3 7.4 3 5.5 7 2 12 2zm-9 6c1.8 1.6 5.3 2.5 9 2.5S19.2 9.6 21 8v4c0 1.9-4 3.5-9 3.5S3 13.9 3 12zm0 6.5c1.8 1.6 5.3 2.5 9 2.5s7.2-.9 9-2.5v4c0 1.9-4 3.5-9 3.5s-9-1.6-9-3.5z"/></svg></span><span>Danh mục dữ liệu</span><b class="chev">›</b></a>
+  <a href="#"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.7 2 .6 2.3a8 8 0 0 1 3.4 0L14.3 2l2.4 1 .9 2.2a8 8 0 0 1 2.4 2.4l2.2.9 1 2.4-2 1.3a8 8 0 0 1 0 3.4l2 1.3-1 2.4-2.2.9a8 8 0 0 1-2.4 2.4l-.9 2.2-2.4 1-.6-2.3a8 8 0 0 1-3.4 0L9.7 22l-2.4-1-.9-2.2A8 8 0 0 1 4 16.4l-2.2-.9-1-2.4 2-1.3a8 8 0 0 1 0-3.4l-2-1.3 1-2.4L4 4.2a8 8 0 0 1 2.4-2.4L7.3-.4zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" transform="scale(.85) translate(2.1 2.1)"/></svg></span><span>Hệ thống &amp; Cài đặt</span><b class="chev">›</b></a>
+ </nav>
+ <div class="side-foot">Kiểm soát chi phí<br>Tối ưu lợi nhuận<br>Phát triển bền vững<br><br>LCMS v1.0.0<br>© 2025. All rights reserved.</div>
+</aside>
+<main class="main">
+ <header class="topbar"><span class="hamb" aria-label="Menu">☰</span><div class="search">⌕ &nbsp; Tìm kiếm (đơn hàng, bill, shipment, khách hàng, nhà cung cấp, chứng từ...)</div><div class="topright"><span title="Thông báo">🔔 <b class="red">12</b></span><span title="Trợ giúp" style="font-size:18px">●?</span><span>🇻🇳 VI⌄</span><div class="avatar">TL</div><div><b>Trần Thanh Liêm</b><br><small>Quản trị hệ thống</small></div>⌄</div></header>
+ <div class="content">
+  <div class="welcome"><div><h1>Xin chào, Trần Thanh Liêm!</h1><p>Chào mừng bạn quay trở lại hệ thống Quản lý Chi phí Logistics (LCMS)</p></div><div class="quote"><div class="date">Thứ Ba, 09/09/2025</div>“Kiểm soát chi phí hôm nay, tạo lợi nhuận ngày mai”</div></div>
+  <div class="grid5">
+   <div class="card kpi"><div class="kicon" style="background:#1677e8"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2.5h8l4 4V21H6z"/><path d="M14 2.5V7h4M9 11h6M9 15h6M9 19h4"/></svg></div><div><h4>Tổng đơn hàng</h4><div class="big">1.248</div><div class="trend green">↑ 12%</div><small>so với tháng trước</small></div></div>
+   <div class="card kpi"><div class="kicon" style="background:#0aae7b"><svg class="icon" viewBox="0 0 24 24"><ellipse cx="9" cy="6" rx="5.5" ry="2.5"/><path d="M3.5 6v4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V6"/><path d="M3.5 10v4c0 1.4 2.5 2.5 5.5 2.5 1 0 2-.1 2.8-.4"/><ellipse cx="16.5" cy="15.5" rx="4" ry="2"/><path d="M12.5 15.5v3c0 1.1 1.8 2 4 2s4-.9 4-2v-3"/></svg></div><div><h4>Tổng chi phí</h4><div class="big">41.300.000 đ</div><div class="trend red">↑ 8%</div><small>so với tháng trước</small></div></div>
+   <div class="card kpi"><div class="kicon" style="background:#ff8500"><svg class="icon" viewBox="0 0 24 24"><path d="M4 20V10M10 20V5M16 20v-8M22 20V2"/><path d="m3 8 6-4 6 5 6-7"/></svg></div><div><h4>Tổng doanh thu</h4><div class="big">29.220.000 đ</div><div class="trend green">↑ 10%</div><small>so với tháng trước</small></div></div>
+   <div class="card kpi"><div class="kicon" style="background:#f44e65"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg></div><div><h4>Lợi nhuận</h4><div class="big red">-12.080.000 đ</div><div class="trend red">↓ 15%</div><small>so với tháng trước</small></div></div>
+   <div class="card kpi"><div class="kicon" style="background:#7045d8"><svg class="icon" viewBox="0 0 24 24"><path d="M6 2.5h8l4 4V21H6z"/><path d="M14 2.5V7h4M9 11h6M9 15h6M9 19h4"/></svg></div><div><h4>Số Bill</h4><div class="big">49</div><div class="trend green">↑ 6%</div><small>so với tháng trước</small></div></div>
+  </div>
+  <section class="card section"><div class="section-head"><b>Việc cần xử lý của bạn &nbsp; <span class="pill" style="background:#f32945;color:white">12</span></b><span class="link">Xem tất cả →</span></div><div class="tasks">
+   <div class="task"><strong class="red">2</strong>Hàng đợi ngoại lệ<br><small>Mã hàng đợi ngoại lệ</small></div><div class="task"><strong class="orange">1</strong>Chờ phê duyệt<br><small>Mã hàng đợi phê duyệt</small></div><div class="task"><strong class="red">2</strong>Quá hạn thanh toán<br><small class="red">Xem chi tiết</small></div><div class="task"><strong class="orange">1</strong>Chênh lệch đối soát<br><small>Mã hàng đợi chênh lệch</small></div><div class="task"><strong class="red">6</strong>Sao kê chưa đối soát<br><small>Đang chờ đối soát</small></div><div class="task"><strong class="green">3</strong>Chốt tài chính<br><small class="green">Mã đã chốt</small></div><div class="task"><strong class="blue">5</strong>Bill cần kiểm tra<br><small class="blue">Xem danh sách</small></div>
+  </div></section>
+  <div class="mid">
+   <section class="card chart-card"><div class="chart-head"><b>Chi phí, doanh thu và lợi nhuận</b><span>Năm 2025⌄</span></div><div class="legend">▰ Chi phí &nbsp;&nbsp; ▰ Doanh thu &nbsp;&nbsp; ● Lợi nhuận</div><div class="chart"><div class="bars" id="bars"></div></div></section>
+   <section class="card best"><div class="section-head" style="padding:0 0 10px"><b>Giá trị tốt nhất hiện có (VND)</b><span class="link">Xem chi tiết →</span></div><small>Theo dữ liệu: Actual → Confirmed → Expected. Projection read-only.</small><div class="bestgrid">
+    <div class="bestbox"><b>Chi phí</b><br><strong>41.300.000 đ</strong><div class="rows"><div><span>Dự kiến</span><b>16</b></div><div><span>Đã xác nhận</span><b>29</b></div><div><span>Thực tế</span><b>3</b></div></div></div>
+    <div class="bestbox"><b>Doanh thu</b><br><strong>29.220.000 đ</strong><div class="rows"><div><span>Dự kiến</span><b>3</b></div><div><span>Đã xác nhận</span><b>10</b></div><div><span>Thực tế</span><b>3</b></div></div></div>
+    <div class="bestbox"><b>Lợi nhuận</b><br><strong class="red">-12.080.000 đ</strong><div class="rows"><div><span>Tỷ suất lợi nhuận</span><b class="red">-41,3%</b></div><div><span>Biên lợi nhuận</span><b>-</b></div><div><span>Số Bill</span><b>49</b></div></div></div>
+   </div></section>
+  </div>
+  <div class="lower">
+   <section class="card maturity"><div class="section-head" style="padding:0"><div><b>Phân tách độ chín</b><br><small>Số dòng Chi phí/Doanh thu theo lớp độ chín – không phải số tiền.</small></div></div><div class="maturity-grid">
+    <div class="mblock"><b>Chi phí</b><div class="mcols"><div class="mcol"><strong>16</strong>Dự kiến<br><small>Chờ xử lý</small></div><div class="mcol"><strong>29</strong>Đã xác nhận<br><small>Chưa thực tế</small></div><div class="mcol"><strong>3</strong>Thực tế<br><small class="blue">Đã có thực tế</small></div></div></div>
+    <div class="mblock"><b>Doanh thu</b><div class="mcols"><div class="mcol"><strong>3</strong>Dự kiến</div><div class="mcol"><strong>10</strong>Đã xác nhận</div><div class="mcol"><strong>3</strong>Thực tế<br><small class="green">Đã có thực tế</small></div></div></div>
+   </div></section>
+   <section class="card tablecard"><div class="section-head" style="padding:0 0 8px"><b>Đơn hàng / Bill gần đây</b><span class="link">Xem tất cả →</span></div><table class="tbl"><thead><tr><th>Mã Bill</th><th>Khách hàng</th><th>Tuyến</th><th>Ngày tạo</th><th>Trạng thái</th></tr></thead><tbody>
+    <tr><td class="blue">BILL2509001</td><td>Công ty ABC</td><td>HCM → LAX</td><td>09/09/2025</td><td><span class="pill">Đang xử lý</span></td></tr><tr><td class="blue">BILL2509002</td><td>Công ty XYZ</td><td>Hải Phòng → Rotterdam</td><td>08/09/2025</td><td><span class="pill ok">Đã xác nhận</span></td></tr><tr><td class="blue">BILL2509003</td><td>Công ty DEF</td><td>HCM → Singapore</td><td>08/09/2025</td><td><span class="pill warn">Chờ chứng từ</span></td></tr><tr><td class="blue">BILL2509004</td><td>Công ty GHI</td><td>Đà Nẵng → Busan</td><td>07/09/2025</td><td><span class="pill warn">Đang xử lý</span></td></tr>
+   </tbody></table></section>
+  </div>
+  <div class="bottom">
+   <section class="card mini"><div class="section-head" style="padding:0 0 8px"><b>Chứng từ tài chính</b><span class="link">Xem chi tiết →</span></div><div class="mini3"><div class="minibox"><strong class="blue">1</strong>Đã nhận,<br>chờ hạch toán</div><div class="minibox"><strong class="orange">3</strong>Đã chấp nhận,<br>chưa khớp đủ</div><div class="minibox"><strong class="red">5</strong>Chờ nhà cung cấp</div></div></section>
+   <section class="card mini"><div class="section-head" style="padding:0 0 8px"><b>Khoản phải trả / Khoản phải thu</b><span class="link">Xem chi tiết →</span></div><div class="bestgrid"><div class="bestbox"><b>Công nợ phải trả (AP)</b><div class="mini3" style="margin-top:8px"><div><strong>3</strong><small>Chưa tất toán hết</small></div><div><strong>2</strong><small>Chưa tất toán hết</small></div></div></div><div class="bestbox" style="grid-column:span 2"><b class="green">Công nợ phải thu (AR)</b><div class="mini3" style="margin-top:8px"><div><strong class="green">9</strong><small>Chưa ghi nhận đủ</small></div><div><strong class="green">1</strong><small>Chưa ghi nhận đủ</small></div></div></div></div></section>
+   <section class="card mini"><div class="section-head" style="padding:0"><b>Thông báo hệ thống</b><span class="link">Xem tất cả →</span></div><div class="notice"><span class="dot"></span>Đã hoàn thành đối soát tháng 08/2025</div><div class="notice"><span class="dot" style="background:#1677e8"></span>Có 5 hóa đơn nhà cung cấp chờ duyệt</div><div class="notice"><span class="dot" style="background:#ff8500"></span>Cập nhật tỷ giá ngoại tệ ngày 09/09/2025</div></section>
+  </div>
+ </div>
+</main>
+</div>
+<script>
+const vals=[[35,50],[43,55],[46,61],[50,65],[55,70],[65,78],[70,88],[66,80],[63,78],[70,86],[78,98],[72,90]];
+document.getElementById('bars').innerHTML=vals.map((v,i)=>`<div class="month"><i class="bar b1" style="height:${v[0]}%"></i><i class="bar b2" style="height:${v[1]}%"></i><span>Th${String(i+1).padStart(2,'0')}</span></div>`).join('');
+</script>
+</body></html>

@@ -26,8 +26,8 @@ export function NavIcon({
     <svg
       className={className}
       viewBox="0 0 24 24"
-      width="16"
-      height="16"
+      width="21"
+      height="21"
       aria-hidden="true"
       fill="none"
       stroke="currentColor"

@@ -37,6 +37,22 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
     };
   }, [navOpen]);
 
+  function toggleSidebar() {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches) {
+      setNavOpen((o) => !o);
+      return;
+    }
+    const root = document.documentElement;
+    const next =
+      root.getAttribute("data-sidebar") === "collapsed" ? "expanded" : "collapsed";
+    root.setAttribute("data-sidebar", next);
+    try {
+      document.cookie = `lcms_sidebar=${next};path=/;max-age=31536000;samesite=lax`;
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
     <div className={`shell${navOpen ? " nav-open" : ""}`}>
       <header className="mobile-bar">
@@ -87,10 +103,18 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
 
       <div className="main">
         <div className="topbar">
+          <button
+            type="button"
+            className="topbar-hamb"
+            aria-label="Thu gọn / mở menu"
+            onClick={toggleSidebar}
+          >
+            ☰
+          </button>
           <GlobalSearch />
           <div className="topbar-actions">{topbarRight}</div>
         </div>
-        {children}
+        <div className="content-pad">{children}</div>
       </div>
 
       <button

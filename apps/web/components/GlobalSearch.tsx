@@ -139,7 +139,7 @@ export function GlobalSearch() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => hits.length > 0 && setOpen(true)}
-          placeholder="Tìm Bill, đơn hàng, chi phí, chứng từ, đối tác…"
+          placeholder="⌕  Tìm kiếm (đơn hàng, bill, shipment, khách hàng, nhà cung cấp, chứng từ...)"
           autoComplete="off"
           aria-autocomplete="list"
           aria-expanded={open}

@@ -66,7 +66,13 @@ html[data-density="compact"] .field textarea {
 }
 
 html[data-density="compact"] fieldset.group-box {
-  padding: 0.8rem 0.9rem 0.95rem;
+  padding: 0 0.9rem 0.95rem;
+}
+
+html[data-density="compact"] fieldset.group-box > legend {
+  width: calc(100% + 1.8rem);
+  margin: 0 -0.9rem 0.75rem;
+  padding: 0.7rem 0.9rem 0.55rem;
 }
 
 html[data-density="compact"] .form-grid {
@@ -2747,8 +2753,9 @@ a.stat-card:hover {
 }
 
 fieldset.group-box {
+  display: block;
   margin: 0;
-  padding: 1rem 1.1rem 1.15rem;
+  padding: 0 1.1rem 1.15rem;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface, #fff);
@@ -2757,22 +2764,20 @@ fieldset.group-box {
 }
 
 fieldset.group-box > legend {
-  float: left;
-  width: 100%;
-  margin: 0 0 0.9rem;
-  padding: 0 0 0.65rem;
+  display: block;
+  float: none;
+  width: calc(100% + 2.2rem);
+  max-width: none;
+  margin: 0 -1.1rem 0.9rem;
+  padding: 0.85rem 1.1rem 0.65rem;
+  border: 0;
   border-bottom: 1px solid var(--line);
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   text-transform: none;
   color: var(--ink);
-}
-
-fieldset.group-box::after {
-  content: "";
-  display: block;
-  clear: both;
+  background: transparent;
 }
 
 fieldset.group-box > .muted,

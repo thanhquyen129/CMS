@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-20 — Fix form layout: legend float tràn mép phải
+
+### User
+giao diện form bị lỗi rồi
+
+### Answer
+`fieldset.group-box > legend { float: left; width: 100% }` khiến browser đẩy nội dung form (Điện thoại, Website, VAT, tài chính…) thành dải dọc mép phải. Bỏ float; legend `display:block` + border-bottom trong card. Verify `/admin/parties/new`.
+
+### Files
+- `apps/web/app/globals.css`
+
+---
+
 ## 2026-09-20 — Reskin toàn bộ form (bố cục 3 cột / card)
 
 ### User

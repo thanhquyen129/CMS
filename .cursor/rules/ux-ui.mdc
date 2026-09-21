@@ -27,6 +27,8 @@ alwaysApply: false
 - **Ô module hub** → `hub-module-tabs`.
 - Do not restyle a shared class (`.filter-bar`, `.po-kpi`, `fieldset.group-box`) for a form without checking list pages that already use it.
 - Không restyle class dùng chung cho form nếu chưa kiểm tra trang list đang dùng class đó.
+- Never put a data table with in-cell editors into `layout-cols-2` 50/50 with a create form — list full width, form below (`stack-panels` / `.form-aside`).
+- Cấm nhét bảng có form trong ô vào lưới 50/50 với form tạo — danh sách full width, form tạo phía dưới.
 
 ## Clarity first / Rõ ràng trước
 - One primary action per screen/section. Reduce cognitive load.

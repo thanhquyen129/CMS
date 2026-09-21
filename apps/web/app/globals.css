@@ -2458,6 +2458,49 @@ form.filter-bar {
   background: #fafbfe;
 }
 
+.data-table .btn {
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.data-table td:has(form) {
+  vertical-align: top;
+}
+
+.data-table:has(.field) {
+  min-width: 56rem;
+}
+
+.data-table td form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 11rem;
+}
+
+.data-table .field {
+  margin: 0;
+  gap: 0.25rem;
+}
+
+.data-table .field input,
+.data-table .field select,
+.data-table .field textarea {
+  min-height: 2.15rem;
+  min-width: 11rem;
+  max-width: 16rem;
+  width: 100%;
+}
+
+.layout-cols-2:has(.data-table .field) {
+  grid-template-columns: 1fr;
+}
+
+.form-aside {
+  max-width: 44rem;
+}
+
 .data-table .num {
   text-align: right;
   font-variant-numeric: tabular-nums;

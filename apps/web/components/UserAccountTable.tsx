@@ -103,7 +103,7 @@ export function UserAccountTable({ users, organizations, userRolesByUserId }: Pr
   if (users.length === 0) {
     return (
       <div className="empty-state" role="status">
-        Chưa có người dùng. Tạo tài khoản bên phải.
+        Chưa có người dùng. Tạo tài khoản ở form bên dưới.
       </div>
     );
   }
@@ -169,7 +169,7 @@ export function UserAccountTable({ users, organizations, userRolesByUserId }: Pr
                         </select>
                       </div>
                       <input type="hidden" name="isActive" value={u.isActive ? "true" : "false"} />
-                      <button type="submit" className="btn btn-ghost" disabled={waiting}>
+                      <button type="submit" className="btn btn-ghost btn-sm" disabled={waiting}>
                         Lưu hồ sơ
                       </button>
                     </form>
@@ -221,7 +221,7 @@ export function UserAccountTable({ users, organizations, userRolesByUserId }: Pr
                           required
                         />
                       </div>
-                      <button type="submit" className="btn btn-ghost" disabled={waiting}>
+                      <button type="submit" className="btn btn-ghost btn-sm" disabled={waiting}>
                         Đặt mật khẩu
                       </button>
                     </form>
@@ -238,7 +238,7 @@ export function UserAccountTable({ users, organizations, userRolesByUserId }: Pr
                       />
                       <button
                         type="submit"
-                        className={u.isActive ? "btn btn-ghost" : "btn"}
+                        className={u.isActive ? "btn btn-ghost btn-sm" : "btn btn-sm"}
                         disabled={waiting}
                       >
                         {u.isActive ? "Ngừng tài khoản" : "Mở lại"}

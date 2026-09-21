@@ -93,7 +93,7 @@ export default async function SettingsUsersPage() {
             },
           ]}
         />
-        <div className="layout-cols-2">
+        <div className="stack-panels">
           <fieldset className="group-box">
             <legend>Danh sách</legend>
             <UserAccountTable
@@ -102,7 +102,7 @@ export default async function SettingsUsersPage() {
               userRolesByUserId={userRolesByUserId}
             />
           </fieldset>
-          <fieldset className="group-box">
+          <fieldset className="group-box form-aside">
             <legend>Tạo người dùng</legend>
             <CreateUserForm organizations={orgs} roles={roles} />
           </fieldset>

@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-21 — Trang Người dùng: bảng không còn vỡ trong lưới 50/50
+
+### User
+lỗi hiển thị giao diện trang người dùng
+
+### Answer
+`/settings/users` nhét bảng 6 cột (form trong ô) cạnh form tạo → cell hẹp, nút/input quấn. Danh sách full width (`stack-panels`), form tạo dưới (`.form-aside`). CSS: bảng có `.field` không chia 50/50; ô form gọn; nút `nowrap`.
+
+### Files
+- `apps/web/app/settings/users/page.tsx`
+- `apps/web/components/UserAccountTable.tsx`
+- `apps/web/app/globals.css`
+- `.cursor/rules/ux-ui.mdc`
+
+---
+
 ## 2026-09-21 — UI-13/UI-14: người dùng, doanh nghiệp, danh mục, audit, license, thông báo, sao lưu
 
 ### User

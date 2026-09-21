@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { InAppNotification } from "@/lib/tenant-admin";
+import type { InAppNotification } from "@/lib/tenant-admin-model";
 import { formatDateTimeVi } from "@/lib/money";
 
 export function NotificationInbox({ items }: { items: InAppNotification[] }) {

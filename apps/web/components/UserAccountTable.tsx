@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { UserRoleItem } from "@/lib/access";
 import type { OrganizationItem } from "@/lib/master-data";
-import type { AccessUser } from "@/lib/tenant-admin";
+import type { AccessUser } from "@/lib/tenant-admin-model";
 
 type Props = {
   users: AccessUser[];

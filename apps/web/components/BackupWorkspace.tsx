@@ -3,8 +3,8 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { TenantBackupItem } from "@/lib/tenant-admin";
-import { backupStatusLabel } from "@/lib/tenant-admin";
+import type { TenantBackupItem } from "@/lib/tenant-admin-model";
+import { backupStatusLabel } from "@/lib/tenant-admin-model";
 import { formatDateTimeVi } from "@/lib/money";
 
 type Props = {

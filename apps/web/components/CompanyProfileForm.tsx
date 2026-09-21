@@ -8,7 +8,7 @@ import {
   DATE_FORMATS,
   TIME_ZONES,
   type TenantProfile,
-} from "@/lib/tenant-admin";
+} from "@/lib/tenant-admin-model";
 
 type Props = {
   profile: TenantProfile;

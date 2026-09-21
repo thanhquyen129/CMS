@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { NotificationSettings } from "@/lib/tenant-admin";
+import type { NotificationSettings } from "@/lib/tenant-admin-model";
 
 export function NotificationSettingsForm({ settings }: { settings: NotificationSettings }) {
   const router = useRouter();

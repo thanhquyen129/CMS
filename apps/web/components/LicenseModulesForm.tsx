@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { licenseStatusLabel, type TenantLicense } from "@/lib/tenant-admin";
+import { licenseStatusLabel, type TenantLicense } from "@/lib/tenant-admin-model";
 import { formatDateTimeVi } from "@/lib/money";
 
 export function LicenseModulesForm({ license }: { license: TenantLicense }) {

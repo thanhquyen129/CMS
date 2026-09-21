@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { OrderListWorkspace } from "@/components/OrderListWorkspace";
+import { QuerySelectLink } from "@/components/QuerySelectLink";
 import {
   DeadlineList,
   FilterBar,
@@ -250,9 +251,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
                     <ul className="stack-list">
                       {unlinked.slice(0, 5).map((o) => (
                         <li key={o.id}>
-                          <Link className="row-link" href={`/orders?selected=${encodeURIComponent(o.id)}`}>
+                          <QuerySelectLink className="row-link" href={`/orders?selected=${encodeURIComponent(o.id)}`}>
                             {o.orderNo}
-                          </Link>
+                          </QuerySelectLink>
                           <div className="muted small">
                             {o.customerName || "—"} · {o.routeCode || "—"}
                           </div>

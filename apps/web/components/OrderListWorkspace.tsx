@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { listenListSelected, replaceSearchShallow } from "@/lib/shallow-query";
 import { DetailDrawer } from "./DetailDrawer";
 import { DataTableShell, DrawerTabs, ExportCsvButton } from "@/components/list";
 import {
@@ -42,10 +42,8 @@ export function OrderListWorkspace({
   pagination,
   lower,
 }: Props) {
-  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [dismissed, setDismissed] = useState(false);
-  const [, startTransition] = useTransition();
   const [tab, setTab] = useState("overview");
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,6 +59,13 @@ export function OrderListWorkspace({
       return orders[0]?.id ?? null;
     });
   }, [orders, initialSelectedId, dismissed]);
+
+  useEffect(() => {
+    return listenListSelected("/orders", (id) => {
+      setDismissed(!id);
+      setSelectedId(id);
+    });
+  }, []);
 
   const selected = useMemo(
     () => orders.find((o) => o.id === selectedId) ?? null,
@@ -108,11 +113,9 @@ export function OrderListWorkspace({
       if (listParams.pageSize) params.set("pageSize", listParams.pageSize);
       if (id) params.set("selected", id);
       const qs = params.toString();
-      startTransition(() => {
-        router.replace(qs ? `/orders?${qs}` : "/orders", { scroll: false });
-      });
+      replaceSearchShallow(qs ? `/orders?${qs}` : "/orders");
     },
-    [listParams, router]
+    [listParams]
   );
 
   const close = useCallback(() => {

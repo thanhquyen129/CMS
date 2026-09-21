@@ -1,7 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { isNavGroupActive } from "@/lib/nav-match";
 import { NavIcon, type NavIconName } from "./NavIcon";
 
 type NavGroupProps = {
@@ -9,6 +11,7 @@ type NavGroupProps = {
   icon: NavIconName;
   openByDefault?: boolean;
   active?: boolean;
+  match?: string[];
   children: ReactNode;
 };
 
@@ -18,19 +21,23 @@ export function NavGroup({
   icon,
   openByDefault = false,
   active = false,
+  match,
   children,
 }: NavGroupProps) {
-  const [open, setOpen] = useState(openByDefault);
+  const pathname = usePathname();
+  const routeActive = match ? isNavGroupActive(match, pathname) : active;
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? (openByDefault || routeActive);
 
   return (
     <div
-      className={`nav-group${open ? " is-open" : ""}${active ? " is-active" : ""}`}
+      className={`nav-group${open ? " is-open" : ""}${routeActive ? " is-active" : ""}`}
     >
       <button
         type="button"
-        className={`nav-item nav-group-toggle${active && !open ? " is-current" : ""}`}
+        className={`nav-item nav-group-toggle${routeActive && !open ? " is-current" : ""}`}
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setUserOpen(!(userOpen ?? open))}
       >
         <NavIcon name={icon} />
         <span className="nav-item-label">{label}</span>

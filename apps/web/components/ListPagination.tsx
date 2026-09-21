@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { hrefWithPage, PAGE_SIZE_OPTIONS } from "@/lib/list-paging";
 
 type Props = {
@@ -20,6 +21,7 @@ export function ListPagination({
   totalCount,
   totalPages: pages,
 }: Props) {
+  const router = useRouter();
   if (totalCount === 0) return null;
 
   const from = (page - 1) * pageSize + 1;
@@ -42,7 +44,7 @@ export function ListPagination({
             value={pageSize}
             onChange={(e) => {
               const next = Number(e.target.value);
-              window.location.assign(hrefWithPage(basePath, params, 1, next));
+              router.push(hrefWithPage(basePath, params, 1, next), { scroll: false });
             }}
             aria-label="Số dòng mỗi trang"
           >
@@ -57,6 +59,7 @@ export function ListPagination({
           <Link
             className="btn btn-ghost btn-sm"
             href={hrefWithPage(basePath, params, page - 1, pageSize)}
+            scroll={false}
           >
             Trước
           </Link>
@@ -70,6 +73,7 @@ export function ListPagination({
             key={n}
             className={n === page ? "btn btn-sm" : "btn btn-ghost btn-sm"}
             href={hrefWithPage(basePath, params, n, pageSize)}
+            scroll={false}
             aria-current={n === page ? "page" : undefined}
           >
             {n}
@@ -79,6 +83,7 @@ export function ListPagination({
           <Link
             className="btn btn-ghost btn-sm"
             href={hrefWithPage(basePath, params, page + 1, pageSize)}
+            scroll={false}
           >
             Sau
           </Link>

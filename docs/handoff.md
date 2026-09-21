@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-21 — Client navigation: không reload, không nhảy về đầu trang
+
+### User
+khi click vào link, bill hoặc menu trái thì trang reload và hiện lại từ đầu trang, cái này gọi là gì, làm sao để chuyển mượt hơn, không load lại và không nhảy nội dung lên đầu trang từ đầu
+
+### Answer
+Đó là **full-page navigation / RSC refetch + scroll restoration** (cảm giác F5), không phải SPA client-side routing. Click Bill đổi `?selected=` gọi `router.replace` → Next tải lại server page, `loading.tsx` vẽ skeleton cả sidebar, window scroll = 0. Menu trái remount `AppShell` vì chrome nằm trong từng `page.tsx`.
+
+Cách làm: (1) chọn dòng Bill/đơn = **shallow URL** (`history.replaceState`, không RSC); (2) **persistent shell** trong `app/layout.tsx` khi đã đăng nhập — sidebar không tháo; `AppShell` trên page chỉ passthrough; (3) `loading.tsx` chỉ skeleton vùng nội dung; (4) FilterBar / phân trang dùng `router.push(..., { scroll: false })` thay vì GET form / `window.location`.
+
+Click sang module khác vẫn cuộn lên đầu **trang mới** (đúng SPA); sidebar và topbar đứng im.
+
+### Files / API
+- `apps/web/app/layout.tsx` — `PersistentShell` khi có cookie
+- `apps/web/components/AppShell.tsx` — `persist` mới vẽ chrome; page wrapper passthrough + `PageTopbar`
+- `BillListWorkspace` / `OrderListWorkspace` — `replaceSearchShallow`
+- `NavLink` / `NavGroup` — active theo `usePathname`
+- `FilterBar`, `ListPagination`, `QuerySelectLink`, `loading.tsx` content-only
+- Không đổi API/schema
+
+### UI
+Sidebar không nháy. Click Bill chỉ đổi panel phải, URL `?selected=` vẫn share được.
+
+---
+
 ## 2026-09-21 — UI-02: danh sách Bill / đơn hàng khớp mockup workspace
 
 ### User

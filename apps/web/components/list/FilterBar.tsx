@@ -1,5 +1,8 @@
-import type { ReactNode } from "react";
+"use client";
+
+import type { FormEvent, ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export type FilterField =
   | {
@@ -45,12 +48,28 @@ export function FilterBar({
   extra?: ReactNode;
   showLabels?: boolean;
 }) {
+  const router = useRouter();
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const params = new URLSearchParams();
+    for (const [key, value] of data.entries()) {
+      const text = String(value).trim();
+      if (text) params.set(key, text);
+    }
+    const qs = params.toString();
+    router.push(qs ? `${action}?${qs}` : action, { scroll: false });
+  }
+
   return (
     <form
       className={`search-bar denser-filters${showLabels ? " filter-bar-labeled" : ""}`}
       method="get"
       action={action}
       role="search"
+      onSubmit={onSubmit}
     >
       {hidden
         ? Object.entries(hidden).map(([k, v]) =>
@@ -121,7 +140,7 @@ export function FilterBar({
             {submitLabel}
           </button>
           {resetHref ? (
-            <Link className="btn btn-ghost" href={resetHref}>
+            <Link className="btn btn-ghost" href={resetHref} scroll={false}>
               Làm mới
             </Link>
           ) : null}

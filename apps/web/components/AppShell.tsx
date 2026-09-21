@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
+import { PageTopbar } from "./PageTopbar";
 import { ShellChrome } from "./ShellChrome";
 import { NavGroup } from "./NavGroup";
 import { NavLink } from "./NavLink";
@@ -27,7 +28,7 @@ export type NavKey =
 
 type AppShellProps = {
   terms: TerminologyMap;
-  active: NavKey;
+  active?: NavKey;
   navChild?:
     | "orders"
     | "orders-new"
@@ -38,9 +39,24 @@ type AppShellProps = {
     | "operations";
   children: ReactNode;
   topbarRight?: ReactNode;
+  persist?: boolean;
 };
 
-export async function AppShell({ terms, active, navChild, children, topbarRight }: AppShellProps) {
+export async function AppShell({
+  terms,
+  children,
+  topbarRight,
+  persist = false,
+}: AppShellProps) {
+  if (!persist) {
+    if (!topbarRight) return children;
+    return (
+      <>
+        <PageTopbar>{topbarRight}</PageTopbar>
+        {children}
+      </>
+    );
+  }
   const jar = await cookies();
   const displayName = jar.get(DISPLAY_NAME_COOKIE)?.value?.trim() || "";
   const billLabel = term(terms, "BILL", "Bill");
@@ -82,7 +98,7 @@ export async function AppShell({ terms, active, navChild, children, topbarRight 
   const nav = (
     <nav className="nav" aria-label="Điều hướng chính">
       {show("dashboard") ? (
-        <NavLink href="/dashboard" icon="home" active={active === "dashboard"}>
+        <NavLink href="/dashboard" icon="home">
           Trang chủ
         </NavLink>
       ) : null}
@@ -91,49 +107,27 @@ export async function AppShell({ terms, active, navChild, children, topbarRight 
         <NavGroup
           label="Đơn hàng vận chuyển"
           icon="bills"
-          openByDefault={active === "bills"}
-          active={active === "bills"}
+          match={["/orders", "/bills", "/shipments", "/operations"]}
         >
-          <NavLink href="/orders" active={navChild === "orders"}>
-            Danh sách đơn hàng
-          </NavLink>
-          <NavLink href="/orders/new" active={navChild === "orders-new"}>
-            Tạo đơn hàng
-          </NavLink>
-          <NavLink href="/bills" active={navChild === "bills" || (!navChild && active === "bills")}>
-            Danh sách {billLabel}
-          </NavLink>
-          <NavLink href="/bills/new" active={navChild === "bills-new"}>
-            Tạo {billLabel}
-          </NavLink>
-          <NavLink href="/shipments" active={navChild === "shipments"}>
-            Danh sách Shipment
-          </NavLink>
-          <NavLink href="/shipments/new" active={navChild === "shipments-new"}>
-            Tạo Shipment
-          </NavLink>
-          <NavLink href="/operations" active={navChild === "operations"}>
-            Chặng &amp; Chuyến
-          </NavLink>
+          <NavLink href="/orders">Danh sách đơn hàng</NavLink>
+          <NavLink href="/orders/new">Tạo đơn hàng</NavLink>
+          <NavLink href="/bills">Danh sách {billLabel}</NavLink>
+          <NavLink href="/bills/new">Tạo {billLabel}</NavLink>
+          <NavLink href="/shipments">Danh sách Shipment</NavLink>
+          <NavLink href="/shipments/new">Tạo Shipment</NavLink>
+          <NavLink href="/operations">Chặng &amp; Chuyến</NavLink>
         </NavGroup>
       ) : null}
 
       {show("rates") ? (
-        <NavLink href="/rate-cards" icon="rates" active={active === "rate-cards"}>
+        <NavLink href="/rate-cards" icon="rates">
           Bảng giá &amp; Tính giá
         </NavLink>
       ) : null}
 
       {show("costs") ? (
-        <NavGroup
-          label={costLabel}
-          icon="costs"
-          openByDefault={active === "costs"}
-          active={active === "costs"}
-        >
-          <NavLink href="/costs" active={active === "costs"}>
-            Quản lý {costLabel.toLowerCase()}
-          </NavLink>
+        <NavGroup label={costLabel} icon="costs" match={["/costs"]}>
+          <NavLink href="/costs">Quản lý {costLabel.toLowerCase()}</NavLink>
           <NavLink href="/costs/shared">
             {costLabel} {sharedLabel.toLowerCase()}
           </NavLink>
@@ -141,31 +135,31 @@ export async function AppShell({ terms, active, navChild, children, topbarRight 
       ) : null}
 
       {show("revenues") ? (
-        <NavLink href="/revenues" icon="revenues" active={active === "revenues"}>
+        <NavLink href="/revenues" icon="revenues">
           {revenueLabel} &amp; Lợi nhuận
         </NavLink>
       ) : null}
 
       {show("documents") ? (
-        <NavLink href="/documents" icon="documents" active={active === "documents"}>
+        <NavLink href="/documents" icon="documents">
           {docLabel}
         </NavLink>
       ) : null}
 
       {show("ap") ? (
-        <NavLink href="/ap-ar?tab=ap" icon="ap" active={active === "ap"}>
+        <NavLink href="/ap-ar?tab=ap" icon="ap">
           {apLabel} (AP)
         </NavLink>
       ) : null}
 
       {show("ar") ? (
-        <NavLink href="/ap-ar?tab=ar" icon="ar" active={active === "ar"}>
+        <NavLink href="/ap-ar?tab=ar" icon="ar">
           {arLabel} (AR)
         </NavLink>
       ) : null}
 
       {show("settlements") ? (
-        <NavLink href="/settlements" icon="settlements" active={active === "settlements"}>
+        <NavLink href="/settlements" icon="settlements">
           {paymentLabel} &amp; {collectionLabel}
         </NavLink>
       ) : null}
@@ -174,12 +168,14 @@ export async function AppShell({ terms, active, navChild, children, topbarRight 
         <NavGroup
           label="Kiểm soát tài chính"
           icon="control"
-          openByDefault={active === "control"}
-          active={active === "control"}
+          match={[
+            "/control",
+            "/queues",
+            "/bank-feed",
+            "/reconciliations",
+          ]}
         >
-          <NavLink href="/control" active={active === "control"}>
-            Tổng quan kiểm soát
-          </NavLink>
+          <NavLink href="/control">Tổng quan kiểm soát</NavLink>
           <NavLink href="/queues/reconciliations">{reconQueueLabel}</NavLink>
           <NavLink href="/queues/variances">
             Hàng đợi {varianceLabel.toLowerCase()}
@@ -192,13 +188,13 @@ export async function AppShell({ terms, active, navChild, children, topbarRight 
       ) : null}
 
       {show("closes") ? (
-        <NavLink href="/financial-closes" icon="close" active={active === "financial-closes"}>
+        <NavLink href="/financial-closes" icon="close">
           {closeLabel}
         </NavLink>
       ) : null}
 
       {show("reports") ? (
-        <NavLink href="/reports" icon="reports" active={active === "reports"}>
+        <NavLink href="/reports" icon="reports">
           Báo cáo &amp; Phân tích
         </NavLink>
       ) : null}
@@ -207,8 +203,13 @@ export async function AppShell({ terms, active, navChild, children, topbarRight 
         <NavGroup
           label="Danh mục dữ liệu"
           icon="admin"
-          openByDefault={active === "admin"}
-          active={active === "admin"}
+          match={[
+            "/admin/parties",
+            "/admin/catalog",
+            "/admin/currencies",
+            "/admin/fx-rates",
+            "/admin/organizations",
+          ]}
         >
           <NavLink href="/admin/parties?role=customer">Khách hàng</NavLink>
           <NavLink href="/admin/parties?role=vendor">Nhà cung cấp</NavLink>
@@ -227,16 +228,13 @@ export async function AppShell({ terms, active, navChild, children, topbarRight 
         <NavGroup
           label="Hệ thống &amp; Cài đặt"
           icon="settings"
-          openByDefault={active === "settings"}
-          active={active === "settings"}
+          match={["/settings", "/admin/access"]}
         >
           <NavLink href="/settings/company">Thông tin doanh nghiệp</NavLink>
           <NavLink href="/settings/users">Người dùng</NavLink>
           <NavLink href="/admin/access">Vai trò &amp; Phân quyền</NavLink>
           <NavLink href="/settings/business">Cấu hình nghiệp vụ</NavLink>
-          <NavLink href="/settings" active={active === "settings"}>
-            {settingsLabel}
-          </NavLink>
+          <NavLink href="/settings">{settingsLabel}</NavLink>
           <NavLink href="/settings/integrations">Tích hợp API</NavLink>
           <NavLink href="/settings/audit">Nhật ký hệ thống</NavLink>
           <NavLink href="/settings/license">Quản lý license</NavLink>

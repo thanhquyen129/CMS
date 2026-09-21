@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { listenListSelected, replaceSearchShallow } from "@/lib/shallow-query";
 import { BillFinancialDrawer } from "./BillFinancialDrawer";
 import { DataTableShell, ExportCsvButton } from "@/components/list";
 import {
@@ -65,10 +65,8 @@ export function BillListWorkspace({
   pagination,
   lower,
 }: Props) {
-  const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [dismissed, setDismissed] = useState(false);
-  const [, startTransition] = useTransition();
 
   useEffect(() => {
     setSelectedId((prev) => {
@@ -80,6 +78,13 @@ export function BillListWorkspace({
       return bills[0]?.id ?? null;
     });
   }, [bills, initialSelectedId, dismissed]);
+
+  useEffect(() => {
+    return listenListSelected("/bills", (id) => {
+      setDismissed(!id);
+      setSelectedId(id);
+    });
+  }, []);
 
   const selected = useMemo(
     () => bills.find((b) => b.id === selectedId) ?? null,
@@ -101,11 +106,9 @@ export function BillListWorkspace({
       if (listParams.pageSize) params.set("pageSize", listParams.pageSize);
       if (id) params.set("selected", id);
       const qs = params.toString();
-      startTransition(() => {
-        router.replace(qs ? `/bills?${qs}` : "/bills", { scroll: false });
-      });
+      replaceSearchShallow(qs ? `/bills?${qs}` : "/bills");
     },
-    [listParams, router]
+    [listParams]
   );
 
   const close = useCallback(() => {

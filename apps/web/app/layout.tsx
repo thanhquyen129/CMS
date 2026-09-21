@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
+import { cookies } from "next/headers";
+import { AppShell } from "@/components/AppShell";
+import { AUTH_COOKIE } from "@/lib/auth";
+import { fetchTerminology } from "@/lib/api";
 import { DEFAULT_UI_PREFERENCES, uiPreferencesBootScript } from "@/lib/ui-preferences";
 import "./globals.css";
 
@@ -21,10 +25,21 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+async function PersistentShell({ children }: { children: React.ReactNode }) {
+  const terms = await fetchTerminology();
+  return (
+    <AppShell terms={terms} persist>
+      {children}
+    </AppShell>
+  );
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const boot = DEFAULT_UI_PREFERENCES;
+  const jar = await cookies();
+  const authed = Boolean(jar.get(AUTH_COOKIE)?.value);
   return (
     <html
       lang="vi"
@@ -42,7 +57,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: uiPreferencesBootScript() }} />
       </head>
       <body className={beVietnam.variable} style={{ fontFamily: "var(--font-be-vietnam), var(--font)" }}>
-        {children}
+        {authed ? <PersistentShell>{children}</PersistentShell> : children}
       </body>
     </html>
   );

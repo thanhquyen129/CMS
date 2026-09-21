@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { QuerySelectLink } from "@/components/QuerySelectLink";
 import { formatMoney } from "@/lib/money";
 import {
   remainingLabel,
@@ -46,9 +46,9 @@ export function DeadlineList({
         const remain = remainingLabel(r.days);
         return (
           <div key={r.id} className="deadline-row">
-            <Link className="row-link" href={hrefFor(r.id)}>
+            <QuerySelectLink className="row-link" href={hrefFor(r.id)}>
               {r.code}
-            </Link>
+            </QuerySelectLink>
             <span>{r.party || "—"}</span>
             <span>{r.item}</span>
             <span className={`deadline-remain-${remain.tone}`}>{remain.text}</span>

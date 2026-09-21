@@ -1,10 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Suspense, useEffect, useId, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useState } from "react";
 import { GlobalSearch } from "./GlobalSearch";
 import { LogoutButton } from "./LogoutButton";
+import { PageTopbarHost, PageTopbarProvider } from "./PageTopbar";
 import { SidebarCollapseButton } from "./SidebarCollapseButton";
 
 type ShellChromeProps = {
@@ -37,6 +38,10 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
     };
   }, [navOpen]);
 
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
   function toggleSidebar() {
     if (typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches) {
       setNavOpen((o) => !o);
@@ -54,6 +59,7 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
   }
 
   return (
+    <PageTopbarProvider>
     <div className={`shell${navOpen ? " nav-open" : ""}`}>
       <header className="mobile-bar">
         <button
@@ -80,7 +86,9 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
 
       <aside className="sidebar" id={sidebarId}>
         <div className="brand sidebar-brand">{brand}</div>
-        <div className="sidebar-nav-scroll">{nav}</div>
+        <div className="sidebar-nav-scroll">
+          <Suspense fallback={nav}>{nav}</Suspense>
+        </div>
         <div className="sidebar-footer">
           <div className="sidebar-footer-visual" aria-hidden="true" />
           <p className="sidebar-tagline">
@@ -112,7 +120,10 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
             ☰
           </button>
           <GlobalSearch />
-          <div className="topbar-actions">{topbarRight}</div>
+          <div className="topbar-actions">
+            <PageTopbarHost />
+            {topbarRight}
+          </div>
         </div>
         <div className="content-pad">{children}</div>
       </div>
@@ -125,5 +136,6 @@ export function ShellChrome({ brand, nav, children, topbarRight }: ShellChromePr
         onClick={() => setNavOpen(false)}
       />
     </div>
+    </PageTopbarProvider>
   );
 }

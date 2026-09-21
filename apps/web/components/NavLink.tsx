@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ComponentProps } from "react";
+import { isNavHrefActive } from "@/lib/nav-match";
 import { NavIcon, type NavIconName } from "./NavIcon";
 
 type NavLinkProps = {
@@ -19,17 +23,21 @@ export function NavLink({
   className,
   ...rest
 }: NavLinkProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const current =
+    active ?? isNavHrefActive(href, pathname, searchParams.toString());
   const classes = [
     "nav-item",
     icon ? "nav-item-with-icon" : "nav-item-child",
-    active ? "active" : "",
+    current ? "active" : "",
     className ?? "",
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <Link href={href} className={classes} {...rest}>
+    <Link href={href} className={classes} prefetch {...rest}>
       {icon ? <NavIcon name={icon} /> : null}
       <span className="nav-item-label">{children}</span>
     </Link>

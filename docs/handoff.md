@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-21 — Checkbox form tạo đơn: cùng cỡ native, không ô vuông to
+
+### User
+Form tạo đơn hàng vì sao có vài checkbox lớn hơn các checkbox khác
+
+### Answer
+`.cw-field input` gắn `width:100%` + `min-height:38px` + border/padding cho **mọi** input, kể cả checkbox. Nhãn ngắn (DG, Pickup) co về cỡ native; nhãn dài (Hàng lạnh, Hải quan, Tự động tạo mã) nở thành ô vuông. Loại checkbox/radio khỏi chrome ô chữ; `.create-checks` khóa 1rem.
+
+### Files
+- `apps/web/app/globals.css`
+- `.cursor/rules/ux-ui.mdc`
+
+---
+
 ## 2026-09-21 — Full slice vận hành + dữ liệu mẫu ≥120 / loại
 
 ### User

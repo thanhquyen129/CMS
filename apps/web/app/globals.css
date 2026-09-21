@@ -58,7 +58,7 @@ html[data-density="compact"] .data-table td {
   padding: 0.45rem 0.55rem;
 }
 
-html[data-density="compact"] .field input,
+html[data-density="compact"] .field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
 html[data-density="compact"] .field select,
 html[data-density="compact"] .field textarea {
   min-height: 2.25rem;
@@ -2488,7 +2488,7 @@ form.filter-bar {
   gap: 0.25rem;
 }
 
-.data-table .field input,
+.data-table .field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
 .data-table .field select,
 .data-table .field textarea {
   min-height: 2.15rem;
@@ -2797,7 +2797,7 @@ form.filter-bar {
   font-weight: 700;
 }
 
-.field input,
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]),
 .field select,
 .field textarea {
   width: 100%;
@@ -2816,18 +2816,18 @@ form.filter-bar {
   line-height: 1.45;
 }
 
-.field input::placeholder,
+.field input:not([type="checkbox"]):not([type="radio"])::placeholder,
 .field textarea::placeholder {
   color: #9aa3b2;
 }
 
-.field input:hover:not(:disabled):not(:focus),
+.field input:not([type="checkbox"]):not([type="radio"]):hover:not(:disabled):not(:focus),
 .field select:hover:not(:disabled):not(:focus),
 .field textarea:hover:not(:disabled):not(:focus) {
   border-color: #c3cad6;
 }
 
-.field input:focus,
+.field input:not([type="checkbox"]):not([type="radio"]):focus,
 .field select:focus,
 .field textarea:focus {
   outline: none;
@@ -2835,7 +2835,7 @@ form.filter-bar {
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
-.field input:disabled,
+.field input:not([type="checkbox"]):not([type="radio"]):disabled,
 .field select:disabled,
 .field textarea:disabled {
   background: #f5f7fa;
@@ -4529,7 +4529,7 @@ html[data-layout="horizontal"] .login-page {
 
 .cw-field .req { color: #e11d48; }
 
-.cw-field input,
+.cw-field input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
 .cw-field select,
 .cw-field textarea {
   width: 100%;
@@ -4547,7 +4547,7 @@ html[data-layout="horizontal"] .login-page {
   resize: vertical;
 }
 
-.cw-field input:read-only,
+.cw-field input:not([type="checkbox"]):not([type="radio"]):read-only,
 .cw-field select:disabled {
   background: #f6f8fb;
   color: #7b8ba7;
@@ -4575,6 +4575,22 @@ html[data-layout="horizontal"] .login-page {
   color: #334e73;
   margin: 0;
   font-size: 0.8rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.create-checks input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  min-width: 1rem;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  flex: none;
+  accent-color: var(--accent);
 }
 
 .create-tag {

@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-21 — Menu ngang: thanh top nav, không còn phủ trắng che trang
+
+### User
+chọn cấu hình giao diện menu ngang bị lỗi hiển thị
+
+### Answer
+`data-layout=horizontal` vẫn giữ `.nav-item { width:100%; color: sidebar-ink trắng }` + footer cảng → menu xếp dọc full-width, chữ trắng trên nền trắng. Override: item `width:auto` + màu topbar, group dropdown, ẩn ảnh footer, nav cuộn ngang. Dashboard nhìn thấy dưới thanh.
+
+### Files
+- `apps/web/app/globals.css`
+
+---
+
 ## 2026-09-21 — Trang Người dùng: bảng không còn vỡ trong lưới 50/50
 
 ### User

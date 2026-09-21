@@ -36,7 +36,7 @@ export function NavGroup({
         <span className="nav-item-label">{label}</span>
         <span className="nav-group-caret" aria-hidden="true" />
       </button>
-      {open ? <div className="nav-group-children">{children}</div> : null}
+      <div className="nav-group-children">{children}</div>
     </div>
   );
 }

@@ -755,10 +755,14 @@ button, input, select, textarea { font: inherit; }
 }
 
 .nav-group-children {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 0.06rem;
   padding: 0.1rem 0 0.25rem;
+}
+
+.nav-group.is-open > .nav-group-children {
+  display: flex;
 }
 
 .nav-group-children .nav-item {
@@ -3431,6 +3435,10 @@ html[data-sticky-nav="0"][data-layout="vertical"] .sidebar {
   height: auto;
 }
 
+html[data-sticky-nav="0"][data-layout="horizontal"] .sidebar {
+  position: relative;
+}
+
 html[data-show-queues="0"] .nav-section-queues {
   display: none;
 }
@@ -3512,7 +3520,8 @@ html[data-layout="horizontal"] .shell {
 
 html[data-layout="horizontal"] .sidebar {
   grid-area: nav;
-  position: relative;
+  position: sticky;
+  top: 0;
   height: auto;
   max-height: none;
   overflow: visible;
@@ -3527,15 +3536,14 @@ html[data-layout="horizontal"] .sidebar {
   background: var(--topbar-bg);
   color: var(--topbar-ink);
   box-shadow: var(--shadow);
-  z-index: 20;
+  z-index: 40;
 }
 
 html[data-layout="horizontal"] .sidebar-nav-scroll {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: visible;
   padding: 0;
   display: flex;
   align-items: center;
@@ -3600,6 +3608,7 @@ html[data-layout="horizontal"] .nav {
   align-items: center;
   align-content: flex-start;
   gap: 0.3rem 0.4rem;
+  overflow: visible;
 }
 
 html[data-layout="horizontal"] .nav-section {
@@ -3607,6 +3616,7 @@ html[data-layout="horizontal"] .nav-section {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.2rem;
+  overflow: visible;
 }
 
 html[data-layout="horizontal"] .nav-section-label {
@@ -3658,19 +3668,52 @@ html[data-layout="horizontal"] .nav-group {
   position: relative;
   width: auto;
   flex: 0 0 auto;
+  z-index: 1;
 }
 
-html[data-layout="horizontal"] .nav-group-children {
+html[data-layout="horizontal"] .nav-group:hover,
+html[data-layout="horizontal"] .nav-group:focus-within {
+  z-index: 50;
+}
+
+html[data-layout="horizontal"] .nav-group.is-open .nav-group-caret {
+  transform: rotate(-45deg);
+}
+
+html[data-layout="horizontal"] .nav-group:hover .nav-group-caret,
+html[data-layout="horizontal"] .nav-group:focus-within .nav-group-caret {
+  transform: rotate(45deg);
+}
+
+/* Flyout overlays .main. Never use overflow-x:auto here — it forces overflow-y:auto and clips. */
+html[data-layout="horizontal"] .nav-group-children,
+html[data-layout="horizontal"] .nav-group.is-open > .nav-group-children {
+  display: none;
   position: absolute;
-  top: calc(100% + 4px);
+  top: 100%;
   left: 0;
   z-index: 40;
   min-width: 13.5rem;
+  margin: 0;
   padding: 0.35rem;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
+}
+
+html[data-layout="horizontal"] .nav-group-children::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;
+  height: 10px;
+}
+
+html[data-layout="horizontal"] .nav-group:hover > .nav-group-children,
+html[data-layout="horizontal"] .nav-group:focus-within > .nav-group-children {
+  display: flex;
 }
 
 html[data-layout="horizontal"] .nav-group-children .nav-item,
@@ -4012,6 +4055,30 @@ html[data-layout="horizontal"] .login-page {
   html[data-layout="horizontal"] .nav-section-label {
     display: block;
     color: var(--muted);
+  }
+
+  html[data-layout="horizontal"] .nav-group {
+    width: 100%;
+    z-index: auto;
+  }
+
+  html[data-layout="horizontal"] .nav-group-children,
+  html[data-layout="horizontal"] .nav-group.is-open > .nav-group-children,
+  html[data-layout="horizontal"] .nav-group:hover > .nav-group-children,
+  html[data-layout="horizontal"] .nav-group:focus-within > .nav-group-children {
+    position: static;
+    display: none;
+    min-width: 0;
+    margin: 0;
+    padding: 0.1rem 0 0.25rem;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  html[data-layout="horizontal"] .nav-group.is-open > .nav-group-children {
+    display: flex;
   }
 
   .nav a,

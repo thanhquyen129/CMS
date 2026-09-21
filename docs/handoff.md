@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-21 — Menu ngang: submenu overlay, không cắt/cuộn trong header
+
+### User
+giao diện menu ngang mở menu ngang bị cắt mất, dường như header và thân trang tách biệt nên header chưa menu bị scroll khi có menu con
+
+### Answer
+`overflow-x: auto` trên `.sidebar-nav-scroll` khiến `overflow-y` thành `auto` (spec) → header thành scrollport, cắt dropdown. Đổi overflow visible; `.nav-group-children` luôn trong DOM, hiện hover/focus-within (không bung hết group `is-open`/`openByDefault`). Mobile drawer vẫn accordion theo click.
+
+### Files
+- `apps/web/app/globals.css`
+- `apps/web/components/NavGroup.tsx`
+
+---
+
 ## 2026-09-21 — Menu ngang: thanh top nav, không còn phủ trắng che trang
 
 ### User

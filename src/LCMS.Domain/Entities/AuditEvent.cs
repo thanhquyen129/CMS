@@ -66,6 +66,14 @@ public static class AuditActions
     public const string PartyBankAccountDelete = "party_bank_account.delete";
     public const string PartyContactUpsert = "party_contact.upsert";
     public const string PartyContactDelete = "party_contact.delete";
+    public const string UserCreate = "user.create";
+    public const string UserUpdate = "user.update";
+    public const string UserPasswordSet = "user.password_set";
+    public const string TenantProfileUpdate = "tenant.profile.update";
+    public const string LicenseModuleUpdate = "license.module.update";
+    public const string NotificationSettingsUpdate = "notification.settings.update";
+    public const string BackupCreate = "backup.create";
+    public const string BackupRestore = "backup.restore";
 }
 
 public static class AuditObjectTypes
@@ -85,4 +93,9 @@ public static class AuditObjectTypes
     public const string PartyBankAccount = "party_bank_account";
     public const string PartyContact = "party_contact";
     public const string PartyRole = "party_role";
+    public const string User = "user";
+    public const string Tenant = "tenant";
+    public const string License = "license";
+    public const string Notification = "notification";
+    public const string Backup = "backup";
 }

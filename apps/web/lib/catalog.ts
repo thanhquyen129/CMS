@@ -3,7 +3,7 @@ import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
 import type { ApiResult } from "./bills";
 
-export { CATALOG_KINDS, catalogKindLabel } from "./catalog-kinds";
+export { CATALOG_KINDS, catalogKindLabel, locationClassLabel } from "./catalog-kinds";
 
 export type MasterCatalogItem = {
   id: string;
@@ -11,6 +11,7 @@ export type MasterCatalogItem = {
   code: string;
   name: string;
   description: string | null;
+  attributesJson: string | null;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;

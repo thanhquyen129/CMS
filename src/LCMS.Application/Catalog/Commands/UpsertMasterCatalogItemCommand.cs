@@ -14,7 +14,8 @@ public sealed record UpsertMasterCatalogItemCommand(
     string Name,
     string? Description,
     bool IsActive,
-    int? SortOrder) : IRequest<Guid>;
+    int? SortOrder,
+    string? AttributesJson = null) : IRequest<Guid>;
 
 public sealed class UpsertMasterCatalogItemCommandValidator : AbstractValidator<UpsertMasterCatalogItemCommand>
 {
@@ -73,7 +74,17 @@ public sealed class UpsertMasterCatalogItemCommandHandler
         var code = request.Code.Trim().ToUpperInvariant();
         var name = request.Name.Trim();
         var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        var attributes = string.IsNullOrWhiteSpace(request.AttributesJson) ? null : request.AttributesJson.Trim();
         var sort = request.SortOrder ?? 0;
+
+        if (kind == MasterCatalogKinds.Location && attributes is not null)
+        {
+            var cls = TryLocationClass(attributes);
+            if (cls is not null && !MasterCatalogKinds.LocationClasses.Contains(cls))
+            {
+                throw new ConflictAppException("Loại địa điểm phải là cảng, sân bay hoặc cửa khẩu.");
+            }
+        }
 
         var existing = await _db.MasterCatalogItems.FirstOrDefaultAsync(
             i => i.Kind == kind && i.Code == code,
@@ -88,6 +99,7 @@ public sealed class UpsertMasterCatalogItemCommandHandler
                 Code = code,
                 Name = name,
                 Description = description,
+                AttributesJson = attributes,
                 IsActive = request.IsActive,
                 SortOrder = sort
             };
@@ -115,9 +127,28 @@ public sealed class UpsertMasterCatalogItemCommandHandler
 
         existing.Name = name;
         existing.Description = description;
+        existing.AttributesJson = attributes;
         existing.IsActive = request.IsActive;
         existing.SortOrder = sort;
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
+    }
+
+    private static string? TryLocationClass(string attributesJson)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(attributesJson);
+            if (doc.RootElement.TryGetProperty("class", out var c))
+            {
+                return c.GetString();
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+
+        return null;
     }
 }

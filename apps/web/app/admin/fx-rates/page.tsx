@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { CatalogHubNav } from "@/components/CatalogHubNav";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { UpsertFxRateForm } from "@/components/UpsertFxRateForm";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -29,6 +30,7 @@ export default async function AdminFxRatesPage() {
           title="Tỷ giá ngoại tệ"
           lede="Tỷ giá theo ngày và phiên bản. Không tính lại lịch sử đã ghi trên chứng từ."
         />
+        <CatalogHubNav active="currency" />
 
         <div className="layout-cols-2">
           <fieldset className="group-box">

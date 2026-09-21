@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using LCMS.Api.Middleware;
+using LCMS.Application.Abstractions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -62,8 +63,10 @@ public static class AuthServiceCollectionExtensions
         });
 
         services.AddSingleton<JwtTokenIssuer>();
-        services.AddScoped<AuthTokenService>();
         services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
+        services.AddSingleton<IPasswordHasher>(sp => sp.GetRequiredService<IPasswordHasherService>());
+        services.AddScoped<AuthTokenService>();
+        services.AddScoped<IRefreshTokenRevoker>(sp => sp.GetRequiredService<AuthTokenService>());
 
         var keyBytes = Encoding.UTF8.GetBytes(signingKey);
 

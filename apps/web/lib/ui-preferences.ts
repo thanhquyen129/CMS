@@ -26,6 +26,12 @@ export type UiHomePath =
   | "/integration-errors"
   | "/admin"
   | "/settings"
+  | "/settings/users"
+  | "/settings/company"
+  | "/settings/audit"
+  | "/settings/license"
+  | "/settings/notifications"
+  | "/settings/backup"
   | "/workflow";
 
 export type UiPreferences = {
@@ -72,6 +78,12 @@ export const UI_HOME_OPTIONS: ReadonlyArray<{ id: UiHomePath; label: string }> =
   { id: "/integration-errors", label: "Lỗi tích hợp" },
   { id: "/admin", label: "Danh mục dữ liệu" },
   { id: "/settings", label: "Hệ thống & Cài đặt" },
+  { id: "/settings/users", label: "Người dùng" },
+  { id: "/settings/company", label: "Thông tin doanh nghiệp" },
+  { id: "/settings/audit", label: "Nhật ký hệ thống" },
+  { id: "/settings/license", label: "Quản lý license" },
+  { id: "/settings/notifications", label: "Cài đặt thông báo" },
+  { id: "/settings/backup", label: "Sao lưu & Khôi phục" },
 ];
 
 export const UI_THEME_OPTIONS: ReadonlyArray<{

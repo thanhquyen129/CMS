@@ -12,6 +12,7 @@ public sealed record UserDto(
     string DisplayName,
     bool IsActive,
     Guid? OrganizationId,
+    bool PasswordSet,
     DateTimeOffset CreatedAt);
 
 public sealed record GetUserByIdQuery(Guid Id) : IRequest<UserDto>;
@@ -53,7 +54,14 @@ public sealed class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, 
             throw new NotFoundAppException("Không tìm thấy người dùng.");
         }
 
-        return new UserDto(user.Id, user.Email, user.DisplayName, user.IsActive, user.OrganizationId, user.CreatedAt);
+        return new UserDto(
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            user.IsActive,
+            user.OrganizationId,
+            user.PasswordHash is not null,
+            user.CreatedAt);
     }
 }
 
@@ -90,7 +98,14 @@ public sealed class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, IRea
         return await _db.Users
             .AsNoTracking()
             .OrderBy(u => u.Email)
-            .Select(u => new UserDto(u.Id, u.Email, u.DisplayName, u.IsActive, u.OrganizationId, u.CreatedAt))
+            .Select(u => new UserDto(
+                u.Id,
+                u.Email,
+                u.DisplayName,
+                u.IsActive,
+                u.OrganizationId,
+                u.PasswordHash != null,
+                u.CreatedAt))
             .ToListAsync(cancellationToken);
     }
 }

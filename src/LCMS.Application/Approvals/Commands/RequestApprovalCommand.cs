@@ -55,15 +55,18 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IOperatorNotificationPublisher _notifications;
 
     public RequestApprovalCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IOperatorNotificationPublisher notifications)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _notifications = notifications;
     }
 
     public async Task<Guid> Handle(RequestApprovalCommand request, CancellationToken cancellationToken)
@@ -127,6 +130,16 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+
+        await _notifications.PublishAsync(
+            new NotificationPublishRequest(
+                NotificationEventTypes.ApprovalPending,
+                "Yêu cầu phê duyệt mới",
+                $"Đối tượng {objectType} cần phê duyệt cấp {requiredLevel}.",
+                "/queues/approvals",
+                objectType,
+                request.ObjectId),
+            cancellationToken);
 
         var permissionCountAfter = await _db.Permissions.CountAsync(cancellationToken);
         var rolePermissionCountAfter = await _db.RolePermissions.CountAsync(cancellationToken);

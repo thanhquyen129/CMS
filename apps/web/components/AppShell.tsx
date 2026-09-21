@@ -6,6 +6,7 @@ import { NavLink } from "./NavLink";
 import { TopbarAccount } from "./TopbarAccount";
 import { DISPLAY_NAME_COOKIE } from "@/lib/auth";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { getTenantLicense, listInbox } from "@/lib/tenant-admin";
 
 /** Level-1 modules per PO UI-15 Navigation Contract (14 modules). */
 export type NavKey =
@@ -50,6 +51,15 @@ export async function AppShell({ terms, active, children, topbarRight }: AppShel
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const settingsLabel = term(terms, "SETTINGS", "Cài đặt");
   const sharedLabel = term(terms, "ATTRIBUTION_SHARED", "Chung");
+  const license = await getTenantLicense();
+  const inbox = await listInbox(true);
+  const unreadNotifications = inbox.ok ? inbox.data.filter((n) => !n.isRead).length : 0;
+  const enabled = new Set(
+    license.ok
+      ? license.data.modules.filter((m) => m.isEnabled && m.includedInPlan).map((m) => m.code)
+      : []
+  );
+  const show = (code: string) => !license.ok || enabled.has(code);
 
   const brand = (
     <>
@@ -63,116 +73,153 @@ export async function AppShell({ terms, active, children, topbarRight }: AppShel
 
   const nav = (
     <nav className="nav" aria-label="Điều hướng chính">
-      <NavLink href="/dashboard" icon="home" active={active === "dashboard"}>
-        Trang chủ
-      </NavLink>
-
-      <NavGroup
-        label="Đơn hàng vận chuyển"
-        icon="bills"
-        openByDefault={active === "bills"}
-        active={active === "bills"}
-      >
-        <NavLink href="/bills" active={active === "bills"}>
-          Danh sách {billLabel}
+      {show("dashboard") ? (
+        <NavLink href="/dashboard" icon="home" active={active === "dashboard"}>
+          Trang chủ
         </NavLink>
-        <NavLink href="/bills/new">Tạo vận đơn</NavLink>
-        <NavLink href="/operations">Tham chiếu vận hành</NavLink>
-      </NavGroup>
+      ) : null}
 
-      <NavLink
-        href="/rate-cards"
-        icon="rates"
-        active={active === "rate-cards"}
-      >
-        Bảng giá &amp; Tính giá
-      </NavLink>
+      {show("bills") ? (
+        <NavGroup
+          label="Đơn hàng vận chuyển"
+          icon="bills"
+          openByDefault={active === "bills"}
+          active={active === "bills"}
+        >
+          <NavLink href="/bills" active={active === "bills"}>
+            Danh sách {billLabel}
+          </NavLink>
+          <NavLink href="/bills/new">Tạo vận đơn</NavLink>
+          <NavLink href="/operations">Tham chiếu vận hành</NavLink>
+        </NavGroup>
+      ) : null}
 
-      <NavGroup
-        label={costLabel}
-        icon="costs"
-        openByDefault={active === "costs"}
-        active={active === "costs"}
-      >
-        <NavLink href="/costs" active={active === "costs"}>
-          Quản lý {costLabel.toLowerCase()}
+      {show("rates") ? (
+        <NavLink href="/rate-cards" icon="rates" active={active === "rate-cards"}>
+          Bảng giá &amp; Tính giá
         </NavLink>
-        <NavLink href="/costs/shared">
-          {costLabel} {sharedLabel.toLowerCase()}
+      ) : null}
+
+      {show("costs") ? (
+        <NavGroup
+          label={costLabel}
+          icon="costs"
+          openByDefault={active === "costs"}
+          active={active === "costs"}
+        >
+          <NavLink href="/costs" active={active === "costs"}>
+            Quản lý {costLabel.toLowerCase()}
+          </NavLink>
+          <NavLink href="/costs/shared">
+            {costLabel} {sharedLabel.toLowerCase()}
+          </NavLink>
+        </NavGroup>
+      ) : null}
+
+      {show("revenues") ? (
+        <NavLink href="/revenues" icon="revenues" active={active === "revenues"}>
+          {revenueLabel} &amp; Lợi nhuận
         </NavLink>
-      </NavGroup>
+      ) : null}
 
-      <NavLink href="/revenues" icon="revenues" active={active === "revenues"}>
-        {revenueLabel} &amp; Lợi nhuận
-      </NavLink>
-
-      <NavLink href="/documents" icon="documents" active={active === "documents"}>
-        {docLabel}
-      </NavLink>
-
-      <NavLink href="/ap-ar?tab=ap" icon="ap" active={active === "ap"}>
-        {apLabel} (AP)
-      </NavLink>
-
-      <NavLink href="/ap-ar?tab=ar" icon="ar" active={active === "ar"}>
-        {arLabel} (AR)
-      </NavLink>
-
-      <NavLink
-        href="/settlements"
-        icon="settlements"
-        active={active === "settlements"}
-      >
-        {paymentLabel} &amp; {collectionLabel}
-      </NavLink>
-
-      <NavGroup
-        label="Kiểm soát tài chính"
-        icon="control"
-        openByDefault={active === "control"}
-        active={active === "control"}
-      >
-        <NavLink href="/control" active={active === "control"}>
-          Tổng quan kiểm soát
+      {show("documents") ? (
+        <NavLink href="/documents" icon="documents" active={active === "documents"}>
+          {docLabel}
         </NavLink>
-        <NavLink href="/queues/reconciliations">{reconQueueLabel}</NavLink>
-        <NavLink href="/queues/variances">
-          Hàng đợi {varianceLabel.toLowerCase()}
+      ) : null}
+
+      {show("ap") ? (
+        <NavLink href="/ap-ar?tab=ap" icon="ap" active={active === "ap"}>
+          {apLabel} (AP)
         </NavLink>
-        <NavLink href="/queues/exceptions">{exceptionQueueLabel}</NavLink>
-        <NavLink href="/queues/approvals">{approvalQueueLabel}</NavLink>
-        <NavLink href="/bank-feed">{bankFeedLabel}</NavLink>
-        <NavLink href="/reconciliations">Đối soát &amp; Matching</NavLink>
-      </NavGroup>
+      ) : null}
 
-      <NavLink
-        href="/financial-closes"
-        icon="close"
-        active={active === "financial-closes"}
-      >
-        {closeLabel}
-      </NavLink>
-
-      <NavLink href="/reports" icon="reports" active={active === "reports"}>
-        Báo cáo &amp; Phân tích
-      </NavLink>
-
-      <NavLink href="/admin" icon="admin" active={active === "admin"}>
-        Danh mục dữ liệu
-      </NavLink>
-
-      <NavGroup
-        label="Hệ thống &amp; Cài đặt"
-        icon="settings"
-        openByDefault={active === "settings"}
-        active={active === "settings"}
-      >
-        <NavLink href="/settings" active={active === "settings"}>
-          {settingsLabel}
+      {show("ar") ? (
+        <NavLink href="/ap-ar?tab=ar" icon="ar" active={active === "ar"}>
+          {arLabel} (AR)
         </NavLink>
-        <NavLink href="/integration-errors">Lỗi tích hợp</NavLink>
-        <NavLink href="/workflow">Bản đồ luồng hệ thống</NavLink>
-      </NavGroup>
+      ) : null}
+
+      {show("settlements") ? (
+        <NavLink href="/settlements" icon="settlements" active={active === "settlements"}>
+          {paymentLabel} &amp; {collectionLabel}
+        </NavLink>
+      ) : null}
+
+      {show("control") ? (
+        <NavGroup
+          label="Kiểm soát tài chính"
+          icon="control"
+          openByDefault={active === "control"}
+          active={active === "control"}
+        >
+          <NavLink href="/control" active={active === "control"}>
+            Tổng quan kiểm soát
+          </NavLink>
+          <NavLink href="/queues/reconciliations">{reconQueueLabel}</NavLink>
+          <NavLink href="/queues/variances">
+            Hàng đợi {varianceLabel.toLowerCase()}
+          </NavLink>
+          <NavLink href="/queues/exceptions">{exceptionQueueLabel}</NavLink>
+          <NavLink href="/queues/approvals">{approvalQueueLabel}</NavLink>
+          <NavLink href="/bank-feed">{bankFeedLabel}</NavLink>
+          <NavLink href="/reconciliations">Đối soát &amp; Matching</NavLink>
+        </NavGroup>
+      ) : null}
+
+      {show("closes") ? (
+        <NavLink href="/financial-closes" icon="close" active={active === "financial-closes"}>
+          {closeLabel}
+        </NavLink>
+      ) : null}
+
+      {show("reports") ? (
+        <NavLink href="/reports" icon="reports" active={active === "reports"}>
+          Báo cáo &amp; Phân tích
+        </NavLink>
+      ) : null}
+
+      {show("master") ? (
+        <NavGroup
+          label="Danh mục dữ liệu"
+          icon="admin"
+          openByDefault={active === "admin"}
+          active={active === "admin"}
+        >
+          <NavLink href="/admin/parties?role=customer">Khách hàng</NavLink>
+          <NavLink href="/admin/parties?role=vendor">Nhà cung cấp</NavLink>
+          <NavLink href="/admin/catalog?kind=service_type">Dịch vụ</NavLink>
+          <NavLink href="/admin/catalog?kind=cost_type">Loại chi phí</NavLink>
+          <NavLink href="/admin/catalog?kind=revenue_type">Loại doanh thu</NavLink>
+          <NavLink href="/admin/catalog?kind=transport_route">Tuyến vận chuyển</NavLink>
+          <NavLink href="/admin/catalog?kind=transport_mode">Phương thức vận chuyển</NavLink>
+          <NavLink href="/admin/catalog?kind=location">Cảng / Sân bay / Cửa khẩu</NavLink>
+          <NavLink href="/admin/currencies">Tiền tệ &amp; Tỷ giá</NavLink>
+          <NavLink href="/admin/catalog?kind=other">Danh mục khác</NavLink>
+        </NavGroup>
+      ) : null}
+
+      {show("admin") ? (
+        <NavGroup
+          label="Hệ thống &amp; Cài đặt"
+          icon="settings"
+          openByDefault={active === "settings"}
+          active={active === "settings"}
+        >
+          <NavLink href="/settings/company">Thông tin doanh nghiệp</NavLink>
+          <NavLink href="/settings/users">Người dùng</NavLink>
+          <NavLink href="/admin/access">Vai trò &amp; Phân quyền</NavLink>
+          <NavLink href="/settings/business">Cấu hình nghiệp vụ</NavLink>
+          <NavLink href="/settings" active={active === "settings"}>
+            {settingsLabel}
+          </NavLink>
+          <NavLink href="/settings/integrations">Tích hợp API</NavLink>
+          <NavLink href="/settings/audit">Nhật ký hệ thống</NavLink>
+          <NavLink href="/settings/license">Quản lý license</NavLink>
+          <NavLink href="/settings/notifications">Cài đặt thông báo</NavLink>
+          <NavLink href="/settings/backup">Sao lưu &amp; Khôi phục</NavLink>
+        </NavGroup>
+      ) : null}
     </nav>
   );
 
@@ -183,7 +230,11 @@ export async function AppShell({ terms, active, children, topbarRight }: AppShel
       topbarRight={
         <>
           {topbarRight}
-          <TopbarAccount displayName={displayName} roleLabel="Đã đăng nhập" />
+          <TopbarAccount
+            displayName={displayName}
+            roleLabel="Đã đăng nhập"
+            unreadNotifications={unreadNotifications}
+          />
         </>
       }
     >

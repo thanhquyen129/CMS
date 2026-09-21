@@ -416,6 +416,49 @@ button, input, select, textarea { font: inherit; }
   background: var(--accent-soft);
 }
 
+.topbar-icon-btn {
+  position: relative;
+}
+
+.topbar-badge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  padding: 0 0.22rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.05rem;
+  text-align: center;
+}
+
+.kv-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.kv-list dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.kv-list dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+
+.alert-warning {
+  background: color-mix(in srgb, var(--warning, #d48806) 12%, transparent);
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--warning, #d48806) 40%, transparent);
+}
+
 .topbar-bell {
   width: 0.85rem;
   height: 0.85rem;

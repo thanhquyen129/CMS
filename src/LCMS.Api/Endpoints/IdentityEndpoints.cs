@@ -14,7 +14,7 @@ public static class IdentityEndpoints
         users.MapPost("/", async (CreateUserRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
-                new CreateUserCommand(body.Email, body.DisplayName, body.OrganizationId),
+                new CreateUserCommand(body.Email, body.DisplayName, body.OrganizationId, body.Password),
                 ct);
             return Results.Created($"/api/users/{id}", new { id });
         });
@@ -37,6 +37,15 @@ public static class IdentityEndpoints
             await sender.Send(
                 new UpdateUserCommand(id, body.DisplayName, body.IsActive, body.OrganizationId),
                 ct);
+            return Results.NoContent();
+        });
+        users.MapPost("/{id:guid}/password", async (
+            Guid id,
+            SetUserPasswordRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new SetUserPasswordCommand(id, body.Password), ct);
             return Results.NoContent();
         });
         users.MapGet("/{userId:guid}/roles", async (Guid userId, ISender sender, CancellationToken ct) =>
@@ -122,8 +131,13 @@ public static class IdentityEndpoints
     }
 }
 
-public sealed record CreateUserRequest(string Email, string DisplayName, Guid? OrganizationId = null);
+public sealed record CreateUserRequest(
+    string Email,
+    string DisplayName,
+    Guid? OrganizationId = null,
+    string? Password = null);
 public sealed record UpdateUserRequest(string DisplayName, bool IsActive, Guid? OrganizationId);
+public sealed record SetUserPasswordRequest(string Password);
 public sealed record CreateRoleRequest(string Code, string Name);
 public sealed record AssignRolePermissionRequest(string ActionCode, string DataScope);
 public sealed record SetRolePermissionRequest(string ActionCode, bool Enabled, string? DataScope = null);

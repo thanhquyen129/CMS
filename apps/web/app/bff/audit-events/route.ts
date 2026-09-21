@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     "correlationId",
     "from",
     "to",
+    "skip",
     "take",
   ]) {
     const v = src.get(key);

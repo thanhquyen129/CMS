@@ -18,12 +18,13 @@ public static class AuditIntegrationEndpoints
             string? correlationId,
             DateTimeOffset? from,
             DateTimeOffset? to,
+            int? skip,
             int? take,
             ISender sender,
             CancellationToken ct) =>
         {
             var list = await sender.Send(
-                new ListAuditEventsQuery(objectType, objectId, action, correlationId, from, to, take ?? 100),
+                new ListAuditEventsQuery(objectType, objectId, action, correlationId, from, to, skip ?? 0, take ?? 100),
                 ct);
             return Results.Ok(list);
         });

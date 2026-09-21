@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { CatalogHubNav } from "@/components/CatalogHubNav";
 import { CreateCurrencyForm } from "@/components/CreateCurrencyForm";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -28,8 +29,12 @@ export default async function AdminCurrenciesPage() {
             { label: "Tiền tệ" },
           ]}
           title="Tiền tệ"
-          lede="Danh mục tiền tệ dùng trên chi phí, doanh thu, thanh toán."
+          lede="Danh mục tiền tệ dùng trên chi phí, doanh thu, thanh toán. Tỷ giá theo ngày tại menu Tỷ giá."
         />
+        <CatalogHubNav active="currency" />
+        <p className="note">
+          Tỷ giá ngày: <a href="/admin/fx-rates">mở danh sách tỷ giá</a>. Không tính lại lịch sử chứng từ khi sửa tỷ giá.
+        </p>
 
         <div className="layout-cols-2">
           <fieldset className="group-box">

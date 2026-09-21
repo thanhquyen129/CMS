@@ -25,6 +25,10 @@ public static class PermissionCodes
     public const string UserManage = "user.manage";
     public const string RoleManage = "role.manage";
     public const string SettingsManage = "settings.manage";
+    public const string AuditRead = "audit.read";
+    public const string LicenseManage = "license.manage";
+    public const string BackupManage = "backup.manage";
+    public const string NotificationManage = "notification.manage";
 
     public static readonly IReadOnlyList<(string Code, string Name)> CoreCatalog =
     [
@@ -46,7 +50,11 @@ public static class PermissionCodes
         (MasterCatalogManage, "Quản lý danh mục loại"),
         (UserManage, "Quản lý người dùng"),
         (RoleManage, "Quản lý vai trò"),
-        (SettingsManage, "Quản lý cài đặt thuê bao")
+        (SettingsManage, "Quản lý cài đặt thuê bao"),
+        (AuditRead, "Xem nhật ký hệ thống"),
+        (LicenseManage, "Quản lý license"),
+        (BackupManage, "Sao lưu và khôi phục danh mục"),
+        (NotificationManage, "Cài đặt thông báo")
     ];
 
     public static readonly string[] CoreActionCodes =
@@ -69,7 +77,11 @@ public static class PermissionCodes
         MasterCatalogManage,
         UserManage,
         RoleManage,
-        SettingsManage
+        SettingsManage,
+        AuditRead,
+        LicenseManage,
+        BackupManage,
+        NotificationManage
     ];
 }
 

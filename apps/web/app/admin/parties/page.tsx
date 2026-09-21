@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { CatalogHubNav } from "@/components/CatalogHubNav";
 import { AdminPartyListWorkspace } from "@/components/AdminPartyListWorkspace";
 import { FilterBar, ListPageHeader, StatCardGrid, type StatCardModel } from "@/components/list";
 import { ListPagination } from "@/components/ListPagination";
@@ -11,7 +12,7 @@ import {
   getPartyDirectorySummary,
   listPartyDirectory,
 } from "@/lib/parties";
-import { PARTY_KIND_OPTIONS, PARTY_ROLE_OPTIONS } from "@/lib/party";
+import { PARTY_KIND_OPTIONS } from "@/lib/party";
 import { parsePage, parsePageSize, totalPages } from "@/lib/list-paging";
 
 type Search = {
@@ -35,6 +36,7 @@ export default async function AdminPartiesPage({
   }
 
   const sp = await searchParams;
+  const roleFilter = sp.role === "vendor" ? "vendor" : "customer";
   const terms = await fetchTerminology();
   const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
   const pageSize = parsePageSize(sp.pageSize);
@@ -42,7 +44,7 @@ export default async function AdminPartiesPage({
   const [result, summaryResult] = await Promise.all([
     listPartyDirectory({
       search: sp.q,
-      roleCode: sp.role,
+      roleCode: roleFilter,
       status: sp.status,
       kind: sp.kind,
       groupCode: sp.group,
@@ -51,7 +53,7 @@ export default async function AdminPartiesPage({
     }),
     getPartyDirectorySummary({
       search: sp.q,
-      roleCode: sp.role,
+      roleCode: roleFilter,
       status: sp.status,
       kind: sp.kind,
       groupCode: sp.group,
@@ -63,7 +65,7 @@ export default async function AdminPartiesPage({
   const page = parsePage(sp.page, pages);
   const exportQs = new URLSearchParams();
   if (sp.q) exportQs.set("search", sp.q);
-  if (sp.role) exportQs.set("roleCode", sp.role);
+  if (roleFilter) exportQs.set("roleCode", roleFilter);
   if (sp.status) exportQs.set("status", sp.status);
   if (sp.kind) exportQs.set("kind", sp.kind);
   if (sp.group) exportQs.set("groupCode", sp.group);
@@ -76,10 +78,10 @@ export default async function AdminPartiesPage({
           breadcrumbs={[
             { href: "/dashboard", label: dashboardLabel },
             { href: "/admin", label: "Danh mục" },
-            { label: "Đối tác" },
+            { label: roleFilter === "vendor" ? "Nhà cung cấp" : "Khách hàng" },
           ]}
-          title="Khách hàng & đối tác"
-          lede="Hồ sơ chuẩn tài chính: MST, vai trò, điều khoản, hạn mức, tài khoản ngân hàng, liên hệ và công nợ. Một đối tác có thể vừa là khách hàng vừa là nhà cung cấp."
+          title={roleFilter === "vendor" ? "Nhà cung cấp" : "Khách hàng"}
+          lede="Hồ sơ chuẩn tài chính: MST, vai trò, điều khoản, hạn mức, tài khoản ngân hàng, liên hệ và công nợ. Một đối tác có thể mang nhiều vai trò."
           action={
             <div className="page-header-actions">
               <a className="btn btn-ghost" href={exportHref}>
@@ -92,24 +94,7 @@ export default async function AdminPartiesPage({
           }
         />
 
-        <div className="hub-module-tabs" role="tablist" aria-label="Danh mục dữ liệu">
-          <Link className="hub-module-tab is-active" href="/admin/parties" role="tab" aria-selected="true">
-            <strong>Đối tác</strong>
-            <span>Khách hàng / NCC</span>
-          </Link>
-          <Link className="hub-module-tab" href="/admin/access" role="tab" aria-selected="false">
-            <strong>Phân quyền</strong>
-            <span>Vai trò × quyền</span>
-          </Link>
-          <Link className="hub-module-tab" href="/admin/organizations" role="tab" aria-selected="false">
-            <strong>Đơn vị / Tổ chức</strong>
-            <span>Phạm vi dữ liệu</span>
-          </Link>
-          <Link className="hub-module-tab" href="/admin/currencies" role="tab" aria-selected="false">
-            <strong>Tiền tệ</strong>
-            <span>Danh mục tiền tệ</span>
-          </Link>
-        </div>
+        <CatalogHubNav active={sp.role === "vendor" ? "vendor" : "customer"} />
 
         {summaryResult.ok ? (
           <StatCardGrid
@@ -145,6 +130,7 @@ export default async function AdminPartiesPage({
 
         <FilterBar
           action="/admin/parties"
+          hidden={{ role: roleFilter }}
           resetHref={
             sp.q || sp.role || sp.status || sp.kind || sp.group
               ? "/admin/parties"
@@ -157,17 +143,6 @@ export default async function AdminPartiesPage({
               label: "Tìm kiếm",
               placeholder: "Mã, tên, MST, SĐT, email…",
               defaultValue: sp.q,
-            },
-            {
-              kind: "select",
-              name: "role",
-              label: "Vai trò",
-              defaultValue: sp.role,
-              emptyLabel: "Tất cả vai trò",
-              options: PARTY_ROLE_OPTIONS.map((r) => ({
-                value: r.code,
-                label: r.label,
-              })),
             },
             {
               kind: "select",

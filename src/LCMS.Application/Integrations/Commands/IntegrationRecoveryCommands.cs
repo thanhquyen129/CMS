@@ -33,11 +33,16 @@ public sealed class RecordIntegrationErrorCommandHandler : IRequestHandler<Recor
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IOperatorNotificationPublisher _notifications;
 
-    public RecordIntegrationErrorCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public RecordIntegrationErrorCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IOperatorNotificationPublisher notifications)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _notifications = notifications;
     }
 
     public async Task<Guid> Handle(RecordIntegrationErrorCommand request, CancellationToken cancellationToken)
@@ -75,6 +80,15 @@ public sealed class RecordIntegrationErrorCommandHandler : IRequestHandler<Recor
 
         _db.IntegrationErrors.Add(error);
         await _db.SaveChangesAsync(cancellationToken);
+        await _notifications.PublishAsync(
+            new NotificationPublishRequest(
+                NotificationEventTypes.IntegrationError,
+                "Lỗi tích hợp",
+                error.Message,
+                "/integration-errors",
+                "integration_error",
+                error.Id),
+            cancellationToken);
         return error.Id;
     }
 }

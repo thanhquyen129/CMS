@@ -37,6 +37,23 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.LegalName).HasMaxLength(256);
+        builder.Property(e => e.TaxId).HasMaxLength(32);
+        builder.Property(e => e.Phone).HasMaxLength(64);
+        builder.Property(e => e.Email).HasMaxLength(256);
+        builder.Property(e => e.Website).HasMaxLength(256);
+        builder.Property(e => e.AddressLine1).HasMaxLength(256);
+        builder.Property(e => e.AddressLine2).HasMaxLength(256);
+        builder.Property(e => e.Ward).HasMaxLength(128);
+        builder.Property(e => e.District).HasMaxLength(128);
+        builder.Property(e => e.City).HasMaxLength(128);
+        builder.Property(e => e.Province).HasMaxLength(128);
+        builder.Property(e => e.CountryCode).HasMaxLength(2);
+        builder.Property(e => e.PostalCode).HasMaxLength(32);
+        builder.Property(e => e.TimeZoneId).HasMaxLength(64).IsRequired().HasDefaultValue(TenantDefaults.TimeZoneId);
+        builder.Property(e => e.DateFormat).HasMaxLength(32).IsRequired().HasDefaultValue(TenantDefaults.DateFormat);
+        builder.Property(e => e.DefaultCurrencyCode).HasMaxLength(3).IsRequired().HasDefaultValue(TenantDefaults.CurrencyCode);
+        builder.Property(e => e.LogoContentType).HasMaxLength(64);
 
         builder.HasIndex(e => e.Code).IsUnique();
     }
@@ -1791,10 +1808,85 @@ internal sealed class MasterCatalogItemConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.Code).HasMaxLength(64).IsRequired();
         builder.Property(e => e.Name).HasMaxLength(256).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(512);
+        builder.Property(e => e.AttributesJson).HasColumnType("text");
         builder.Property(e => e.IsActive).IsRequired();
         builder.Property(e => e.SortOrder).IsRequired();
 
         builder.HasIndex(e => new { e.TenantId, e.Kind, e.Code }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.Kind, e.IsActive });
+    }
+}
+
+internal sealed class TenantLicenseConfiguration : IEntityTypeConfiguration<TenantLicense>
+{
+    public void Configure(EntityTypeBuilder<TenantLicense> builder)
+    {
+        builder.ToTable("tenant_licenses");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PlanCode).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.PlanName).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.SeatLimit).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(1024);
+        builder.HasIndex(e => new { e.TenantId, e.Status, e.ValidUntil });
+    }
+}
+
+internal sealed class TenantLicenseModuleConfiguration : IEntityTypeConfiguration<TenantLicenseModule>
+{
+    public void Configure(EntityTypeBuilder<TenantLicenseModule> builder)
+    {
+        builder.ToTable("tenant_license_modules");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.LicenseId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ModuleCode).HasMaxLength(32).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.LicenseId, e.ModuleCode }).IsUnique();
+    }
+}
+
+internal sealed class TenantNotificationSettingConfiguration : IEntityTypeConfiguration<TenantNotificationSetting>
+{
+    public void Configure(EntityTypeBuilder<TenantNotificationSetting> builder)
+    {
+        builder.ToTable("tenant_notification_settings");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.EventsJson).HasColumnType("text").IsRequired();
+        builder.HasIndex(e => e.TenantId).IsUnique();
+    }
+}
+
+internal sealed class InAppNotificationConfiguration : IEntityTypeConfiguration<InAppNotification>
+{
+    public void Configure(EntityTypeBuilder<InAppNotification> builder)
+    {
+        builder.ToTable("in_app_notifications");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.UserId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.EventType).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Title).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.Body).HasMaxLength(2048).IsRequired();
+        builder.Property(e => e.Href).HasMaxLength(512);
+        builder.Property(e => e.ObjectType).HasMaxLength(64);
+        builder.HasIndex(e => new { e.TenantId, e.UserId, e.IsRead, e.CreatedAt });
+    }
+}
+
+internal sealed class TenantBackupConfiguration : IEntityTypeConfiguration<TenantBackup>
+{
+    public void Configure(EntityTypeBuilder<TenantBackup> builder)
+    {
+        builder.ToTable("tenant_backups");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Kind).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.PayloadJson).HasColumnType("text").IsRequired();
+        builder.Property(e => e.ChecksumSha256).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Note).HasMaxLength(512);
+        builder.HasIndex(e => new { e.TenantId, e.CreatedAt });
     }
 }

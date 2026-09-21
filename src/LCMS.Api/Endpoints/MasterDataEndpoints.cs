@@ -487,7 +487,8 @@ public static class MasterDataEndpoints
                     body.Name,
                     body.Description,
                     body.IsActive ?? true,
-                    body.SortOrder),
+                    body.SortOrder,
+                    body.AttributesJson),
                 ct);
             return Results.Ok(new { id });
         });
@@ -511,7 +512,8 @@ public sealed record UpsertMasterCatalogItemRequest(
     string Name,
     string? Description,
     bool? IsActive,
-    int? SortOrder);
+    int? SortOrder,
+    string? AttributesJson = null);
 
 public sealed record CreateOrganizationRequest(string Code, string Name, Guid? ParentId);
 public sealed record UpdateOrganizationRequest(string Name, Guid? ParentId, bool IsActive);

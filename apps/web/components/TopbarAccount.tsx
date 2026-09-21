@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 
-/** Designer topbar utilities — no fake notification counts. */
+/** Designer topbar utilities — notification count is live inbox, never a fake badge. */
 export function TopbarAccount({
   displayName,
   roleLabel = "Người dùng",
+  unreadNotifications = 0,
 }: {
   displayName: string;
   roleLabel?: string;
+  unreadNotifications?: number;
 }) {
   const name = displayName.trim() || "Người dùng";
   const initials = name
@@ -17,16 +19,20 @@ export function TopbarAccount({
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("") || "U";
+  const unread = Math.max(0, unreadNotifications);
 
   return (
     <div className="topbar-account">
       <Link
         className="topbar-icon-btn"
-        href="/queues/exceptions"
-        title="Hàng đợi ngoại lệ"
-        aria-label="Hàng đợi ngoại lệ"
+        href="/settings/notifications#inbox"
+        title={unread > 0 ? `${unread} thông báo chưa đọc` : "Hộp thư thông báo"}
+        aria-label={unread > 0 ? `${unread} thông báo chưa đọc` : "Hộp thư thông báo"}
       >
         <span className="topbar-bell" aria-hidden="true" />
+        {unread > 0 ? (
+          <span className="topbar-badge">{unread > 99 ? "99+" : unread}</span>
+        ) : null}
       </Link>
       <Link
         className="topbar-icon-btn"

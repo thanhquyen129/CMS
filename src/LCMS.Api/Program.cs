@@ -5,6 +5,7 @@ using LCMS.Application;
 using LCMS.Application.Currencies;
 using LCMS.Application.Demo;
 using LCMS.Application.Identity;
+using LCMS.Application.Licenses;
 using LCMS.Infrastructure;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -135,6 +136,7 @@ try
     app.MapIdentityEndpoints();
     app.MapMasterDataEndpoints();
     app.MapTenantSettingsEndpoints();
+    app.MapTenantAdminEndpoints();
     app.MapOperationalReferenceEndpoints();
     app.MapRatePricingEndpoints();
     app.MapCostEndpoints();
@@ -174,6 +176,7 @@ static async Task MigrateDatabaseAsync(WebApplication app)
     await db.Database.MigrateAsync();
     await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
     await TenantAccessSeeder.SeedSystemRolesForAllTenantsAsync(db, CancellationToken.None);
+    await TenantLicenseSeeder.EnsureForAllTenantsAsync(db, CancellationToken.None);
 }
 
 static async Task SeedDemoIfEnabledAsync(WebApplication app)

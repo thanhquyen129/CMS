@@ -54,7 +54,9 @@ public static class SystemRoleCatalog
                 (PermissionCodes.MasterPartyManage, DataScopes.All),
                 (PermissionCodes.MasterCurrencyManage, DataScopes.All),
                 (PermissionCodes.MasterCatalogManage, DataScopes.All),
-                (PermissionCodes.SettingsManage, DataScopes.All)
+                (PermissionCodes.SettingsManage, DataScopes.All),
+                (PermissionCodes.AuditRead, DataScopes.All),
+                (PermissionCodes.NotificationManage, DataScopes.All)
             ]),
 
         new(

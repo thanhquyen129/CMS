@@ -1,5 +1,31 @@
 # Handoff
 
+## 2026-09-21 — UI-13/UI-14: người dùng, doanh nghiệp, danh mục, audit, license, thông báo, sao lưu
+
+### User
+làm lần lượt từ 1 đến 5, đầy đủ chi tiết như 1 hệ thống chuẩn, không lát mỏng, không sơ sài tạm đủ dùng. làm xong kiểm tra deploy luôn nhé.
+
+### Answer
+Đã làm đủ 5 hạng mục System/Danh mục (ADR-0021), không control giả.
+
+1. **Người dùng** `/settings/users`: tạo + mật khẩu bắt buộc (10 ký tự, chữ+số), đặt lại mật khẩu (thu hồi refresh token), ngừng/mở, chặn ngừng Admin cuối, chỗ license.
+2. **Doanh nghiệp** `/settings/company`: MST, địa chỉ, IANA timezone (chỉ hiển thị; sổ UTC), tiền tệ mặc định, logo PNG/JPEG/WebP ≤512KB.
+3. **Danh mục** tab UI-13: khách/NCC, dịch vụ, loại CP/DT, tuyến, phương thức, cảng/sân bay/cửa khẩu (`attributes_json`), tiền tệ/tỷ giá, danh mục khác + tổ chức.
+4. **Nhật ký** `/settings/audit`: lọc hành động/đối tượng/ngày, phân trang, JSON trước/sau. Quyền `audit.read`.
+5. **License / thông báo / sao lưu**: chỗ+module server-enforced (H-001: tắt chỉ ẩn UI); in-app + email outbox, SMTP chưa cấu hình = “chưa gửi”; backup logic danh mục/cấu hình, confirm `RESTORE {tenantCode}`, không PITR/sổ tiền.
+
+API: `/api/users/{id}/password`, `/api/tenant-profile`, `/api/tenant-license`, `/api/notifications/*`, `/api/tenant-backups`, catalog kinds mới. Migration `P28_TenantAdminSettingsFull`. Test `AdminSettingsFullTests` (8).
+
+### Files
+- `docs/adr/ADR-0021-tenant-admin-license-backup-notifications.md`
+- `src/LCMS.Api/Endpoints/TenantAdminEndpoints.cs`, `IdentityEndpoints.cs`
+- `src/LCMS.Application/{Users,Tenants,Licenses,Notifications,Backups,Catalog}`
+- `src/LCMS.Infrastructure/Persistence/Migrations/20260921034927_P28_TenantAdminSettingsFull.cs`
+- `apps/web/app/settings/{users,company,audit,license,notifications,backup,business,integrations}/page.tsx`
+- `tests/LCMS.Api.Tests/AdminSettingsFullTests.cs`
+
+---
+
 ## 2026-09-21 — Deploy UI chrome (sidebar, KPI, tab, filter)
 
 ### User

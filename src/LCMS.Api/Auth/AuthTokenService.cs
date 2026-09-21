@@ -10,7 +10,7 @@ namespace LCMS.Api.Auth;
 public sealed record TokenPair(string AccessToken, int ExpiresInSeconds, string RefreshToken, int RefreshExpiresInSeconds);
 
 /// <summary>Issues access JWT + stores hashed refresh tokens (P22).</summary>
-public sealed class AuthTokenService
+public sealed class AuthTokenService : IRefreshTokenRevoker
 {
     private readonly JwtTokenIssuer _issuer;
     private readonly AuthOptions _options;
@@ -87,6 +87,23 @@ public sealed class AuthTokenService
 
         row.RevokedAt = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task RevokeAllForUserAsync(Guid userId, CancellationToken ct)
+    {
+        var utc = DateTimeOffset.UtcNow;
+        var rows = await _db.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ToListAsync(ct);
+        foreach (var row in rows)
+        {
+            row.RevokedAt = utc;
+        }
+
+        if (rows.Count > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
     }
 
     private static string Hash(string plain)

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { RolePermissionToggleMatrix } from "@/components/RolePermissionToggleMatrix";
+import { SettingsHubNav } from "@/components/SettingsHubNav";
 import { UserRoleAssignPanel } from "@/components/UserRoleAssignPanel";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -42,16 +43,17 @@ export default async function AdminAccessPage({
       (!usersResult.ok && usersResult.message) ||
       "Không tải được phân quyền.";
     return (
-      <AppShell terms={terms} active="admin">
+      <AppShell terms={terms} active="settings">
         <section className="panel panel-wide">
           <ListPageHeader
             breadcrumbs={[
               { href: "/dashboard", label: dashboardLabel },
-              { href: "/admin", label: "Danh mục" },
+              { href: "/settings", label: "Hệ thống" },
               { label: "Phân quyền" },
             ]}
-            title="Phân quyền"
+            title="Vai trò &amp; Phân quyền"
           />
+          <SettingsHubNav active="access" />
           <div className="alert alert-error" role="alert">
             {message}
           </div>
@@ -79,17 +81,18 @@ export default async function AdminAccessPage({
   );
 
   return (
-    <AppShell terms={terms} active="admin">
+    <AppShell terms={terms} active="settings">
       <section className="panel panel-wide">
         <ListPageHeader
           breadcrumbs={[
             { href: "/dashboard", label: dashboardLabel },
-            { href: "/admin", label: "Danh mục" },
+            { href: "/settings", label: "Hệ thống" },
             { label: "Phân quyền" },
           ]}
-          title="Phân quyền"
+          title="Vai trò &amp; Phân quyền"
           lede="Gán vai trò cho thành viên và bật/tắt quyền theo nhóm nghiệp vụ. Chi phí và doanh thu độc lập; phê duyệt không thay thế quyền."
         />
+        <SettingsHubNav active="access" />
 
         <UserRoleAssignPanel
           users={users}

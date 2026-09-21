@@ -1,12 +1,11 @@
+using LCMS.Application.Abstractions;
 using LCMS.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
 namespace LCMS.Api.Auth;
 
-public interface IPasswordHasherService
+public interface IPasswordHasherService : IPasswordHasher
 {
-    string HashPassword(User user, string password);
-    bool VerifyPassword(User user, string password);
 }
 
 public sealed class PasswordHasherService : IPasswordHasherService

@@ -11,6 +11,7 @@ public sealed record MasterCatalogItemDto(
     string Code,
     string Name,
     string? Description,
+    string? AttributesJson,
     bool IsActive,
     int SortOrder,
     DateTimeOffset CreatedAt);
@@ -62,6 +63,7 @@ public sealed class ListMasterCatalogItemsQueryHandler
                 i.Code,
                 i.Name,
                 i.Description,
+                i.AttributesJson,
                 i.IsActive,
                 i.SortOrder,
                 i.CreatedAt))

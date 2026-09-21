@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Identity;
+using LCMS.Application.Licenses;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,7 @@ public sealed class CreateTenantCommandHandler : IRequestHandler<CreateTenantCom
         await _db.SaveChangesAsync(cancellationToken);
 
         await TenantAccessSeeder.SeedAdminRoleAsync(_db, tenant.Id, cancellationToken);
+        await TenantLicenseSeeder.EnsureForCurrentTenantAsync(_db, tenant.Id, cancellationToken);
 
         return tenant.Id;
     }

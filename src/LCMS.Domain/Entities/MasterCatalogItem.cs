@@ -7,7 +7,7 @@ namespace LCMS.Domain.Entities;
 /// </summary>
 public sealed class MasterCatalogItem : TenantEntityBase
 {
-    /// <summary>cost_type | revenue_type | service_type | pricing_component | document_type | payment_term</summary>
+    /// <summary>See <see cref="MasterCatalogKinds"/>.</summary>
     public string Kind { get; set; } = string.Empty;
 
     public string Code { get; set; } = string.Empty;
@@ -15,6 +15,9 @@ public sealed class MasterCatalogItem : TenantEntityBase
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
+
+    /// <summary>Optional JSON extras (route origin/dest, location class).</summary>
+    public string? AttributesJson { get; set; }
 }
 
 /// <summary>Stable kind codes for <see cref="MasterCatalogItem"/>.</summary>
@@ -26,10 +29,19 @@ public static class MasterCatalogKinds
     public const string PricingComponent = "pricing_component";
     public const string DocumentType = "document_type";
     public const string PaymentTerm = "payment_term";
+    public const string TransportRoute = "transport_route";
+    public const string TransportMode = "transport_mode";
+    public const string Location = "location";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        CostType, RevenueType, ServiceType, PricingComponent, DocumentType, PaymentTerm
+        CostType, RevenueType, ServiceType, PricingComponent, DocumentType, PaymentTerm,
+        TransportRoute, TransportMode, Location
+    };
+
+    public static readonly IReadOnlySet<string> LocationClasses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "port", "airport", "border"
     };
 }
 

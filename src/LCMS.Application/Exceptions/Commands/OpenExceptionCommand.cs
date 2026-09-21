@@ -77,15 +77,18 @@ public sealed class OpenExceptionCommandHandler : IRequestHandler<OpenExceptionC
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly FinancialControlOptions _options;
+    private readonly IOperatorNotificationPublisher _notifications;
 
     public OpenExceptionCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IOptions<FinancialControlOptions> options)
+        IOptions<FinancialControlOptions> options,
+        IOperatorNotificationPublisher notifications)
     {
         _db = db;
         _tenantContext = tenantContext;
         _options = options.Value;
+        _notifications = notifications;
     }
 
     public async Task<Guid> Handle(OpenExceptionCommand request, CancellationToken cancellationToken)
@@ -176,6 +179,16 @@ public sealed class OpenExceptionCommandHandler : IRequestHandler<OpenExceptionC
             throw new ConflictAppException(
                 "Mở Ngoại lệ không được tạo Chênh lệch mới — Chênh lệch ≠ Ngoại lệ.");
         }
+
+        await _notifications.PublishAsync(
+            new NotificationPublishRequest(
+                NotificationEventTypes.ExceptionOpened,
+                "Ngoại lệ tài chính mở",
+                entity.Title,
+                "/queues/exceptions",
+                "exception",
+                entity.Id),
+            cancellationToken);
 
         return entity.Id;
     }

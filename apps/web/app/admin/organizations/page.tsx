@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { CatalogHubNav } from "@/components/CatalogHubNav";
 import { CreateOrganizationForm } from "@/components/CreateOrganizationForm";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -30,6 +31,7 @@ export default async function AdminOrganizationsPage() {
           title="Đơn vị / Tổ chức"
           lede="Cây tổ chức phục vụ phạm vi dữ liệu. Thêm đơn vị gốc tại đây."
         />
+        <CatalogHubNav active="other" />
 
         <div className="layout-cols-2">
           <fieldset className="group-box">

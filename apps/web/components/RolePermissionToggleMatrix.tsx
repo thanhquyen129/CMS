@@ -43,7 +43,11 @@ const GROUPS: { id: string; title: string; match: (code: string) => boolean }[] 
       match: (c) =>
         c.startsWith("user.") ||
         c.startsWith("role.") ||
-        c.startsWith("settings."),
+        c.startsWith("settings.") ||
+        c.startsWith("audit.") ||
+        c.startsWith("license.") ||
+        c.startsWith("backup.") ||
+        c.startsWith("notification."),
     },
   ];
 

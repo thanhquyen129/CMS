@@ -2,6 +2,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Infrastructure.Audit;
 using LCMS.Infrastructure.Identity;
 using LCMS.Infrastructure.Integrations;
+using LCMS.Infrastructure.Notifications;
 using LCMS.Infrastructure.Persistence;
 using LCMS.Infrastructure.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<ICorrelationContext>(sp => sp.GetRequiredService<HttpCorrelationContext>());
         services.AddScoped<IAuditWriter, AuditWriter>();
         services.AddScoped<IPermissionService, PermissionService>();
+        services.AddScoped<IOperatorNotificationPublisher, NotificationPublisher>();
+        services.AddSingleton<INotificationMailTransport, UnconfiguredNotificationMailTransport>();
 
         var connectionString = configuration.GetConnectionString("LcmsDb")
             ?? "Host=localhost;Port=5432;Database=lcms;Username=lcms;Password=lcms";

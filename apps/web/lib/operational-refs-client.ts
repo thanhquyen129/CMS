@@ -4,6 +4,11 @@ export type ClientResult<T> =
   | { ok: true; data: T }
   | { ok: false; message: string };
 
+export function sourceSystemLabel(source: string): string {
+  if (source?.toLowerCase() === "lcms_manual") return "Nhập tay LCMS";
+  return source || "—";
+}
+
 export async function fetchOrderClient(id: string): Promise<ClientResult<OrderDetail>> {
   try {
     const res = await fetch(`/bff/orders/${encodeURIComponent(id)}`, {

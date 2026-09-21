@@ -11,12 +11,8 @@ import {
   transportModeLabel,
 } from "@/lib/bills-shared";
 import { formatDateVi } from "@/lib/money";
-import { fetchOrderClient } from "@/lib/operational-refs-client";
-import {
-  sourceSystemLabel,
-  type OrderDetail,
-  type OrderListItem,
-} from "@/lib/operational-refs";
+import { fetchOrderClient, sourceSystemLabel } from "@/lib/operational-refs-client";
+import type { OrderDetail, OrderListItem } from "@/lib/operational-refs";
 
 type ListParams = {
   q?: string;

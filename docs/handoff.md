@@ -13,6 +13,7 @@ danh sách bill và danh sách đơn hàng chưa giống mockup `@docs/po/Mockup
 - Workspace: `BillListWorkspace`, `OrderListWorkspace`, `list/FilterBar` `showLabels`, `StatCardGrid` icon
 - CSS: `.list-workspace`, `.list-detail-panel`, `.stat-kicon`, `.filter-bar-labeled`
 - List DTO: `BillListItemDto` thêm `EtdAt`/`EtaAt`; BFF `GET /bff/orders/:id`
+- Client `OrderListWorkspace` không import `operational-refs` (kéo `next/headers`) — CI web build.
 
 ### UI
 Copy tiếng Việt. Empty/error thật. CTA **Tạo Bill / Tạo đơn hàng**. Xuất = CSV. Hạn = ETD trong 14 ngày.

@@ -22,10 +22,12 @@ export function DeadlineList({
   rows,
   hrefFor,
   empty,
+  partyColumn = "Khách hàng",
 }: {
   rows: DeadlineRow[];
   hrefFor: (id: string) => string;
   empty: string;
+  partyColumn?: string;
 }) {
   if (rows.length === 0) {
     return (
@@ -38,7 +40,7 @@ export function DeadlineList({
     <>
       <div className="deadline-head">
         <span>Mã</span>
-        <span>Khách hàng</span>
+        <span>{partyColumn}</span>
         <span>Hạng mục</span>
         <span>Còn lại</span>
       </div>

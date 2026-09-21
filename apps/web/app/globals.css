@@ -1363,6 +1363,11 @@ html[data-sidebar="collapsed"] .sidebar-logout {
   font-size: 0.8rem;
 }
 
+.list-workspace .data-table th,
+.list-workspace .data-table td {
+  white-space: nowrap;
+}
+
 .list-workspace .data-table tbody tr {
   cursor: pointer;
 }

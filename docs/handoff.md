@@ -1,5 +1,23 @@
 # Handoff
 
+## 2026-09-22 — UI-02: danh sách Shipment khớp mockup workspace
+
+### User
+làm luôn trang danh sách shipment theo mockup `@docs/po/Mockup html/LCMS_UI02_Don_hang_van_chuyen_Danh_sach_Bill_Mockup.html`
+
+### Answer
+`/shipments` dùng cùng khung Bill/Order: lọc có nhãn (tìm, từ/đến ngày, trạng thái, tuyến — **không** dropdown khách vì Shipment không có customer), 4 KPI icon, lưới bảng + panel chi tiết, CSV, widget chưa gắn Bill + ETD 14 ngày. Panel: Tổng quan / Bill liên kết / Chặng. Chọn dòng = shallow URL. Không checkbox bulk, không % kỳ trước, không cột tiền giả.
+
+### Files / API
+- `apps/web/app/shipments/page.tsx`, `ShipmentListWorkspace.tsx`
+- BFF `GET /bff/shipments/:id` → `/api/shipments/:id`
+- `fetchShipmentClient` trong `operational-refs-client.ts`
+
+### UI
+CTA **Tạo Shipment**. Empty/error thật. Xuất = CSV.
+
+---
+
 ## 2026-09-21 — Client navigation: không reload, không nhảy về đầu trang
 
 ### User

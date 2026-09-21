@@ -1,4 +1,4 @@
-import type { OrderDetail } from "./operational-refs";
+import type { OrderDetail, ShipmentDetail } from "./operational-refs";
 
 export type ClientResult<T> =
   | { ok: true; data: T }
@@ -9,9 +9,9 @@ export function sourceSystemLabel(source: string): string {
   return source || "—";
 }
 
-export async function fetchOrderClient(id: string): Promise<ClientResult<OrderDetail>> {
+async function fetchJsonClient<T>(path: string, failMsg: string): Promise<ClientResult<T>> {
   try {
-    const res = await fetch(`/bff/orders/${encodeURIComponent(id)}`, {
+    const res = await fetch(path, {
       headers: { Accept: "application/json" },
       cache: "no-store",
     });
@@ -21,10 +21,24 @@ export async function fetchOrderClient(id: string): Promise<ClientResult<OrderDe
     }
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { message?: string };
-      return { ok: false, message: body.message || "Không tải được đơn hàng." };
+      return { ok: false, message: body.message || failMsg };
     }
-    return { ok: true, data: (await res.json()) as OrderDetail };
+    return { ok: true, data: (await res.json()) as T };
   } catch {
     return { ok: false, message: "Không kết nối được máy chủ." };
   }
+}
+
+export function fetchOrderClient(id: string): Promise<ClientResult<OrderDetail>> {
+  return fetchJsonClient<OrderDetail>(
+    `/bff/orders/${encodeURIComponent(id)}`,
+    "Không tải được đơn hàng."
+  );
+}
+
+export function fetchShipmentClient(id: string): Promise<ClientResult<ShipmentDetail>> {
+  return fetchJsonClient<ShipmentDetail>(
+    `/bff/shipments/${encodeURIComponent(id)}`,
+    "Không tải được Shipment."
+  );
 }

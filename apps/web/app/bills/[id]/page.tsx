@@ -6,6 +6,7 @@ import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
+import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -348,6 +349,9 @@ export default async function BillDetailPage({
                 Tính giá
               </Link>
             </div>
+
+            <h2 className="section-title">Ngữ cảnh vận hành</h2>
+            <OperationalContextGrid row={bill} />
 
             <h2 className="section-title">{profileLabel}</h2>
             {!profileRes.ok ? (

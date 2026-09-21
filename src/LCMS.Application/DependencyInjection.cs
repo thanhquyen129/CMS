@@ -55,6 +55,7 @@ public static class DependencyInjection
             services.AddOptions<DemoOptions>();
         }
 
+        services.AddScoped<DemoVolumeCatalogSeeder>();
         services.AddScoped<DemoDataSeeder>();
 
         services.AddScoped<IFxRateLookup, FxRateLookup>();

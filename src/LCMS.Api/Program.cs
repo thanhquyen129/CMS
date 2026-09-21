@@ -137,6 +137,7 @@ try
     app.MapMasterDataEndpoints();
     app.MapTenantSettingsEndpoints();
     app.MapTenantAdminEndpoints();
+    app.MapSampleDataEndpoints();
     app.MapOperationalReferenceEndpoints();
     app.MapRatePricingEndpoints();
     app.MapCostEndpoints();

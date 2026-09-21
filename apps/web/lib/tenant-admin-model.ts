@@ -191,3 +191,31 @@ export function backupStatusLabel(status: string) {
   if (status === "failed") return "Lỗi";
   return status;
 }
+
+export type SampleDataStatus = {
+  tenantId: string;
+  targetCount: number;
+  counts: Record<string, number>;
+  complete: boolean;
+};
+
+export const SAMPLE_DATA_LABELS: Record<string, string> = {
+  customer: "Khách hàng",
+  vendor: "Nhà cung cấp",
+  order: "Đơn hàng",
+  bill: "Bill",
+  shipment: "Shipment",
+  leg: "Chặng",
+  movement: "Chuyến",
+  cost: "Chi phí",
+  revenue: "Doanh thu",
+  document: "Chứng từ",
+  ap: "Phải trả (AP)",
+  ar: "Phải thu (AR)",
+  payment: "Thanh toán",
+  collection: "Thu tiền",
+  rateCard: "Bảng giá",
+  bankFeed: "Sao kê ngân hàng",
+  location: "Địa điểm",
+  route: "Tuyến",
+};

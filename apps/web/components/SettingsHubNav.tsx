@@ -11,7 +11,8 @@ type Props = {
     | "audit"
     | "license"
     | "notifications"
-    | "backup";
+    | "backup"
+    | "sample-data";
 };
 
 const TABS: { id: Props["active"]; href: string; title: string; desc: string }[] = [
@@ -25,6 +26,7 @@ const TABS: { id: Props["active"]; href: string; title: string; desc: string }[]
   { id: "license", href: "/settings/license", title: "Quản lý license", desc: "Gói, chỗ, module" },
   { id: "notifications", href: "/settings/notifications", title: "Cài đặt thông báo", desc: "In-app và email" },
   { id: "backup", href: "/settings/backup", title: "Sao lưu & Khôi phục", desc: "Danh mục / cấu hình" },
+  { id: "sample-data", href: "/settings/sample-data", title: "Dữ liệu mẫu", desc: "≥120 bản ghi mỗi loại" },
 ];
 
 export function SettingsHubNav({ active }: Props) {

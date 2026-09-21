@@ -8,6 +8,7 @@ import type {
   InAppNotification,
   IntegrationRecordItem,
   NotificationSettings,
+  SampleDataStatus,
   TenantBackupItem,
   TenantLicense,
   TenantProfile,
@@ -61,6 +62,10 @@ export function listInbox(unreadOnly = false) {
 
 export function listTenantBackups() {
   return apiGet<TenantBackupItem[]>("/api/tenant-backups");
+}
+
+export function getSampleDataStatus() {
+  return apiGet<SampleDataStatus>("/api/sample-data");
 }
 
 export function listAuditEvents(qs: string) {

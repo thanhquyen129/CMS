@@ -1,5 +1,7 @@
 /** Client-safe bill types and display labels (no next/headers). */
 
+import type { OperationalContext } from "./create-workspace";
+
 export type BillListItem = {
   id: string;
   billNo: string;
@@ -39,6 +41,10 @@ export type BillDto = BillListItem & {
   assignedUserName?: string | null;
   description?: string | null;
   internalNote?: string | null;
+  originCode?: string | null;
+  destinationCode?: string | null;
+  customerReference?: string | null;
+  context?: OperationalContext | null;
 };
 
 /** Vietnamese labels for operational status — never show raw enum to end users. */

@@ -66,7 +66,9 @@ public static class DevAuthEndpoints
                     tenantId = result.TenantId,
                     skipped = result.Skipped,
                     summary = result.Summary,
-                    markerBillNo = DemoDataSeeder.MarkerBillNo
+                    counts = result.Counts,
+                    markerBillNo = DemoDataSeeder.MarkerBillNo,
+                    targetCount = DemoVolumeCatalogSeeder.TargetCount
                 });
             })
             .AllowAnonymous()

@@ -18,12 +18,18 @@ public sealed class DemoDataSeeder
 
     private readonly ILcmsDbContext _db;
     private readonly DemoOptions _options;
+    private readonly DemoVolumeCatalogSeeder _volume;
     private readonly ILogger<DemoDataSeeder> _logger;
 
-    public DemoDataSeeder(ILcmsDbContext db, IOptions<DemoOptions> options, ILogger<DemoDataSeeder> logger)
+    public DemoDataSeeder(
+        ILcmsDbContext db,
+        IOptions<DemoOptions> options,
+        DemoVolumeCatalogSeeder volume,
+        ILogger<DemoDataSeeder> logger)
     {
         _db = db;
         _options = options.Value;
+        _volume = volume;
         _logger = logger;
     }
 
@@ -44,20 +50,38 @@ public sealed class DemoDataSeeder
             _logger.LogInformation("Demo seed created tenant {Code} ({TenantId}).", code, tenant.Id);
         }
 
+        return await EnsureForTenantAsync(tenant, cancellationToken);
+    }
+
+    public async Task<DemoSeedResult> EnsureForTenantAsync(Tenant tenant, CancellationToken cancellationToken = default)
+    {
         var exists = await _db.Bills.IgnoreQueryFilters()
             .AnyAsync(b => b.TenantId == tenant.Id && b.BillNo == MarkerBillNo && b.DeletedAt == null, cancellationToken);
 
         await EnsureDefaultCatalogAsync(tenant.Id, cancellationToken);
 
+        string scenarioSummary;
         if (exists)
         {
-            _logger.LogInformation("Demo seed skipped (marker {Marker} already present for tenant {Code}).", MarkerBillNo, code);
-            return new DemoSeedResult(tenant.Id, Skipped: true, Summary: "Đã có dữ liệu demo — bỏ qua.");
+            _logger.LogInformation("Demo scenario skipped (marker {Marker} already present for tenant {Code}).", MarkerBillNo, tenant.Code);
+            scenarioSummary = "Đã có kịch bản demo — bỏ qua.";
+        }
+        else
+        {
+            scenarioSummary = await SeedScenarioAsync(tenant.Id, cancellationToken);
         }
 
+        var volume = await _volume.EnsureAsync(tenant.Id, cancellationToken);
+        var summary = $"{scenarioSummary} {volume.Summary}";
+        _logger.LogInformation("Demo seed completed for tenant {Code}: {Summary}", tenant.Code, summary);
+        return new DemoSeedResult(tenant.Id, Skipped: exists && volume.Skipped, Summary: summary, Counts: volume.Counts);
+    }
+
+    private async Task<string> SeedScenarioAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var now = DateTimeOffset.UtcNow;
-        var tid = tenant.Id;
+        var tid = tenantId;
 
         // --- Master ---
         var org = new Organization { TenantId = tid, Code = "DEMO-ORG", Name = "Chi nhánh Demo HCM", IsActive = true };
@@ -609,8 +633,8 @@ public sealed class DemoDataSeeder
         var summary =
             "Seeded: 12 bills, costs/revenues maturity, shared alloc, docs triad, AP/AR+settlement, " +
             "closes open/locked/reopened, exceptions/approvals/recon, parties+rate card.";
-        _logger.LogInformation("Demo seed completed for tenant {Code}: {Summary}", code, summary);
-        return new DemoSeedResult(tid, Skipped: false, Summary: summary);
+        _logger.LogInformation("Demo scenario seeded: {Summary}", summary);
+        return summary;
     }
 
     private async Task AddSnapshotAsync(
@@ -1023,4 +1047,8 @@ public sealed class DemoDataSeeder
     };
 }
 
-public sealed record DemoSeedResult(Guid TenantId, bool Skipped, string Summary);
+public sealed record DemoSeedResult(
+    Guid TenantId,
+    bool Skipped,
+    string Summary,
+    IReadOnlyDictionary<string, int>? Counts = null);

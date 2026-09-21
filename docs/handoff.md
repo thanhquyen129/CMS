@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-21 — Full slice vận hành + dữ liệu mẫu ≥120 / loại
+
+### User
+Kiểm tra toàn hệ thống, phần nào hiện đang làm lát cắt mỏng thì triển khai làm full chức năng. Xong tạo dữ liệu mẫu để test, mỗi loại >100 record
+
+### Answer
+API P01–P25 / Pass 2 đã đủ cho go-live tài chính. Phần còn mỏng là **chi tiết ngữ cảnh** Order/Bill/Shipment (mới tạo đủ form UI-02 nhưng màn xem chỉ còn identity). Đã hiện đầy đủ tuyến, ETD/ETA, hàng hóa, dịch vụ thêm. Dữ liệu demo 12 Bill không đủ test list — thêm catalog **VOL-** ≥120 mỗi loại (khách, NCC, đơn, Bill, Shipment, chặng, chuyến, chi phí, doanh thu, chứng từ, AP, AR, thanh toán, thu, bảng giá, sao kê, địa điểm, tuyến). Idempotent. Tạo từ **Cài đặt → Dữ liệu mẫu** (`POST /api/sample-data/ensure`, quyền `settings.manage`). Tạo record mẫu **không** sinh Cost/Revenue từ chứng từ.
+
+### Files / API / schema
+- `src/LCMS.Application/Demo/DemoVolumeCatalogSeeder.cs` — TargetCount=120, prefix `VOL-`
+- `GET /api/sample-data`, `POST /api/sample-data/ensure`
+- UI: `/settings/sample-data`, `OperationalContextGrid` trên Bill + chi tiết tham chiếu
+- Tests: `DemoVolumeCatalogTests`
+
+### UI
+Chi tiết đơn/Bill/Shipment hiện ngữ cảnh vận hành. Nút **Tạo dữ liệu mẫu**. Empty/error thật.
+
+---
+
 ## 2026-09-21 — UI-02: danh sách đơn hàng + tạo Bill / Order / Shipment
 
 ### User

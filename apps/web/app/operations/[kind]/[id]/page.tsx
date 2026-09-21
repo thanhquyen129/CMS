@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { LinkBillToRefForm } from "@/components/LinkBillToRefForm";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { operationalStatusLabel } from "@/lib/bills-shared";
@@ -125,6 +126,13 @@ export default async function OperationalDetailPage({
             </div>
           ) : null}
         </dl>
+
+        {"transportMode" in row || "customerName" in row || "context" in row ? (
+          <>
+            <h2 className="section-title">Ngữ cảnh vận hành</h2>
+            <OperationalContextGrid row={row} />
+          </>
+        ) : null}
 
         <h2 className="section-title">{billLabel} liên kết</h2>
         {row.relatedBills.length === 0 ? (

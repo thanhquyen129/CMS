@@ -22,6 +22,7 @@ export type BillListItem = {
   costActualTotal?: number | null;
   customerName?: string | null;
   routeCode?: string | null;
+  transportMode?: string | null;
   costLineCount?: number | null;
   revenueLineCount?: number | null;
   documentCount?: number | null;
@@ -43,6 +44,8 @@ export type BillDto = BillListItem & {
 /** Vietnamese labels for operational status — never show raw enum to end users. */
 export function operationalStatusLabel(status: string): string {
   switch (status?.toLowerCase()) {
+    case "draft":
+      return "Nháp";
     case "active":
       return "Đang xử lý";
     case "confirmed":
@@ -69,23 +72,49 @@ export function operationalStatusLabel(status: string): string {
 
 export function billTypeLabel(billType: string): string {
   switch (billType?.toLowerCase()) {
+    case "house":
+    case "house_bill":
+      return "House Bill";
+    case "master":
+    case "master_bill":
+      return "Master Bill";
     case "air":
-      return "Hàng không";
+      return "Air";
     case "sea":
     case "ocean":
-      return "Đường biển";
+      return "Sea";
     case "road":
     case "truck":
-      return "Đường bộ";
+      return "Road";
     case "rail":
-      return "Đường sắt";
+      return "Rail";
     case "multimodal":
       return "Đa phương thức";
     case "parcel":
     case "postal":
     case "courier":
       return "Bưu kiện";
+    case "freight":
+      return "Vận tải";
     default:
       return billType || "—";
+  }
+}
+
+/** Transport mode for list/create — distinct from House/Master Bill type. */
+export function transportModeLabel(mode: string | null | undefined): string {
+  switch ((mode ?? "").toLowerCase()) {
+    case "air":
+      return "Air";
+    case "sea":
+    case "ocean":
+      return "Sea";
+    case "road":
+    case "truck":
+      return "Road";
+    case "rail":
+      return "Rail";
+    default:
+      return mode || "—";
   }
 }

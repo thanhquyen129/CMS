@@ -1,5 +1,27 @@
 # Handoff
 
+## 2026-09-21 — UI-02: danh sách đơn hàng + tạo Bill / Order / Shipment
+
+### User
+`@docs/po/Mockup html` mockup html phần ds đơn hàng, tạo bill, order, shipment
+
+### Answer
+Đã đưa mockup UI-02 vào sản phẩm: danh sách đơn hàng `/orders`, tạo đơn `/orders/new`, tạo Bill `/bills/new`, danh sách + tạo Shipment `/shipments`. Order/Shipment vẫn là tham chiếu vận hành (C-002, ADR-0017); không TMS/GPS/e-POD. Form lưu ngữ cảnh rating (khách, tuyến, ETD/ETA, hàng hóa) trên cột + `context_json`. Tạo record **không** sinh Cost/Revenue/AP/AR. Upsert identity TMS không xóa context LCMS (`ApplyContext`). List API sort `CreatedAt` in-memory vì SQLite test không `ORDER BY DateTimeOffset`.
+
+### Files / API / schema
+- Nav: `apps/web/components/AppShell.tsx` — 6 mục con + Chặng & Chuyến
+- Pages: `apps/web/app/{orders,shipments}/**`, `apps/web/app/bills/{page,new/page}.tsx`
+- Forms: `CreateOrderForm`, `CreateBillWorkspaceForm`, `CreateShipmentForm`
+- API: `PUT /api/orders`, `GET /api/orders`, `PUT /api/shipments`, `GET /api/shipments`, `PATCH /api/bills/{id}/context`
+- Migration: `20260921140450_UI02_OperationalCreateContext`
+- ADR: `docs/adr/ADR-0022-ui02-order-bill-shipment-create.md`
+- Tests: `tests/LCMS.Api.Tests/Ui02OperationalCreateContextTests.cs` + Sprint2 list orders
+
+### UI
+Copy tiếng Việt CP6.5. CTA **Tạo đơn hàng / Tạo Bill / Tạo Shipment**. Empty/error thật. Nháp = `draft`, dùng để liên kết = `active`.
+
+---
+
 ## 2026-09-21 — Menu ngang: submenu overlay, không cắt/cuộn trong header
 
 ### User

@@ -16,5 +16,23 @@ public sealed class Shipment : TenantEntityBase
     public string OperationalStatus { get; set; } = "active";
     public bool IsActive { get; set; } = true;
 
+    public Guid? AssignedUserId { get; set; }
+
+    /// <summary>air / sea / road / rail — rating/allocation context, not dispatch.</summary>
+    public string? TransportMode { get; set; }
+
+    public string? OriginCode { get; set; }
+    public string? DestinationCode { get; set; }
+    public string? RouteCode { get; set; }
+
+    public DateTimeOffset? EtdAt { get; set; }
+    public DateTimeOffset? EtaAt { get; set; }
+
+    public string? CustomerReference { get; set; }
+    public string? Description { get; set; }
+
+    /// <summary>Remaining create-form fields (cargo totals, rating notes) as JSON.</summary>
+    public string? ContextJson { get; set; }
+
     public Tenant? Tenant { get; set; }
 }

@@ -7,6 +7,7 @@ import { BillFinancialDrawer } from "./BillFinancialDrawer";
 import {
   billTypeLabel,
   operationalStatusLabel,
+  transportModeLabel,
   type BillListItem,
 } from "@/lib/bills-shared";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
@@ -150,7 +151,7 @@ export function BillListWorkspace({
                   </td>
                   <td>{b.customerName || "—"}</td>
                   <td>{b.routeCode || "—"}</td>
-                  <td>{billTypeLabel(b.billType)}</td>
+                  <td>{b.transportMode ? transportModeLabel(b.transportMode) : billTypeLabel(b.billType)}</td>
                   <td>{formatDateTimeVi(b.createdAt)}</td>
                   <td>
                     <span className="status-pill">

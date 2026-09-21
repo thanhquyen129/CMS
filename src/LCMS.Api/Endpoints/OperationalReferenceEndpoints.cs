@@ -1,5 +1,6 @@
 using LCMS.Application.Bills.Queries;
 using LCMS.Application.OperationalLinks.Commands;
+using LCMS.Application.OperationalReferences;
 using LCMS.Application.Orders.Commands;
 using LCMS.Application.Orders.Queries;
 using LCMS.Application.Search.Queries;
@@ -27,7 +28,30 @@ public static class OperationalReferenceEndpoints
                     body.ExternalId,
                     body.ExternalVersion,
                     body.OperationalStatus,
-                    body.IsActive ?? true),
+                    body.IsActive ?? true,
+                    body.CustomerPartyId,
+                    body.AssignedUserId,
+                    body.TransportMode,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.RouteCode,
+                    body.EtdAt,
+                    body.EtaAt,
+                    body.CustomerReference,
+                    body.Description,
+                    body.Context,
+                    ApplyContext: body.ApplyContext
+                        || body.CustomerPartyId is not null
+                        || body.AssignedUserId is not null
+                        || body.TransportMode is not null
+                        || body.OriginCode is not null
+                        || body.DestinationCode is not null
+                        || body.RouteCode is not null
+                        || body.EtdAt is not null
+                        || body.EtaAt is not null
+                        || body.CustomerReference is not null
+                        || body.Description is not null
+                        || body.Context is not null),
                 ct);
             return Results.Ok(new { id });
         });
@@ -61,7 +85,28 @@ public static class OperationalReferenceEndpoints
                     body.ExternalId,
                     body.ExternalVersion,
                     body.OperationalStatus,
-                    body.IsActive ?? true),
+                    body.IsActive ?? true,
+                    body.AssignedUserId,
+                    body.TransportMode,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.RouteCode,
+                    body.EtdAt,
+                    body.EtaAt,
+                    body.CustomerReference,
+                    body.Description,
+                    body.Context,
+                    ApplyContext: body.ApplyContext
+                        || body.AssignedUserId is not null
+                        || body.TransportMode is not null
+                        || body.OriginCode is not null
+                        || body.DestinationCode is not null
+                        || body.RouteCode is not null
+                        || body.EtdAt is not null
+                        || body.EtaAt is not null
+                        || body.CustomerReference is not null
+                        || body.Description is not null
+                        || body.Context is not null),
                 ct);
             return Results.Ok(new { id });
         });
@@ -220,7 +265,19 @@ public sealed record UpsertOrderRequest(
     string ExternalId,
     string? ExternalVersion,
     string? OperationalStatus,
-    bool? IsActive);
+    bool? IsActive,
+    Guid? CustomerPartyId = null,
+    Guid? AssignedUserId = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? RouteCode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null,
+    string? CustomerReference = null,
+    string? Description = null,
+    OperationalContextDocument? Context = null,
+    bool ApplyContext = false);
 
 public sealed record UpsertShipmentRequest(
     string ShipmentNo,
@@ -228,7 +285,18 @@ public sealed record UpsertShipmentRequest(
     string ExternalId,
     string? ExternalVersion,
     string? OperationalStatus,
-    bool? IsActive);
+    bool? IsActive,
+    Guid? AssignedUserId = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? RouteCode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null,
+    string? CustomerReference = null,
+    string? Description = null,
+    OperationalContextDocument? Context = null,
+    bool ApplyContext = false);
 
 public sealed record UpsertTransportLegRequest(
     string LegNo,

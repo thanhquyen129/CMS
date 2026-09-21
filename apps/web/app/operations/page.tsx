@@ -48,7 +48,7 @@ export default async function OperationsPage({
   ]);
 
   return (
-    <AppShell terms={terms} active="bills">
+    <AppShell terms={terms} active="bills" navChild="operations">
       <section className="panel panel-wide">
         <ListPageHeader
           breadcrumbs={[
@@ -56,8 +56,16 @@ export default async function OperationsPage({
             { href: "/bills", label: billLabel },
             { label: "Tham chiếu vận hành" },
           ]}
-          title="Tham chiếu vận hành"
-          lede="Order / Lô hàng / Chặng / Chuyến phục vụ neo tài chính trên Bill. Không phải TMS — không điều phối, định vị hay e-POD."
+          title="Chặng & Chuyến"
+          lede={
+            <>
+              Chặng / Chuyến phục vụ neo tài chính trên Bill. Danh sách đơn hàng và Shipment nằm ở menu Đơn hàng vận chuyển —{" "}
+              <Link className="row-link" href="/orders">đơn hàng</Link>
+              {" · "}
+              <Link className="row-link" href="/shipments">Shipment</Link>
+              . Không phải TMS.
+            </>
+          }
         />
 
         <div className="hub-module-tabs" role="tablist" aria-label="Loại tham chiếu">

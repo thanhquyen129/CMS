@@ -10,6 +10,7 @@ export type {
 export {
   billTypeLabel,
   operationalStatusLabel,
+  transportModeLabel,
 } from "./bills-shared";
 import type { BillDto, BillListItem } from "./bills-shared";
 

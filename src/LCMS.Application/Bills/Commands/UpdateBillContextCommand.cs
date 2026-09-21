@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Identity;
+using LCMS.Application.OperationalReferences;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -22,7 +23,13 @@ public sealed record UpdateBillContextCommand(
     DateTimeOffset? EtaAt,
     Guid? AssignedUserId,
     string? Description,
-    string? InternalNote) : IRequest;
+    string? InternalNote,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? CustomerReference = null,
+    OperationalContextDocument? Context = null,
+    bool ApplyExtendedContext = false) : IRequest;
 
 public sealed class UpdateBillContextCommandValidator : AbstractValidator<UpdateBillContextCommand>
 {
@@ -39,6 +46,11 @@ public sealed class UpdateBillContextCommandValidator : AbstractValidator<Update
         RuleFor(x => x.InternalNote)
             .MaximumLength(4000)
             .When(x => x.InternalNote is not null);
+
+        RuleFor(x => x.TransportMode).MaximumLength(32).When(x => x.TransportMode is not null);
+        RuleFor(x => x.OriginCode).MaximumLength(64).When(x => x.OriginCode is not null);
+        RuleFor(x => x.DestinationCode).MaximumLength(64).When(x => x.DestinationCode is not null);
+        RuleFor(x => x.CustomerReference).MaximumLength(128).When(x => x.CustomerReference is not null);
 
         RuleFor(x => x)
             .Must(x => x.EtdAt is null || x.EtaAt is null || x.EtdAt <= x.EtaAt)
@@ -141,12 +153,28 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         }
 
         bill.CustomerPartyId = request.CustomerPartyId;
-        bill.RouteCode = string.IsNullOrWhiteSpace(request.RouteCode) ? null : request.RouteCode.Trim();
+        var route = OperationalContextJson.TrimOrNull(request.RouteCode);
+        if (route is null
+            && !string.IsNullOrWhiteSpace(request.OriginCode)
+            && !string.IsNullOrWhiteSpace(request.DestinationCode))
+        {
+            route = $"{request.OriginCode.Trim()} → {request.DestinationCode.Trim()}";
+        }
+
+        bill.RouteCode = route;
         bill.EtdAt = request.EtdAt;
         bill.EtaAt = request.EtaAt;
         bill.AssignedUserId = request.AssignedUserId;
-        bill.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
-        bill.InternalNote = string.IsNullOrWhiteSpace(request.InternalNote) ? null : request.InternalNote.Trim();
+        bill.Description = OperationalContextJson.TrimOrNull(request.Description);
+        bill.InternalNote = OperationalContextJson.TrimOrNull(request.InternalNote);
+        if (request.ApplyExtendedContext)
+        {
+            bill.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
+            bill.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
+            bill.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
+            bill.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);
+            bill.ContextJson = OperationalContextJson.Serialize(request.Context);
+        }
 
         await _db.SaveChangesAsync(cancellationToken);
     }

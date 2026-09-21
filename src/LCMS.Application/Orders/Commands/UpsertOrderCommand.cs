@@ -1,7 +1,10 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.OperationalReferences;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +12,8 @@ namespace LCMS.Application.Orders.Commands;
 
 /// <summary>
 /// Idempotent upsert by (tenant_id, source_system, external_id) — C-002.
+/// Optional operational context is applied only when at least one context field is present,
+/// so TMS/API identity upserts do not wipe LCMS manual context.
 /// </summary>
 public sealed record UpsertOrderCommand(
     string OrderNo,
@@ -16,7 +21,19 @@ public sealed record UpsertOrderCommand(
     string ExternalId,
     string? ExternalVersion,
     string? OperationalStatus,
-    bool IsActive = true) : IRequest<Guid>;
+    bool IsActive = true,
+    Guid? CustomerPartyId = null,
+    Guid? AssignedUserId = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? RouteCode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null,
+    string? CustomerReference = null,
+    string? Description = null,
+    OperationalContextDocument? Context = null,
+    bool ApplyContext = false) : IRequest<Guid>;
 
 public sealed class UpsertOrderCommandValidator : AbstractValidator<UpsertOrderCommand>
 {
@@ -41,6 +58,16 @@ public sealed class UpsertOrderCommandValidator : AbstractValidator<UpsertOrderC
         RuleFor(x => x.OperationalStatus)
             .MaximumLength(64)
             .When(x => x.OperationalStatus is not null);
+
+        RuleFor(x => x.TransportMode).MaximumLength(32).When(x => x.TransportMode is not null);
+        RuleFor(x => x.OriginCode).MaximumLength(64).When(x => x.OriginCode is not null);
+        RuleFor(x => x.DestinationCode).MaximumLength(64).When(x => x.DestinationCode is not null);
+        RuleFor(x => x.RouteCode).MaximumLength(128).When(x => x.RouteCode is not null);
+        RuleFor(x => x.CustomerReference).MaximumLength(128).When(x => x.CustomerReference is not null);
+        RuleFor(x => x.Description).MaximumLength(2000).When(x => x.Description is not null);
+        RuleFor(x => x)
+            .Must(x => x.EtdAt is null || x.EtaAt is null || x.EtdAt <= x.EtaAt)
+            .WithMessage("ETD không được sau ETA.");
     }
 }
 
@@ -48,11 +75,16 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPartyDirectoryService _parties;
 
-    public UpsertOrderCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public UpsertOrderCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPartyDirectoryService parties)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _parties = parties;
     }
 
     public async Task<Guid> Handle(UpsertOrderCommand request, CancellationToken cancellationToken)
@@ -73,6 +105,15 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
             ? null
             : request.ExternalVersion.Trim();
 
+        if (request.ApplyContext && request.CustomerPartyId is Guid customerId)
+        {
+            await _parties.EnsureUsableAsync(
+                customerId,
+                [PartyRoleCodes.Customer],
+                "gắn khách hàng lên đơn hàng",
+                cancellationToken);
+        }
+
         var existing = await _db.Orders.FirstOrDefaultAsync(
             o => o.TenantId == tenantId
                  && o.SourceSystem == sourceSystem
@@ -91,6 +132,7 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
                 OperationalStatus = status,
                 IsActive = request.IsActive
             };
+            ApplyContext(order, request);
             _db.Orders.Add(order);
             try
             {
@@ -98,7 +140,6 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
             }
             catch (DbUpdateException)
             {
-                // Concurrent insert — re-read and treat as idempotent update.
                 existing = await _db.Orders.FirstOrDefaultAsync(
                     o => o.TenantId == tenantId
                          && o.SourceSystem == sourceSystem
@@ -121,7 +162,36 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
         existing.ExternalVersion = externalVersion;
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
+        ApplyContext(existing, request);
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
+    }
+
+    private static void ApplyContext(Order order, UpsertOrderCommand request)
+    {
+        if (!request.ApplyContext)
+        {
+            return;
+        }
+
+        order.CustomerPartyId = request.CustomerPartyId;
+        order.AssignedUserId = request.AssignedUserId;
+        order.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
+        order.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
+        order.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
+        var route = OperationalContextJson.TrimOrNull(request.RouteCode);
+        if (route is null
+            && !string.IsNullOrWhiteSpace(request.OriginCode)
+            && !string.IsNullOrWhiteSpace(request.DestinationCode))
+        {
+            route = $"{request.OriginCode.Trim()} → {request.DestinationCode.Trim()}";
+        }
+
+        order.RouteCode = route;
+        order.EtdAt = request.EtdAt;
+        order.EtaAt = request.EtaAt;
+        order.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);
+        order.Description = OperationalContextJson.TrimOrNull(request.Description);
+        order.ContextJson = OperationalContextJson.Serialize(request.Context);
     }
 }

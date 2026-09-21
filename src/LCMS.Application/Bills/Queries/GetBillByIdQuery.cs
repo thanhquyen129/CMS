@@ -2,6 +2,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Common.Paging;
 using LCMS.Application.Identity;
+using LCMS.Application.OperationalReferences;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -29,7 +30,12 @@ public sealed record BillDto(
     Guid? AssignedUserId = null,
     string? AssignedUserName = null,
     string? Description = null,
-    string? InternalNote = null);
+    string? InternalNote = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? CustomerReference = null,
+    OperationalContextDocument? Context = null);
 
 public sealed record BillListItemDto(
     Guid Id,
@@ -55,7 +61,8 @@ public sealed record BillListItemDto(
     string? RouteCode = null,
     int? CostLineCount = null,
     int? RevenueLineCount = null,
-    int? DocumentCount = null);
+    int? DocumentCount = null,
+    string? TransportMode = null);
 
 public sealed record GetBillByIdQuery(Guid Id) : IRequest<BillDto>;
 
@@ -167,7 +174,12 @@ public sealed class GetBillByIdQueryHandler : IRequestHandler<GetBillByIdQuery, 
         bill.AssignedUserId,
         assignedUserName,
         bill.Description,
-        bill.InternalNote);
+        bill.InternalNote,
+        bill.TransportMode,
+        bill.OriginCode,
+        bill.DestinationCode,
+        bill.CustomerReference,
+        OperationalContextJson.Deserialize(bill.ContextJson));
 }
 
 public sealed record ListBillsQuery(
@@ -310,7 +322,8 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 b.RouteCode,
                 null,
                 null,
-                null))
+                null,
+                b.TransportMode))
             .ToListAsync(cancellationToken);
 
         var enriched = await AttachFinancialSummariesAsync(bills, cancellationToken);

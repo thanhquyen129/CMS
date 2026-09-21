@@ -15,7 +15,19 @@ public sealed record ShipmentDto(
     string? ExternalVersion,
     string OperationalStatus,
     bool IsActive,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    Guid? AssignedUserId = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? RouteCode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null,
+    string? CustomerReference = null,
+    string? Description = null,
+    int RelatedBillCount = 0,
+    int LegCount = 0,
+    OperationalContextDocument? Context = null);
 
 public sealed record ShipmentLegRef(Guid Id, string LegNo, string OperationalStatus);
 
@@ -30,7 +42,18 @@ public sealed record ShipmentDetailDto(
     bool IsActive,
     DateTimeOffset CreatedAt,
     IReadOnlyList<OperationalBillRef> RelatedBills,
-    IReadOnlyList<ShipmentLegRef> Legs);
+    IReadOnlyList<ShipmentLegRef> Legs,
+    Guid? AssignedUserId = null,
+    string? AssignedUserName = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? RouteCode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null,
+    string? CustomerReference = null,
+    string? Description = null,
+    OperationalContextDocument? Context = null);
 
 public sealed record ListShipmentsQuery(string? Q = null) : IRequest<IReadOnlyList<ShipmentDto>>;
 
@@ -61,22 +84,57 @@ public sealed class ListShipmentsQueryHandler : IRequestHandler<ListShipmentsQue
             var pattern = request.Q.Trim().ToLowerInvariant();
             query = query.Where(s =>
                 s.ShipmentNo.ToLower().Contains(pattern)
-                || s.ExternalId.ToLower().Contains(pattern));
+                || s.ExternalId.ToLower().Contains(pattern)
+                || (s.CustomerReference != null && s.CustomerReference.ToLower().Contains(pattern))
+                || (s.RouteCode != null && s.RouteCode.ToLower().Contains(pattern)));
         }
 
-        return await query
-            .OrderBy(s => s.ShipmentNo)
-            .Select(s => new ShipmentDto(
-                s.Id,
-                s.TenantId,
-                s.ShipmentNo,
-                s.SourceSystem,
-                s.ExternalId,
-                s.ExternalVersion,
-                s.OperationalStatus,
-                s.IsActive,
-                s.CreatedAt))
-            .ToListAsync(cancellationToken);
+        // ORDER BY DateTimeOffset is rejected by SQLite tests; Postgres accepts in-memory sort equally.
+        var rows = (await query.ToListAsync(cancellationToken))
+            .OrderByDescending(s => s.CreatedAt)
+            .ThenBy(s => s.ShipmentNo)
+            .ToList();
+
+        var ids = rows.Select(s => s.Id).ToList();
+        Dictionary<Guid, int> billCounts = [];
+        Dictionary<Guid, int> legCounts = [];
+        if (ids.Count > 0)
+        {
+            var billLinks = await _db.BillShipmentLinks.AsNoTracking()
+                .Where(l => ids.Contains(l.ShipmentId))
+                .Select(l => l.ShipmentId)
+                .ToListAsync(cancellationToken);
+            billCounts = billLinks.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
+
+            var legs = await _db.TransportLegs.AsNoTracking()
+                .Where(l => ids.Contains(l.ShipmentId))
+                .Select(l => l.ShipmentId)
+                .ToListAsync(cancellationToken);
+            legCounts = legs.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
+        }
+
+        return rows.Select(s => new ShipmentDto(
+            s.Id,
+            s.TenantId,
+            s.ShipmentNo,
+            s.SourceSystem,
+            s.ExternalId,
+            s.ExternalVersion,
+            s.OperationalStatus,
+            s.IsActive,
+            s.CreatedAt,
+            s.AssignedUserId,
+            s.TransportMode,
+            s.OriginCode,
+            s.DestinationCode,
+            s.RouteCode,
+            s.EtdAt,
+            s.EtaAt,
+            s.CustomerReference,
+            s.Description,
+            billCounts.GetValueOrDefault(s.Id),
+            legCounts.GetValueOrDefault(s.Id),
+            OperationalContextJson.Deserialize(s.ContextJson))).ToList();
     }
 }
 
@@ -120,6 +178,15 @@ public sealed class GetShipmentByIdQueryHandler : IRequestHandler<GetShipmentByI
             .Select(l => new ShipmentLegRef(l.Id, l.LegNo, l.OperationalStatus))
             .ToListAsync(cancellationToken);
 
+        string? assignedName = null;
+        if (shipment.AssignedUserId is Guid uid)
+        {
+            assignedName = await _db.Users.AsNoTracking()
+                .Where(u => u.Id == uid)
+                .Select(u => u.DisplayName)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         return new ShipmentDetailDto(
             shipment.Id,
             shipment.TenantId,
@@ -131,6 +198,17 @@ public sealed class GetShipmentByIdQueryHandler : IRequestHandler<GetShipmentByI
             shipment.IsActive,
             shipment.CreatedAt,
             related,
-            legs);
+            legs,
+            shipment.AssignedUserId,
+            assignedName,
+            shipment.TransportMode,
+            shipment.OriginCode,
+            shipment.DestinationCode,
+            shipment.RouteCode,
+            shipment.EtdAt,
+            shipment.EtaAt,
+            shipment.CustomerReference,
+            shipment.Description,
+            OperationalContextJson.Deserialize(shipment.ContextJson));
     }
 }

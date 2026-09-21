@@ -73,7 +73,17 @@ public static class TenantBillEndpoints
                     body.EtaAt,
                     body.AssignedUserId,
                     body.Description,
-                    body.InternalNote),
+                    body.InternalNote,
+                    body.TransportMode,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.CustomerReference,
+                    body.Context,
+                    ApplyExtendedContext: body.TransportMode is not null
+                        || body.OriginCode is not null
+                        || body.DestinationCode is not null
+                        || body.CustomerReference is not null
+                        || body.Context is not null),
                 ct);
             return Results.NoContent();
         });
@@ -126,7 +136,12 @@ public sealed record UpdateBillContextRequest(
     DateTimeOffset? EtaAt,
     Guid? AssignedUserId,
     string? Description,
-    string? InternalNote);
+    string? InternalNote,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? CustomerReference = null,
+    LCMS.Application.OperationalReferences.OperationalContextDocument? Context = null);
 
 public sealed record CaptureWaybillPartyRequest(
     string? Name,

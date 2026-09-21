@@ -67,7 +67,7 @@ export default async function OperationalDetailPage({
 
   if (!loaded.ok) {
     return (
-      <AppShell terms={terms} active="bills">
+      <AppShell terms={terms} active="bills" navChild="operations">
         <section className="panel">
           <p className="breadcrumb">
             <Link href={`/operations?tab=${tab}`}>Tham chiếu vận hành</Link>
@@ -93,7 +93,7 @@ export default async function OperationalDetailPage({
           : `/bff/transport-movements/${id}/bills`;
 
   return (
-    <AppShell terms={terms} active="bills">
+    <AppShell terms={terms} active="bills" navChild="operations">
       <section className="panel panel-wide">
         <ListPageHeader
           breadcrumbs={[

@@ -106,7 +106,7 @@ export default async function BillsPage({
   );
 
   return (
-    <AppShell terms={terms} active="bills">
+    <AppShell terms={terms} active="bills" navChild="bills">
       <section className="panel panel-wide">
         <ListPageHeader
           breadcrumbs={[
@@ -124,7 +124,7 @@ export default async function BillsPage({
           }
           action={
             <Link className="btn" href="/bills/new">
-              + Tạo vận đơn
+              + Tạo {billLabel}
             </Link>
           }
         />
@@ -203,7 +203,7 @@ export default async function BillsPage({
               <>
                 Chưa có {billLabel} nào trong phạm vi của bạn.{" "}
                 <Link className="row-link" href="/bills/new">
-                  Tạo vận đơn
+                  Tạo {billLabel}
                 </Link>
                 .
               </>

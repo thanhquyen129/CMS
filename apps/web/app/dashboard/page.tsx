@@ -209,7 +209,7 @@ export default async function DashboardPage() {
           </div>
 
           <div className="po-grid5">
-            <Link className="po-card po-kpi" href="/operations?tab=orders">
+            <Link className="po-card po-kpi" href="/orders">
               <div className="po-kicon" style={{ background: "#1677e8" }}>
                 <svg viewBox="0 0 24 24">
                   <path d="M6 2.5h8l4 4V21H6z" />

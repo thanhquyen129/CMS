@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
 import type { ApiResult } from "./bills";
+import type { OperationalContext } from "./create-workspace";
 
 export type OperationalBillRef = {
   id: string;
@@ -17,12 +18,26 @@ export type OrderListItem = {
   operationalStatus: string;
   isActive: boolean;
   createdAt: string;
+  customerPartyId?: string | null;
+  customerName?: string | null;
+  assignedUserId?: string | null;
+  transportMode?: string | null;
+  originCode?: string | null;
+  destinationCode?: string | null;
+  routeCode?: string | null;
+  etdAt?: string | null;
+  etaAt?: string | null;
+  customerReference?: string | null;
+  description?: string | null;
+  relatedBillCount?: number;
 };
 
 export type OrderDetail = OrderListItem & {
   tenantId: string;
   externalVersion: string | null;
+  assignedUserName?: string | null;
   relatedBills: OperationalBillRef[];
+  context?: OperationalContext | null;
 };
 
 export type ShipmentListItem = {
@@ -33,13 +48,26 @@ export type ShipmentListItem = {
   operationalStatus: string;
   isActive: boolean;
   createdAt: string;
+  assignedUserId?: string | null;
+  transportMode?: string | null;
+  originCode?: string | null;
+  destinationCode?: string | null;
+  routeCode?: string | null;
+  etdAt?: string | null;
+  etaAt?: string | null;
+  customerReference?: string | null;
+  description?: string | null;
+  relatedBillCount?: number;
+  legCount?: number;
 };
 
 export type ShipmentDetail = ShipmentListItem & {
   tenantId: string;
   externalVersion: string | null;
+  assignedUserName?: string | null;
   relatedBills: OperationalBillRef[];
   legs: { id: string; legNo: string; operationalStatus: string }[];
+  context?: OperationalContext | null;
 };
 
 export type LegListItem = {

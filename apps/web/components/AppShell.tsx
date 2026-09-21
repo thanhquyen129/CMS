@@ -28,11 +28,19 @@ export type NavKey =
 type AppShellProps = {
   terms: TerminologyMap;
   active: NavKey;
+  navChild?:
+    | "orders"
+    | "orders-new"
+    | "bills"
+    | "bills-new"
+    | "shipments"
+    | "shipments-new"
+    | "operations";
   children: ReactNode;
   topbarRight?: ReactNode;
 };
 
-export async function AppShell({ terms, active, children, topbarRight }: AppShellProps) {
+export async function AppShell({ terms, active, navChild, children, topbarRight }: AppShellProps) {
   const jar = await cookies();
   const displayName = jar.get(DISPLAY_NAME_COOKIE)?.value?.trim() || "";
   const billLabel = term(terms, "BILL", "Bill");
@@ -86,11 +94,27 @@ export async function AppShell({ terms, active, children, topbarRight }: AppShel
           openByDefault={active === "bills"}
           active={active === "bills"}
         >
-          <NavLink href="/bills" active={active === "bills"}>
+          <NavLink href="/orders" active={navChild === "orders"}>
+            Danh sách đơn hàng
+          </NavLink>
+          <NavLink href="/orders/new" active={navChild === "orders-new"}>
+            Tạo đơn hàng
+          </NavLink>
+          <NavLink href="/bills" active={navChild === "bills" || (!navChild && active === "bills")}>
             Danh sách {billLabel}
           </NavLink>
-          <NavLink href="/bills/new">Tạo vận đơn</NavLink>
-          <NavLink href="/operations">Tham chiếu vận hành</NavLink>
+          <NavLink href="/bills/new" active={navChild === "bills-new"}>
+            Tạo {billLabel}
+          </NavLink>
+          <NavLink href="/shipments" active={navChild === "shipments"}>
+            Danh sách Shipment
+          </NavLink>
+          <NavLink href="/shipments/new" active={navChild === "shipments-new"}>
+            Tạo Shipment
+          </NavLink>
+          <NavLink href="/operations" active={navChild === "operations"}>
+            Chặng &amp; Chuyến
+          </NavLink>
         </NavGroup>
       ) : null}
 

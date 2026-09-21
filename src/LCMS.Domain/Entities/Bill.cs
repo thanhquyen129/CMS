@@ -40,5 +40,15 @@ public sealed class Bill : TenantEntityBase
     /// <summary>Internal working note on Bill Financial View — not a ledger fact.</summary>
     public string? InternalNote { get; set; }
 
+    /// <summary>air / sea / road / rail. Distinct from BillType (house/master).</summary>
+    public string? TransportMode { get; set; }
+
+    public string? OriginCode { get; set; }
+    public string? DestinationCode { get; set; }
+    public string? CustomerReference { get; set; }
+
+    /// <summary>Rating extras from create Bill (service, incoterm, currency) — not ledger amounts.</summary>
+    public string? ContextJson { get; set; }
+
     public Tenant? Tenant { get; set; }
 }

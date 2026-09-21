@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.OperationalReferences;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ namespace LCMS.Application.Shipments.Commands;
 
 /// <summary>
 /// Idempotent upsert by (tenant_id, source_system, external_id) — C-002.
+/// Optional operational context is applied only when <see cref="ApplyContext"/> is true.
 /// </summary>
 public sealed record UpsertShipmentCommand(
     string ShipmentNo,
@@ -16,7 +18,18 @@ public sealed record UpsertShipmentCommand(
     string ExternalId,
     string? ExternalVersion,
     string? OperationalStatus,
-    bool IsActive = true) : IRequest<Guid>;
+    bool IsActive = true,
+    Guid? AssignedUserId = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? RouteCode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null,
+    string? CustomerReference = null,
+    string? Description = null,
+    OperationalContextDocument? Context = null,
+    bool ApplyContext = false) : IRequest<Guid>;
 
 public sealed class UpsertShipmentCommandValidator : AbstractValidator<UpsertShipmentCommand>
 {
@@ -41,6 +54,16 @@ public sealed class UpsertShipmentCommandValidator : AbstractValidator<UpsertShi
         RuleFor(x => x.OperationalStatus)
             .MaximumLength(64)
             .When(x => x.OperationalStatus is not null);
+
+        RuleFor(x => x.TransportMode).MaximumLength(32).When(x => x.TransportMode is not null);
+        RuleFor(x => x.OriginCode).MaximumLength(64).When(x => x.OriginCode is not null);
+        RuleFor(x => x.DestinationCode).MaximumLength(64).When(x => x.DestinationCode is not null);
+        RuleFor(x => x.RouteCode).MaximumLength(128).When(x => x.RouteCode is not null);
+        RuleFor(x => x.CustomerReference).MaximumLength(128).When(x => x.CustomerReference is not null);
+        RuleFor(x => x.Description).MaximumLength(2000).When(x => x.Description is not null);
+        RuleFor(x => x)
+            .Must(x => x.EtdAt is null || x.EtaAt is null || x.EtdAt <= x.EtaAt)
+            .WithMessage("ETD không được sau ETA.");
     }
 }
 
@@ -91,6 +114,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
                 OperationalStatus = status,
                 IsActive = request.IsActive
             };
+            ApplyContext(shipment, request);
             _db.Shipments.Add(shipment);
             try
             {
@@ -120,7 +144,35 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         existing.ExternalVersion = externalVersion;
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
+        ApplyContext(existing, request);
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
+    }
+
+    private static void ApplyContext(Shipment shipment, UpsertShipmentCommand request)
+    {
+        if (!request.ApplyContext)
+        {
+            return;
+        }
+
+        shipment.AssignedUserId = request.AssignedUserId;
+        shipment.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
+        shipment.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
+        shipment.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
+        var route = OperationalContextJson.TrimOrNull(request.RouteCode);
+        if (route is null
+            && !string.IsNullOrWhiteSpace(request.OriginCode)
+            && !string.IsNullOrWhiteSpace(request.DestinationCode))
+        {
+            route = $"{request.OriginCode.Trim()} → {request.DestinationCode.Trim()}";
+        }
+
+        shipment.RouteCode = route;
+        shipment.EtdAt = request.EtdAt;
+        shipment.EtaAt = request.EtaAt;
+        shipment.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);
+        shipment.Description = OperationalContextJson.TrimOrNull(request.Description);
+        shipment.ContextJson = OperationalContextJson.Serialize(request.Context);
     }
 }

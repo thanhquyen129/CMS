@@ -82,8 +82,14 @@ internal sealed class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.Property(e => e.AssignedUserId).HasColumnType("uuid");
         builder.Property(e => e.Description).HasMaxLength(2000);
         builder.Property(e => e.InternalNote).HasMaxLength(4000);
+        builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.OriginCode).HasMaxLength(64);
+        builder.Property(e => e.DestinationCode).HasMaxLength(64);
+        builder.Property(e => e.CustomerReference).HasMaxLength(128);
+        builder.Property(e => e.ContextJson).HasColumnType("text");
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
         builder.HasIndex(e => new { e.TenantId, e.CustomerPartyId });
+        builder.HasIndex(e => new { e.TenantId, e.TransportMode });
 
         // IDX-001
         builder.HasIndex(e => new { e.TenantId, e.BillNo }).IsUnique();
@@ -588,10 +594,20 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(e => e.ExternalVersion).HasMaxLength(64);
         builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.CustomerPartyId).HasColumnType("uuid");
+        builder.Property(e => e.AssignedUserId).HasColumnType("uuid");
+        builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.OriginCode).HasMaxLength(64);
+        builder.Property(e => e.DestinationCode).HasMaxLength(64);
+        builder.Property(e => e.RouteCode).HasMaxLength(128);
+        builder.Property(e => e.CustomerReference).HasMaxLength(128);
+        builder.Property(e => e.Description).HasMaxLength(2000);
+        builder.Property(e => e.ContextJson).HasColumnType("text");
 
         // C-002 / sync idempotency — unique external identity per tenant
         builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.OrderNo });
+        builder.HasIndex(e => new { e.TenantId, e.CustomerPartyId });
 
         builder.HasOne(e => e.Tenant)
             .WithMany()
@@ -614,9 +630,18 @@ internal sealed class ShipmentConfiguration : IEntityTypeConfiguration<Shipment>
         builder.Property(e => e.ExternalVersion).HasMaxLength(64);
         builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.AssignedUserId).HasColumnType("uuid");
+        builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.OriginCode).HasMaxLength(64);
+        builder.Property(e => e.DestinationCode).HasMaxLength(64);
+        builder.Property(e => e.RouteCode).HasMaxLength(128);
+        builder.Property(e => e.CustomerReference).HasMaxLength(128);
+        builder.Property(e => e.Description).HasMaxLength(2000);
+        builder.Property(e => e.ContextJson).HasColumnType("text");
 
         builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.ShipmentNo });
+        builder.HasIndex(e => new { e.TenantId, e.TransportMode });
 
         builder.HasOne(e => e.Tenant)
             .WithMany()

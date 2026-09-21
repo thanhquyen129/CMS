@@ -14,7 +14,7 @@ làm lần lượt từ 1 đến 5, đầy đủ chi tiết như 1 hệ thống 
 4. **Nhật ký** `/settings/audit`: lọc hành động/đối tượng/ngày, phân trang, JSON trước/sau. Quyền `audit.read`.
 5. **License / thông báo / sao lưu**: chỗ+module server-enforced (H-001: tắt chỉ ẩn UI); in-app + email outbox, SMTP chưa cấu hình = “chưa gửi”; backup logic danh mục/cấu hình, confirm `RESTORE {tenantCode}`, không PITR/sổ tiền.
 
-API: `/api/users/{id}/password`, `/api/tenant-profile`, `/api/tenant-license`, `/api/notifications/*`, `/api/tenant-backups`, catalog kinds mới. Migration `P28_TenantAdminSettingsFull`. Test `AdminSettingsFullTests` (8).
+Push `23cc254` rồi CI **test fail** (`InactiveUser_Denied_EvenWithRole` ngừng Admin cuối → 409). Đã giữ thêm Admin keeper rồi push lại.
 
 ### Files
 - `docs/adr/ADR-0021-tenant-admin-license-backup-notifications.md`

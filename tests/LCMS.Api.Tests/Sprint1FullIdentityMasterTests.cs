@@ -128,6 +128,8 @@ public sealed class Sprint1FullIdentityMasterTests : IAsyncLifetime
         var roles = await (await _client.SendAsync(listRoles)).Content
             .ReadFromJsonAsync<List<RoleResponse>>(JsonOptions);
         var admin = Assert.Single(roles!, r => r.Code == "Admin");
+        var keeperId = await CreateUserAsync(tenantId, "keeper@example.com", "Keeper", null);
+        await AssignUserRoleAsync(tenantId, keeperId, admin.Id);
         await AssignUserRoleAsync(tenantId, userId, admin.Id);
 
         using var deactivate = WithTenant(HttpMethod.Put, $"/api/users/{userId}", tenantId);

@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-21 — UI-02: danh sách Bill / đơn hàng khớp mockup workspace
+
+### User
+danh sách bill và danh sách đơn hàng chưa giống mockup `@docs/po/Mockup html/LCMS_UI02_Don_hang_van_chuyen_Danh_sach_Bill_Mockup.html`
+
+### Answer
+`/bills` và `/orders` dùng cùng khung mockup: thanh lọc có nhãn (tìm, từ/đến ngày, trạng thái, tuyến, khách), 4 KPI icon trái, lưới 2 cột (bảng + panel chi tiết dính phải), xuất CSV từ dòng đã lọc, widget dưới (hạn ETD thật / top khách theo doanh thu best-available; đơn: chưa gắn Bill + ETD). Không làm checkbox bulk, “Bộ lọc khác”, % so kỳ trước, hay “Xem tất cả”. Chọn dòng mở panel; đóng panel không giả Excel.
+
+### Files / API
+- Pages: `apps/web/app/bills/page.tsx`, `apps/web/app/orders/page.tsx`
+- Workspace: `BillListWorkspace`, `OrderListWorkspace`, `list/FilterBar` `showLabels`, `StatCardGrid` icon
+- CSS: `.list-workspace`, `.list-detail-panel`, `.stat-kicon`, `.filter-bar-labeled`
+- List DTO: `BillListItemDto` thêm `EtdAt`/`EtaAt`; BFF `GET /bff/orders/:id`
+
+### UI
+Copy tiếng Việt. Empty/error thật. CTA **Tạo Bill / Tạo đơn hàng**. Xuất = CSV. Hạn = ETD trong 14 ngày.
+
+---
+
 ## 2026-09-21 — Checkbox form tạo đơn: cùng cỡ native, không ô vuông to
 
 ### User

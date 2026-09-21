@@ -27,7 +27,7 @@ export type FilterField =
       defaultValue?: string;
     };
 
-/** GET form filter bar — only wire fields the API supports. */
+/** GET form filter bar — only wire fields the API/list actually filters. */
 export function FilterBar({
   action,
   fields,
@@ -35,6 +35,7 @@ export function FilterBar({
   submitLabel = "Lọc",
   resetHref,
   extra,
+  showLabels = false,
 }: {
   action: string;
   fields: FilterField[];
@@ -42,9 +43,15 @@ export function FilterBar({
   submitLabel?: string;
   resetHref?: string;
   extra?: ReactNode;
+  showLabels?: boolean;
 }) {
   return (
-    <form className="search-bar denser-filters" method="get" action={action} role="search">
+    <form
+      className={`search-bar denser-filters${showLabels ? " filter-bar-labeled" : ""}`}
+      method="get"
+      action={action}
+      role="search"
+    >
       {hidden
         ? Object.entries(hidden).map(([k, v]) =>
             v != null && v !== "" ? (
@@ -57,7 +64,7 @@ export function FilterBar({
         if (f.kind === "search") {
           return (
             <span key={f.name} className="filter-field">
-              <label className="sr-only" htmlFor={id}>
+              <label className={showLabels ? undefined : "sr-only"} htmlFor={id}>
                 {f.label}
               </label>
               <input
@@ -74,7 +81,7 @@ export function FilterBar({
         if (f.kind === "date") {
           return (
             <span key={f.name} className="filter-field">
-              <label className="sr-only" htmlFor={id}>
+              <label className={showLabels ? undefined : "sr-only"} htmlFor={id}>
                 {f.label}
               </label>
               <input
@@ -89,7 +96,7 @@ export function FilterBar({
         }
         return (
           <span key={f.name} className="filter-field">
-            <label className="sr-only" htmlFor={id}>
+            <label className={showLabels ? undefined : "sr-only"} htmlFor={id}>
               {f.label}
             </label>
             <select id={id} name={f.name} defaultValue={f.defaultValue ?? ""}>
@@ -103,15 +110,24 @@ export function FilterBar({
           </span>
         );
       })}
-      <button className="btn" type="submit">
-        {submitLabel}
-      </button>
-      {resetHref ? (
-        <Link className="btn btn-ghost" href={resetHref}>
-          Làm mới
-        </Link>
-      ) : null}
-      {extra}
+      <span className="filter-field filter-field-actions">
+        {showLabels ? (
+          <label className="filter-actions-spacer" aria-hidden="true">
+            &nbsp;
+          </label>
+        ) : null}
+        <span className="filter-actions">
+          <button className="btn" type="submit">
+            {submitLabel}
+          </button>
+          {resetHref ? (
+            <Link className="btn btn-ghost" href={resetHref}>
+              Làm mới
+            </Link>
+          ) : null}
+          {extra}
+        </span>
+      </span>
     </form>
   );
 }

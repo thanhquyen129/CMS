@@ -13,6 +13,8 @@ import {
 import {
   billTypeLabel,
   operationalStatusLabel,
+  operationalStatusPillClass,
+  transportModeLabel,
 } from "@/lib/bills-shared";
 import {
   directionLabel,
@@ -40,6 +42,7 @@ type Props = {
   onClose: () => void;
   labels: Labels;
   terms: TerminologyMap;
+  inline?: boolean;
 };
 
 function money(amount: number | null | undefined, currency: string | null | undefined) {
@@ -74,6 +77,7 @@ export function BillFinancialDrawer({
   onClose,
   labels,
   terms,
+  inline = false,
 }: Props) {
   const [tab, setTab] = useState("overview");
   const [loading, setLoading] = useState(false);
@@ -151,11 +155,16 @@ export function BillFinancialDrawer({
     <DetailDrawer
       open={open}
       wide
+      inline={inline}
+      emptyHint={`Chọn một ${labels.bill} trên danh sách để xem tổng quan tài chính.`}
       onClose={onClose}
       title={
         bill ? (
           <>
-            {labels.bill} {bill.billNo}
+            {bill.billNo}{" "}
+            <span className={operationalStatusPillClass(bill.operationalStatus)}>
+              {operationalStatusLabel(bill.operationalStatus)}
+            </span>
           </>
         ) : billId ? (
           labels.bill
@@ -164,13 +173,10 @@ export function BillFinancialDrawer({
       subtitle={
         bill ? (
           <>
-            <span className="status-pill">
-              {operationalStatusLabel(bill.operationalStatus)}
-            </span>
-            {bill.customerName ? ` · ${bill.customerName}` : ""}
-            {bill.routeCode ? ` · ${bill.routeCode}` : ""}
-            {` · ${billTypeLabel(bill.billType)}`}
-            {` · ${formatDateOnly(bill.createdAt)}`}
+            {bill.customerName || "—"}
+            {`  |  ${bill.routeCode || "—"}`}
+            {`  |  ${bill.transportMode ? transportModeLabel(bill.transportMode) : billTypeLabel(bill.billType)}`}
+            {`  |  Ngày tạo: ${formatDateOnly(bill.createdAt)}`}
           </>
         ) : null
       }

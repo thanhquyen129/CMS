@@ -19,3 +19,11 @@ export function formatDateTimeVi(iso: string | Date): string {
     timeStyle: "short",
   });
 }
+
+/** Date only (dd/MM/yyyy) for list columns matching PO mockup. */
+export function formatDateVi(iso: string | Date | null | undefined): string {
+  if (!iso) return "—";
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("vi-VN");
+}

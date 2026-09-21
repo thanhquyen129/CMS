@@ -7,3 +7,6 @@ export { DataTableShell } from "./DataTableShell";
 export { DrawerTabs } from "./DrawerTabs";
 export type { DrawerTab } from "./DrawerTabs";
 export { AnalyticsRow, AnalyticsPanel } from "./AnalyticsRow";
+export { ExportCsvButton } from "./ExportCsvButton";
+export { KpiGlyph } from "./KpiGlyph";
+export { MiniWidget, DeadlineList, RankList } from "./ListWorkspaceWidgets";

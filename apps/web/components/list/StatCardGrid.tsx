@@ -8,6 +8,7 @@ export type StatCardModel = {
   hint?: ReactNode;
   href?: string;
   tone?: "default" | "danger" | "success" | "warning" | "info" | "primary";
+  icon?: ReactNode;
 };
 
 const TONE_CLASS: Record<NonNullable<StatCardModel["tone"]>, string> = {
@@ -31,20 +32,29 @@ export function StatCardGrid({
     <div className={className}>
       {cards.map((c) => {
         const tone = c.tone ?? "default";
-        const cardClass = `stat-card ${TONE_CLASS[tone]}`;
+        const withIcon = c.icon ? " stat-card-row" : "";
+        const surface = c.icon ? " stat-card-on-surface" : ` ${TONE_CLASS[tone]}`;
+        const cardClass = `stat-card${surface}${withIcon}`;
         const inner = (
           <>
-            <span className="stat-label">{c.label}</span>
-            <strong
-              className={
-                tone === "danger"
-                  ? "stat-value neg"
-                  : "stat-value"
-              }
-            >
-              {c.value}
-            </strong>
-            {c.hint ? <span className="stat-hint">{c.hint}</span> : null}
+            {c.icon ? (
+              <span className={`stat-kicon stat-kicon-${tone}`} aria-hidden="true">
+                {c.icon}
+              </span>
+            ) : null}
+            <span className="stat-card-copy">
+              <span className="stat-label">{c.label}</span>
+              <strong
+                className={
+                  tone === "danger"
+                    ? "stat-value neg"
+                    : "stat-value"
+                }
+              >
+                {c.value}
+              </strong>
+              {c.hint ? <span className="stat-hint">{c.hint}</span> : null}
+            </span>
           </>
         );
         return c.href ? (

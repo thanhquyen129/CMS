@@ -28,6 +28,8 @@ export type BillListItem = {
   costLineCount?: number | null;
   revenueLineCount?: number | null;
   documentCount?: number | null;
+  etdAt?: string | null;
+  etaAt?: string | null;
 };
 
 export type BillDto = BillListItem & {
@@ -74,6 +76,12 @@ export function operationalStatusLabel(status: string): string {
     default:
       return status || "—";
   }
+}
+
+/** Status pill tone class — maps operational status to mockup warn/ok/bad. */
+export function operationalStatusPillClass(status: string): string {
+  const s = (status ?? "").toLowerCase();
+  return `status-pill status-${s || "unknown"}`;
 }
 
 export function billTypeLabel(billType: string): string {

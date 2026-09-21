@@ -62,7 +62,9 @@ public sealed record BillListItemDto(
     int? CostLineCount = null,
     int? RevenueLineCount = null,
     int? DocumentCount = null,
-    string? TransportMode = null);
+    string? TransportMode = null,
+    DateTimeOffset? EtdAt = null,
+    DateTimeOffset? EtaAt = null);
 
 public sealed record GetBillByIdQuery(Guid Id) : IRequest<BillDto>;
 
@@ -323,7 +325,9 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 null,
                 null,
                 null,
-                b.TransportMode))
+                b.TransportMode,
+                b.EtdAt,
+                b.EtaAt))
             .ToListAsync(cancellationToken);
 
         var enriched = await AttachFinancialSummariesAsync(bills, cancellationToken);

@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-22 — Hotfix: Next.js slug `billId` ≠ `id` làm web 500
+
+### User
+user demo: admin@cms.local (password local-only) — chạy UAT Pixel Wave 2 trên prod.
+
+### Answer
+Prod web 500: `You cannot use different slug names for the same dynamic path ('billId' !== 'id')`. Unlink BFF tạo `bff/bills/[billId]/…` song song `bff/bills/[id]/…` (và `orders/[orderId]` vs `[id]`). Gộp về `[id]`; DELETE unlink gắn vào route orders đã có. **Không** ghi password vào repo. UAT tiếp sau deploy.
+
+### Files
+- `apps/web/app/bff/bills/[id]/legs|movements|shipments/…/route.ts` (thay `[billId]`)
+- `apps/web/app/bff/orders/[id]/bills/[billId]/route.ts` (+ DELETE)
+- Xóa `bff/bills/[billId]/…`, `bff/orders/[orderId]/…`
+
 ## 2026-09-22 — Trình tự tối ưu: K3 unlink + J3 breaks + N template + L3 ADR
 
 ### User

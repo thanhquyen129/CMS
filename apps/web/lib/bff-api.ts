@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { AUTH_COOKIE, getApiInternalUrl } from "./auth";
 
@@ -54,6 +54,9 @@ export async function forwardApiMutation(
     );
   }
 
+  const incoming = await headers();
+  const idempotencyKey = incoming.get("Idempotency-Key")?.trim();
+
   try {
     const res = await fetch(`${getApiInternalUrl()}${apiPath}`, {
       method,
@@ -61,6 +64,7 @@ export async function forwardApiMutation(
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       cache: "no-store",

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Props = {
   terms: TerminologyMap;
@@ -37,7 +38,7 @@ export function CloseSnapshotButton({ terms, closeId, canRun }: Props) {
     try {
       const res = await fetch(`/bff/financial-closes/${closeId}/snapshot`, {
         method: "POST",
-        headers: { Accept: "application/json" },
+        headers: withIdempotency({}, newIdempotencyKey("close-snap")),
       });
 
       if (res.status === 401) {

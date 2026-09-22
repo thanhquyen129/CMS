@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { ManualReferenceForm } from "@/components/ManualReferenceForm";
@@ -65,6 +66,17 @@ export default async function OperationsPage({
               <Link className="row-link" href="/shipments">Shipment</Link>
               . Không phải TMS.
             </>
+          }
+          action={
+            tab === "legs" ? (
+              <Link className="btn" href="/operations/legs/new">
+                + Tạo chặng
+              </Link>
+            ) : tab === "movements" ? (
+              <Link className="btn" href="/operations/movements/new">
+                + Tạo chuyến
+              </Link>
+            ) : undefined
           }
         />
 
@@ -136,7 +148,14 @@ export default async function OperationsPage({
         {tab === "legs" ? (
           <OpsTable
             error={legsRes.ok ? null : legsRes.message}
-            empty="Chưa có chặng tham chiếu."
+            empty={
+              <>
+                Chưa có chặng tham chiếu.{" "}
+                <Link className="row-link" href="/operations/legs/new">
+                  Tạo chặng
+                </Link>
+              </>
+            }
             rows={
               legsRes.ok
                 ? legsRes.data.map((l) => ({
@@ -154,7 +173,14 @@ export default async function OperationsPage({
         {tab === "movements" ? (
           <OpsTable
             error={movementsRes.ok ? null : movementsRes.message}
-            empty="Chưa có chuyến tham chiếu."
+            empty={
+              <>
+                Chưa có chuyến tham chiếu.{" "}
+                <Link className="row-link" href="/operations/movements/new">
+                  Tạo chuyến
+                </Link>
+              </>
+            }
             rows={
               movementsRes.ok
                 ? movementsRes.data.map((m) => ({
@@ -170,24 +196,12 @@ export default async function OperationsPage({
           />
         ) : null}
 
-        <div className="layout-cols-2" style={{ marginTop: "1.5rem" }}>
-          {tab === "orders" ? <ManualReferenceForm kind="order" /> : null}
-          {tab === "shipments" ? <ManualReferenceForm kind="shipment" /> : null}
-          {tab === "legs" ? (
-            <ManualReferenceForm
-              kind="leg"
-              shipments={
-                shipmentsRes.ok
-                  ? shipmentsRes.data.map((s) => ({
-                      id: s.id,
-                      shipmentNo: s.shipmentNo,
-                    }))
-                  : []
-              }
-            />
-          ) : null}
-          {tab === "movements" ? <ManualReferenceForm kind="movement" /> : null}
-        </div>
+        {tab === "orders" || tab === "shipments" ? (
+          <div className="form-aside" style={{ marginTop: "1.5rem" }}>
+            {tab === "orders" ? <ManualReferenceForm kind="order" /> : null}
+            {tab === "shipments" ? <ManualReferenceForm kind="shipment" /> : null}
+          </div>
+        ) : null}
       </section>
     </AppShell>
   );
@@ -199,7 +213,7 @@ function OpsTable({
   rows,
 }: {
   error: string | null;
-  empty: string;
+  empty: ReactNode;
   rows: {
     id: string;
     href: string;

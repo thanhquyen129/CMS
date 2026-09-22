@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 export type AllocateTargetOption = {
   id: string;
@@ -114,10 +115,10 @@ export function AllocateCashForm({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey(isPayment ? "pay-alloc" : "coll-alloc")
+        ),
         body: JSON.stringify(body),
       });
 

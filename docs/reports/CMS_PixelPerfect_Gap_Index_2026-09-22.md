@@ -58,7 +58,7 @@
 | **02** | Hồ sơ Bill | `/bills/[id]` | PNG panel | `STRUCTURAL` | Inline edit mockup mỏng; tab Rating có | A–C |
 | **02** | Tạo Bill / Order / Shipment | `/bills/new`, `/orders/new`, `/shipments/new` | HTML riêng | `STRUCTURAL` | Không lưới kiện; picker người phụ trách mỏng | A–B |
 | **02** | DS Order / Shipment | `/orders`, `/shipments` | HTML subnav | `STRUCTURAL` | Cùng kit Bill; không checkbox/% MoM (`INTENTIONAL`) | B |
-| **02** | Chặng / Chuyến | `/operations`, `/operations/[kind]/[id]` | Không PNG riêng | `SKELETON` | Detail mỏng; không create workspace như Bill | B |
+| **02** | Chặng / Chuyến | `/operations`, `/operations/[kind]/[id]`, `/operations/legs|movements/new` | Không PNG riêng | `STRUCTURAL` | CreateWorkspace có; unlink K3 blocked | B |
 | **03** | DS bảng giá | `/rate-cards` | PNG + HTML-01 | `STRUCTURAL` | Thiếu «Bộ lọc khác», drawer Excel-like; weight-break không trong panel list | C |
 | **03** | Tính giá | `/rate-cards/rate` | HTML-02 | `STRUCTURAL` | Cần UAT 2-cột + breakdown | C |
 | **03** | So sánh giá | `/rate-cards/compare` | HTML-03 | `STRUCTURAL` | Form-only vs CTA «Tạo so sánh mới» mockup | C |
@@ -103,7 +103,7 @@
 | B2 | Rate card import | `POST /api/rate-imports/*` | **Không màn** | `API_ONLY` | Màn nhập bảng giá (UI-03) |
 | B3 | Cargo packages / containers | `POST …/packages\|containers` | Create form **không lưới** | `SKELETON` | Lưới kiện/container trên Bill/Order (mockup có thể bỏ — MASTER FR-006) |
 | B4 | Field ownership matrix | `field_ownerships` | Invisible (chỉ fail) | `STRUCTURAL` | Hiển thị nguồn SoT + lý do ghi đè trên field | 
-| B5 | Leg / Movement create | Upsert API | Detail `/operations/...` mỏng | `SKELETON` | CreateWorkspace + list chrome như Bill |
+| B5 | Leg / Movement create | Upsert API | CreateWorkspace `/operations/legs|movements/new` | `STRUCTURAL` | Unlink (K3) còn blocked |
 | B6 | Unlink quan hệ | — | **MISSING** | `MISSING` | API + UI unlink Order–Bill / Bill–Shipment + audit |
 | B7 | Weight breaks trên list | Rating engine | Chỉ hồ sơ version | `STRUCTURAL` | Panel bậc trọng lượng trên detail list (HTML-01) |
 | B8 | Allocation SoD finalize | Commands | Người tạo vẫn chốt | `STRUCTURAL` | Chặn creator finalize khi có user khác (ADR-0026 residual) |
@@ -216,7 +216,7 @@ Ghi chú: mọi route dưới đây **có page**; cột = mức Pixel so mockup/
 | `/bills/[id]/costs/new`, `…/revenues/new` | STRUCTURAL | — |
 | `/orders`, `/orders/new` | STRUCTURAL | K1, N1 |
 | `/shipments`, `/shipments/new` | STRUCTURAL | K1 |
-| `/operations`, `/operations/[kind]/[id]` | SKELETON | K2–K3 |
+| `/operations`, `/operations/[kind]/[id]`, `…/new` | STRUCTURAL | K3 unlink |
 | `/rate-cards`, `/new`, `/[id]` | STRUCTURAL | J3, I2 |
 | `/rate-cards/rate`, `/compare`, `/fx`, `/history` | STRUCTURAL | J4–J5 |
 | `/rate-cards/surcharges`, `/appendices` | SKELETON | J1–J2 |
@@ -284,7 +284,7 @@ O*  Chỉ khi PO mở scope
 | Việc Wave 2 đánh số (I–N) | **~35** |
 | `OUT` / `INTENTIONAL` theo dõi | **~10** |
 
-**Kết luận vận hành (cập nhật đợt Wave 2):** Lõi tài chính đã ship. Đợt này đã đóng P0 chính: Import UI (I1/I2), phụ phí/phụ lục (J1/J2), SoD phân bổ (L1), lưới kiện (K1), workflow nav (M1/M2). Còn: I3 party import, K2/K3 ops unlink, L2–L6 polish, M5 đồng đều client, **N UAT evidence**.
+**Kết luận vận hành (cập nhật đợt Wave 2):** Lõi tài chính đã ship. Đợt này đã đóng P0 chính: Import UI (I1/I2), phụ phí/phụ lục (J1/J2), SoD phân bổ (L1), lưới kiện (K1), workflow nav (M1/M2), CreateWorkspace Chặng/Chuyến (K2). Còn: I3 party import, K3 ops unlink, L2–L6 polish, M5 đồng đều client, **N UAT evidence**.
 
 ---
 
@@ -300,7 +300,7 @@ O*  Chỉ khi PO mở scope
 | W-J2 | **DONE** | KPI + filter + quy trình phụ lục |
 | W-J3–J6 | PENDING | Breaks panel, lịch sử xuất, UAT HTML |
 | W-K1 | **DONE** | Lưới kiện/container trên tạo Bill/Order |
-| W-K2 | PENDING | CreateWorkspace Chặng/Chuyến |
+| W-K2 | **DONE** | CreateWorkspace Chặng/Chuyến |
 | W-K3 | BLOCKED | Unlink API chưa có |
 | W-K4–K6 | PENDING | Ownership badge, drawer tabs, picker |
 | W-L1 | **DONE** | PC-21 SoD finalize + `AllocationSodTests` |

@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-22 — W-K2: CreateWorkspace Chặng / Chuyến
+
+### User
+In c:\A1\git\cms implement W-K2: CreateWorkspace for Leg (Chặng) and Movement (Chuyến) under /operations. … Do not implement unlink (K3 blocked). Do not commit/push. Return files changed.
+
+### Answer
+Thêm CreateWorkspace tạo Chặng (`/operations/legs/new`) và Chuyến (`/operations/movements/new`) — chỉ field bắt buộc API (số + shipmentId cho chặng; source/externalId mặc định `lcms_manual`). CTA + empty-state trên `/operations`, nav AppShell «Tạo chặng / Tạo chuyến». Không TMS; không unlink (K3). Chưa commit/push theo yêu cầu.
+
+### Files
+- `apps/web/components/CreateLegForm.tsx`, `CreateMovementForm.tsx`
+- `apps/web/app/operations/legs/new/page.tsx`, `movements/new/page.tsx`
+- `apps/web/app/operations/page.tsx`, `components/AppShell.tsx`
+- `docs/reports/CMS_PixelPerfect_Gap_Index_2026-09-22.md` (W-K2 DONE)
+
 ## 2026-09-22 — Wave 2 Pixel-perfect đợt 1 (I1/I2/J1/J2/K1/L1/M1–M2)
 
 ### User

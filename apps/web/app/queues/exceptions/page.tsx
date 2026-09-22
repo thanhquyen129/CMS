@@ -85,6 +85,7 @@ export default async function ExceptionQueuePage({
                   <th scope="col">Tiêu đề</th>
                   <th scope="col">Mức độ</th>
                   <th scope="col">Trạng thái</th>
+                  <th scope="col">Ngày tạo</th>
                   <th scope="col">{slaLabel}</th>
                   <th scope="col">Đối tượng</th>
                   <th scope="col">{billLabel}</th>
@@ -113,6 +114,11 @@ export default async function ExceptionQueuePage({
                         </span>
                       </td>
                       <td>{exceptionStatusLabel(terms, item.status)}</td>
+                      <td>
+                        {item.createdAt
+                          ? formatDateTimeVi(item.createdAt)
+                          : "—"}
+                      </td>
                       <td>
                         {item.dueAt ? (
                           <span className={overdue ? "neg" : undefined}>

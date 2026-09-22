@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Kind = "payment" | "collection";
 
@@ -71,10 +72,10 @@ export function CreateCashTxnForm({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey(isPayment ? "payment" : "collection")
+        ),
         body: JSON.stringify(body),
       });
 

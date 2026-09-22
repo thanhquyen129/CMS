@@ -72,6 +72,12 @@ public static class FinancialCloseEndpoints
             return Results.Ok(pnl);
         });
 
+        closes.MapGet("/{id:guid}/eligibility", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetFinancialCloseEligibilityQuery(id), ct);
+            return Results.Ok(result);
+        });
+
         var snapshots = app.MapGroup("/api/financial-close-snapshots").WithTags("FinancialCloseSnapshots");
 
         snapshots.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>

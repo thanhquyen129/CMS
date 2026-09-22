@@ -113,6 +113,8 @@ export async function AppShell({
           <NavLink href="/shipments">Danh sách Shipment</NavLink>
           <NavLink href="/shipments/new">Tạo Shipment</NavLink>
           <NavLink href="/operations">Chặng &amp; Chuyến</NavLink>
+          <NavLink href="/operations/legs/new">Tạo chặng</NavLink>
+          <NavLink href="/operations/movements/new">Tạo chuyến</NavLink>
           <NavLink href="/operations/import">Nhập nghiệp vụ</NavLink>
         </NavGroup>
       ) : null}

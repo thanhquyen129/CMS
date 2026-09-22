@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Props = {
   terms: TerminologyMap;
@@ -35,7 +36,7 @@ export function ConfirmDocumentMatchButton({
     try {
       const res = await fetch(`/bff/document-matches/${matchId}/confirm`, {
         method: "POST",
-        headers: { Accept: "application/json" },
+        headers: withIdempotency({}, newIdempotencyKey("doc-match")),
       });
 
       if (res.status === 401) {

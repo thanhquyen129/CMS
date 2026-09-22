@@ -5,6 +5,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { maturityLabelKey } from "@/lib/costs-revenues";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Kind = "cost" | "revenue";
 
@@ -85,10 +86,10 @@ export function AdjustCostRevenueButton({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey("line-adj")
+        ),
         body: JSON.stringify({
           adjustmentType,
           deltaAmount: delta,

@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Props = {
   terms: TerminologyMap;
@@ -47,10 +48,10 @@ export function ReopenCloseButton({ terms, closeId, canRun }: Props) {
     try {
       const res = await fetch(`/bff/financial-closes/${closeId}/reopen`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey("close-reopen")
+        ),
         body: JSON.stringify({ reason }),
       });
 

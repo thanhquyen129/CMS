@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Kind = "payment" | "collection";
 
@@ -50,7 +51,7 @@ export function FinalizeAllocationButton({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { Accept: "application/json" },
+        headers: withIdempotency({}, newIdempotencyKey("cash-alloc-fin")),
       });
 
       if (res.status === 401) {

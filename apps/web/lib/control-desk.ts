@@ -83,6 +83,8 @@ export type ExceptionQueueItem = {
   ownerId: string | null;
   status: string;
   dueAt: string | null;
+  /** Present after ExceptionDto includes EntityBase.CreatedAt (W-L2). */
+  createdAt?: string | null;
   title: string;
   description: string | null;
   billId: string | null;

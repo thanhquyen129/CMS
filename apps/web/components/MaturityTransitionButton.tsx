@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Kind = "cost" | "revenue";
 type Action = "confirm" | "actualize";
@@ -89,10 +90,10 @@ export function MaturityTransitionButton({
     try {
       const res = await fetch(path, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey(`maturity-${action}`)
+        ),
         body: JSON.stringify(body),
       });
 

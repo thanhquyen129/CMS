@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import type { AllocationBasis } from "@/lib/costs-revenues";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 export type BillOption = {
   id: string;
@@ -146,10 +147,10 @@ export function AllocateSharedCostForm({
     try {
       const res = await fetch(`/bff/costs/${costId}/allocations`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey("alloc-create")
+        ),
         body: JSON.stringify({
           allocationBasis: basis,
           details,

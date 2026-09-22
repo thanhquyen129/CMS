@@ -5022,4 +5022,41 @@ html[data-layout="horizontal"] .login-page {
   .cw-field.s12 { grid-column: span 12; }
 }
 
+/* Close eligibility checklist (W-L5) */
+.close-gate-list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.close-gate-item {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border, #d7e0ec);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.close-gate-item.pass {
+  border-color: #b7e0cf;
+  background: #f3fbf7;
+}
+
+.close-gate-item.fail {
+  border-color: #f0c4c4;
+  background: #fff7f7;
+}
+
+.close-gate-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
 

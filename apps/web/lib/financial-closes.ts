@@ -75,6 +75,19 @@ export type FinancialClosePnl = {
   note: string;
 };
 
+export type CloseEligibilityGate = {
+  code: string;
+  label: string;
+  passed: boolean;
+  failReason: string | null;
+};
+
+export type CloseEligibility = {
+  financialCloseId: string;
+  eligible: boolean;
+  gates: CloseEligibilityGate[];
+};
+
 async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   const token = await getSessionToken();
   if (!token) {
@@ -142,6 +155,12 @@ export function getFinancialClosePnl(
 ): Promise<ApiResult<FinancialClosePnl>> {
   const qs = snapshotId ? `?snapshotId=${encodeURIComponent(snapshotId)}` : "";
   return apiGet<FinancialClosePnl>(`/api/financial-closes/${id}/pnl${qs}`);
+}
+
+export function getFinancialCloseEligibility(
+  id: string
+): Promise<ApiResult<CloseEligibility>> {
+  return apiGet<CloseEligibility>(`/api/financial-closes/${id}/eligibility`);
 }
 
 export function closeStatusLabel(

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 export function AllocationSessionActions({
   allocationId,
@@ -20,7 +21,10 @@ export function AllocationSessionActions({
     setError(null);
     setBusy(true);
     try {
-      const res = await fetch(`/bff/cost-allocations/${allocationId}/${action}`, { method: "POST" });
+      const res = await fetch(`/bff/cost-allocations/${allocationId}/${action}`, {
+        method: "POST",
+        headers: withIdempotency({}, newIdempotencyKey(`alloc-${action}`)),
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string };
         setError(body.message || "Không cập nhật được phiên phân bổ.");

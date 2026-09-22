@@ -13,7 +13,21 @@ namespace LCMS.Application.FinancialCloses;
 public interface ICloseEligibilityChecker
 {
     Task EnsureEligibleAsync(FinancialClose close, CancellationToken cancellationToken);
+
+    /// <summary>Same gates as EnsureEligible — returns pass/fail for UI checklist (no throw).</summary>
+    Task<CloseEligibilityResult> EvaluateAsync(FinancialClose close, CancellationToken cancellationToken);
 }
+
+public sealed record CloseEligibilityGateDto(
+    string Code,
+    string Label,
+    bool Passed,
+    string? FailReason);
+
+public sealed record CloseEligibilityResult(
+    Guid FinancialCloseId,
+    bool Eligible,
+    IReadOnlyList<CloseEligibilityGateDto> Gates);
 
 public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
 {
@@ -28,39 +42,59 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
 
     public async Task EnsureEligibleAsync(FinancialClose close, CancellationToken cancellationToken)
     {
+        var result = await EvaluateAsync(close, cancellationToken);
+        var firstFail = result.Gates.FirstOrDefault(g => !g.Passed);
+        if (firstFail is not null)
+        {
+            throw new ConflictAppException(
+                firstFail.FailReason
+                ?? "Không đủ điều kiện chốt trong phạm vi.");
+        }
+    }
+
+    public async Task<CloseEligibilityResult> EvaluateAsync(
+        FinancialClose close,
+        CancellationToken cancellationToken)
+    {
         var strict = string.Equals(
             close.PolicyVersion,
             FinancialClosePolicies.Strict,
             StringComparison.OrdinalIgnoreCase);
         var eligibility = _options.Eligibility ?? new CloseEligibilityOptions();
+        var gates = new List<CloseEligibilityGateDto>();
 
         if (strict || eligibility.BlockOnCriticalExceptions)
         {
-            await EnsureNoCriticalOpenExceptionsAsync(close, cancellationToken);
+            gates.Add(await EvaluateCriticalExceptionsAsync(close, cancellationToken));
         }
 
         if (strict || eligibility.BlockOnUnmatchedAcceptedDocuments)
         {
-            await EnsureNoUnmatchedAcceptedDocumentsAsync(close, cancellationToken);
+            gates.Add(await EvaluateUnmatchedDocumentsAsync(close, cancellationToken));
         }
 
         if (strict || eligibility.BlockOnUnsettledApArAboveThreshold)
         {
-            await EnsureNoUnsettledApArAboveThresholdAsync(close, cancellationToken);
+            gates.Add(await EvaluateUnsettledApArAsync(close, cancellationToken));
         }
 
         if (strict || eligibility.BlockOnOpenAllocations)
         {
-            await EnsureNoOpenAllocationsAsync(close, cancellationToken);
+            gates.Add(await EvaluateOpenAllocationsAsync(close, cancellationToken));
         }
 
         if (strict || eligibility.BlockOnUnallocatedMoneyAboveThreshold)
         {
-            await EnsureNoUnallocatedMoneyAboveThresholdAsync(close, cancellationToken);
+            gates.Add(await EvaluateUnallocatedMoneyAsync(close, cancellationToken));
         }
+
+        return new CloseEligibilityResult(
+            close.Id,
+            gates.All(g => g.Passed),
+            gates);
     }
 
-    private async Task EnsureNoCriticalOpenExceptionsAsync(
+    private async Task<CloseEligibilityGateDto> EvaluateCriticalExceptionsAsync(
         FinancialClose close,
         CancellationToken cancellationToken)
     {
@@ -78,14 +112,17 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
             query = query.Where(e => e.BillId == billId);
         }
 
-        if (await query.AnyAsync(cancellationToken))
-        {
-            throw new ConflictAppException(
-                "Không đủ điều kiện chốt: còn ngoại lệ mức nghiêm trọng (critical) đang mở trong phạm vi.");
-        }
+        var blocked = await query.AnyAsync(cancellationToken);
+        return new CloseEligibilityGateDto(
+            "critical_exceptions",
+            "Ngoại lệ nghiêm trọng đang mở",
+            !blocked,
+            blocked
+                ? "Không đủ điều kiện chốt: còn ngoại lệ mức nghiêm trọng (critical) đang mở trong phạm vi."
+                : null);
     }
 
-    private async Task EnsureNoOpenAllocationsAsync(
+    private async Task<CloseEligibilityGateDto> EvaluateOpenAllocationsAsync(
         FinancialClose close,
         CancellationToken cancellationToken)
     {
@@ -112,14 +149,18 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
             revenueQuery = revenueQuery.Where(m => revenueIds.Contains(m.RevenueId));
         }
 
-        if (await costQuery.AnyAsync(cancellationToken) || await revenueQuery.AnyAsync(cancellationToken))
-        {
-            throw new ConflictAppException(
-                "Không đủ điều kiện chốt: còn phiên phân bổ chi phí hoặc chia doanh thu chưa chốt trong phạm vi.");
-        }
+        var blocked = await costQuery.AnyAsync(cancellationToken)
+            || await revenueQuery.AnyAsync(cancellationToken);
+        return new CloseEligibilityGateDto(
+            "open_allocations",
+            "Phân bổ / chia doanh thu chưa chốt",
+            !blocked,
+            blocked
+                ? "Không đủ điều kiện chốt: còn phiên phân bổ chi phí hoặc chia doanh thu chưa chốt trong phạm vi."
+                : null);
     }
 
-    private async Task EnsureNoUnallocatedMoneyAboveThresholdAsync(
+    private async Task<CloseEligibilityGateDto> EvaluateUnallocatedMoneyAsync(
         FinancialClose close,
         CancellationToken cancellationToken)
     {
@@ -163,14 +204,17 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
 
         var unappliedPay = paymentList.Sum(p => p.Amount - (payMap.TryGetValue(p.Id, out var s) ? s : 0m));
         var unappliedColl = collectionList.Sum(c => c.Amount - (collMap.TryGetValue(c.Id, out var s) ? s : 0m));
-        if (unappliedPay > threshold || unappliedColl > threshold)
-        {
-            throw new ConflictAppException(
-                $"Không đủ điều kiện chốt: còn tiền thanh toán/thu chưa gán vượt ngưỡng {threshold} trong phạm vi.");
-        }
+        var blocked = unappliedPay > threshold || unappliedColl > threshold;
+        return new CloseEligibilityGateDto(
+            "unallocated_cash",
+            "Tiền thanh toán/thu chưa gán",
+            !blocked,
+            blocked
+                ? $"Không đủ điều kiện chốt: còn tiền thanh toán/thu chưa gán vượt ngưỡng {threshold} trong phạm vi."
+                : null);
     }
 
-    private async Task EnsureNoUnmatchedAcceptedDocumentsAsync(
+    private async Task<CloseEligibilityGateDto> EvaluateUnmatchedDocumentsAsync(
         FinancialClose close,
         CancellationToken cancellationToken)
     {
@@ -202,14 +246,17 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
             }
         }
 
-        if (await query.AnyAsync(cancellationToken))
-        {
-            throw new ConflictAppException(
-                "Không đủ điều kiện chốt: còn chứng từ đã chấp nhận nhưng chưa khớp đủ trong phạm vi.");
-        }
+        var blocked = await query.AnyAsync(cancellationToken);
+        return new CloseEligibilityGateDto(
+            "unmatched_documents",
+            "Chứng từ đã chấp nhận chưa khớp đủ",
+            !blocked,
+            blocked
+                ? "Không đủ điều kiện chốt: còn chứng từ đã chấp nhận nhưng chưa khớp đủ trong phạm vi."
+                : null);
     }
 
-    private async Task EnsureNoUnsettledApArAboveThresholdAsync(
+    private async Task<CloseEligibilityGateDto> EvaluateUnsettledApArAsync(
         FinancialClose close,
         CancellationToken cancellationToken)
     {
@@ -234,11 +281,14 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
         var apList = await apQuery.ToListAsync(cancellationToken);
         var arList = await arQuery.ToListAsync(cancellationToken);
 
-        if (apList.Any(a => a.DeriveOutstanding() > threshold)
-            || arList.Any(a => a.DeriveOutstanding() > threshold))
-        {
-            throw new ConflictAppException(
-                $"Không đủ điều kiện chốt: còn khoản phải trả/phải thu chưa tất toán với số dư mở vượt ngưỡng {threshold} trong phạm vi.");
-        }
+        var blocked = apList.Any(a => a.DeriveOutstanding() > threshold)
+            || arList.Any(a => a.DeriveOutstanding() > threshold);
+        return new CloseEligibilityGateDto(
+            "unsettled_ap_ar",
+            "AP/AR chưa tất toán vượt ngưỡng",
+            !blocked,
+            blocked
+                ? $"Không đủ điều kiện chốt: còn khoản phải trả/phải thu chưa tất toán với số dư mở vượt ngưỡng {threshold} trong phạm vi."
+                : null);
     }
 }

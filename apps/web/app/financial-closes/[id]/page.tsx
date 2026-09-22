@@ -12,6 +12,7 @@ import {
   canSnapshot,
   closeStatusLabel,
   getFinancialClose,
+  getFinancialCloseEligibility,
   getFinancialClosePnl,
   scopeTypeLabel,
 } from "@/lib/financial-closes";
@@ -61,6 +62,9 @@ export default async function FinancialCloseDetailPage({
   const close = closeRes.data;
   const hasSnapshot = (close.snapshots?.length ?? 0) > 0;
   const pnlRes = hasSnapshot ? await getFinancialClosePnl(id) : null;
+  const eligibilityRes = canSnapshot(close.status)
+    ? await getFinancialCloseEligibility(id)
+    : null;
   const latestSnapshot = hasSnapshot
     ? [...close.snapshots].sort(
         (a, b) => b.snapshotVersion - a.snapshotVersion
@@ -128,6 +132,51 @@ export default async function FinancialCloseDetailPage({
         {close.notes ? <p className="note">Ghi chú: {close.notes}</p> : null}
         {close.reopenReason ? (
           <p className="note">Lý do mở lại: {close.reopenReason}</p>
+        ) : null}
+
+        {eligibilityRes ? (
+          <>
+            <h2 className="section-title">Điều kiện chốt</h2>
+            {!eligibilityRes.ok ? (
+              <div className="alert alert-error" role="alert">
+                {eligibilityRes.message}
+              </div>
+            ) : (
+              <>
+                <p className="note">
+                  {eligibilityRes.data.eligible
+                    ? "Đủ điều kiện tạo bản chốt theo chính sách hiện tại."
+                    : "Còn điều kiện chặn — xử lý xong rồi tạo bản chốt."}
+                </p>
+                <ul className="close-gate-list" aria-label="Checklist điều kiện chốt">
+                  {eligibilityRes.data.gates.map((g) => (
+                    <li
+                      key={g.code}
+                      className={
+                        g.passed ? "close-gate-item pass" : "close-gate-item fail"
+                      }
+                    >
+                      <span
+                        className={
+                          g.passed
+                            ? "status-pill status-completed"
+                            : "status-pill status-blocked"
+                        }
+                      >
+                        {g.passed ? "Đạt" : "Chặn"}
+                      </span>
+                      <div className="close-gate-body">
+                        <strong>{g.label}</strong>
+                        {!g.passed && g.failReason ? (
+                          <span className="muted small block">{g.failReason}</span>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </>
         ) : null}
 
         <div className="cta-row">

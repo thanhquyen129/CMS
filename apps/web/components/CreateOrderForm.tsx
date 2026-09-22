@@ -4,10 +4,17 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { CreateCargoFields } from "@/components/CreateCargoFields";
+import { CreateCargoLineGrid } from "@/components/CreateCargoLineGrid";
 import { CreateSection, CreateWorkspace } from "@/components/CreateWorkspace";
 import { LocationField } from "@/components/LocationField";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { RefTagPicker, type RefHit } from "@/components/RefTagPicker";
+import {
+  submitCargoLines,
+  validateCargoLines,
+  type ContainerLineDraft,
+  type PackageLineDraft,
+} from "@/lib/cargo-lines";
 import {
   EXTRA_SERVICES,
   INCOTERMS,
@@ -59,6 +66,8 @@ export function CreateOrderForm({
   const [customerLabel, setCustomerLabel] = useState("Chưa chọn");
   const [bills, setBills] = useState<RefHit[]>([]);
   const [shipments, setShipments] = useState<RefHit[]>([]);
+  const [packages, setPackages] = useState<PackageLineDraft[]>([]);
+  const [containers, setContainers] = useState<ContainerLineDraft[]>([]);
 
   const modeOpts = mergeCatalog(modes, TRANSPORT_MODES);
   const route = useMemo(() => composeRoute(origin || null, dest || null), [origin, dest]);
@@ -87,6 +96,11 @@ export function CreateOrderForm({
     const destinationCode = formStr(fd, "destinationCode");
     if (!originCode || !destinationCode) {
       setError("Chọn điểm đi và điểm đến.");
+      return;
+    }
+    const cargoErr = validateCargoLines(packages, containers);
+    if (cargoErr) {
+      setError(cargoErr);
       return;
     }
 
@@ -153,6 +167,14 @@ export function CreateOrderForm({
       const created = (await res.json()) as { id?: string };
       if (created.id) {
         await linkRefs(`/bff/orders/${created.id}/bills`, bills);
+        const cargo = await submitCargoLines("order", created.id, packages, containers);
+        if (!cargo.ok) {
+          setError(
+            `Đơn hàng đã lưu nhưng chưa lưu đủ kiện/container: ${cargo.message} Mở hồ sơ đơn hàng để kiểm tra.`
+          );
+          startTransition(() => router.push(`/operations/orders/${created.id}`));
+          return;
+        }
         startTransition(() => router.push(`/operations/orders/${created.id}`));
       } else {
         startTransition(() => router.push("/orders"));
@@ -364,6 +386,16 @@ export function CreateOrderForm({
             commodities={commodities}
             descriptionPlaceholder="Tên hàng, quy cách đóng gói, kích thước, đặc tính cần lưu ý..."
           />
+          <div style={{ marginTop: 16 }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: "0.9rem" }}>Kiện / Container</h3>
+            <CreateCargoLineGrid
+              disabled={submitting}
+              packages={packages}
+              containers={containers}
+              onPackagesChange={setPackages}
+              onContainersChange={setContainers}
+            />
+          </div>
         </CreateSection>
 
         <CreateSection title="4. Yêu cầu dịch vụ & tham chiếu" hint="Thông tin khách hàng cung cấp và các yêu cầu bổ sung">

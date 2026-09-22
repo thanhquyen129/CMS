@@ -38,10 +38,22 @@ export default async function WorkflowMapPage() {
       href: "/operations",
     },
     {
+      no: "01c",
+      title: "Nhập nghiệp vụ",
+      desc: "CSV Order/Bill/Shipment — xem trước rồi ghi all-or-nothing",
+      href: "/operations/import",
+    },
+    {
       no: "02",
       title: "Tính giá",
       desc: "Rate card tạo kỳ vọng tài chính, không tạo Thực tế",
       href: "/rate-cards",
+    },
+    {
+      no: "02b",
+      title: "Nhập bảng giá",
+      desc: "JSON bảng giá → phiên bản nháp; Published bất biến",
+      href: "/rate-cards/import",
     },
     {
       no: "03",

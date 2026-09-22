@@ -21,6 +21,7 @@ import {
   maturityLabelKey,
 } from "@/lib/costs-revenues";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
+import { readJwtSub } from "@/lib/jwt-payload";
 
 type Params = Promise<{ id: string }>;
 
@@ -33,6 +34,7 @@ export default async function SharedCostDetailPage({
   if (!jar.get(AUTH_COOKIE)?.value) {
     redirect("/login");
   }
+  const currentUserId = readJwtSub(jar.get(AUTH_COOKIE)?.value);
 
   const { id } = await params;
   const terms = await fetchTerminology();
@@ -214,6 +216,11 @@ export default async function SharedCostDetailPage({
               amount={open.allocatableAmount || cost.amount}
               currencyCode={cost.currencyCode}
               billCount={open.details?.length ?? 0}
+              blockedAsCreator={Boolean(
+                currentUserId &&
+                  open.createdBy &&
+                  open.createdBy.toLowerCase() === currentUserId.toLowerCase()
+              )}
             />
             <span className="muted">
               Phiên v{open.versionNo} · {allocationStatusLabel(open.allocationStatus)} ·{" "}

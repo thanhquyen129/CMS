@@ -1,5 +1,33 @@
 # Handoff
 
+## 2026-09-22 — Wave 2 Pixel-perfect đợt 1 (I1/I2/J1/J2/K1/L1/M1–M2)
+
+### User
+làm lần lượt đến hết nhé
+
+### Answer
+Đợt 1 Wave 2: màn nhập nghiệp vụ CSV (`/operations/import`) và nhập bảng giá JSON (`/rate-cards/import`) — preview → commit all-or-nothing. Phụ phí/phụ lục có KPI + filter + CTA trung thực. SoD PC-21: người tạo phiên phân bổ không tự chốt (`AllocationSodTests`). Lưới kiện/container trên tạo Bill/Order. Workflow map thêm bước import + link từ Cài đặt. Helper `Idempotency-Key` trên import và chốt phân bổ. Còn I3, K2/K3, L2–L6, M5 rộng, N UAT.
+
+### Files
+- `apps/web/app/operations/import/page.tsx`, `rate-cards/import/page.tsx`, BFF operational-import + rate-imports
+- `apps/web/components/ImportOperationalForm.tsx`, `ImportRateCardsForm.tsx`, `CreateCargoLineGrid.tsx`
+- `apps/web/app/rate-cards/surcharges/page.tsx`, `appendices/page.tsx`
+- `src/LCMS.Application/Costs/Commands/AllocationCommands.cs` (PC-21), `CostQueries` CreatedBy
+- `tests/LCMS.Api.Tests/AllocationSodTests.cs`
+- `docs/reports/CMS_PixelPerfect_Gap_Index_2026-09-22.md` §10
+
+## 2026-09-22 — Chỉ mục Pixel-perfect còn thiếu (toàn dự án)
+
+### User
+rà soát và lập chỉ mục toàn dự án các chức năng chưa làm đến mức Pixel-perfect đảm bảo đủ độ sâu và mở rộng tối đa.
+
+### Answer
+Gói A–H = domain DONE trên production; claim «Pixel-perfect» ≠ UAT mockup. UX-01…14 vẫn «Chưa kiểm thử». Module UI-01…15: 0 MISSING cấp 1; ~1 PIXEL_OK (Dashboard); đa số STRUCTURAL; SKELETON: phụ phí, phụ lục, operations, workflow map. Wave 2 (I–N): ~35 việc — P0 gồm import UI (ops + rate), phụ phí/phụ lục, SoD phân bổ, idempotent client, UAT evidence + 09B Reviewer. Không mở lại bulk/% MoM/Excel giả (INTENTIONAL).
+
+### Files
+- `docs/reports/CMS_PixelPerfect_Gap_Index_2026-09-22.md` — chỉ mục đầy đủ
+- Canvas IDE: `pixel-perfect-gap-index.canvas.tsx` (lọc theo gói/maturity/prio)
+
 ## 2026-09-22 — Fix UI tạo doanh thu: chọn Bill dạng danh sách
 
 ### User

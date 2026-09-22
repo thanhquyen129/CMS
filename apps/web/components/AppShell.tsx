@@ -113,12 +113,14 @@ export async function AppShell({
           <NavLink href="/shipments">Danh sách Shipment</NavLink>
           <NavLink href="/shipments/new">Tạo Shipment</NavLink>
           <NavLink href="/operations">Chặng &amp; Chuyến</NavLink>
+          <NavLink href="/operations/import">Nhập nghiệp vụ</NavLink>
         </NavGroup>
       ) : null}
 
       {show("rates") ? (
         <NavGroup label="Bảng giá &amp; Tính giá" icon="rates" match={["/rate-cards"]}>
           <NavLink href="/rate-cards">Danh sách bảng giá</NavLink>
+          <NavLink href="/rate-cards/import">Nhập bảng giá</NavLink>
           <NavLink href="/rate-cards/rate">Tính giá</NavLink>
           <NavLink href="/rate-cards/compare">So sánh giá</NavLink>
           <NavLink href="/rate-cards/surcharges">Quản lý phụ phí</NavLink>
@@ -236,7 +238,7 @@ export async function AppShell({
         <NavGroup
           label="Hệ thống &amp; Cài đặt"
           icon="settings"
-          match={["/settings", "/admin/access"]}
+          match={["/settings", "/admin/access", "/workflow"]}
         >
           <NavLink href="/settings/company">Thông tin doanh nghiệp</NavLink>
           <NavLink href="/settings/users">Người dùng</NavLink>
@@ -249,6 +251,7 @@ export async function AppShell({
           <NavLink href="/settings/license">Quản lý license</NavLink>
           <NavLink href="/settings/notifications">Cài đặt thông báo</NavLink>
           <NavLink href="/settings/backup">Sao lưu &amp; Khôi phục</NavLink>
+          <NavLink href="/workflow">Bản đồ luồng nghiệp vụ</NavLink>
         </NavGroup>
       ) : null}
     </nav>

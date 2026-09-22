@@ -362,6 +362,14 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             throw new ConflictAppException("Phiên phân bổ đã chốt hoặc đã hủy, không sửa.");
         }
 
+        // W-L1 / PC-21: người tạo phiên không tự chốt khi đăng nhập với user (SoD).
+        if (_user.HasUser
+            && allocation.CreatedBy.HasValue
+            && allocation.CreatedBy.Value == _user.UserId)
+        {
+            throw new ConflictAppException("PC-21: Người tạo không được tự chốt phân bổ.");
+        }
+
         if (!CostAllocationBases.IsSupported(allocation.AllocationBasis))
         {
             throw new ConflictAppException("Cơ sở phân bổ không hợp lệ.");

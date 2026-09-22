@@ -36,6 +36,7 @@ export type CostAllocation = {
   allocatedAmount: number;
   finalizedAt: string | null;
   supersedesAllocationId: string | null;
+  createdBy?: string | null;
   details: CostAllocationDetail[];
 };
 

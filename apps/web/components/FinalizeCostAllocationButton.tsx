@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 
 type Props = {
   terms: TerminologyMap;
@@ -11,6 +12,8 @@ type Props = {
   amount: number;
   currencyCode: string;
   billCount: number;
+  /** When true, hide CTA — creator cannot self-finalize (PC-21 / W-L1). */
+  blockedAsCreator?: boolean;
 };
 
 export function FinalizeCostAllocationButton({
@@ -19,6 +22,7 @@ export function FinalizeCostAllocationButton({
   amount,
   currencyCode,
   billCount,
+  blockedAsCreator = false,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -41,13 +45,10 @@ export function FinalizeCostAllocationButton({
     setError(null);
 
     try {
-      const res = await fetch(
-        `/bff/cost-allocations/${allocationId}/finalize`,
-        {
-          method: "POST",
-          headers: { Accept: "application/json" },
-        }
-      );
+      const res = await fetch(`/bff/cost-allocations/${allocationId}/finalize`, {
+        method: "POST",
+        headers: withIdempotency({}, newIdempotencyKey("alloc-fin")),
+      });
 
       if (res.status === 401) {
         window.location.href = "/login";
@@ -61,7 +62,7 @@ export function FinalizeCostAllocationButton({
         setError(
           body.message ||
             (res.status === 409
-              ? "Không chốt được (cơ sở = 0 / conservation / kỳ khóa). Kiểm tra dòng phân bổ."
+              ? "Không chốt được (PC-21 / cơ sở / conservation / kỳ khóa). Kiểm tra phiên phân bổ."
               : "Chốt phân bổ thất bại.")
         );
         return;
@@ -75,6 +76,14 @@ export function FinalizeCostAllocationButton({
       setSubmitting(false);
     }
   }, [allocationId, router]);
+
+  if (blockedAsCreator) {
+    return (
+      <span className="muted" role="status">
+        Người tạo không được tự chốt (PC-21) — nhờ người khác chốt phiên này.
+      </span>
+    );
+  }
 
   return (
     <>

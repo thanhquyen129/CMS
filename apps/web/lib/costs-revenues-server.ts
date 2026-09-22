@@ -3,8 +3,10 @@ import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
 import type { ApiResult } from "./bills";
 import type {
+  BillProfitRow,
   CostDto,
   CostListItem,
+  ProfitGroupRow,
   RevenueDto,
   RevenueListItem,
 } from "./costs-revenues";
@@ -118,4 +120,27 @@ export function listRevenues(opts?: {
   return apiGet<RevenueListItem[] | PagedResult<RevenueListItem>>(
     qs ? `/api/revenues?${qs}` : "/api/revenues"
   ).then((r) => (r.ok ? { ok: true, data: unwrapPaged(r.data) } : r));
+}
+
+export function listBillProfit(opts?: {
+  view?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<ApiResult<PagedResult<BillProfitRow>>> {
+  const p = new URLSearchParams();
+  if (opts?.view) p.set("view", opts.view);
+  if (opts?.page != null) p.set("page", String(opts.page));
+  if (opts?.pageSize != null) p.set("pageSize", String(opts.pageSize));
+  const qs = p.toString();
+  return apiGet<PagedResult<BillProfitRow>>(
+    `/api/profitability/bills${qs ? `?${qs}` : ""}`
+  );
+}
+
+export function listProfitGroups(
+  groupBy: string,
+  view: string
+): Promise<ApiResult<ProfitGroupRow[]>> {
+  const p = new URLSearchParams({ groupBy, view });
+  return apiGet<ProfitGroupRow[]>(`/api/profitability/groups?${p.toString()}`);
 }

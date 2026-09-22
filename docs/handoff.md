@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-22 — Gói E: chia doanh thu và lãi gộp theo maturity
+
+### User
+tiếp theo làm phần nào? triển khai Pixel-perfect luôn nhé
+
+### Answer
+Phần tiếp theo là gói E (W-E1…E5). Một doanh thu kinh tế chia nhiều Bill, tổng dòng bằng số gốc, phần dư trên Bill cuối, chốt thì bất biến, chia lại thì thay phiên cũ. Lợi nhuận theo một lớp: Dự kiến, Đã xác nhận, hoặc Thực tế. Không cộng hai lớp. Doanh thu 0 thì tỷ suất là N/A, lãi gộp vẫn hiện. Đổi về một tiền báo cáo thì kèm trace tỷ giá; thiếu tỷ giá thì không cộng USD với VND. Tổng hợp theo khách, dịch vụ, phương thức, tuyến, chuyến — chuyến là tổng Bill, không phải sổ lãi riêng. Nguồn ngoài đang sở hữu doanh thu thực tế thì từ chối `RV-06`, trừ khi có lý do ghi đè.
+
+Menu: Danh sách doanh thu, Tạo doanh thu, Báo cáo doanh thu. Không thêm Đối soát vì chưa có luồng. Chưa bấm từng nút trên trình duyệt vì không có phiên đăng nhập local.
+
+Gói F chưa làm.
+
+### Files / API / schema
+- Migration `20260922061634_RevenueMappingProfitability`: `revenue_mappings`, `revenue_mapping_details`.
+- `POST /api/revenues/{id}/mappings`, `POST /api/revenue-mappings/{id}/finalize|cancel`.
+- `GET /api/bills/{id}/profitability?view=&reportingCurrency=` thêm `marginRate`, trace FX.
+- `GET /api/profitability/bills`, `GET /api/profitability/groups?groupBy=&view=`.
+- Tạo doanh thu nhận `actualRevenueOwner`. Thực tế hóa nhận `sourceSystem`, `overrideReason`.
+- Quyền `revenue.mapping.override`.
+- ADR-0027.
+- UI: `/revenues`, `/revenues/new`, `/revenues/report`, form chia trên `/revenues/{id}`.
+
+### UI
+Bảng Bill: số bill, khách, tuyến, loại DV, ba lớp doanh thu, lợi nhuận, tỷ suất, trạng thái. Báo cáo là bảng nhóm, không biểu đồ giả.
+
 ## 2026-09-22 — Gói D: cơ sở phân bổ, phạm vi Bill, dư làm tròn
 
 ### User

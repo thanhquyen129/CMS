@@ -187,6 +187,36 @@ export function canConfirm(maturity: string, recordStatus: string): boolean {
   );
 }
 
+export type BillProfitRow = {
+  billId: string;
+  billNo: string;
+  customerName: string | null;
+  routeCode: string | null;
+  transportMode: string | null;
+  serviceTypeCode: string | null;
+  billDate: string | null;
+  operationalStatus: string;
+  currencyCode: string;
+  hasMixedCurrencies: boolean;
+  expectedRevenue: number;
+  confirmedRevenue: number;
+  actualRevenue: number;
+  profitAmount: number;
+  marginRate: number | null;
+};
+
+export type ProfitGroupRow = {
+  key: string;
+  label: string;
+  revenueAmount: number;
+  costAmount: number;
+  profitAmount: number;
+  marginRate: number | null;
+  billCount: number;
+  currencyCode: string;
+  note: string | null;
+};
+
 export function canActualize(maturity: string, recordStatus: string): boolean {
   return (
     recordStatus === "active" && maturity?.toLowerCase() === "confirmed"

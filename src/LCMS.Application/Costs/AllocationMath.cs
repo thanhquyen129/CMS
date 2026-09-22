@@ -125,4 +125,34 @@ public static class AllocationMath
             freeAllocated += detail.AllocatedAmount;
         }
     }
+
+    public static void ApplyLines(string basis, decimal allocatable, IList<AllocationSplitLine> lines)
+    {
+        var details = lines.Select(line => new CostAllocationDetail
+        {
+            BillId = line.BillId,
+            BasisValue = line.BasisValue,
+            ManualOverrideAmount = line.ManualOverrideAmount
+        }).ToList();
+        Apply(basis, allocatable, details);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            lines[i].BasisValue = details[i].BasisValue;
+            lines[i].BasisRatio = details[i].BasisRatio;
+            lines[i].AllocatedAmount = details[i].AllocatedAmount;
+            lines[i].RoundingAdjustment = details[i].RoundingAdjustment;
+            lines[i].OverrideBeforeAmount = details[i].OverrideBeforeAmount;
+        }
+    }
+}
+
+public sealed class AllocationSplitLine
+{
+    public Guid BillId { get; set; }
+    public decimal BasisValue { get; set; }
+    public decimal? ManualOverrideAmount { get; set; }
+    public decimal BasisRatio { get; set; }
+    public decimal AllocatedAmount { get; set; }
+    public decimal RoundingAdjustment { get; set; }
+    public decimal? OverrideBeforeAmount { get; set; }
 }

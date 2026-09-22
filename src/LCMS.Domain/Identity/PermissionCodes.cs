@@ -16,6 +16,7 @@ public static class PermissionCodes
     public const string RevenueRead = "revenue.read";
     public const string RevenueConfirm = "revenue.confirm";
     public const string RevenueActualize = "revenue.actualize";
+    public const string RevenueMappingOverride = "revenue.mapping.override";
     public const string ApWriteOff = "ap.write_off";
     public const string ArWriteOff = "ar.write_off";
     public const string MasterOrgManage = "master.org.manage";
@@ -52,6 +53,7 @@ public static class PermissionCodes
         (RevenueRead, "Xem doanh thu"),
         (RevenueConfirm, "Xác nhận doanh thu"),
         (RevenueActualize, "Thực tế hóa doanh thu"),
+        (RevenueMappingOverride, "Sửa kết quả chia doanh thu tự động"),
         (ApWriteOff, "Xóa nợ phải trả"),
         (ArWriteOff, "Xóa nợ phải thu"),
         (MasterOrgManage, "Quản lý tổ chức"),
@@ -88,6 +90,7 @@ public static class PermissionCodes
         RevenueRead,
         RevenueConfirm,
         RevenueActualize,
+        RevenueMappingOverride,
         ApWriteOff,
         ArWriteOff,
         MasterOrgManage,

@@ -139,9 +139,11 @@ export async function AppShell({
       ) : null}
 
       {show("revenues") ? (
-        <NavLink href="/revenues" icon="revenues">
-          {revenueLabel} &amp; Lợi nhuận
-        </NavLink>
+        <NavGroup label={`${revenueLabel} &amp; Lợi nhuận`} icon="revenues" match={["/revenues"]}>
+          <NavLink href="/revenues">Danh sách {revenueLabel.toLowerCase()}</NavLink>
+          <NavLink href="/revenues/new">Tạo {revenueLabel.toLowerCase()}</NavLink>
+          <NavLink href="/revenues/report">Báo cáo {revenueLabel.toLowerCase()}</NavLink>
+        </NavGroup>
       ) : null}
 
       {show("documents") ? (

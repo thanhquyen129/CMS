@@ -470,6 +470,54 @@ internal sealed class RevenueConfiguration : IEntityTypeConfiguration<Revenue>
     }
 }
 
+internal sealed class RevenueMappingConfiguration : IEntityTypeConfiguration<RevenueMapping>
+{
+    public void Configure(EntityTypeBuilder<RevenueMapping> builder)
+    {
+        builder.ToTable("revenue_mappings");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.AllocationBasis).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ApplicabilityMode).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ConditionCode).HasMaxLength(64);
+        builder.Property(e => e.AllocatableAmount).HasPrecision(18, 4);
+        builder.Property(e => e.AllocatedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.MappedMaturity).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.MappingStatus).HasMaxLength(32).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.RevenueId, e.VersionNo }).IsUnique();
+        builder.HasOne(e => e.Revenue)
+            .WithMany()
+            .HasForeignKey(e => e.RevenueId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class RevenueMappingDetailConfiguration : IEntityTypeConfiguration<RevenueMappingDetail>
+{
+    public void Configure(EntityTypeBuilder<RevenueMappingDetail> builder)
+    {
+        builder.ToTable("revenue_mapping_details");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.BasisValue).HasPrecision(18, 6);
+        builder.Property(e => e.BasisRatio).HasPrecision(18, 8);
+        builder.Property(e => e.AllocatedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.RoundingAdjustment).HasPrecision(18, 4);
+        builder.Property(e => e.ManualOverrideAmount).HasPrecision(18, 4);
+        builder.Property(e => e.OverrideBeforeAmount).HasPrecision(18, 4);
+        builder.Property(e => e.OverrideReason).HasMaxLength(512);
+        builder.HasIndex(e => new { e.TenantId, e.MappingId, e.BillId }).IsUnique();
+        builder.HasOne(e => e.Mapping)
+            .WithMany()
+            .HasForeignKey(e => e.MappingId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 internal sealed class RevenueAdjustmentConfiguration : IEntityTypeConfiguration<RevenueAdjustment>
 {
     public void Configure(EntityTypeBuilder<RevenueAdjustment> builder)

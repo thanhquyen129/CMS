@@ -14,6 +14,7 @@ using LCMS.Application.RateCards.Commands;
 using LCMS.Application.Reconciliations;
 using LCMS.Application.ReferenceMasters;
 using LCMS.Application.Revenues;
+using LCMS.Application.Revenues.Queries;
 using LCMS.Application.Settlements;
 using LCMS.Application.Tenancy;
 using MediatR;
@@ -71,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<ICostFxStub, CostFxStub>();
         services.AddScoped<ICostApprovalGate, CostApprovalGate>();
         services.AddScoped<IRevenueFxStub, RevenueFxStub>();
+        services.AddScoped<ProfitabilityBoard>();
         services.AddScoped<IRevenueApprovalGate, RevenueApprovalGate>();
         services.AddScoped<ISettlementFxStub, SettlementFxStub>();
         services.AddSingleton<IVarianceSeverityCalculator, VarianceSeverityCalculator>();

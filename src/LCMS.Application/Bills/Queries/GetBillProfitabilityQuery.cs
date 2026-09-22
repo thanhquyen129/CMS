@@ -1,6 +1,8 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
+using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Terminology;
 using MediatR;
@@ -12,7 +14,7 @@ namespace LCMS.Application.Bills.Queries;
 /// Explicit profitability view for a Bill (Pass 2 Sprint 5 FULL).
 /// view=expected|confirmed|actual|best — never sums raw across currencies (C-014).
 /// </summary>
-public sealed record GetBillProfitabilityQuery(Guid BillId, string View)
+public sealed record GetBillProfitabilityQuery(Guid BillId, string View, string? ReportingCurrency = null)
     : IRequest<BillProfitabilityDto>;
 
 public sealed class GetBillProfitabilityQueryValidator : AbstractValidator<GetBillProfitabilityQuery>
@@ -55,7 +57,8 @@ public sealed record ProfitabilityCurrencyBucketDto(
     decimal ProfitVarianceExpectedVsActual,
     int RevenueLineCount,
     int DirectCostLineCount,
-    int AllocatedCostLineCount);
+    int AllocatedCostLineCount,
+    decimal? MarginRate = null);
 
 public sealed record BillProfitabilityDto(
     Guid BillId,
@@ -64,18 +67,37 @@ public sealed record BillProfitabilityDto(
     DateTimeOffset AsOfTimestamp,
     IReadOnlyList<ProfitabilityCurrencyBucketDto> ByCurrency,
     bool HasMixedCurrencies,
-    string Note);
+    string Note,
+    string? ReportingCurrency = null,
+    decimal? ReportingRevenue = null,
+    decimal? ReportingCost = null,
+    decimal? ReportingProfit = null,
+    IReadOnlyList<ProfitabilityFxTraceDto>? FxTrace = null,
+    IReadOnlyList<string>? UnconvertedCurrencies = null);
+
+public sealed record ProfitabilityFxTraceDto(
+    string CurrencyCode,
+    decimal Rate,
+    string Source,
+    DateOnly? RateDate,
+    Guid? FxRateId,
+    decimal RevenueAmount,
+    decimal ConvertedRevenue,
+    decimal CostAmount,
+    decimal ConvertedCost);
 
 public sealed class GetBillProfitabilityQueryHandler
     : IRequestHandler<GetBillProfitabilityQuery, BillProfitabilityDto>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IFxRateLookup _fx;
 
-    public GetBillProfitabilityQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetBillProfitabilityQueryHandler(ILcmsDbContext db, ITenantContext tenantContext, IFxRateLookup fx)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _fx = fx;
     }
 
     public async Task<BillProfitabilityDto> Handle(
@@ -94,9 +116,8 @@ public sealed class GetBillProfitabilityQueryHandler
             .FirstOrDefaultAsync(b => b.Id == request.BillId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy Bill.");
 
-        var revenues = await _db.Revenues.AsNoTracking()
-            .Where(r => r.BillId == bill.Id && r.RecordStatus == "active")
-            .ToListAsync(cancellationToken);
+        var revenues = await LoadRevenuesAsync(bill.Id, cancellationToken);
+        var shares = await LoadSharesAsync(bill.Id, revenues, cancellationToken);
 
         var directCosts = await _db.Costs.AsNoTracking()
             .Where(c => c.BillId == bill.Id
@@ -134,14 +155,14 @@ public sealed class GetBillProfitabilityQueryHandler
                 .Where(a => string.Equals(a.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var revenueAmount = revLines.Sum(r => AmountForView(view, r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount));
-            var directAmount = costLines.Sum(c => AmountForView(view, c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount));
+            var revenueAmount = revLines.Sum(r => ShareOf(view, r, shares));
+            var directAmount = costLines.Sum(c => ProfitabilityShare.Layer(view, c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount));
             var allocatedAmount = allocLines.Sum(a => a.AllocatedAmount);
             var costAmount = decimal.Round(directAmount + allocatedAmount, 4, MidpointRounding.AwayFromZero);
             var profit = decimal.Round(revenueAmount - costAmount, 4, MidpointRounding.AwayFromZero);
 
-            var revExpected = revLines.Sum(r => r.ExpectedAmount);
-            var revActual = revLines.Sum(r => r.ActualAmount ?? 0m);
+            var revExpected = revLines.Sum(r => ShareOf(ProfitabilityViews.Expected, r, shares));
+            var revActual = revLines.Sum(r => ShareOf(ProfitabilityViews.Actual, r, shares));
             var costExpected = costLines.Sum(c => c.ExpectedAmount) + allocatedAmount;
             var costActual = costLines.Sum(c => c.ActualAmount ?? 0m) + allocatedAmount;
             var profitExpected = revExpected - costExpected;
@@ -159,7 +180,8 @@ public sealed class GetBillProfitabilityQueryHandler
                 decimal.Round(profitExpected - profitActual, 4, MidpointRounding.AwayFromZero),
                 revLines.Count,
                 costLines.Count,
-                allocLines.Count));
+                allocLines.Count,
+                ProfitabilityShare.MarginPercent(decimal.Round(revenueAmount, 4, MidpointRounding.AwayFromZero), profit)));
         }
 
         var mixed = buckets.Count > 1;
@@ -169,6 +191,9 @@ public sealed class GetBillProfitabilityQueryHandler
             ? $"{label}: Không cộng gộp khác loại tiền tệ. {viewLabel}={view}. Allocated cost luôn gồm trong Cost."
             : $"{label}: {viewLabel}={view}. Profit = Revenue − (Direct + Allocated). Không lưu SoT trên Bill.";
 
+        var (reportingRevenue, reportingCost, reportingProfit, trace, missing) =
+            await ConvertAsync(request.ReportingCurrency, buckets, cancellationToken);
+
         return new BillProfitabilityDto(
             bill.Id,
             bill.BillNo,
@@ -176,21 +201,121 @@ public sealed class GetBillProfitabilityQueryHandler
             asOfTimestamp,
             buckets,
             mixed,
-            note);
+            note,
+            string.IsNullOrWhiteSpace(request.ReportingCurrency) ? null : request.ReportingCurrency.Trim().ToUpperInvariant(),
+            reportingRevenue,
+            reportingCost,
+            reportingProfit,
+            trace,
+            missing);
     }
 
-    /// <summary>
-    /// Layer picker: confirmed/actual use 0 when that layer is not set (explicit view honesty).
-    /// best = Actual → Confirmed → Expected.
-    /// </summary>
-    private static decimal AmountForView(string view, decimal? actual, decimal? confirmed, decimal expected)
+    private async Task<List<Revenue>> LoadRevenuesAsync(Guid billId, CancellationToken cancellationToken)
     {
-        return view switch
+        var own = await _db.Revenues.AsNoTracking()
+            .Where(r => r.BillId == billId && r.RecordStatus == "active")
+            .ToListAsync(cancellationToken);
+        var mappedIds = await (
+            from d in _db.RevenueMappingDetails.AsNoTracking()
+            join m in _db.RevenueMappings.AsNoTracking() on d.MappingId equals m.Id
+            where d.BillId == billId && m.MappingStatus == CostAllocationStatuses.Finalized
+            select m.RevenueId
+        ).Distinct().ToListAsync(cancellationToken);
+        var extraIds = mappedIds.Except(own.Select(r => r.Id)).ToList();
+        if (extraIds.Count == 0)
         {
-            ProfitabilityViews.Expected => expected,
-            ProfitabilityViews.Confirmed => confirmed ?? 0m,
-            ProfitabilityViews.Actual => actual ?? 0m,
-            _ => actual ?? confirmed ?? expected
-        };
+            return own;
+        }
+
+        var extra = await _db.Revenues.AsNoTracking()
+            .Where(r => extraIds.Contains(r.Id) && r.RecordStatus == "active")
+            .ToListAsync(cancellationToken);
+        own.AddRange(extra);
+        return own;
+    }
+
+    private async Task<Dictionary<Guid, (string Maturity, decimal Amount)>> LoadSharesAsync(
+        Guid billId,
+        IReadOnlyList<Revenue> revenues,
+        CancellationToken cancellationToken)
+    {
+        var ids = revenues.Select(r => r.Id).ToList();
+        var maps = await _db.RevenueMappings.AsNoTracking()
+            .Where(m => ids.Contains(m.RevenueId) && m.MappingStatus == CostAllocationStatuses.Finalized)
+            .Select(m => new { m.Id, m.RevenueId, m.VersionNo, m.MappedMaturity })
+            .ToListAsync(cancellationToken);
+        var mapIds = maps.Select(m => m.Id).ToList();
+        var lines = await _db.RevenueMappingDetails.AsNoTracking()
+            .Where(d => mapIds.Contains(d.MappingId) && d.BillId == billId)
+            .Select(d => new { d.MappingId, d.AllocatedAmount })
+            .ToListAsync(cancellationToken);
+        return maps
+            .GroupBy(m => m.RevenueId)
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    var top = g.OrderByDescending(x => x.VersionNo).First();
+                    var amount = lines.Where(l => l.MappingId == top.Id).Select(l => l.AllocatedAmount).FirstOrDefault();
+                    return (top.MappedMaturity, amount);
+                });
+    }
+
+    private static decimal ShareOf(string view, Revenue revenue, IReadOnlyDictionary<Guid, (string Maturity, decimal Amount)> shares)
+    {
+        shares.TryGetValue(revenue.Id, out var share);
+        var has = shares.ContainsKey(revenue.Id);
+        return ProfitabilityShare.Amount(
+            view,
+            revenue.ActualAmount,
+            revenue.ConfirmedAmount,
+            revenue.ExpectedAmount,
+            has,
+            share.Maturity,
+            share.Amount);
+    }
+
+    private async Task<(decimal? Revenue, decimal? Cost, decimal? Profit, IReadOnlyList<ProfitabilityFxTraceDto>? Trace, IReadOnlyList<string>? Missing)> ConvertAsync(
+        string? reportingCurrency,
+        IReadOnlyList<ProfitabilityCurrencyBucketDto> buckets,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(reportingCurrency) || buckets.Count == 0)
+        {
+            return (null, null, null, null, null);
+        }
+
+        var target = reportingCurrency.Trim().ToUpperInvariant();
+        var asOf = DateOnly.FromDateTime(DateTime.UtcNow);
+        var trace = new List<ProfitabilityFxTraceDto>();
+        var missing = new List<string>();
+        foreach (var bucket in buckets)
+        {
+            if (string.Equals(bucket.CurrencyCode, target, StringComparison.OrdinalIgnoreCase))
+            {
+                trace.Add(new ProfitabilityFxTraceDto(bucket.CurrencyCode, 1m, "identity", asOf, null, bucket.RevenueAmount, bucket.RevenueAmount, bucket.CostAmount, bucket.CostAmount));
+                continue;
+            }
+
+            var rate = await _fx.ResolveAsync(bucket.CurrencyCode, target, asOf, cancellationToken);
+            if (rate is null)
+            {
+                missing.Add(bucket.CurrencyCode);
+                continue;
+            }
+
+            var revenue = decimal.Round(bucket.RevenueAmount * rate.Rate, 4, MidpointRounding.AwayFromZero);
+            var cost = decimal.Round(bucket.CostAmount * rate.Rate, 4, MidpointRounding.AwayFromZero);
+            trace.Add(new ProfitabilityFxTraceDto(bucket.CurrencyCode, rate.Rate, rate.Source, rate.RateDate, rate.FxRateId, bucket.RevenueAmount, revenue, bucket.CostAmount, cost));
+        }
+
+        if (missing.Count > 0)
+        {
+            return (null, null, null, trace, missing);
+        }
+
+        var reportingRevenue = trace.Sum(t => t.ConvertedRevenue);
+        var reportingCost = trace.Sum(t => t.ConvertedCost);
+        return (reportingRevenue, reportingCost, decimal.Round(reportingRevenue - reportingCost, 4, MidpointRounding.AwayFromZero), trace, missing);
     }
 }

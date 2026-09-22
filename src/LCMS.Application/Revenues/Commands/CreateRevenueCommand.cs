@@ -19,7 +19,8 @@ public sealed record CreateRevenueCommand(
     Guid? CustomerPartyId,
     string? SourceType,
     Guid? SourceId,
-    string? RecognitionPolicyVersion) : IRequest<Guid>;
+    string? RecognitionPolicyVersion,
+    string? ActualRevenueOwner = null) : IRequest<Guid>;
 
 public sealed class CreateRevenueCommandValidator : AbstractValidator<CreateRevenueCommand>
 {
@@ -174,6 +175,22 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         _approvalGate.RefreshPendingFlag(revenue);
 
         _db.Revenues.Add(revenue);
+        var owner = string.IsNullOrWhiteSpace(request.ActualRevenueOwner)
+            ? null
+            : request.ActualRevenueOwner.Trim();
+        if (owner is not null
+            && !string.Equals(owner, OperationalSourceSystems.LcmsManual, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(owner, RevenueSourceTypes.Manual, StringComparison.OrdinalIgnoreCase))
+        {
+            _db.FieldOwnerships.Add(new FieldOwnership
+            {
+                TenantId = tenantId,
+                ObjectType = "revenue",
+                ObjectId = revenue.Id,
+                FieldName = "actual_revenue",
+                OwnerSystem = owner
+            });
+        }
         _audit.Append(
             AuditActions.RevenueCreate,
             AuditObjectTypes.Revenue,

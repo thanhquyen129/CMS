@@ -10,7 +10,7 @@ import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid
 import { FinColors, StackedCompositionBar } from "@/components/charts/FinanceCharts";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import { listRevenues } from "@/lib/costs-revenues-server";
+import { listBillProfit, listRevenues } from "@/lib/costs-revenues-server";
 import {
   parsePage,
   parsePageSize,
@@ -59,13 +59,14 @@ export default async function RevenuesPage({
     Number.parseInt(String(pageRaw ?? "1"), 10) || 1
   );
 
-  const [result, kpiRes] = await Promise.all([
+  const [result, kpiRes, board] = await Promise.all([
     listRevenues({
       financialMaturity: maturityFilter,
       page: pageHint,
       pageSize,
     }),
     listRevenues(),
+    listBillProfit({ view: "actual", page: 1, pageSize: 50 }),
   ]);
   const kpiItems = kpiRes.ok ? kpiRes.data.items : [];
   const countByMaturity = (m: string) =>
@@ -102,8 +103,8 @@ export default async function RevenuesPage({
       key: "profit",
       label: profitLabel,
       value: (
-        <Link className="row-link" href="/reports">
-          Xem báo cáo →
+        <Link className="row-link" href="/revenues/report">
+          Báo cáo doanh thu
         </Link>
       ),
     },
@@ -115,18 +116,62 @@ export default async function RevenuesPage({
         <ListPageHeader
           breadcrumbs={[
             { href: "/dashboard", label: "Trang chủ" },
-            { label: `${revenueLabel} & ${profitLabel}` },
+            { href: "/revenues", label: revenueLabel },
+            { label: "Danh sách doanh thu" },
           ]}
-          title={`${revenueLabel} & ${profitLabel}`}
-          lede={`${revenueLabel} ≠ hóa đơn / AR / thu tiền. ${profitLabel} suy ra từ chi phí và ${revenueLabel.toLowerCase()} theo ${billLabel}.`}
+          title="Danh sách doanh thu"
+          lede="Quản lý doanh thu theo bill/shipment và theo dõi lợi nhuận"
           action={
-            <Link className="btn" href="/bills">
-              + Ghi trên {billLabel}
+            <Link className="btn" href="/revenues/new">
+              + Tạo doanh thu
             </Link>
           }
         />
 
         {kpiRes.ok ? <StatCardGrid cards={statCards} /> : null}
+
+        <h2>Theo {billLabel}</h2>
+        {!board.ok ? (
+          <div className="alert alert-error" role="alert">{board.message}</div>
+        ) : board.data.items.length === 0 ? (
+          <div className="empty-state" role="status">Chưa có doanh thu hoặc chi phí trên Bill.</div>
+        ) : (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Số bill</th>
+                  <th>Khách hàng</th>
+                  <th>Tuyến</th>
+                  <th>Loại DV</th>
+                  <th className="num">Dự kiến</th>
+                  <th className="num">Đã xác nhận</th>
+                  <th className="num">Thực tế</th>
+                  <th className="num">Lợi nhuận</th>
+                  <th className="num">Tỷ suất</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {board.data.items.map((row) => (
+                  <tr key={row.billId}>
+                    <td><Link className="row-link" href={`/bills/${row.billId}`}>{row.billNo}</Link></td>
+                    <td>{row.customerName ?? "—"}</td>
+                    <td>{row.routeCode ?? "—"}</td>
+                    <td>{row.serviceTypeCode ?? row.transportMode ?? "—"}</td>
+                    <td className="num">{formatMoney(row.expectedRevenue, row.currencyCode)}</td>
+                    <td className="num">{formatMoney(row.confirmedRevenue, row.currencyCode)}</td>
+                    <td className="num">{formatMoney(row.actualRevenue, row.currencyCode)}</td>
+                    <td className="num">{row.hasMixedCurrencies ? "Nhiều tiền tệ" : formatMoney(row.profitAmount, row.currencyCode)}</td>
+                    <td className="num">{row.marginRate == null ? "N/A" : `${row.marginRate.toFixed(2)}%`}</td>
+                    <td>{row.operationalStatus}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="note">Doanh thu 0 thì tỷ suất là N/A, lãi gộp vẫn hiện. Không cộng USD với VND. Không cộng Dự kiến với Thực tế trên cùng một ô.</p>
 
         {kpiRes.ok ? (
           <AnalyticsRow columns={1}>

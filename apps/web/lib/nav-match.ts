@@ -28,6 +28,14 @@ export function isNavHrefActive(
     if ((current.get(key) ?? "") !== value) return false;
   }
 
+  if (target === "/revenues") {
+    if (pathname === "/revenues") return true;
+    const child = pathname.startsWith("/revenues/")
+      ? pathname.slice("/revenues/".length).split("/")[0]
+      : "";
+    if (child === "report" || child === "new") return false;
+  }
+
   if (target === "/rate-cards") {
     if (pathname === "/rate-cards") return true;
     const child = pathname.startsWith("/rate-cards/")

@@ -38,6 +38,7 @@ public static class AuditActions
     public const string CostCreate = "cost.create";
     public const string CostConfirm = "cost.confirm";
     public const string RevenueCreate = "revenue.create";
+    public const string RevenueMappingFinalize = "revenue.mapping.finalize";
     public const string PaymentAllocationFinalize = "payment_allocation.finalize";
     public const string CollectionAllocationFinalize = "collection_allocation.finalize";
     public const string AccountsPayableWriteOff = "accounts_payable.write_off";

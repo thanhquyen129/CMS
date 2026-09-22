@@ -37,6 +37,8 @@ public interface ILcmsDbContext
     DbSet<CostAllocationDetail> CostAllocationDetails { get; }
     DbSet<Revenue> Revenues { get; }
     DbSet<RevenueAdjustment> RevenueAdjustments { get; }
+    DbSet<RevenueMapping> RevenueMappings { get; }
+    DbSet<RevenueMappingDetail> RevenueMappingDetails { get; }
     DbSet<Order> Orders { get; }
     DbSet<Shipment> Shipments { get; }
     DbSet<OrderBillLink> OrderBillLinks { get; }

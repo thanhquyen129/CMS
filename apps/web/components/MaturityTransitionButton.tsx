@@ -32,6 +32,7 @@ export function MaturityTransitionButton({
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [amount, setAmount] = useState(String(currentAmount));
+  const [overrideReason, setOverrideReason] = useState("");
 
   const costLabel = term(terms, "COST", "Chi phí");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
@@ -80,7 +81,10 @@ export function MaturityTransitionButton({
     const body =
       action === "confirm"
         ? { confirmedAmount: parsed }
-        : { actualAmount: parsed };
+        : {
+            actualAmount: parsed,
+            overrideReason: kind === "revenue" && overrideReason.trim() ? overrideReason.trim() : null,
+          };
 
     try {
       const res = await fetch(path, {
@@ -117,7 +121,7 @@ export function MaturityTransitionButton({
     } finally {
       setSubmitting(false);
     }
-  }, [action, amount, kind, lineId, router]);
+  }, [action, amount, kind, lineId, overrideReason, router]);
 
   return (
     <>
@@ -169,6 +173,17 @@ export function MaturityTransitionButton({
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
+            {kind === "revenue" && action === "actualize" ? (
+              <div className="field">
+                <label htmlFor={`maturity-reason-${lineId}`}>Lý do ghi đè nguồn ngoài</label>
+                <input
+                  id={`maturity-reason-${lineId}`}
+                  value={overrideReason}
+                  disabled={submitting}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                />
+              </div>
+            ) : null}
             {error ? (
               <div className="alert alert-error" role="alert">
                 {error}

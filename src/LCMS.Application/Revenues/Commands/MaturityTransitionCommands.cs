@@ -123,7 +123,11 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
     }
 }
 
-public sealed record ActualizeRevenueCommand(Guid RevenueId, decimal? ActualAmount) : IRequest;
+public sealed record ActualizeRevenueCommand(
+    Guid RevenueId,
+    decimal? ActualAmount,
+    string? SourceSystem = null,
+    string? OverrideReason = null) : IRequest;
 
 public sealed class ActualizeRevenueCommandValidator : AbstractValidator<ActualizeRevenueCommand>
 {
@@ -146,19 +150,22 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
     private readonly ICurrentUserContext _user;
     private readonly IRevenueFxStub _fx;
     private readonly IPermissionService _permissions;
+    private readonly IAuditWriter _audit;
 
     public ActualizeRevenueCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IRevenueFxStub fx,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _fx = fx;
         _permissions = permissions;
+        _audit = audit;
     }
 
     public async Task Handle(ActualizeRevenueCommand request, CancellationToken cancellationToken)
@@ -184,6 +191,28 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         if (!string.Equals(revenue.FinancialMaturity, RevenueMaturities.Confirmed, StringComparison.OrdinalIgnoreCase))
         {
             throw new ConflictAppException("Chỉ chuyển Confirmed → Actual; không ghi đè mức độ trước.");
+        }
+
+        var source = string.IsNullOrWhiteSpace(request.SourceSystem)
+            ? OperationalSourceSystems.LcmsManual
+            : request.SourceSystem.Trim();
+        var owned = await _db.FieldOwnerships.FirstOrDefaultAsync(
+            f => f.ObjectType == "revenue" && f.ObjectId == revenue.Id && f.FieldName == "actual_revenue",
+            cancellationToken);
+        if (owned is not null
+            && !string.Equals(owned.OwnerSystem, source, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(request.OverrideReason))
+            {
+                throw new ConflictAppException("RV-06: Nguồn không sở hữu doanh thu thực tế. Không ghi đè.");
+            }
+
+            _audit.Append(
+                AuditActions.FieldOverride,
+                AuditObjectTypes.Revenue,
+                revenue.Id,
+                reason: request.OverrideReason.Trim(),
+                afterJson: "actual_revenue");
         }
 
         var actual = decimal.Round(

@@ -7,9 +7,11 @@ import {
   AdjustmentHistoryTable,
   LineDetailBackLink,
 } from "@/components/AdjustmentHistoryTable";
+import { MapRevenueForm } from "@/components/MapRevenueForm";
 import { MaturityTransitionButton } from "@/components/MaturityTransitionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import { listBills } from "@/lib/bills";
 import { getRevenue } from "@/lib/costs-revenues-server";
 import {
   canActualize,
@@ -66,6 +68,10 @@ export default async function RevenueDetailPage({
 
   const backHref = `/bills/${revenue.billId}`;
   const adjustments = revenue.adjustments ?? [];
+  const billList = await listBills(undefined, { page: 1, pageSize: 50 });
+  const billOptions = billList.ok
+    ? billList.data.items.map((b) => ({ id: b.id, billNo: b.billNo }))
+    : [];
 
   return (
     <AppShell terms={terms} active="revenues">
@@ -146,6 +152,13 @@ export default async function RevenueDetailPage({
             </Link>
           </p>
         ) : null}
+
+        <MapRevenueForm
+          revenueId={revenue.id}
+          amount={revenue.amount}
+          currencyCode={revenue.currencyCode}
+          bills={billOptions}
+        />
 
         <h2>{adjLabel} — lịch sử</h2>
         <p className="note">

@@ -52,6 +52,8 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<CostAllocationDetail> CostAllocationDetails => Set<CostAllocationDetail>();
     public DbSet<Revenue> Revenues => Set<Revenue>();
     public DbSet<RevenueAdjustment> RevenueAdjustments => Set<RevenueAdjustment>();
+    public DbSet<RevenueMapping> RevenueMappings => Set<RevenueMapping>();
+    public DbSet<RevenueMappingDetail> RevenueMappingDetails => Set<RevenueMappingDetail>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Shipment> Shipments => Set<Shipment>();
     public DbSet<OrderBillLink> OrderBillLinks => Set<OrderBillLink>();

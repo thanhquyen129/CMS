@@ -66,8 +66,11 @@ public static class TenantAccessSeeder
             }
 
             // Insert missing default grants for every system role (new catalog actions on existing tenants).
-            // Does not restore rows an Admin already revoked (match by permission id).
+            // Prune grants that are no longer in the catalog for IsSystem roles (H-009 Cost≠Revenue).
+            // Does not restore rows an Admin already soft-revoked (match by permission id).
             await EnsureRolePermissionsAsync(
+                db, tenantId, role.Id, def.Permissions, permissions, cancellationToken);
+            await PruneSystemRolePermissionsAsync(
                 db, tenantId, role.Id, def.Permissions, permissions, cancellationToken);
         }
     }
@@ -118,6 +121,48 @@ public static class TenantAccessSeeder
                 PermissionId = permissionId,
                 DataScope = dataScope
             });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Soft-delete system-role grants that drifted from <see cref="SystemRoleCatalog"/>
+    /// (e.g. CostAccountant wrongly holding revenue.*).
+    /// </summary>
+    private static async Task PruneSystemRolePermissionsAsync(
+        ILcmsDbContext db,
+        Guid tenantId,
+        Guid roleId,
+        IReadOnlyList<(string ActionCode, string DataScope)> grants,
+        IReadOnlyDictionary<string, Guid> permissions,
+        CancellationToken cancellationToken)
+    {
+        var allowedIds = new HashSet<Guid>();
+        foreach (var (actionCode, _) in grants)
+        {
+            if (permissions.TryGetValue(actionCode, out var permissionId))
+            {
+                allowedIds.Add(permissionId);
+            }
+        }
+
+        var extras = await db.RolePermissions
+            .Where(rp =>
+                rp.TenantId == tenantId &&
+                rp.RoleId == roleId &&
+                !allowedIds.Contains(rp.PermissionId))
+            .ToListAsync(cancellationToken);
+
+        if (extras.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var row in extras)
+        {
+            row.DeletedAt = now;
         }
 
         await db.SaveChangesAsync(cancellationToken);

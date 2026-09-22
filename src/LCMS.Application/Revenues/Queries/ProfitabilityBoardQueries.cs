@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Common.Paging;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,11 +61,26 @@ public sealed class GetProfitabilityGroupsQueryValidator : AbstractValidator<Get
 public sealed class ListBillProfitQueryHandler : IRequestHandler<ListBillProfitQuery, PagedResult<BillProfitRowDto>>
 {
     private readonly ProfitabilityBoard _board;
+    private readonly IPermissionService _permissions;
 
-    public ListBillProfitQueryHandler(ProfitabilityBoard board) => _board = board;
+    public ListBillProfitQueryHandler(ProfitabilityBoard board, IPermissionService permissions)
+    {
+        _board = board;
+        _permissions = permissions;
+    }
 
     public async Task<PagedResult<BillProfitRowDto>> Handle(ListBillProfitQuery request, CancellationToken cancellationToken)
     {
+        // H-009: profit board needs both cost + revenue visibility.
+        await _permissions.EnsureAndResolveDataScopeAsync(
+            PermissionCodes.RevenueRead,
+            "Bạn không có quyền xem doanh thu.",
+            cancellationToken);
+        await _permissions.EnsureAndResolveDataScopeAsync(
+            PermissionCodes.CostRead,
+            "Bạn không có quyền xem chi phí (cần để xem lợi nhuận).",
+            cancellationToken);
+
         var rows = await _board.RowsAsync(request.View, cancellationToken);
         var page = request.Page is null or < 1 ? 1 : request.Page.Value;
         var size = request.PageSize is null or < 1 ? 20 : Math.Min(request.PageSize.Value, 100);
@@ -79,11 +95,25 @@ public sealed class ListBillProfitQueryHandler : IRequestHandler<ListBillProfitQ
 public sealed class GetProfitabilityGroupsQueryHandler : IRequestHandler<GetProfitabilityGroupsQuery, IReadOnlyList<ProfitGroupDto>>
 {
     private readonly ProfitabilityBoard _board;
+    private readonly IPermissionService _permissions;
 
-    public GetProfitabilityGroupsQueryHandler(ProfitabilityBoard board) => _board = board;
+    public GetProfitabilityGroupsQueryHandler(ProfitabilityBoard board, IPermissionService permissions)
+    {
+        _board = board;
+        _permissions = permissions;
+    }
 
     public async Task<IReadOnlyList<ProfitGroupDto>> Handle(GetProfitabilityGroupsQuery request, CancellationToken cancellationToken)
     {
+        await _permissions.EnsureAndResolveDataScopeAsync(
+            PermissionCodes.RevenueRead,
+            "Bạn không có quyền xem doanh thu.",
+            cancellationToken);
+        await _permissions.EnsureAndResolveDataScopeAsync(
+            PermissionCodes.CostRead,
+            "Bạn không có quyền xem chi phí (cần để xem lợi nhuận).",
+            cancellationToken);
+
         var rows = await _board.RowsAsync(request.View, cancellationToken);
         var comparable = rows.Where(r => !r.HasMixedCurrencies).ToList();
         if (request.GroupBy != "movement")

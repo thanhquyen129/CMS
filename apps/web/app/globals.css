@@ -2501,6 +2501,34 @@ a.stat-card:hover {
 
 .stat-card-static { cursor: default; }
 
+.stat-card-best {
+  border-width: 2px;
+  border-color: var(--accent, #1677e8);
+}
+
+.stat-card .quote-price {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin: 0.25rem 0;
+}
+
+.stat-card .badge {
+  align-self: flex-start;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #e9f3ff;
+  color: #0875ef;
+}
+
+.section-title {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
 .stat-label {
   font-size: 0.75rem;
   font-weight: 600;

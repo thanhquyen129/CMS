@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -30,6 +31,7 @@ export function CreateRevenueForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting || isPending) return;
     setError(null);
     setSubmitting(true);
 
@@ -62,10 +64,10 @@ export function CreateRevenueForm({
     try {
       const res = await fetch("/bff/revenues", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey("rev-create")
+        ),
         body: JSON.stringify(body),
       });
 

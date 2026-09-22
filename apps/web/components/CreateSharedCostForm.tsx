@@ -3,8 +3,9 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { term, type TerminologyMap } from "@/lib/terminology";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
+import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
   terms: TerminologyMap;
@@ -29,6 +30,7 @@ export function CreateSharedCostForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (submitting || isPending) return;
     setError(null);
     setSubmitting(true);
 
@@ -59,10 +61,10 @@ export function CreateSharedCostForm({
     try {
       const res = await fetch("/bff/costs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          newIdempotencyKey("shared-cost")
+        ),
         body: JSON.stringify(body),
       });
 

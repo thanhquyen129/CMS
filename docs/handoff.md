@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-22 — UX-04/12 + J5 + CostAccountant revenue grant leak
+
+### User
+tiếp tục nào chuyên gia
+
+### Answer
+(1) Idempotency-Key + double-submit trên CreateCost/SharedCost/Revenue + StartFinancialClose. (2) UX-04: `cost@`/`revenue@` — CostAccountant trong DB lệch catalog (có `revenue.*`); soft-delete prod + `TenantAccessSeeder` prune system-role extras; profit board bắt CostRead+RevenueRead. Dashboard cost ẩn DT/biên. (3) W-J5 So sánh: toolbar + grid 3 cột + badge Tốt nhất. Nav Doanh thu theo license còn hiện (follow-up UI).
+
+### Files
+- `CreateCostForm.tsx`, `CreateSharedCostForm.tsx`, `CreateRevenueForm.tsx`, `StartFinancialCloseForm.tsx`
+- `TenantAccessSeeder.cs`, `ProfitabilityBoardQueries.cs`
+- `CompareRatesForm.tsx`, `globals.css`
+- UAT + gap index
+
 ## 2026-09-22 — UAT Pixel Wave 2 (admin demo) + hotfix slug
 
 ### User

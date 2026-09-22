@@ -136,7 +136,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-J2 | Phụ lục: wizard phiên bản mới (amendment) | `/rate-cards/appendices` | P0 |
 | W-J3 | DS bảng giá: panel bậc trọng lượng / container rate | `/rate-cards`, `[id]` | P1 |
 | W-J4 | Lịch sử: filter thời gian + xuất CSV (không Excel giả) | `/rate-cards/history` | P1 | DONE |
-| W-J5 | Tính giá / So sánh: UAT bố cục 2 cột vs HTML | `rate`, `compare` | P1 |
+| W-J5 | Tính giá / So sánh: UAT bố cục 2 cột vs HTML | `rate`, `compare` | P1 | DONE (rate 2-col; compare toolbar + `stat-grid-3` + badge Tốt nhất) |
 | W-J6 | Gộp hoặc cắt trùng `/rate-cards/fx` vs `/admin/fx-rates` | — | P2 |
 
 ### Gói K — UI-02 / Ops depth

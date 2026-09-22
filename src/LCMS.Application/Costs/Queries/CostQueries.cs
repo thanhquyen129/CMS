@@ -29,7 +29,8 @@ public sealed record CostAllocationDetailDto(
     decimal AllocatedAmount,
     decimal RoundingAdjustment,
     decimal? ManualOverrideAmount,
-    string? OverrideReason);
+    string? OverrideReason,
+    decimal? OverrideBeforeAmount = null);
 
 public sealed record CostAllocationDto(
     Guid Id,
@@ -195,7 +196,8 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                     d.AllocatedAmount,
                     d.RoundingAdjustment,
                     d.ManualOverrideAmount,
-                    d.OverrideReason)).ToList());
+                    d.OverrideReason,
+                    d.OverrideBeforeAmount)).ToList());
         }).ToList();
 
         return new CostDto(

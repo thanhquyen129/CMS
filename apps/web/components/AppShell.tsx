@@ -74,7 +74,6 @@ export async function AppShell({
   const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const settingsLabel = term(terms, "SETTINGS", "Cài đặt");
-  const sharedLabel = term(terms, "ATTRIBUTION_SHARED", "Chung");
   const license = await getTenantLicense();
   const inbox = await listInbox(true);
   const unreadNotifications = inbox.ok ? inbox.data.filter((n) => !n.isRead).length : 0;
@@ -133,10 +132,9 @@ export async function AppShell({
 
       {show("costs") ? (
         <NavGroup label={costLabel} icon="costs" match={["/costs"]}>
-          <NavLink href="/costs">Quản lý {costLabel.toLowerCase()}</NavLink>
-          <NavLink href="/costs/shared">
-            {costLabel} {sharedLabel.toLowerCase()}
-          </NavLink>
+          <NavLink href="/costs">Danh sách {costLabel.toLowerCase()}</NavLink>
+          <NavLink href="/costs/shared/new">Tạo {costLabel.toLowerCase()}</NavLink>
+          <NavLink href="/costs/shared">Phân bổ {costLabel.toLowerCase()}</NavLink>
         </NavGroup>
       ) : null}
 

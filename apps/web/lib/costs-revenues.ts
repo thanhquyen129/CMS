@@ -95,7 +95,17 @@ export type RevenueDto = RevenueListItem & {
   adjustments: CostAdjustmentItem[];
 };
 
-export type AllocationBasis = "equal" | "quantity" | "manual_ratio";
+export type AllocationBasis =
+  | "equal"
+  | "quantity"
+  | "gross_kg"
+  | "chargeable"
+  | "cbm"
+  | "package_count"
+  | "teu"
+  | "manual_ratio"
+  | "manual_percent"
+  | "manual_amount";
 
 export function adjustmentTypeLabel(type: string): string {
   switch (type?.toLowerCase()) {
@@ -114,8 +124,22 @@ export function allocationBasisLabel(basis: string): string {
       return "Chia đều";
     case "quantity":
       return "Theo số lượng";
+    case "gross_kg":
+      return "Theo kg";
+    case "chargeable":
+      return "Theo trọng lượng tính cước";
+    case "cbm":
+      return "Theo CBM";
+    case "package_count":
+      return "Theo số kiện";
+    case "teu":
+      return "Theo TEU";
     case "manual_ratio":
       return "Tỷ lệ thủ công";
+    case "manual_percent":
+      return "Theo phần trăm";
+    case "manual_amount":
+      return "Theo số tiền";
     default:
       return basis;
   }
@@ -125,8 +149,14 @@ export function allocationStatusLabel(status: string): string {
   switch (status?.toLowerCase()) {
     case "draft":
       return "Nháp";
+    case "calculated":
+      return "Đã tính";
+    case "pending_approval":
+      return "Chờ duyệt";
     case "finalized":
       return "Đã chốt";
+    case "cancelled":
+      return "Đã hủy";
     case "superseded":
       return "Đã thay thế";
     default:

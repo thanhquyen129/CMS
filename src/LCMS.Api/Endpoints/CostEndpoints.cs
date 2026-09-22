@@ -113,7 +113,13 @@ public static class CostEndpoints
                 .Select(d => new AllocationDetailInput(d.BillId, d.BasisValue, d.ManualOverrideAmount, d.OverrideReason))
                 .ToList();
             var allocationId = await sender.Send(
-                new CreateCostAllocationCommand(id, body.AllocationBasis, details),
+                new CreateCostAllocationCommand(
+                    id,
+                    body.AllocationBasis,
+                    details,
+                    body.ApplicabilityMode,
+                    body.ScopeId,
+                    body.ConditionCode),
                 ct);
             return Results.Created($"/api/cost-allocations/{allocationId}", new { id = allocationId });
         });
@@ -122,6 +128,21 @@ public static class CostEndpoints
         allocations.MapPost("/{id:guid}/finalize", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             await sender.Send(new FinalizeCostAllocationCommand(id), ct);
+            return Results.NoContent();
+        });
+        allocations.MapPost("/{id:guid}/calculate", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new CalculateCostAllocationCommand(id), ct);
+            return Results.NoContent();
+        });
+        allocations.MapPost("/{id:guid}/submit", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new SubmitCostAllocationCommand(id), ct);
+            return Results.NoContent();
+        });
+        allocations.MapPost("/{id:guid}/cancel", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new CancelCostAllocationCommand(id), ct);
             return Results.NoContent();
         });
 
@@ -171,4 +192,7 @@ public sealed record AllocationDetailRequest(
 
 public sealed record CreateAllocationRequest(
     string AllocationBasis,
-    List<AllocationDetailRequest>? Details);
+    List<AllocationDetailRequest>? Details,
+    string? ApplicabilityMode = null,
+    Guid? ScopeId = null,
+    string? ConditionCode = null);

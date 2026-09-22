@@ -1,5 +1,28 @@
 # Handoff
 
+## 2026-09-22 — Gói D: cơ sở phân bổ, phạm vi Bill, dư làm tròn
+
+### User
+tiếp tục làm pixel-perfect gói D
+
+### Answer
+Gói D (W-D1…D6) xong. Cơ sở thêm kg thực, trọng lượng tính cước, CBM, số kiện, TEU, phần trăm và số tiền. Equal, quantity, manual ratio giữ. Số đo lấy từ operational measurements; tổng cơ sở bằng 0 trả `ZERO_ALLOCATION_BASIS`, không chia đều. Phần trăm phải cộng đủ 100. Số tiền tay phải khớp số cần phân bổ. Làm tròn theo Bill id, dòng dương cuối nhận phần dư, tổng dòng bằng số gốc. Phạm vi explicit, chặng, chuyến hoặc điều kiện dịch vụ: không gán mọi Bill liên kết khi rule giới hạn. Sửa kết quả tự động cần quyền `cost.allocation.override`, lý do, và lưu số trước/sau. Trạng thái: nháp, đã tính, chờ duyệt, đã chốt, đã hủy, đã thay. Chốt vẫn bất biến; phân bổ lại thì supersede. Tách người tạo và người duyệt (W-F5) chưa làm — người tạo vẫn chốt được.
+
+Menu Chi phí chỉ gắn ba mục có màn thật: Danh sách chi phí, Tạo chi phí, Phân bổ chi phí. Không thêm Duyệt, Đối soát, theo Shipment, theo Chuyến, Báo cáo vì chưa có luồng. Màn phân bổ hiện Đối tượng, Mã, Số tiền, Tỷ lệ, Dư làm tròn và nút Tính phân bổ, Gửi duyệt, Hủy phiên, Chốt. Chưa bấm từng nút trên trình duyệt vì không có phiên đăng nhập local.
+
+Gói E chưa làm.
+
+### Files / API / schema
+- Migration `20260922053957_AllocationBasesScopeRounding`: `cost_allocations.scope_id`, `condition_code`; `cost_allocation_details.override_before_amount`.
+- `POST /api/costs/{id}/allocations` nhận applicabilityMode, scopeId, conditionCode.
+- `POST /api/cost-allocations/{id}/calculate|submit|cancel` (BFF cùng đường).
+- Quyền `cost.allocation.override` cho Financial Controller và Cost Accountant.
+- ADR-0026.
+- UI: `/costs` lede theo UI-04; `/costs/shared` và `/costs/shared/{id}`.
+
+### UI
+Ba nhãn nav có trang. Form chọn mười cơ sở. Phiên đang mở chặn phiên nháp thứ hai. `next build` xanh. Chưa click trình duyệt.
+
 ## 2026-09-22 — Gói C: sáu mode tính giá, snapshot, phụ phí, so sánh
 
 ### User

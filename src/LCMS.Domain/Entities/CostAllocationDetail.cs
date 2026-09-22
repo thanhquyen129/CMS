@@ -16,6 +16,7 @@ public sealed class CostAllocationDetail : TenantEntityBase
     public decimal RoundingAdjustment { get; set; }
     public decimal? ManualOverrideAmount { get; set; }
     public string? OverrideReason { get; set; }
+    public decimal? OverrideBeforeAmount { get; set; }
 
     public CostAllocation? Allocation { get; set; }
     public Bill? Bill { get; set; }

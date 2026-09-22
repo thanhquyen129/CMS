@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { AdjustCostRevenueButton } from "@/components/AdjustCostRevenueButton";
 import { AdjustmentHistoryTable } from "@/components/AdjustmentHistoryTable";
 import { AllocateSharedCostForm } from "@/components/AllocateSharedCostForm";
+import { AllocationSessionActions } from "@/components/AllocationSessionActions";
 import { FinalizeCostAllocationButton } from "@/components/FinalizeCostAllocationButton";
 import { MaturityTransitionButton } from "@/components/MaturityTransitionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -105,12 +106,12 @@ export default async function SharedCostDetailPage({
   const allocations = [...(cost.allocations ?? [])].sort(
     (a, b) => b.versionNo - a.versionNo
   );
-  const hasDraft = allocations.some(
-    (a) => a.allocationStatus?.toLowerCase() === "draft"
+  const open = allocations.find((a) =>
+    ["draft", "calculated", "pending_approval"].includes(
+      a.allocationStatus?.toLowerCase() ?? ""
+    )
   );
-  const draft = allocations.find(
-    (a) => a.allocationStatus?.toLowerCase() === "draft"
-  );
+  const hasDraft = Boolean(open);
 
   return (
     <AppShell terms={terms} active="costs">
@@ -204,18 +205,19 @@ export default async function SharedCostDetailPage({
           </div>
         ) : null}
 
-        {draft ? (
+        {open ? (
           <div className="cta-row" style={{ marginBottom: "1rem" }}>
+            <AllocationSessionActions allocationId={open.id} status={open.allocationStatus} />
             <FinalizeCostAllocationButton
               terms={terms}
-              allocationId={draft.id}
-              amount={draft.allocatableAmount || cost.amount}
+              allocationId={open.id}
+              amount={open.allocatableAmount || cost.amount}
               currencyCode={cost.currencyCode}
-              billCount={draft.details?.length ?? 0}
+              billCount={open.details?.length ?? 0}
             />
             <span className="muted">
-              Phiên nháp v{draft.versionNo} ·{" "}
-              {allocationBasisLabel(draft.allocationBasis)}
+              Phiên v{open.versionNo} · {allocationStatusLabel(open.allocationStatus)} ·{" "}
+              {allocationBasisLabel(open.allocationBasis)}
             </span>
           </div>
         ) : null}
@@ -255,24 +257,32 @@ export default async function SharedCostDetailPage({
                         : ""}
                     </td>
                     <td>
-                      <ul className="inline-list">
-                        {(a.details ?? []).map((d) => (
-                          <li key={d.id}>
-                            <Link
-                              className="row-link"
-                              href={`/bills/${d.billId}`}
-                            >
-                              {billNoById.get(d.billId) ??
-                                d.billId.slice(0, 8)}
-                            </Link>
-                            {a.allocationStatus?.toLowerCase() !== "draft"
-                              ? `: ${formatMoney(d.allocatedAmount, cost.currencyCode)}`
-                              : d.basisValue
-                                ? ` (cơ sở ${d.basisValue})`
-                                : ""}
-                          </li>
-                        ))}
-                      </ul>
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Đối tượng</th>
+                            <th>Mã</th>
+                            <th className="num">Số tiền</th>
+                            <th className="num">Tỷ lệ</th>
+                            <th className="num">Dư làm tròn</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(a.details ?? []).map((d) => (
+                            <tr key={d.id}>
+                              <td>{billLabel}</td>
+                              <td>
+                                <Link className="row-link" href={`/bills/${d.billId}`}>
+                                  {billNoById.get(d.billId) ?? d.billId.slice(0, 8)}
+                                </Link>
+                              </td>
+                              <td className="num">{formatMoney(d.allocatedAmount, cost.currencyCode)}</td>
+                              <td className="num">{(d.basisRatio * 100).toFixed(2)}%</td>
+                              <td className="num">{formatMoney(d.roundingAdjustment, cost.currencyCode)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </td>
                     <td>
                       {a.finalizedAt ? formatDateTimeVi(a.finalizedAt) : "—"}

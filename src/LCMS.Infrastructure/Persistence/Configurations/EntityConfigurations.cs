@@ -390,6 +390,7 @@ internal sealed class CostAllocationConfiguration : IEntityTypeConfiguration<Cos
         builder.Property(e => e.VersionNo).IsRequired();
         builder.Property(e => e.AllocationBasis).HasMaxLength(64).IsRequired();
         builder.Property(e => e.ApplicabilityMode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ConditionCode).HasMaxLength(64);
         builder.Property(e => e.AllocatableAmount).HasPrecision(18, 4);
         builder.Property(e => e.AllocatedAmount).HasPrecision(18, 4);
         builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
@@ -419,6 +420,7 @@ internal sealed class CostAllocationDetailConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.RoundingAdjustment).HasPrecision(18, 4);
         builder.Property(e => e.ManualOverrideAmount).HasPrecision(18, 4);
         builder.Property(e => e.OverrideReason).HasMaxLength(512);
+        builder.Property(e => e.OverrideBeforeAmount).HasPrecision(18, 4);
 
         builder.HasIndex(e => new { e.TenantId, e.AllocationId, e.BillId }).IsUnique();
 

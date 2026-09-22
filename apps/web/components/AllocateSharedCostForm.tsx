@@ -55,7 +55,21 @@ export function AllocateSharedCostForm({
     [rows]
   );
 
-  const needsBasis = basis === "quantity" || basis === "manual_ratio";
+  const measured =
+    basis === "gross_kg" ||
+    basis === "chargeable" ||
+    basis === "cbm" ||
+    basis === "package_count" ||
+    basis === "teu";
+  const needsBasis = !measured && basis !== "equal";
+  const basisColumn =
+    basis === "manual_percent"
+      ? "Phần trăm"
+      : basis === "manual_amount"
+        ? "Số tiền"
+        : basis === "quantity"
+          ? "Số lượng"
+          : "Tỷ lệ";
 
   if (hasDraft) {
     return (
@@ -177,7 +191,7 @@ export function AllocateSharedCostForm({
       <p className="note">
         Tạo {draftLabel.toLowerCase()} từ số{" "}
         <strong>{formatMoney(allocatableAmount, currencyCode)}</strong>. Chọn ≥2{" "}
-        {billLabel}, cơ sở equal / quantity / manual_ratio. Chốt mới ghi vào hồ sơ{" "}
+        {billLabel}. Kg, trọng lượng tính cước, CBM, kiện và TEU lấy từ số đo trên {billLabel}. Chốt mới ghi vào hồ sơ{" "}
         {billLabel} (conservation C-005).
       </p>
 
@@ -187,41 +201,29 @@ export function AllocateSharedCostForm({
         </div>
       ) : null}
 
-      <fieldset className="field" disabled={busy}>
-        <legend>Cơ sở phân bổ</legend>
-        <div className="radio-row">
-          <label>
-            <input
-              type="radio"
-              name="basis"
-              value="equal"
-              checked={basis === "equal"}
-              onChange={() => setBasis("equal")}
-            />{" "}
-            Chia đều
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="basis"
-              value="quantity"
-              checked={basis === "quantity"}
-              onChange={() => setBasis("quantity")}
-            />{" "}
-            Theo số lượng
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="basis"
-              value="manual_ratio"
-              checked={basis === "manual_ratio"}
-              onChange={() => setBasis("manual_ratio")}
-            />{" "}
-            Tỷ lệ thủ công
-          </label>
-        </div>
-      </fieldset>
+      <div className="field">
+        <label htmlFor="allocation-basis">Cơ sở phân bổ</label>
+        <select
+          id="allocation-basis"
+          value={basis}
+          disabled={busy}
+          onChange={(ev) => setBasis(ev.target.value as AllocationBasis)}
+        >
+          <option value="equal">Chia đều</option>
+          <option value="quantity">Theo số lượng</option>
+          <option value="gross_kg">Theo kg</option>
+          <option value="chargeable">Theo trọng lượng tính cước</option>
+          <option value="cbm">Theo CBM</option>
+          <option value="package_count">Theo số kiện</option>
+          <option value="teu">Theo TEU</option>
+          <option value="manual_ratio">Tỷ lệ thủ công</option>
+          <option value="manual_percent">Theo phần trăm</option>
+          <option value="manual_amount">Theo số tiền</option>
+        </select>
+      </div>
+      {measured ? (
+        <p className="muted">Số đo bằng 0 trên mọi {billLabel} thì không chia đều.</p>
+      ) : null}
 
       <div className="table-wrap">
         <table className="data-table">
@@ -231,7 +233,7 @@ export function AllocateSharedCostForm({
               <th scope="col">{billLabel}</th>
               {needsBasis ? (
                 <th scope="col" className="num">
-                  {basis === "quantity" ? "Số lượng" : "Tỷ lệ"}
+                  {basisColumn}
                 </th>
               ) : null}
             </tr>
@@ -262,7 +264,7 @@ export function AllocateSharedCostForm({
                         onChange={(ev) => setBasisValue(b.id, ev.target.value)}
                         disabled={busy || !row?.selected}
                         style={{ width: "6rem", textAlign: "right" }}
-                        aria-label={`${basis === "quantity" ? "Số lượng" : "Tỷ lệ"} ${b.billNo}`}
+                        aria-label={`${basisColumn} ${b.billNo}`}
                       />
                     </td>
                   ) : null}

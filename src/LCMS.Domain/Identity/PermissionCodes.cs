@@ -11,6 +11,7 @@ public static class PermissionCodes
     public const string CostRead = "cost.read";
     public const string CostConfirm = "cost.confirm";
     public const string CostActualize = "cost.actualize";
+    public const string CostAllocationOverride = "cost.allocation.override";
     /// <summary>View revenue — independent of cost.read (H View Cost ≠ Revenue).</summary>
     public const string RevenueRead = "revenue.read";
     public const string RevenueConfirm = "revenue.confirm";
@@ -47,6 +48,7 @@ public static class PermissionCodes
         (CostRead, "Xem chi phí"),
         (CostConfirm, "Xác nhận chi phí"),
         (CostActualize, "Thực tế hóa chi phí"),
+        (CostAllocationOverride, "Sửa kết quả phân bổ tự động"),
         (RevenueRead, "Xem doanh thu"),
         (RevenueConfirm, "Xác nhận doanh thu"),
         (RevenueActualize, "Thực tế hóa doanh thu"),
@@ -82,6 +84,7 @@ public static class PermissionCodes
         CostRead,
         CostConfirm,
         CostActualize,
+        CostAllocationOverride,
         RevenueRead,
         RevenueConfirm,
         RevenueActualize,

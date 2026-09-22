@@ -171,7 +171,7 @@ export default async function CostsPage({
             { label: costLabel },
           ]}
           title={`Danh sách ${costLabel.toLowerCase()}`}
-          lede={`Vòng đời ${costLabel.toLowerCase()}: ${expectedLabel} → ${confirmedLabel} → ${actualLabel}. Phân bổ giữ tổng; không ghi đè độ chín. Chọn dòng để xem panel chi tiết.`}
+          lede={`Quản lý ${costLabel.toLowerCase()} theo mức độ chín, theo chứng từ và phân bổ cho vận đơn/shipment`}
           action={
             <Link className="btn" href="/costs/shared/new">
               + Tạo {costLabel.toLowerCase()} {sharedLabel.toLowerCase()}
@@ -186,7 +186,7 @@ export default async function CostsPage({
             Ghi {costLabel.toLowerCase()} trên {billLabel}
           </Link>
           <Link className="btn btn-ghost" href="/costs/shared">
-            {costLabel} {sharedLabel.toLowerCase()}
+            Phân bổ {costLabel.toLowerCase()}
           </Link>
         </p>
 

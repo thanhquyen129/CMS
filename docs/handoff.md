@@ -1,5 +1,30 @@
 # Handoff
 
+## 2026-09-22 — Gói A: địa điểm, tuyến, loại hàng, vai trò Bill, snapshot đối tác
+
+### User
+Triển khai làm lần lượt từng phần. Làm đầy đủ, chi tiết nhất cho từng chức năng. Không làm lát cắt mỏng đủ vận hành.
+
+### Answer
+Gói A (W-A1…A6) xong. Địa điểm canonical (loại, IATA, UN/LOCODE, alias), tuyến (điểm đi ≠ điểm đến, điểm trung gian), loại hàng (cờ DG/lạnh/quá khổ/quá tải/giá trị cao, loại cha). Bill gắn payer / shipper / consignee / bill_to. Chính sách thuê bao chọn vai trò bắt buộc và cho phép vãng lai. Snapshot đóng băng tên đối tác; sửa master không viết lại dòng cũ. Khi thuê bao đã có địa điểm, mã điểm không khớp bị từ chối; chưa có địa điểm thì vẫn nhập tự do. A5 (gợi ý đối tác) giữ nguyên.
+
+Gói B trở đi chưa làm.
+
+### Files / API / schema
+- Bảng: `locations`, `location_aliases`, `routes`, `route_stops`, `commodity_types`, `operational_party_snapshots`
+- Cột Bill: `payer_party_id`, `shipper_party_id`, `consignee_party_id`, `bill_to_party_id`, `origin_location_id`, `destination_location_id`, `route_id`
+- Cột Order: `origin_location_id`, `destination_location_id`, `route_id`
+- `tenant_settings.bill_party_policy_json`
+- Migration `20260922021952_CanonicalReferenceMasters` (copy `master_catalog` kind location / transport_route)
+- API: `PUT/GET /api/locations` (+ `/resolve`), `/api/routes`, `/api/commodities`, `GET/POST /api/party-snapshots`, `GET/PUT /api/bill-party-policy`
+- ADR-0023
+- UI: `/admin/locations`, `/admin/routes`, `/admin/commodities`, snapshot trên Bill, chính sách ở Cấu hình nghiệp vụ, form tạo Bill gửi vai trò + tuyến danh mục
+
+### UI
+Tạo Bill: chọn khách / bên trả tiền / người gửi / người nhận / bên nhận hóa đơn; chọn tuyến thì điền điểm đi và điểm đến. Snapshot đối tác trên tab tổng quan Bill.
+
+---
+
 ## 2026-09-22 — UI-02: danh sách Shipment khớp mockup workspace
 
 ### User

@@ -4,6 +4,7 @@ using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
+using LCMS.Application.ReferenceMasters;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,11 @@ public sealed record CreateBillCommand(
     string? SourceSystem,
     string? ExternalId,
     Guid? OrganizationId,
-    Guid? CustomerPartyId = null) : IRequest<Guid>;
+    Guid? CustomerPartyId = null,
+    Guid? PayerPartyId = null,
+    Guid? ShipperPartyId = null,
+    Guid? ConsigneePartyId = null,
+    Guid? BillToPartyId = null) : IRequest<Guid>;
 
 public sealed class CreateBillCommandValidator : AbstractValidator<CreateBillCommand>
 {
@@ -51,19 +56,25 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
     private readonly ICurrentUserContext _userContext;
     private readonly IPermissionService _permissions;
     private readonly IPartyDirectoryService _parties;
+    private readonly IPartySnapshotCapture _snapshots;
+    private readonly IBillPartyPolicyStore _partyPolicy;
 
     public CreateBillCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext userContext,
         IPermissionService permissions,
-        IPartyDirectoryService parties)
+        IPartyDirectoryService parties,
+        IPartySnapshotCapture snapshots,
+        IBillPartyPolicyStore partyPolicy)
     {
         _db = db;
         _tenantContext = tenantContext;
         _userContext = userContext;
         _permissions = permissions;
         _parties = parties;
+        _snapshots = snapshots;
+        _partyPolicy = partyPolicy;
     }
 
     public async Task<Guid> Handle(CreateBillCommand request, CancellationToken cancellationToken)
@@ -130,10 +141,16 @@ public sealed class CreateBillCommandHandler : IRequestHandler<CreateBillCommand
             OperationalStatus = "active",
             IsActive = true,
             OrganizationId = organizationId,
-            CustomerPartyId = request.CustomerPartyId
+            CustomerPartyId = request.CustomerPartyId,
+            PayerPartyId = request.PayerPartyId,
+            ShipperPartyId = request.ShipperPartyId,
+            ConsigneePartyId = request.ConsigneePartyId,
+            BillToPartyId = request.BillToPartyId
         };
 
+        await BillPartyRoles.EnsureRequiredAsync(bill, await _partyPolicy.GetAsync(cancellationToken), cancellationToken);
         _db.Bills.Add(bill);
+        await BillPartyRoles.CaptureAsync(bill, _parties, _snapshots, cancellationToken);
 
         try
         {

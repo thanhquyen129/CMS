@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences;
+using LCMS.Application.ReferenceMasters;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -33,7 +34,8 @@ public sealed record UpsertOrderCommand(
     string? CustomerReference = null,
     string? Description = null,
     OperationalContextDocument? Context = null,
-    bool ApplyContext = false) : IRequest<Guid>;
+    bool ApplyContext = false,
+    Guid? RouteId = null) : IRequest<Guid>;
 
 public sealed class UpsertOrderCommandValidator : AbstractValidator<UpsertOrderCommand>
 {
@@ -76,15 +78,21 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPartyDirectoryService _parties;
+    private readonly ICanonicalPlaceBinder _places;
+    private readonly IPartySnapshotCapture _snapshots;
 
     public UpsertOrderCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IPartyDirectoryService parties)
+        IPartyDirectoryService parties,
+        ICanonicalPlaceBinder places,
+        IPartySnapshotCapture snapshots)
     {
         _db = db;
         _tenantContext = tenantContext;
         _parties = parties;
+        _places = places;
+        _snapshots = snapshots;
     }
 
     public async Task<Guid> Handle(UpsertOrderCommand request, CancellationToken cancellationToken)
@@ -133,7 +141,12 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
                 IsActive = request.IsActive
             };
             ApplyContext(order, request);
+            await BindPlacesAsync(order, request, cancellationToken);
             _db.Orders.Add(order);
+            if (request.ApplyContext && order.CustomerPartyId is Guid newCustomer)
+            {
+                await _snapshots.CapturePartyAsync(PartySnapshotObjectTypes.Order, order.Id, PartyRoleCodes.Customer, newCustomer, cancellationToken);
+            }
             try
             {
                 await _db.SaveChangesAsync(cancellationToken);
@@ -163,6 +176,12 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
         ApplyContext(existing, request);
+        await BindPlacesAsync(existing, request, cancellationToken);
+        if (request.ApplyContext && existing.CustomerPartyId is Guid customer)
+        {
+            await _snapshots.CapturePartyAsync(PartySnapshotObjectTypes.Order, existing.Id, PartyRoleCodes.Customer, customer, cancellationToken);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }
@@ -193,5 +212,41 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
         order.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);
         order.Description = OperationalContextJson.TrimOrNull(request.Description);
         order.ContextJson = OperationalContextJson.Serialize(request.Context);
+    }
+
+    private async Task BindPlacesAsync(Order order, UpsertOrderCommand request, CancellationToken cancellationToken)
+    {
+        if (!request.ApplyContext && request.RouteId is null)
+        {
+            return;
+        }
+
+        if (request.RouteId is Guid routeId)
+        {
+            var route = await _places.RequireRouteAsync(routeId, cancellationToken);
+            var origin = await _db.Locations.AsNoTracking().FirstAsync(l => l.Id == route.OriginLocationId, cancellationToken);
+            var destination = await _db.Locations.AsNoTracking().FirstAsync(l => l.Id == route.DestinationLocationId, cancellationToken);
+            order.RouteId = route.Id;
+            order.OriginLocationId = origin.Id;
+            order.DestinationLocationId = destination.Id;
+            order.OriginCode = origin.Code;
+            order.DestinationCode = destination.Code;
+            order.RouteCode = route.Code;
+            return;
+        }
+
+        var boundOrigin = await _places.BindAsync(order.OriginCode, "Điểm đi", cancellationToken);
+        var boundDestination = await _places.BindAsync(order.DestinationCode, "Điểm đến", cancellationToken);
+        order.OriginLocationId = boundOrigin.LocationId;
+        order.DestinationLocationId = boundDestination.LocationId;
+        if (boundOrigin.Code is not null)
+        {
+            order.OriginCode = boundOrigin.Code;
+        }
+
+        if (boundDestination.Code is not null)
+        {
+            order.DestinationCode = boundDestination.Code;
+        }
     }
 }

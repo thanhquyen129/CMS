@@ -17,6 +17,9 @@ public sealed class TenantSetting : TenantEntityBase
     ///   "defaultExceptionSlaHours": 48, "confirmApprovalThresholdBase": 100000 }
     /// </summary>
     public string? FinancialJson { get; set; }
+
+    /// <summary>JSON: required Bill party roles and whether walk-in capture is allowed.</summary>
+    public string? BillPartyPolicyJson { get; set; }
 }
 
 /// <summary>Deserialized shape of TenantSetting.FinancialJson (P16/P20).</summary>

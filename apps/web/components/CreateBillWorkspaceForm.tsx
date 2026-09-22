@@ -28,6 +28,7 @@ type Props = {
   users: CatalogOption[];
   modes: CatalogOption[];
   locations: CatalogOption[];
+  canonicalRoutes: { id: string; code: string; name: string; originCode: string; destinationCode: string }[];
   services: CatalogOption[];
   currencies: CatalogOption[];
   vendors: CatalogOption[];
@@ -40,6 +41,7 @@ export function CreateBillWorkspaceForm({
   users,
   modes,
   locations,
+  canonicalRoutes,
   services,
   currencies,
   vendors,
@@ -55,11 +57,15 @@ export function CreateBillWorkspaceForm({
   const [mode, setMode] = useState("air");
   const [origin, setOrigin] = useState("");
   const [dest, setDest] = useState("");
+  const [routeId, setRouteId] = useState("");
   const [customerLabel, setCustomerLabel] = useState("Chưa chọn");
   const [orders, setOrders] = useState<RefHit[]>([]);
   const [shipments, setShipments] = useState<RefHit[]>([]);
   const modeOpts = mergeCatalog(modes, TRANSPORT_MODES);
-  const route = useMemo(() => composeRoute(origin || null, dest || null), [origin, dest]);
+  const route = useMemo(() => {
+    const picked = canonicalRoutes.find((r) => r.id === routeId);
+    return picked?.code ?? composeRoute(origin || null, dest || null);
+  }, [canonicalRoutes, routeId, origin, dest]);
   const submitting = busy || pending;
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -100,6 +106,10 @@ export function CreateBillWorkspaceForm({
           sourceSystem: manualSource(),
           externalId: number,
           customerPartyId,
+          payerPartyId: formStr(fd, "payerPartyId"),
+          shipperPartyId: formStr(fd, "shipperPartyId"),
+          consigneePartyId: formStr(fd, "consigneePartyId"),
+          billToPartyId: formStr(fd, "billToPartyId"),
         }),
       });
       if (createdRes.status === 401) {
@@ -123,6 +133,12 @@ export function CreateBillWorkspaceForm({
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           customerPartyId,
+          payerPartyId: formStr(fd, "payerPartyId"),
+          shipperPartyId: formStr(fd, "shipperPartyId"),
+          consigneePartyId: formStr(fd, "consigneePartyId"),
+          billToPartyId: formStr(fd, "billToPartyId"),
+          applyPartyRoles: true,
+          routeId: routeId || null,
           routeCode: route,
           etdAt: formDateIso(fd, "etdAt"),
           etaAt: formDateIso(fd, "etaAt"),
@@ -288,19 +304,23 @@ export function CreateBillWorkspaceForm({
               <PartyTypeahead name="customerPartyId" label="Khách hàng" roleCode="customer" required disabled={submitting} onSelect={(p) => setCustomerLabel(p ? `${p.code} — ${p.name}` : "Chưa chọn")} />
             </div>
             <div className="cw-field s6">
+              <PartyTypeahead name="payerPartyId" label="Bên trả tiền" roleCode="payer" disabled={submitting} />
+            </div>
+            <div className="cw-field s6">
+              <PartyTypeahead name="shipperPartyId" label="Người gửi hàng" roleCode="shipper" disabled={submitting} />
+            </div>
+            <div className="cw-field s6">
+              <PartyTypeahead name="consigneePartyId" label="Người nhận hàng" roleCode="consignee" disabled={submitting} />
+            </div>
+            <div className="cw-field s6">
+              <PartyTypeahead name="billToPartyId" label="Bên nhận hóa đơn" roleCode="bill_to" disabled={submitting} />
+            </div>
+            <div className="cw-field s6">
               <label htmlFor="assignedUserId">Nhân viên phụ trách</label>
               <select id="assignedUserId" name="assignedUserId" disabled={submitting} defaultValue="">
                 <option value="">Chưa chọn</option>
                 {users.map((u) => <option key={u.value} value={u.value}>{u.label}</option>)}
               </select>
-            </div>
-            <div className="cw-field s6">
-              <label htmlFor="shipperName">Người gửi hàng (Shipper)</label>
-              <input id="shipperName" name="shipperName" disabled={submitting} placeholder="Chọn hoặc nhập người gửi hàng" />
-            </div>
-            <div className="cw-field s6">
-              <label htmlFor="consigneeName">Người nhận hàng (Consignee)</label>
-              <input id="consigneeName" name="consigneeName" disabled={submitting} placeholder="Chọn hoặc nhập người nhận hàng" />
             </div>
             <div className="cw-field s12">
               <label htmlFor="description">Mô tả / Ghi chú Bill</label>
@@ -311,10 +331,32 @@ export function CreateBillWorkspaceForm({
 
         <CreateSection title="2. Hành trình & thời gian" hint="Thông tin tuyến và mốc thời gian dự kiến">
           <div className="create-grid">
-            <LocationField id="originCode" name="originCode" label="Điểm đi" required value={origin} onChange={setOrigin} options={locations} disabled={submitting} />
-            <LocationField id="destinationCode" name="destinationCode" label="Điểm đến" required value={dest} onChange={setDest} options={locations} disabled={submitting} />
+            <div className="cw-field s12">
+              <label htmlFor="canonicalRouteId">Tuyến danh mục</label>
+              <select
+                id="canonicalRouteId"
+                value={routeId}
+                disabled={submitting || canonicalRoutes.length === 0}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setRouteId(id);
+                  const picked = canonicalRoutes.find((r) => r.id === id);
+                  if (picked) {
+                    setOrigin(picked.originCode);
+                    setDest(picked.destinationCode);
+                  }
+                }}
+              >
+                <option value="">{canonicalRoutes.length === 0 ? "Chưa có tuyến — nhập điểm đi và điểm đến" : "Không chọn tuyến"}</option>
+                {canonicalRoutes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.code} — {r.name}</option>
+                ))}
+              </select>
+            </div>
+            <LocationField id="originCode" name="originCode" label="Điểm đi" required value={origin} onChange={(v) => { setRouteId(""); setOrigin(v); }} options={locations} disabled={submitting} />
+            <LocationField id="destinationCode" name="destinationCode" label="Điểm đến" required value={dest} onChange={(v) => { setRouteId(""); setDest(v); }} options={locations} disabled={submitting} />
             <div className="cw-field">
-              <label>Tuyến vận chuyển</label>
+              <label>Tuyến hiển thị</label>
               <input readOnly value={route || "Tự xác định từ điểm đi → điểm đến"} />
             </div>
             <div className="cw-field">

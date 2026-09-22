@@ -26,6 +26,15 @@ public sealed class Bill : TenantEntityBase
     /// <summary>Primary customer party for Bill Financial View (UI-02). Ops SoT may still sync separately.</summary>
     public Guid? CustomerPartyId { get; set; }
 
+    public Guid? PayerPartyId { get; set; }
+    public Guid? ShipperPartyId { get; set; }
+    public Guid? ConsigneePartyId { get; set; }
+    public Guid? BillToPartyId { get; set; }
+
+    public Guid? OriginLocationId { get; set; }
+    public Guid? DestinationLocationId { get; set; }
+    public Guid? RouteId { get; set; }
+
     /// <summary>Route / corridor label (e.g. HCM-LAX). Not a TMS schedule.</summary>
     public string? RouteCode { get; set; }
 

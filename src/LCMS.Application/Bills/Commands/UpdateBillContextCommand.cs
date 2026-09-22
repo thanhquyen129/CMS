@@ -4,6 +4,7 @@ using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Identity;
 using LCMS.Application.OperationalReferences;
+using LCMS.Application.ReferenceMasters;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -29,7 +30,13 @@ public sealed record UpdateBillContextCommand(
     string? DestinationCode = null,
     string? CustomerReference = null,
     OperationalContextDocument? Context = null,
-    bool ApplyExtendedContext = false) : IRequest;
+    bool ApplyExtendedContext = false,
+    bool ApplyPartyRoles = false,
+    Guid? PayerPartyId = null,
+    Guid? ShipperPartyId = null,
+    Guid? ConsigneePartyId = null,
+    Guid? BillToPartyId = null,
+    Guid? RouteId = null) : IRequest;
 
 public sealed class UpdateBillContextCommandValidator : AbstractValidator<UpdateBillContextCommand>
 {
@@ -66,6 +73,9 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
     private readonly IPermissionService _permissions;
     private readonly IOrganizationHierarchyService _orgHierarchy;
     private readonly IPartyDirectoryService _parties;
+    private readonly IPartySnapshotCapture _snapshots;
+    private readonly IBillPartyPolicyStore _partyPolicy;
+    private readonly ICanonicalPlaceBinder _places;
 
     public UpdateBillContextCommandHandler(
         ILcmsDbContext db,
@@ -73,7 +83,10 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         ICurrentUserContext userContext,
         IPermissionService permissions,
         IOrganizationHierarchyService orgHierarchy,
-        IPartyDirectoryService parties)
+        IPartyDirectoryService parties,
+        IPartySnapshotCapture snapshots,
+        IBillPartyPolicyStore partyPolicy,
+        ICanonicalPlaceBinder places)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -81,6 +94,9 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         _permissions = permissions;
         _orgHierarchy = orgHierarchy;
         _parties = parties;
+        _snapshots = snapshots;
+        _partyPolicy = partyPolicy;
+        _places = places;
     }
 
     public async Task Handle(UpdateBillContextCommand request, CancellationToken cancellationToken)
@@ -153,6 +169,14 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         }
 
         bill.CustomerPartyId = request.CustomerPartyId;
+        if (request.ApplyPartyRoles)
+        {
+            bill.PayerPartyId = request.PayerPartyId;
+            bill.ShipperPartyId = request.ShipperPartyId;
+            bill.ConsigneePartyId = request.ConsigneePartyId;
+            bill.BillToPartyId = request.BillToPartyId;
+        }
+
         var route = OperationalContextJson.TrimOrNull(request.RouteCode);
         if (route is null
             && !string.IsNullOrWhiteSpace(request.OriginCode)
@@ -167,15 +191,54 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         bill.AssignedUserId = request.AssignedUserId;
         bill.Description = OperationalContextJson.TrimOrNull(request.Description);
         bill.InternalNote = OperationalContextJson.TrimOrNull(request.InternalNote);
-        if (request.ApplyExtendedContext)
+        if (request.ApplyExtendedContext || request.RouteId is not null)
         {
-            bill.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
-            bill.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
-            bill.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
-            bill.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);
-            bill.ContextJson = OperationalContextJson.Serialize(request.Context);
+            if (request.ApplyExtendedContext)
+            {
+                bill.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
+                bill.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
+                bill.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
+                bill.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);
+                bill.ContextJson = OperationalContextJson.Serialize(request.Context);
+            }
+
+            await BindPlacesAsync(bill, request, cancellationToken);
         }
 
+        await BillPartyRoles.EnsureRequiredAsync(bill, await _partyPolicy.GetAsync(cancellationToken), cancellationToken);
+        await BillPartyRoles.CaptureAsync(bill, _parties, _snapshots, cancellationToken);
+
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task BindPlacesAsync(Bill bill, UpdateBillContextCommand request, CancellationToken cancellationToken)
+    {
+        if (request.RouteId is Guid routeId)
+        {
+            var route = await _places.RequireRouteAsync(routeId, cancellationToken);
+            var origin = await _db.Locations.AsNoTracking().FirstAsync(l => l.Id == route.OriginLocationId, cancellationToken);
+            var destination = await _db.Locations.AsNoTracking().FirstAsync(l => l.Id == route.DestinationLocationId, cancellationToken);
+            bill.RouteId = route.Id;
+            bill.OriginLocationId = origin.Id;
+            bill.DestinationLocationId = destination.Id;
+            bill.OriginCode = origin.Code;
+            bill.DestinationCode = destination.Code;
+            bill.RouteCode = route.Code;
+            return;
+        }
+
+        var boundOrigin = await _places.BindAsync(bill.OriginCode, "Điểm đi", cancellationToken);
+        var boundDestination = await _places.BindAsync(bill.DestinationCode, "Điểm đến", cancellationToken);
+        bill.OriginLocationId = boundOrigin.LocationId;
+        bill.DestinationLocationId = boundDestination.LocationId;
+        if (boundOrigin.Code is not null)
+        {
+            bill.OriginCode = boundOrigin.Code;
+        }
+
+        if (boundDestination.Code is not null)
+        {
+            bill.DestinationCode = boundDestination.Code;
+        }
     }
 }

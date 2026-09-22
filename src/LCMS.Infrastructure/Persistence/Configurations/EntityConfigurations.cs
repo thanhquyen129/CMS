@@ -76,6 +76,13 @@ internal sealed class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.Property(e => e.IsActive).IsRequired();
         builder.Property(e => e.OrganizationId).HasColumnType("uuid");
         builder.Property(e => e.CustomerPartyId).HasColumnType("uuid");
+        builder.Property(e => e.PayerPartyId).HasColumnType("uuid");
+        builder.Property(e => e.ShipperPartyId).HasColumnType("uuid");
+        builder.Property(e => e.ConsigneePartyId).HasColumnType("uuid");
+        builder.Property(e => e.BillToPartyId).HasColumnType("uuid");
+        builder.Property(e => e.OriginLocationId).HasColumnType("uuid");
+        builder.Property(e => e.DestinationLocationId).HasColumnType("uuid");
+        builder.Property(e => e.RouteId).HasColumnType("uuid");
         builder.Property(e => e.RouteCode).HasMaxLength(128);
         builder.Property(e => e.EtdAt);
         builder.Property(e => e.EtaAt);
@@ -89,6 +96,9 @@ internal sealed class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.Property(e => e.ContextJson).HasColumnType("text");
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
         builder.HasIndex(e => new { e.TenantId, e.CustomerPartyId });
+        builder.HasIndex(e => new { e.TenantId, e.OriginLocationId });
+        builder.HasIndex(e => new { e.TenantId, e.DestinationLocationId });
+        builder.HasIndex(e => new { e.TenantId, e.RouteId });
         builder.HasIndex(e => new { e.TenantId, e.TransportMode });
 
         // IDX-001
@@ -599,6 +609,9 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(e => e.TransportMode).HasMaxLength(32);
         builder.Property(e => e.OriginCode).HasMaxLength(64);
         builder.Property(e => e.DestinationCode).HasMaxLength(64);
+        builder.Property(e => e.OriginLocationId).HasColumnType("uuid");
+        builder.Property(e => e.DestinationLocationId).HasColumnType("uuid");
+        builder.Property(e => e.RouteId).HasColumnType("uuid");
         builder.Property(e => e.RouteCode).HasMaxLength(128);
         builder.Property(e => e.CustomerReference).HasMaxLength(128);
         builder.Property(e => e.Description).HasMaxLength(2000);
@@ -1342,6 +1355,7 @@ internal sealed class TenantSettingConfiguration : IEntityTypeConfiguration<Tena
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
         builder.Property(e => e.UiJson).HasColumnType("text");
         builder.Property(e => e.FinancialJson).HasColumnType("text");
+        builder.Property(e => e.BillPartyPolicyJson).HasColumnType("text");
         builder.HasIndex(e => e.TenantId).IsUnique();
     }
 }

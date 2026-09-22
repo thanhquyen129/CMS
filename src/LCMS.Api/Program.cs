@@ -135,6 +135,7 @@ try
     app.MapTenantBillEndpoints();
     app.MapIdentityEndpoints();
     app.MapMasterDataEndpoints();
+    app.MapReferenceMasterEndpoints();
     app.MapTenantSettingsEndpoints();
     app.MapTenantAdminEndpoints();
     app.MapSampleDataEndpoints();

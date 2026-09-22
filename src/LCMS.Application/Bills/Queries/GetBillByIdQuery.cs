@@ -35,7 +35,14 @@ public sealed record BillDto(
     string? OriginCode = null,
     string? DestinationCode = null,
     string? CustomerReference = null,
-    OperationalContextDocument? Context = null);
+    OperationalContextDocument? Context = null,
+    Guid? PayerPartyId = null,
+    Guid? ShipperPartyId = null,
+    Guid? ConsigneePartyId = null,
+    Guid? BillToPartyId = null,
+    Guid? OriginLocationId = null,
+    Guid? DestinationLocationId = null,
+    Guid? RouteId = null);
 
 public sealed record BillListItemDto(
     Guid Id,
@@ -181,7 +188,14 @@ public sealed class GetBillByIdQueryHandler : IRequestHandler<GetBillByIdQuery, 
         bill.OriginCode,
         bill.DestinationCode,
         bill.CustomerReference,
-        OperationalContextJson.Deserialize(bill.ContextJson));
+        OperationalContextJson.Deserialize(bill.ContextJson),
+        bill.PayerPartyId,
+        bill.ShipperPartyId,
+        bill.ConsigneePartyId,
+        bill.BillToPartyId,
+        bill.OriginLocationId,
+        bill.DestinationLocationId,
+        bill.RouteId);
 }
 
 public sealed record ListBillsQuery(

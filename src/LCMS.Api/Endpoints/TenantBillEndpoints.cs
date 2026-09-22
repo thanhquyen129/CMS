@@ -33,7 +33,11 @@ public static class TenantBillEndpoints
                     body.SourceSystem,
                     body.ExternalId,
                     body.OrganizationId,
-                    body.CustomerPartyId),
+                    body.CustomerPartyId,
+                    body.PayerPartyId,
+                    body.ShipperPartyId,
+                    body.ConsigneePartyId,
+                    body.BillToPartyId),
                 ct);
             return Results.Created($"/api/bills/{id}", new { id });
         });
@@ -79,11 +83,17 @@ public static class TenantBillEndpoints
                     body.DestinationCode,
                     body.CustomerReference,
                     body.Context,
-                    ApplyExtendedContext: body.TransportMode is not null
+                    body.TransportMode is not null
                         || body.OriginCode is not null
                         || body.DestinationCode is not null
                         || body.CustomerReference is not null
-                        || body.Context is not null),
+                        || body.Context is not null,
+                    body.ApplyPartyRoles,
+                    body.PayerPartyId,
+                    body.ShipperPartyId,
+                    body.ConsigneePartyId,
+                    body.BillToPartyId,
+                    body.RouteId),
                 ct);
             return Results.NoContent();
         });
@@ -127,7 +137,11 @@ public sealed record CreateBillRequest(
     string? SourceSystem,
     string? ExternalId,
     Guid? OrganizationId = null,
-    Guid? CustomerPartyId = null);
+    Guid? CustomerPartyId = null,
+    Guid? PayerPartyId = null,
+    Guid? ShipperPartyId = null,
+    Guid? ConsigneePartyId = null,
+    Guid? BillToPartyId = null);
 
 public sealed record UpdateBillContextRequest(
     Guid? CustomerPartyId,
@@ -141,7 +155,13 @@ public sealed record UpdateBillContextRequest(
     string? OriginCode = null,
     string? DestinationCode = null,
     string? CustomerReference = null,
-    LCMS.Application.OperationalReferences.OperationalContextDocument? Context = null);
+    LCMS.Application.OperationalReferences.OperationalContextDocument? Context = null,
+    bool ApplyPartyRoles = false,
+    Guid? PayerPartyId = null,
+    Guid? ShipperPartyId = null,
+    Guid? ConsigneePartyId = null,
+    Guid? BillToPartyId = null,
+    Guid? RouteId = null);
 
 public sealed record CaptureWaybillPartyRequest(
     string? Name,

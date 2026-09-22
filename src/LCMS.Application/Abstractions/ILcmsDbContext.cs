@@ -21,6 +21,12 @@ public interface ILcmsDbContext
     DbSet<Currency> Currencies { get; }
     DbSet<FxRate> FxRates { get; }
     DbSet<MasterCatalogItem> MasterCatalogItems { get; }
+    DbSet<Location> Locations { get; }
+    DbSet<LocationAlias> LocationAliases { get; }
+    DbSet<RouteMaster> Routes { get; }
+    DbSet<RouteStop> RouteStops { get; }
+    DbSet<CommodityType> CommodityTypes { get; }
+    DbSet<OperationalPartySnapshot> OperationalPartySnapshots { get; }
     DbSet<Cost> Costs { get; }
     DbSet<CostAdjustment> CostAdjustments { get; }
     DbSet<CostAllocation> CostAllocations { get; }

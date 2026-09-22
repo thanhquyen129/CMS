@@ -10,6 +10,7 @@ using LCMS.Application.FinancialDocuments;
 using LCMS.Application.Fx;
 using LCMS.Application.Identity;
 using LCMS.Application.Reconciliations;
+using LCMS.Application.ReferenceMasters;
 using LCMS.Application.Revenues;
 using LCMS.Application.Settlements;
 using LCMS.Application.Tenancy;
@@ -29,6 +30,9 @@ public static class DependencyInjection
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddScoped<IOrganizationHierarchyService, OrganizationHierarchyService>();
         services.AddScoped<IPartyDirectoryService, PartyDirectoryService>();
+        services.AddScoped<ICanonicalPlaceBinder, CanonicalPlaceBinder>();
+        services.AddScoped<IPartySnapshotCapture, PartySnapshotCapture>();
+        services.AddScoped<IBillPartyPolicyStore, BillPartyPolicyStore>();
         services.AddScoped<ITenantSettingsService, TenantSettingsService>();
         services.AddScoped<TenantFinancialOptionsResolver>();
 

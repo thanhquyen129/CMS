@@ -74,6 +74,11 @@ public static class AuditActions
     public const string NotificationSettingsUpdate = "notification.settings.update";
     public const string BackupCreate = "backup.create";
     public const string BackupRestore = "backup.restore";
+    public const string LocationUpsert = "location.upsert";
+    public const string RouteUpsert = "route.upsert";
+    public const string CommodityUpsert = "commodity.upsert";
+    public const string PartySnapshotCapture = "party_snapshot.capture";
+    public const string BillPartyPolicyUpdate = "bill_party_policy.update";
 }
 
 public static class AuditObjectTypes
@@ -93,6 +98,10 @@ public static class AuditObjectTypes
     public const string PartyBankAccount = "party_bank_account";
     public const string PartyContact = "party_contact";
     public const string PartyRole = "party_role";
+    public const string Location = "location";
+    public const string Route = "route";
+    public const string CommodityType = "commodity_type";
+    public const string PartySnapshot = "party_snapshot";
     public const string User = "user";
     public const string Tenant = "tenant";
     public const string License = "license";

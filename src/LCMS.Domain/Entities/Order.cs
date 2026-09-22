@@ -27,6 +27,9 @@ public sealed class Order : TenantEntityBase
 
     public string? OriginCode { get; set; }
     public string? DestinationCode { get; set; }
+    public Guid? OriginLocationId { get; set; }
+    public Guid? DestinationLocationId { get; set; }
+    public Guid? RouteId { get; set; }
     public string? RouteCode { get; set; }
 
     public DateTimeOffset? EtdAt { get; set; }

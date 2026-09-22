@@ -201,6 +201,11 @@ export const PARTY_ROLE_OPTIONS = [
   { code: "vendor", label: "Nhà cung cấp" },
   { code: "payer", label: "Bên trả tiền" },
   { code: "payee", label: "Bên nhận tiền" },
+  { code: "bill_to", label: "Bên nhận hóa đơn" },
+  { code: "shipper", label: "Người gửi hàng" },
+  { code: "consignee", label: "Người nhận hàng" },
+  { code: "carrier", label: "Hãng vận chuyển" },
+  { code: "agent", label: "Đại lý" },
 ] as const;
 
 export const PARTY_KIND_OPTIONS = [

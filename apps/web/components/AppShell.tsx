@@ -206,6 +206,9 @@ export async function AppShell({
           match={[
             "/admin/parties",
             "/admin/catalog",
+            "/admin/locations",
+            "/admin/routes",
+            "/admin/commodities",
             "/admin/currencies",
             "/admin/fx-rates",
             "/admin/organizations",
@@ -216,9 +219,10 @@ export async function AppShell({
           <NavLink href="/admin/catalog?kind=service_type">Dịch vụ</NavLink>
           <NavLink href="/admin/catalog?kind=cost_type">Loại chi phí</NavLink>
           <NavLink href="/admin/catalog?kind=revenue_type">Loại doanh thu</NavLink>
-          <NavLink href="/admin/catalog?kind=transport_route">Tuyến vận chuyển</NavLink>
+          <NavLink href="/admin/routes">Tuyến vận chuyển</NavLink>
           <NavLink href="/admin/catalog?kind=transport_mode">Phương thức vận chuyển</NavLink>
-          <NavLink href="/admin/catalog?kind=location">Cảng / Sân bay / Cửa khẩu</NavLink>
+          <NavLink href="/admin/locations">Địa điểm</NavLink>
+          <NavLink href="/admin/commodities">Loại hàng</NavLink>
           <NavLink href="/admin/currencies">Tiền tệ &amp; Tỷ giá</NavLink>
           <NavLink href="/admin/catalog?kind=other">Danh mục khác</NavLink>
         </NavGroup>

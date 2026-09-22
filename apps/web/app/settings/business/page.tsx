@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { SettingsHubNav } from "@/components/SettingsHubNav";
+import { BillPartyPolicyForm } from "@/components/BillPartyPolicyForm";
 import { TenantFinancialSettingsForm } from "@/components/TenantFinancialSettingsForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
@@ -29,6 +30,7 @@ export default async function SettingsBusinessPage() {
         />
         <SettingsHubNav active="business" />
         <TenantFinancialSettingsForm />
+        <BillPartyPolicyForm />
       </section>
     </AppShell>
   );

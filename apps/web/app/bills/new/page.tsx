@@ -20,6 +20,7 @@ export default async function NewBillPage() {
           users={opts.users}
           modes={opts.modes}
           locations={opts.locations}
+          canonicalRoutes={opts.canonicalRoutes}
           services={opts.services}
           currencies={opts.currencies}
           vendors={opts.vendors}

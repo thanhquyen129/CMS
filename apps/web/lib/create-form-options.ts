@@ -1,5 +1,6 @@
 import { listAccessUsers } from "@/lib/access";
 import { listCatalog } from "@/lib/catalog";
+import { listLocations, listRoutes } from "@/lib/reference-masters";
 import { catalogToOptions, type CatalogOption } from "@/lib/create-workspace";
 import { listCurrencies } from "@/lib/master-data";
 import { listBills } from "@/lib/bills";
@@ -13,6 +14,7 @@ export type CreateFormOptions = {
   modes: CatalogOption[];
   locations: CatalogOption[];
   routes: CatalogOption[];
+  canonicalRoutes: { id: string; code: string; name: string; originCode: string; destinationCode: string }[];
   services: CatalogOption[];
   currencies: CatalogOption[];
   vendors: CatalogOption[];
@@ -38,8 +40,8 @@ export async function loadCreateFormOptions(): Promise<CreateFormOptions> {
     shipments,
   ] = await Promise.all([
     listCatalog("transport_mode"),
-    listCatalog("location"),
-    listCatalog("transport_route"),
+    listLocations(true),
+    listRoutes(true),
     listCatalog("service_type"),
     listAccessUsers(),
     listCurrencies(),
@@ -55,8 +57,21 @@ export async function loadCreateFormOptions(): Promise<CreateFormOptions> {
       ? users.data.filter((u) => u.isActive).map((u) => ({ value: u.id, label: u.displayName || u.email }))
       : [],
     modes: modes.ok ? catalogToOptions(modes.data) : [],
-    locations: locations.ok ? catalogToOptions(locations.data) : [],
-    routes: routes.ok ? catalogToOptions(routes.data) : [],
+    locations: locations.ok
+      ? locations.data.filter((l) => l.isActive).map((l) => ({ value: l.code, label: `${l.code} — ${l.name}` }))
+      : [],
+    routes: routes.ok
+      ? routes.data.filter((r) => r.isActive).map((r) => ({ value: r.code, label: `${r.code} — ${r.name}` }))
+      : [],
+    canonicalRoutes: routes.ok
+      ? routes.data.filter((r) => r.isActive).map((r) => ({
+          id: r.id,
+          code: r.code,
+          name: r.name,
+          originCode: r.originCode,
+          destinationCode: r.destinationCode,
+        }))
+      : [],
     services: services.ok ? catalogToOptions(services.data) : [],
     currencies: currencies.ok
       ? currencies.data.filter((c) => c.isActive).map((c) => ({ value: c.code, label: c.code }))

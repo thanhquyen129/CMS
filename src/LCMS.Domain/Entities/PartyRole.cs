@@ -19,13 +19,23 @@ public static class PartyRoleCodes
     public const string Vendor = "vendor";
     public const string Payer = "payer";
     public const string Payee = "payee";
+    public const string BillTo = "bill_to";
+    public const string Shipper = "shipper";
+    public const string Consignee = "consignee";
+    public const string Carrier = "carrier";
+    public const string Agent = "agent";
 
     public static readonly IReadOnlyList<string> Catalog =
     [
         Customer,
         Vendor,
         Payer,
-        Payee
+        Payee,
+        BillTo,
+        Shipper,
+        Consignee,
+        Carrier,
+        Agent
     ];
 
     public static bool IsKnown(string? code) =>
@@ -35,12 +45,17 @@ public static class PartyRoleCodes
     public static readonly IReadOnlyList<string> CustomerSide =
     [
         Customer,
-        Payer
+        Payer,
+        BillTo,
+        Shipper,
+        Consignee
     ];
 
     public static readonly IReadOnlyList<string> VendorSide =
     [
         Vendor,
-        Payee
+        Payee,
+        Carrier,
+        Agent
     ];
 }

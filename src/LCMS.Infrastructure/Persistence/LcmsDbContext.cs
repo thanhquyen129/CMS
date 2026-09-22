@@ -36,6 +36,12 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<FxRate> FxRates => Set<FxRate>();
     public DbSet<MasterCatalogItem> MasterCatalogItems => Set<MasterCatalogItem>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<LocationAlias> LocationAliases => Set<LocationAlias>();
+    public DbSet<RouteMaster> Routes => Set<RouteMaster>();
+    public DbSet<RouteStop> RouteStops => Set<RouteStop>();
+    public DbSet<CommodityType> CommodityTypes => Set<CommodityType>();
+    public DbSet<OperationalPartySnapshot> OperationalPartySnapshots => Set<OperationalPartySnapshot>();
     public DbSet<Cost> Costs => Set<Cost>();
     public DbSet<CostAdjustment> CostAdjustments => Set<CostAdjustment>();
     public DbSet<CostAllocation> CostAllocations => Set<CostAllocation>();
@@ -104,6 +110,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
         StampAuditAndConcurrency();
         RejectHardDeletes();
         RejectImmutableCloseSnapshotMutations();
+        RejectPartySnapshotRewrites();
         return base.SaveChangesAsync(cancellationToken);
     }
 
@@ -112,6 +119,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
         StampAuditAndConcurrency();
         RejectHardDeletes();
         RejectImmutableCloseSnapshotMutations();
+        RejectPartySnapshotRewrites();
         return base.SaveChanges();
     }
 
@@ -231,5 +239,30 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
 
         throw new InvalidOperationException(
             "Cấm sửa hoặc xóa bản chốt tài chính (C-010). Mở lại / chốt lại để tạo phiên bản snapshot mới.");
+    }
+
+    /// <summary>Party snapshot content is frozen. Only supersede is allowed.</summary>
+    private void RejectPartySnapshotRewrites()
+    {
+        foreach (var entry in ChangeTracker.Entries<OperationalPartySnapshot>())
+        {
+            if (entry.State != EntityState.Modified)
+            {
+                continue;
+            }
+
+            var illegal = entry.Properties.Any(p =>
+                p.IsModified
+                && p.Metadata.Name is not (
+                    nameof(OperationalPartySnapshot.SupersededAt)
+                    or nameof(OperationalPartySnapshot.UpdatedAt)
+                    or nameof(OperationalPartySnapshot.UpdatedBy)
+                    or nameof(OperationalPartySnapshot.RowVersion)));
+            if (illegal)
+            {
+                throw new InvalidOperationException(
+                    "Cấm sửa nội dung snapshot đối tác. Ghi snapshot mới để thay thế.");
+            }
+        }
     }
 }

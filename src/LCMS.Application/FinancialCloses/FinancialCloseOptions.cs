@@ -31,8 +31,23 @@ public sealed class CloseEligibilityOptions
     /// </summary>
     public bool BlockOnUnsettledApArAboveThreshold { get; set; } = true;
 
+    /// <summary>Block when a cost allocation or revenue mapping is still open (draft/calculated/pending).</summary>
+    public bool BlockOnOpenAllocations { get; set; } = true;
+
+    /// <summary>Block when unapplied payment/collection cash exceeds the threshold in scope.</summary>
+    public bool BlockOnUnallocatedMoneyAboveThreshold { get; set; } = true;
+
     /// <summary>
     /// Outstanding above this amount blocks close (default 0 ⇒ any positive open balance).
     /// </summary>
     public decimal UnsettledApArOpenBalanceThreshold { get; set; }
+
+    /// <summary>Unapplied payment/collection cash above this amount blocks close (default 0).</summary>
+    public decimal UnallocatedMoneyThreshold { get; set; }
+
+    /// <summary>
+    /// Late document into a locked period: at or below this amount may post as a current-period adjustment.
+    /// Above it, reopen is required. Default 0 ⇒ any late document requires reopen.
+    /// </summary>
+    public decimal LateDocumentMaterialThreshold { get; set; }
 }

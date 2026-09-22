@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Text;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Exposures.Queries;
+using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
 
@@ -100,15 +102,18 @@ public sealed class ExportAgingCsvQueryHandler : IRequestHandler<ExportAgingCsvQ
     private readonly ISender _sender;
     private readonly IPermissionService _permissions;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
     public ExportAgingCsvQueryHandler(
         ISender sender,
         IPermissionService permissions,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext,
+        IAuditWriter audit)
     {
         _sender = sender;
         _permissions = permissions;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<AgingCsvExportResult> Handle(ExportAgingCsvQuery request, CancellationToken cancellationToken)
@@ -120,6 +125,7 @@ public sealed class ExportAgingCsvQueryHandler : IRequestHandler<ExportAgingCsvQ
 
         var side = (request.Side ?? "").Trim().ToLowerInvariant();
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        AgingCsvExportResult result;
 
         if (side is "payable" or "ap")
         {
@@ -131,12 +137,11 @@ public sealed class ExportAgingCsvQueryHandler : IRequestHandler<ExportAgingCsvQ
                 new GetAccountsPayableAgingQuery(
                     asOf, request.CounterpartyId, request.CurrencyCode, request.IncludeSettled),
                 cancellationToken);
-            return new AgingCsvExportResult(
+            result = new AgingCsvExportResult(
                 $"aging-ap-{asOf:yyyyMMdd}.csv",
                 BuildCsv("AP", report.PayableItems ?? []));
         }
-
-        if (side is "receivable" or "ar")
+        else if (side is "receivable" or "ar")
         {
             await _permissions.EnsureAsync(
                 PermissionCodes.RevenueRead,
@@ -146,15 +151,34 @@ public sealed class ExportAgingCsvQueryHandler : IRequestHandler<ExportAgingCsvQ
                 new GetAccountsReceivableAgingQuery(
                     asOf, request.CounterpartyId, request.CurrencyCode, request.IncludeSettled),
                 cancellationToken);
-            return new AgingCsvExportResult(
+            result = new AgingCsvExportResult(
                 $"aging-ar-{asOf:yyyyMMdd}.csv",
                 BuildCsv("AR", report.ReceivableItems ?? []));
         }
-
-        throw new ValidationAppException(new Dictionary<string, string[]>
+        else
         {
-            ["Side"] = ["side phải là payable (ap) hoặc receivable (ar)."]
-        });
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["Side"] = ["side phải là payable (ap) hoặc receivable (ar)."]
+            });
+        }
+
+        _audit.Append(
+            AuditActions.ReportExport,
+            AuditObjectTypes.Report,
+            Guid.Empty,
+            afterJson: AuditJson.Serialize(new
+            {
+                report = "aging",
+                side,
+                asOf,
+                fileName = result.FileName,
+                counterpartyId = request.CounterpartyId,
+                currencyCode = request.CurrencyCode,
+                includeSettled = request.IncludeSettled
+            }));
+
+        return result;
     }
 
     private static string BuildCsv(string side, IReadOnlyList<AccountsPayableDto> apItems) =>

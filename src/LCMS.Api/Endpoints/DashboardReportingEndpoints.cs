@@ -1,6 +1,7 @@
 using LCMS.Application.Dashboard.Queries;
 using LCMS.Application.Exposures.Aging;
 using LCMS.Application.Queues.Queries;
+using LCMS.Application.Reports.Queries;
 using MediatR;
 
 namespace LCMS.Api.Endpoints;
@@ -90,6 +91,16 @@ public static class DashboardReportingEndpoints
         {
             var list = await sender.Send(new ListOpenReconciliationQueueQuery(status), ct);
             return Results.Ok(list);
+        });
+
+        var reports = app.MapGroup("/api/reports").WithTags("Reports");
+        reports.MapGet("/cash-settlement", async (
+            DateOnly? asOf,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var report = await sender.Send(new GetCashSettlementReportQuery(asOf), ct);
+            return Results.Ok(report);
         });
 
         return app;

@@ -48,6 +48,16 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
         {
             await EnsureNoUnsettledApArAboveThresholdAsync(close, cancellationToken);
         }
+
+        if (strict || eligibility.BlockOnOpenAllocations)
+        {
+            await EnsureNoOpenAllocationsAsync(close, cancellationToken);
+        }
+
+        if (strict || eligibility.BlockOnUnallocatedMoneyAboveThreshold)
+        {
+            await EnsureNoUnallocatedMoneyAboveThresholdAsync(close, cancellationToken);
+        }
     }
 
     private async Task EnsureNoCriticalOpenExceptionsAsync(
@@ -58,7 +68,8 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
             .Where(e =>
                 (e.Status == ExceptionStatuses.Open
                  || e.Status == ExceptionStatuses.InProgress
-                 || e.Status == ExceptionStatuses.Escalated)
+                 || e.Status == ExceptionStatuses.Escalated
+                 || e.Status == ExceptionStatuses.Waiting)
                 && e.Severity == ExceptionSeverities.Critical);
 
         if (close.ScopeType == FinancialCloseScopeTypes.Bill && close.ScopeId.HasValue)
@@ -71,6 +82,91 @@ public sealed class CloseEligibilityChecker : ICloseEligibilityChecker
         {
             throw new ConflictAppException(
                 "Không đủ điều kiện chốt: còn ngoại lệ mức nghiêm trọng (critical) đang mở trong phạm vi.");
+        }
+    }
+
+    private async Task EnsureNoOpenAllocationsAsync(
+        FinancialClose close,
+        CancellationToken cancellationToken)
+    {
+        var costQuery = _db.CostAllocations.AsNoTracking()
+            .Where(a =>
+                a.AllocationStatus == CostAllocationStatuses.Draft
+                || a.AllocationStatus == CostAllocationStatuses.Calculated
+                || a.AllocationStatus == CostAllocationStatuses.PendingApproval);
+        var revenueQuery = _db.RevenueMappings.AsNoTracking()
+            .Where(m => m.MappingStatus == CostAllocationStatuses.Draft);
+
+        if (close.ScopeType == FinancialCloseScopeTypes.Bill && close.ScopeId.HasValue)
+        {
+            var billId = close.ScopeId.Value;
+            var costIds = await _db.Costs.AsNoTracking()
+                .Where(c => c.BillId == billId)
+                .Select(c => c.Id)
+                .ToListAsync(cancellationToken);
+            costQuery = costQuery.Where(a => costIds.Contains(a.CostId));
+            var revenueIds = await _db.Revenues.AsNoTracking()
+                .Where(r => r.BillId == billId)
+                .Select(r => r.Id)
+                .ToListAsync(cancellationToken);
+            revenueQuery = revenueQuery.Where(m => revenueIds.Contains(m.RevenueId));
+        }
+
+        if (await costQuery.AnyAsync(cancellationToken) || await revenueQuery.AnyAsync(cancellationToken))
+        {
+            throw new ConflictAppException(
+                "Không đủ điều kiện chốt: còn phiên phân bổ chi phí hoặc chia doanh thu chưa chốt trong phạm vi.");
+        }
+    }
+
+    private async Task EnsureNoUnallocatedMoneyAboveThresholdAsync(
+        FinancialClose close,
+        CancellationToken cancellationToken)
+    {
+        var threshold = _options.Eligibility?.UnallocatedMoneyThreshold ?? 0m;
+        var payments = _db.Payments.AsNoTracking()
+            .Where(p => p.Status != PaymentStatuses.Cancelled && p.RecordStatus == "active");
+        var collections = _db.Collections.AsNoTracking()
+            .Where(c => c.Status != CollectionStatuses.Cancelled && c.RecordStatus == "active");
+
+        if (close.ScopeType == FinancialCloseScopeTypes.Bill && close.ScopeId.HasValue)
+        {
+            var billId = close.ScopeId.Value;
+            payments = payments.Where(p => p.BillId == billId);
+            collections = collections.Where(c => c.BillId == billId);
+        }
+
+        var paymentList = await payments.ToListAsync(cancellationToken);
+        var collectionList = await collections.ToListAsync(cancellationToken);
+        var paymentIds = paymentList.Select(p => p.Id).ToList();
+        var collectionIds = collectionList.Select(c => c.Id).ToList();
+
+        var payAlloc = paymentIds.Count == 0
+            ? []
+            : await _db.PaymentAllocations.AsNoTracking()
+                .Where(a => paymentIds.Contains(a.PaymentId)
+                    && (a.AllocationStatus == SettlementAllocationStatuses.Draft
+                        || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
+                .Select(a => new { a.PaymentId, a.Amount })
+                .ToListAsync(cancellationToken);
+        var collAlloc = collectionIds.Count == 0
+            ? []
+            : await _db.CollectionAllocations.AsNoTracking()
+                .Where(a => collectionIds.Contains(a.CollectionId)
+                    && (a.AllocationStatus == SettlementAllocationStatuses.Draft
+                        || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
+                .Select(a => new { a.CollectionId, a.Amount })
+                .ToListAsync(cancellationToken);
+
+        var payMap = payAlloc.GroupBy(a => a.PaymentId).ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+        var collMap = collAlloc.GroupBy(a => a.CollectionId).ToDictionary(g => g.Key, g => g.Sum(x => x.Amount));
+
+        var unappliedPay = paymentList.Sum(p => p.Amount - (payMap.TryGetValue(p.Id, out var s) ? s : 0m));
+        var unappliedColl = collectionList.Sum(c => c.Amount - (collMap.TryGetValue(c.Id, out var s) ? s : 0m));
+        if (unappliedPay > threshold || unappliedColl > threshold)
+        {
+            throw new ConflictAppException(
+                $"Không đủ điều kiện chốt: còn tiền thanh toán/thu chưa gán vượt ngưỡng {threshold} trong phạm vi.");
         }
     }
 

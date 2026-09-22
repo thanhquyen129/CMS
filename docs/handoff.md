@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-09-22 — Gói G: chốt kỳ và báo cáo
+
+### User
+làm tiếp gói G mức Pixel-perfect
+
+### Answer
+Gói G (W-G1…G7) xong. Chốt bị chặn khi còn ngoại lệ nghiêm trọng (kể cả chờ miễn), phân bổ/chia doanh thu chưa chốt, tiền thanh toán/thu chưa gán vượt ngưỡng, chứng từ chưa khớp, hoặc công nợ mở. Miễn đã duyệt ghi vào snapshot. Chứng từ trễ trọng yếu vào kỳ đã khóa bắt mở lại; bản chốt cũ không bị viết lại. Hub báo cáo hỏi maturity và as-of tường minh; danh mục chỉ trỏ màn thật (lãi, Bill, chi phí, tuổi nợ, tiền, ngoại lệ, chốt). Tuổi nợ tại as-of không tính thanh toán/thu sau mốc. Bucket tuổi nợ cấu hình được trong `FinancialJson`. Xuất aging ghi audit. Chưa bấm từng nút trên trình duyệt vì không có phiên đăng nhập local.
+
+Gói H chưa làm.
+
+### Files / API / schema
+- Close eligibility: open allocations, unallocated cash, waiting critical, waiver metrics in snapshot.
+- `ILateDocumentGate` trên nhận chứng từ.
+- `GET /api/reports/cash-settlement?asOf=`.
+- Aging as-of settlement + tenant bucket days; `report.export` audit.
+- ADR-0029.
+- UI: `/reports` (maturity/as-of + catalogue), `/reports/cash`, lede chốt, bảng miễn trên chi tiết chốt.
+
+### UI
+Không thêm biểu đồ giả hay Excel. Export aging vẫn qua màn tuổi nợ hiện có.
+
 ## 2026-09-22 — Gói F: chứng từ, đối soát, phê duyệt
 
 ### User

@@ -15,12 +15,29 @@ import { agingBucketLabel, getAgingSummary } from "@/lib/ap-ar";
 import { getDashboardSummary } from "@/lib/control-desk";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
-export default async function ReportsPage() {
+type SearchParams = Promise<{ view?: string; asOf?: string }>;
+
+const VIEW_OPTIONS = [
+  { value: "expected", label: "Dự kiến" },
+  { value: "confirmed", label: "Đã xác nhận" },
+  { value: "actual", label: "Thực tế" },
+  { value: "best", label: "Giá trị tốt nhất" },
+] as const;
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const jar = await cookies();
   if (!jar.get(AUTH_COOKIE)?.value) {
     redirect("/login");
   }
 
+  const sp = await searchParams;
+  const view = VIEW_OPTIONS.some((v) => v.value === sp.view)
+    ? (sp.view as string)
+    : "best";
   const terms = await fetchTerminology();
   const costLabel = term(terms, "COST", "Chi phí");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
@@ -28,11 +45,12 @@ export default async function ReportsPage() {
   const billLabel = term(terms, "BILL", "Bill");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Công nợ phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Công nợ phải thu");
-  const bestAvailableLabel = term(terms, "BEST_AVAILABLE", "Giá trị tốt nhất hiện có");
+  const viewLabel =
+    VIEW_OPTIONS.find((v) => v.value === view)?.label ?? "Giá trị tốt nhất";
 
   const [summary, aging] = await Promise.all([
     getDashboardSummary(),
-    getAgingSummary(),
+    getAgingSummary(sp.asOf ? { asOf: sp.asOf } : undefined),
   ]);
 
   const roll = summary.ok ? summary.data.baseCurrencyRollUp : null;
@@ -72,39 +90,39 @@ export default async function ReportsPage() {
 
   const links = [
     {
-      href: "/dashboard",
-      title: "Trang chủ điều hành",
-      desc: "KPI + việc cần xử lý + phân tách độ chín.",
+      href: `/revenues/report?view=${view}`,
+      title: `Lãi gộp / ${revenueLabel}`,
+      desc: `Maturity tường minh: ${viewLabel}. Drill theo nhóm khách, dịch vụ, tuyến.`,
     },
     {
       href: "/bills",
       title: `Lợi nhuận theo ${billLabel}`,
-      desc: "Drill-down hồ sơ tài chính từng Bill (Financial Anchor).",
-    },
-    {
-      href: "/financial-closes",
-      title: "Snapshot chốt kỳ",
-      desc: "Báo cáo sau chốt lấy từ snapshot bất biến.",
+      desc: "Hồ sơ tài chính từng Bill (Financial Anchor).",
     },
     {
       href: "/costs",
-      title: `Chi tiết ${costLabel.toLowerCase()}`,
-      desc: "Danh sách + phân tách độ chín theo dòng.",
+      title: `Phân tích ${costLabel.toLowerCase()}`,
+      desc: "Danh sách và phân bổ theo độ chín.",
     },
     {
-      href: "/revenues",
-      title: `Chi tiết ${revenueLabel.toLowerCase()}`,
-      desc: "Danh sách + phân tách độ chín theo dòng.",
+      href: sp.asOf ? `/ap-ar/aging?asOf=${sp.asOf}` : "/ap-ar/aging",
+      title: `Tuổi nợ ${apLabel} / ${arLabel}`,
+      desc: "As-of loại trừ thanh toán/thu phát sinh sau mốc.",
     },
     {
-      href: "/ap-ar",
-      title: `${apLabel} / ${arLabel}`,
-      desc: "Số dư còn lại, tuổi nợ và lịch sử tất toán.",
+      href: sp.asOf ? `/reports/cash?asOf=${sp.asOf}` : "/reports/cash",
+      title: "Tiền và tất toán",
+      desc: "Thanh toán/thu chưa gán; drill về giao dịch.",
     },
     {
-      href: "/settlements",
-      title: "Thanh toán & Thu tiền",
-      desc: "Tổng phân bổ, chưa áp dụng theo giao dịch tiền mặt.",
+      href: "/queues/exceptions",
+      title: "Ngoại lệ",
+      desc: "Hàng đợi ngoại lệ đang mở / chờ miễn.",
+    },
+    {
+      href: "/financial-closes",
+      title: "Báo cáo chốt",
+      desc: "P&L và chỉ số từ snapshot bất biến.",
     },
   ];
 
@@ -119,15 +137,37 @@ export default async function ReportsPage() {
           title="Báo cáo & Phân tích"
           lede={
             <>
-              Read model quản trị — không phải sổ giao dịch. Mọi số liệu có thể truy ngược về{" "}
+              Chọn maturity và as-of tường minh. Không trộn lớp độ chín. Drill về{" "}
               {billLabel} và chứng từ nguồn.
             </>
           }
         />
+
+        <form className="filter-bar" method="get">
+          <label>
+            Maturity
+            <select name="view" defaultValue={view}>
+              {VIEW_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            As-of
+            <input type="date" name="asOf" defaultValue={sp.asOf ?? ""} />
+          </label>
+          <button type="submit" className="btn btn-sm">
+            Áp dụng
+          </button>
+        </form>
+
         {summary.ok ? (
           <p className="meta-line muted">
-            Tại thời điểm: {formatDateTimeVi(summary.data.asOfTimestamp)} — số liệu
-            projection, không phải sổ ghi tài chính.
+            Tổng quan dashboard tại {formatDateTimeVi(summary.data.asOfTimestamp)}{" "}
+            — KPI dưới đây vẫn là {viewLabel} trên projection; báo cáo chi tiết
+            dùng bộ lọc phía trên.
           </p>
         ) : null}
 
@@ -141,17 +181,17 @@ export default async function ReportsPage() {
               cards={[
                 {
                   key: "cost",
-                  label: `${costLabel} (${bestAvailableLabel})`,
+                  label: `${costLabel} (${viewLabel})`,
                   value: formatMoney(cost, currency),
                   tone: "warning",
                   href: "/costs",
                 },
                 {
                   key: "revenue",
-                  label: `${revenueLabel} (${bestAvailableLabel})`,
+                  label: `${revenueLabel} (${viewLabel})`,
                   value: formatMoney(revenue, currency),
                   tone: "success",
-                  href: "/revenues",
+                  href: `/revenues/report?view=${view}`,
                 },
                 {
                   key: "profit",
@@ -183,19 +223,19 @@ export default async function ReportsPage() {
                   </div>
                 ) : (
                   <HorizontalBarChart
-                    caption="Tuổi nợ AP (projection)"
+                    caption={`Tuổi nợ AP${sp.asOf ? ` · as-of ${sp.asOf}` : ""}`}
                     series={agingBars}
                   />
                 )}
                 <p className="cta-row">
-                  <Link className="btn btn-ghost btn-sm" href="/ap-ar?tab=ap">
-                    {apLabel}
-                  </Link>
-                  <Link className="btn btn-ghost btn-sm" href="/ap-ar?tab=ar">
-                    {arLabel}
-                  </Link>
-                  <Link className="btn btn-ghost btn-sm" href="/ap-ar/aging">
+                  <Link
+                    className="btn btn-ghost btn-sm"
+                    href={sp.asOf ? `/ap-ar/aging?asOf=${sp.asOf}` : "/ap-ar/aging"}
+                  >
                     Chi tiết aging
+                  </Link>
+                  <Link className="btn btn-ghost btn-sm" href="/reports/cash">
+                    Tiền &amp; tất toán
                   </Link>
                 </p>
               </div>
@@ -203,7 +243,7 @@ export default async function ReportsPage() {
           </>
         )}
 
-        <div className="hub-module-tabs" role="navigation" aria-label="Liên kết báo cáo">
+        <div className="hub-module-tabs" role="navigation" aria-label="Danh mục báo cáo">
           {links.map((item) => (
             <Link key={item.href} href={item.href} className="hub-module-tab">
               <strong>{item.title}</strong>

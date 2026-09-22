@@ -178,6 +178,38 @@ export default async function FinancialCloseDetailPage({
           </div>
         )}
 
+        {latestSnapshot?.details?.some((d) => d.metricKey === "waiver") ? (
+          <>
+            <h2 className="section-title">Miễn đã ghi vào snapshot</h2>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Ghi chú</th>
+                    <th>Nguồn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {latestSnapshot.details
+                    .filter((d) => d.metricKey === "waiver")
+                    .map((d) => (
+                      <tr key={d.id}>
+                        <td>{d.notes || "—"}</td>
+                        <td>
+                          {d.sourceId ? (
+                            <Link href={`/queues/exceptions`}>Ngoại lệ</Link>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : null}
+
         <h2 className="section-title">{pnlLabel}</h2>
         {!hasSnapshot ? (
           <p className="note">Cần snapshot trước khi xem P&amp;L.</p>

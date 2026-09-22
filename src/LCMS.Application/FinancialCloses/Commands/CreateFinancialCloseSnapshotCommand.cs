@@ -110,6 +110,7 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
                 MetricValue = m.Value,
                 CurrencyCode = m.CurrencyCode,
                 SourceType = m.SourceType,
+                SourceId = m.SourceId,
                 Notes = m.Notes
             });
         }
@@ -164,18 +165,42 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         var apList = await ap.ToListAsync(cancellationToken);
         var arList = await ar.ToListAsync(cancellationToken);
 
+        var waivedQuery = _db.Exceptions.AsNoTracking()
+            .Where(e => e.Status == ExceptionStatuses.Waived);
+        if (close.ScopeType == FinancialCloseScopeTypes.Bill && close.ScopeId.HasValue)
+        {
+            var billId = close.ScopeId.Value;
+            waivedQuery = waivedQuery.Where(e => e.BillId == billId);
+        }
+
+        var waived = await waivedQuery.ToListAsync(cancellationToken);
+
         var currency = close.BaseCurrency;
-        return
-        [
-            new SnapshotMetric("cost_count", costList.Count, null, "cost", null),
-            new SnapshotMetric("cost_total", costList.Where(c => c.CurrencyCode == currency).Sum(c => c.Amount), currency, "cost", null),
-            new SnapshotMetric("revenue_count", revenueList.Count, null, "revenue", null),
-            new SnapshotMetric("revenue_total", revenueList.Where(r => r.CurrencyCode == currency).Sum(r => r.Amount), currency, "revenue", null),
-            new SnapshotMetric("ap_count", apList.Count, null, "accounts_payable", null),
-            new SnapshotMetric("ap_outstanding_total", apList.Where(a => a.CurrencyCode == currency).Sum(a => a.DeriveOutstanding()), currency, "accounts_payable", null),
-            new SnapshotMetric("ar_count", arList.Count, null, "accounts_receivable", null),
-            new SnapshotMetric("ar_outstanding_total", arList.Where(a => a.CurrencyCode == currency).Sum(a => a.DeriveOutstanding()), currency, "accounts_receivable", null)
-        ];
+        var metrics = new List<SnapshotMetric>
+        {
+            new("cost_count", costList.Count, null, "cost", null, null),
+            new("cost_total", costList.Where(c => c.CurrencyCode == currency).Sum(c => c.Amount), currency, "cost", null, null),
+            new("revenue_count", revenueList.Count, null, "revenue", null, null),
+            new("revenue_total", revenueList.Where(r => r.CurrencyCode == currency).Sum(r => r.Amount), currency, "revenue", null, null),
+            new("ap_count", apList.Count, null, "accounts_payable", null, null),
+            new("ap_outstanding_total", apList.Where(a => a.CurrencyCode == currency).Sum(a => a.DeriveOutstanding()), currency, "accounts_payable", null, null),
+            new("ar_count", arList.Count, null, "accounts_receivable", null, null),
+            new("ar_outstanding_total", arList.Where(a => a.CurrencyCode == currency).Sum(a => a.DeriveOutstanding()), currency, "accounts_receivable", null, null),
+            new("waiver_count", waived.Count, null, "exception", null, null)
+        };
+
+        foreach (var w in waived.OrderBy(e => e.Id))
+        {
+            metrics.Add(new SnapshotMetric(
+                "waiver",
+                1m,
+                null,
+                "exception",
+                w.Id,
+                string.IsNullOrWhiteSpace(w.ResolutionNotes) ? w.Title : $"{w.Title}: {w.ResolutionNotes}"));
+        }
+
+        return metrics;
     }
 
     private static string ComputeImmutableHash(
@@ -208,5 +233,6 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         decimal Value,
         string? CurrencyCode,
         string? SourceType,
+        Guid? SourceId,
         string? Notes);
 }

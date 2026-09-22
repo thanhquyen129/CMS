@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -69,19 +70,22 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
     private readonly ICurrentUserContext _user;
     private readonly DocumentOptions _options;
     private readonly IPartyDirectoryService _parties;
+    private readonly ILateDocumentGate _lateDocuments;
 
     public ReceiveFinancialDocumentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IOptions<DocumentOptions> options,
-        IPartyDirectoryService parties)
+        IPartyDirectoryService parties,
+        ILateDocumentGate lateDocuments)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _options = options.Value;
         _parties = parties;
+        _lateDocuments = lateDocuments;
     }
 
     public async Task<Guid> Handle(ReceiveFinancialDocumentCommand request, CancellationToken cancellationToken)
@@ -101,6 +105,13 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
                 return prior.ObjectId;
             }
         }
+
+        var documentDate = request.DocumentDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        await _lateDocuments.EnsureReceiveAllowedAsync(
+            request.BillId,
+            documentDate,
+            request.TotalAmount,
+            cancellationToken);
 
         var tenantId = _tenantContext.TenantId!.Value;
         var documentType = request.DocumentType.Trim().ToLowerInvariant();

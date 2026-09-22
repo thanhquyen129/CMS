@@ -32,6 +32,15 @@ public sealed class TenantFinancialSettings
     public string? RecognitionPolicyMode { get; set; }
 
     public string? RecognitionPolicyVersion { get; set; }
+
+    /// <summary>Upper day bound of the first past-due aging bucket (default 30).</summary>
+    public int? AgingBucket1Days { get; set; }
+
+    /// <summary>Upper day bound of the second past-due aging bucket (default 60).</summary>
+    public int? AgingBucket2Days { get; set; }
+
+    /// <summary>Upper day bound of the third past-due aging bucket (default 90).</summary>
+    public int? AgingBucket3Days { get; set; }
 }
 
 public static class RecognitionPolicyModes

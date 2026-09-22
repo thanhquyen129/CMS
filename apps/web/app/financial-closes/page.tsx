@@ -66,7 +66,7 @@ export default async function FinancialClosesPage({
             { label: closeLabel },
           ]}
           title={closeLabel}
-          lede={`Mở → Close Review → Closed → Reopened → Reclosed. Tạo ${snapshotLabel.toLowerCase()} bất biến; không sửa ngầm kỳ đã chốt. P&L sau chốt đọc từ snapshot — không ghi đè ${billLabel}.`}
+          lede={`Mở → Close Review → Closed → Reopened → Reclosed. Chặn chốt khi còn ngoại lệ nghiêm trọng, phân bổ chưa chốt, tiền chưa gán, chứng từ chưa khớp hoặc công nợ mở. Miễn đã duyệt ghi vào snapshot. Bản chốt bất biến.`}
           action={
             <Link className="btn" href="/financial-closes/new">
               + Mở {closeLabel.toLowerCase()}

@@ -83,6 +83,7 @@ public static class AuditActions
     public const string MeasurementOverride = "measurement.override";
     public const string FieldOverride = "field.override";
     public const string LinkCreate = "link.create";
+    public const string ReportExport = "report.export";
 }
 
 public static class AuditObjectTypes
@@ -112,4 +113,5 @@ public static class AuditObjectTypes
     public const string License = "license";
     public const string Notification = "notification";
     public const string Backup = "backup";
+    public const string Report = "report";
 }

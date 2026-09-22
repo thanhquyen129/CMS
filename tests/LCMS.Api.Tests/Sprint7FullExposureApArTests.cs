@@ -164,11 +164,22 @@ public sealed class Sprint7FullExposureApArTests : IAsyncLifetime
         Assert.Equal(asOf, aging.AsOf);
         Assert.Equal(6, aging.PayableItems!.Count);
         Assert.Equal(100m, BucketOutstanding(aging, "current"));
-        Assert.Equal(100m, BucketOutstanding(aging, "1_30")); // after settlement
+        // Settlement finalized after asOf must not reduce outstanding at that as-of (CR-12).
+        Assert.Equal(200m, BucketOutstanding(aging, "1_30"));
         Assert.Equal(300m, BucketOutstanding(aging, "31_60"));
         Assert.Equal(400m, BucketOutstanding(aging, "61_90"));
         Assert.Equal(500m, BucketOutstanding(aging, "90_plus"));
         Assert.Equal(50m, BucketOutstanding(aging, "no_due_date"));
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        using var agingTodayReq = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/accounts-payable/aging?asOf={today:yyyy-MM-dd}");
+        agingTodayReq.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var agingTodayResp = await _client.SendAsync(agingTodayReq);
+        agingTodayResp.EnsureSuccessStatusCode();
+        var agingToday = (await agingTodayResp.Content.ReadFromJsonAsync<AgingReportDto>(JsonOptions))!;
+        Assert.Equal(100m, agingToday.PayableItems!.Single(i => i.Id == ap30).Outstanding);
 
         Assert.Empty(await ListCostsAsync(tenantId));
         Assert.Empty(await ListRevenuesAsync(tenantId));

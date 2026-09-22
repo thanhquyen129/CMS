@@ -1,6 +1,7 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Identity;
+using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -373,15 +374,18 @@ public sealed class GetAccountsPayableAgingQueryHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly ITenantSettingsService _settings;
 
     public GetAccountsPayableAgingQueryHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        ITenantSettingsService settings)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _settings = settings;
     }
 
     public async Task<ApArAgingReportDto> Handle(
@@ -399,6 +403,7 @@ public sealed class GetAccountsPayableAgingQueryHandler
             cancellationToken);
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var bounds = AgingBuckets.ResolveBounds(await _settings.GetFinancialAsync(cancellationToken));
         var query = _db.AccountsPayable.AsNoTracking().AsQueryable();
         if (request.CounterpartyId.HasValue)
         {
@@ -412,8 +417,32 @@ public sealed class GetAccountsPayableAgingQueryHandler
         }
 
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
+        var settled = await AsOfOutstanding.SettledByPayableAsync(
+            _db, rows.Select(r => r.Id).ToList(), asOf, cancellationToken);
         var items = rows
-            .Select(a => ListAccountsPayableQueryHandler.MapAp(a, asOf))
+            .Select(a =>
+            {
+                var settledAmt = settled.TryGetValue(a.Id, out var s) ? s : 0m;
+                var outstanding = AsOfOutstanding.Outstanding(a.RecognizedAmount, a.AdjustmentAmount, settledAmt);
+                var (days, bucket) = AgingBuckets.Classify(a.DueDate, asOf, bounds);
+                return new AccountsPayableDto(
+                    a.Id,
+                    a.PayableExposureId,
+                    a.RecognizedAmount,
+                    a.AdjustmentAmount,
+                    settledAmt,
+                    outstanding,
+                    a.CurrencyCode,
+                    a.DueDate,
+                    a.SettlementStatus,
+                    a.BillId,
+                    a.CounterpartyId,
+                    a.RecognizedAt,
+                    a.Notes,
+                    a.RecordStatus,
+                    days,
+                    bucket);
+            })
             .Where(a => request.IncludeSettled || a.Outstanding > 0m)
             .ToList();
 
@@ -438,15 +467,18 @@ public sealed class GetAccountsReceivableAgingQueryHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly ITenantSettingsService _settings;
 
     public GetAccountsReceivableAgingQueryHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        ITenantSettingsService settings)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _settings = settings;
     }
 
     public async Task<ApArAgingReportDto> Handle(
@@ -464,6 +496,7 @@ public sealed class GetAccountsReceivableAgingQueryHandler
             cancellationToken);
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var bounds = AgingBuckets.ResolveBounds(await _settings.GetFinancialAsync(cancellationToken));
         var query = _db.AccountsReceivable.AsNoTracking().AsQueryable();
         if (request.CounterpartyId.HasValue)
         {
@@ -477,8 +510,32 @@ public sealed class GetAccountsReceivableAgingQueryHandler
         }
 
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
+        var settled = await AsOfOutstanding.SettledByReceivableAsync(
+            _db, rows.Select(r => r.Id).ToList(), asOf, cancellationToken);
         var items = rows
-            .Select(a => ListAccountsReceivableQueryHandler.MapAr(a, asOf))
+            .Select(a =>
+            {
+                var settledAmt = settled.TryGetValue(a.Id, out var s) ? s : 0m;
+                var outstanding = AsOfOutstanding.Outstanding(a.RecognizedAmount, a.AdjustmentAmount, settledAmt);
+                var (days, bucket) = AgingBuckets.Classify(a.DueDate, asOf, bounds);
+                return new AccountsReceivableDto(
+                    a.Id,
+                    a.ReceivableExposureId,
+                    a.RecognizedAmount,
+                    a.AdjustmentAmount,
+                    settledAmt,
+                    outstanding,
+                    a.CurrencyCode,
+                    a.DueDate,
+                    a.SettlementStatus,
+                    a.BillId,
+                    a.CounterpartyId,
+                    a.RecognizedAt,
+                    a.Notes,
+                    a.RecordStatus,
+                    days,
+                    bucket);
+            })
             .Where(a => request.IncludeSettled || a.Outstanding > 0m)
             .ToList();
 

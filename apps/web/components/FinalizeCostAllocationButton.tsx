@@ -5,6 +5,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Props = {
   terms: TerminologyMap;
@@ -56,14 +57,13 @@ export function FinalizeCostAllocationButton({
       }
 
       if (!res.ok && res.status !== 204) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const body = await readApiErrorBody(res);
         setError(
-          body.message ||
-            (res.status === 409
-              ? "Không chốt được (PC-21 / cơ sở / conservation / kỳ khóa). Kiểm tra phiên phân bổ."
-              : "Chốt phân bổ thất bại.")
+          formatHttpError(res.status, body, {
+            conflict:
+              "Không chốt được (PC-21 / cơ sở / bảo toàn số tiền). Kiểm tra phiên phân bổ.",
+            default: "Chốt phân bổ thất bại.",
+          })
         );
         return;
       }

@@ -6,6 +6,7 @@ import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { maturityLabelKey } from "@/lib/costs-revenues";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "cost" | "revenue";
 
@@ -104,16 +105,13 @@ export function AdjustCostRevenueButton({
       }
 
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const body = await readApiErrorBody(res);
         setError(
-          body.message ||
-            (res.status === 403
-              ? `Bạn không có quyền điều chỉnh ${lineLabel.toLowerCase()}.`
-              : res.status === 409
-                ? "Không điều chỉnh được (trạng thái / số âm / kỳ khóa). Tải lại trang."
-                : "Điều chỉnh thất bại.")
+          formatHttpError(res.status, body, {
+            forbidden: `Bạn không có quyền điều chỉnh ${lineLabel.toLowerCase()}.`,
+            conflict: "Không điều chỉnh được (trạng thái / số âm). Tải lại trang.",
+            default: "Điều chỉnh thất bại.",
+          })
         );
         return;
       }

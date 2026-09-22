@@ -100,7 +100,8 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
             var res = await _client.SendAsync(confirm);
             Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
             var err = await res.Content.ReadFromJsonAsync<ErrorResponse>(JsonOptions);
-            Assert.Contains("đã khóa chốt", err!.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("period_locked", err!.Code);
+            Assert.Contains("đã khóa chốt", err.Message, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("xác nhận chi phí", err.Message, StringComparison.OrdinalIgnoreCase);
         }
 

@@ -61,8 +61,8 @@ public sealed class PeriodLockGate : IPeriodLockGate
                 continue;
             }
 
-            throw new ConflictAppException(
-                $"Kỳ/phạm vi đã khóa chốt tài chính — không được {mutationLabelVi}. Mở lại chốt nếu cần điều chỉnh (period lock).");
+            throw new PeriodLockedAppException(
+                $"Kỳ/phạm vi đã khóa chốt tài chính — không được {mutationLabelVi}. Mở lại chốt tại Chốt tài chính nếu cần điều chỉnh.");
         }
     }
 

@@ -5,6 +5,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "payment" | "collection";
 
@@ -60,14 +61,12 @@ export function FinalizeAllocationButton({
       }
 
       if (!res.ok && res.status !== 204) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const body = await readApiErrorBody(res);
         setError(
-          body.message ||
-            (res.status === 409
-              ? "Không chốt được (kỳ khóa / trạng thái lệch). Tải lại trang."
-              : "Chốt phân bổ thất bại.")
+          formatHttpError(res.status, body, {
+            conflict: "Không chốt được (trạng thái lệch). Tải lại trang.",
+            default: "Chốt phân bổ thất bại.",
+          })
         );
         return;
       }

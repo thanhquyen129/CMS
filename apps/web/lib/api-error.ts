@@ -28,3 +28,64 @@ export async function readApiErrorBody(
 ): Promise<ApiErrorBody> {
   return (await res.json().catch(() => ({}))) as ApiErrorBody;
 }
+
+function looksLikePeriodLock(body: ApiErrorBody | null | undefined): boolean {
+  const code = body?.code?.toLowerCase() ?? "";
+  if (code === "period_locked") return true;
+  const msg = body?.message ?? "";
+  return /khóa chốt|period[_\s-]?lock|mở lại chốt/i.test(msg);
+}
+
+/**
+ * UX-07: distinguish period lock vs concurrency vs generic conflict.
+ * Always prefers server Vietnamese message when present.
+ */
+export function formatHttpError(
+  status: number,
+  body: ApiErrorBody | null | undefined,
+  fallbacks?: {
+    forbidden?: string;
+    conflict?: string;
+    default?: string;
+  }
+): string {
+  if (status === 403) {
+    return formatApiErrorMessage(
+      body,
+      fallbacks?.forbidden ?? "Bạn không có quyền thực hiện thao tác này."
+    );
+  }
+
+  if (status === 409) {
+    if (looksLikePeriodLock(body)) {
+      return formatApiErrorMessage(
+        body,
+        "Kỳ/phạm vi đã khóa chốt tài chính. Mở lại chốt tại Chốt tài chính nếu cần điều chỉnh."
+      );
+    }
+    const code = body?.code?.toLowerCase() ?? "";
+    if (code === "concurrency_conflict") {
+      return formatApiErrorMessage(
+        body,
+        "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại và thử lại."
+      );
+    }
+    return formatApiErrorMessage(
+      body,
+      fallbacks?.conflict ??
+        "Không thực hiện được vì xung đột trạng thái. Tải lại và thử lại."
+    );
+  }
+
+  return formatApiErrorMessage(
+    body,
+    fallbacks?.default ?? "Thao tác thất bại."
+  );
+}
+
+/** True when operator should open Financial Close to unlock. */
+export function isPeriodLockedError(
+  body: ApiErrorBody | null | undefined
+): boolean {
+  return looksLikePeriodLock(body);
+}

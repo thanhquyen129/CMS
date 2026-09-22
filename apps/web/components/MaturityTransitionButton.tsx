@@ -5,6 +5,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "cost" | "revenue";
 type Action = "confirm" | "actualize";
@@ -103,14 +104,12 @@ export function MaturityTransitionButton({
       }
 
       if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const payload = await readApiErrorBody(res);
         setError(
-          payload.message ||
-            (res.status === 409
-              ? "Không thể chuyển lớp (xung đột / kỳ khóa). Tải lại trang."
-              : "Thao tác thất bại.")
+          formatHttpError(res.status, payload, {
+            conflict: "Không thể chuyển lớp. Tải lại trang và thử lại.",
+            default: "Thao tác thất bại.",
+          })
         );
         return;
       }

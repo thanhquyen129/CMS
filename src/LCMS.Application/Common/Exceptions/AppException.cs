@@ -41,6 +41,15 @@ public sealed class ConflictAppException : AppException
     }
 }
 
+/// <summary>Financial close period/scope lock blocked a money mutation (H-009 / close gates).</summary>
+public sealed class PeriodLockedAppException : AppException
+{
+    public PeriodLockedAppException(string vietnameseMessage)
+        : base(vietnameseMessage, StatusCodes.Conflict, "period_locked")
+    {
+    }
+}
+
 public sealed class ForbiddenAppException : AppException
 {
     public ForbiddenAppException(string vietnameseMessage = "Bạn không có quyền thực hiện thao tác này.")

@@ -1,6 +1,6 @@
 # P04 UAT - Strict close + period lock stress on VPS (AC-008 / ADR-0010)
 # Does not print secrets. Writes result JSON (token redacted).
-# Match period-lock errors via ASCII marker "period lock" in API VI messages.
+# Match period-lock errors via VI «khóa chốt» / code period_locked (UX-07).
 $ErrorActionPreference = "Stop"
 $Base = if ($env:CMS_UAT_BASE) { $env:CMS_UAT_BASE } else { "http://194.233.89.26" }
 $Email = $env:CMS_UAT_EMAIL
@@ -22,7 +22,7 @@ function Record([string]$name, [bool]$ok, [string]$detail) {
 }
 
 function Test-PeriodLockMessage([string]$msg) {
-  return [bool]($msg -match '(?i)period\s*lock')
+  return [bool]($msg -match '(?i)khóa chốt|period[_\s-]?lock|period_locked')
 }
 
 function Invoke-Api {

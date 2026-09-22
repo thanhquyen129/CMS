@@ -13,6 +13,7 @@ import {
 } from "@/lib/costs-revenues";
 import { formatMoney } from "@/lib/money";
 import { AdjustCostRevenueButton } from "@/components/AdjustCostRevenueButton";
+import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "cost" | "revenue";
 type Action = "confirm" | "actualize";
@@ -138,14 +139,11 @@ export function BillCostRevenuePanel({
       }
 
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        const msg =
-          body.message ||
-          (res.status === 403
-            ? "Bạn không có quyền thực hiện thao tác này."
-            : res.status === 409
-              ? "Không thể thực hiện vì xung đột trạng thái. Tải lại trang và thử lại."
-              : "Thao tác thất bại.");
+        const body = await readApiErrorBody(res);
+        const msg = formatHttpError(res.status, body, {
+          conflict: "Không thể thực hiện vì xung đột trạng thái. Tải lại trang và thử lại.",
+          default: "Thao tác thất bại.",
+        });
         setError(msg);
         if (res.status === 403 || res.status === 409) {
           setBlocked((prev) => ({

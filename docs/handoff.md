@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-22 — UX-07 period_locked vs concurrency (commercial money path)
+
+### User
+tiếp bạn, làm ở cấp độ commercial ready product luôn nha
+
+### Answer
+(1) API: `PeriodLockedAppException` code `period_locked` (tách `concurrency_conflict`); copy VI bỏ marker EN. (2) Web: `formatHttpError` phân loại 409; wire maturity/allocate/adjust/finalize/cash. (3) UAT script + Sprint10 assert `period_locked`.
+
+### Files
+- `AppException.cs`, `PeriodLockGate.cs`
+- `lib/api-error.ts`, MaturityTransition/BillCostRevenue/AllocateCash/Adjust/Finalize*/CreateCashTxn
+- `Sprint10FullFinancialCloseTests.cs`, `scripts/uat-vps-p04-strict-period-lock.ps1`
+
 ## 2026-09-22 — W-L4 Settlement allocate timeline (Pixel UI-09)
 
 ### User

@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 export type AllocateTargetOption = {
   id: string;
@@ -128,14 +129,12 @@ export function AllocateCashForm({
       }
 
       if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const payload = await readApiErrorBody(res);
         setError(
-          payload.message ||
-            (res.status === 409
-              ? "Không phân bổ được (kỳ khóa / vượt số dư). Tải lại và thử lại."
-              : "Phân bổ thất bại.")
+          formatHttpError(res.status, payload, {
+            conflict: "Không phân bổ được (vượt số dư hoặc trạng thái lệch). Tải lại và thử lại.",
+            default: "Phân bổ thất bại.",
+          })
         );
         return;
       }

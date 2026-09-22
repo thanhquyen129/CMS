@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -67,8 +68,10 @@ public sealed class RecordIntegrationErrorCommandHandler : IRequestHandler<Recor
             TenantId = tenantId,
             IntegrationRecordId = record.Id,
             ErrorCode = request.ErrorCode.Trim(),
-            Message = request.Message.Trim(),
-            Detail = string.IsNullOrWhiteSpace(request.Detail) ? null : request.Detail.Trim(),
+            Message = SecretRedactor.Redact(request.Message.Trim())!,
+            Detail = string.IsNullOrWhiteSpace(request.Detail)
+                ? null
+                : SecretRedactor.Redact(request.Detail.Trim()),
             AttemptNo = attemptNo + 1,
             OccurredAt = DateTimeOffset.UtcNow,
             NextRetryAt = request.NextRetryAt,

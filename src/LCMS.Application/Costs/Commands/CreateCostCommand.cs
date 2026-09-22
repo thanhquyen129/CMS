@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
 using LCMS.Application.BusinessParties;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
@@ -20,7 +21,8 @@ public sealed record CreateCostCommand(
     Guid? VendorPartyId,
     string? SourceType,
     Guid? SourceId,
-    Guid? OrganizationId) : IRequest<Guid>;
+    Guid? OrganizationId,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class CreateCostCommandValidator : AbstractValidator<CreateCostCommand>
 {
@@ -56,6 +58,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
     private readonly ICostFxStub _fx;
     private readonly ICostApprovalGate _approvalGate;
     private readonly IPartyDirectoryService _parties;
+    private readonly IIdempotencyGate _idempotency;
 
     public CreateCostCommandHandler(
         ILcmsDbContext db,
@@ -64,7 +67,8 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         IAuditWriter audit,
         ICostFxStub fx,
         ICostApprovalGate approvalGate,
-        IPartyDirectoryService parties)
+        IPartyDirectoryService parties,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -73,6 +77,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         _fx = fx;
         _approvalGate = approvalGate;
         _parties = parties;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(CreateCostCommand request, CancellationToken cancellationToken)
@@ -83,6 +88,15 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.Cost,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
+
         var attribution = request.AttributionType.Trim().ToLowerInvariant();
         var currency = request.CurrencyCode.Trim().ToUpperInvariant();
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
@@ -188,6 +202,11 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         await _approvalGate.RefreshPendingFlagAsync(cost, cancellationToken);
 
         _db.Costs.Add(cost);
+        _idempotency.Remember(
+            IdempotencyScopes.Cost,
+            request.IdempotencyKey ?? string.Empty,
+            cost.Id,
+            tenantId);
         _audit.Append(
             AuditActions.CostCreate,
             AuditObjectTypes.Cost,

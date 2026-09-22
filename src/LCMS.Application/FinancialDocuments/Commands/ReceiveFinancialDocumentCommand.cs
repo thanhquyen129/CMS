@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.BusinessParties;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
@@ -71,6 +72,7 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
     private readonly DocumentOptions _options;
     private readonly IPartyDirectoryService _parties;
     private readonly ILateDocumentGate _lateDocuments;
+    private readonly IIdempotencyGate _idempotency;
 
     public ReceiveFinancialDocumentCommandHandler(
         ILcmsDbContext db,
@@ -78,7 +80,8 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         ICurrentUserContext user,
         IOptions<DocumentOptions> options,
         IPartyDirectoryService parties,
-        ILateDocumentGate lateDocuments)
+        ILateDocumentGate lateDocuments,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -86,6 +89,7 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         _options = options.Value;
         _parties = parties;
         _lateDocuments = lateDocuments;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(ReceiveFinancialDocumentCommand request, CancellationToken cancellationToken)
@@ -95,15 +99,13 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
             throw new TenantRequiredAppException();
         }
 
-        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
-        if (idempotencyKey is not null)
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.FinancialDocument,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
         {
-            var prior = await _db.IdempotencyRecords.AsNoTracking()
-                .FirstOrDefaultAsync(r => r.Scope == "financial_document" && r.Key == idempotencyKey, cancellationToken);
-            if (prior is not null)
-            {
-                return prior.ObjectId;
-            }
+            return priorId.Value;
         }
 
         var documentDate = request.DocumentDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
@@ -199,16 +201,11 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         };
 
         _db.FinancialDocuments.Add(document);
-        if (idempotencyKey is not null)
-        {
-            _db.IdempotencyRecords.Add(new IdempotencyRecord
-            {
-                TenantId = _tenantContext.TenantId!.Value,
-                Scope = "financial_document",
-                Key = idempotencyKey,
-                ObjectId = document.Id
-            });
-        }
+        _idempotency.Remember(
+            IdempotencyScopes.FinancialDocument,
+            request.IdempotencyKey ?? string.Empty,
+            document.Id,
+            tenantId);
         // Explicit: do not create Cost or Revenue rows from document intake (C-003 / C-004).
         await _db.SaveChangesAsync(cancellationToken);
         return document.Id;

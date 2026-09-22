@@ -74,6 +74,24 @@ export function listIntegrationErrors(opts?: {
   return apiGet<IntegrationErrorItem[]>(`/api/integration-errors${qs}`);
 }
 
+export type IntegrationJobHealth = {
+  outboxPending: number;
+  integrationErrorsPending: number;
+  integrationErrorsDeadLetter: number;
+  topActionableErrors: {
+    id: string;
+    errorCode: string;
+    message: string;
+    nextAction: string | null;
+    occurredAt: string;
+    nextRetryAt: string | null;
+  }[];
+};
+
+export function getIntegrationJobHealth(): Promise<ApiResult<IntegrationJobHealth>> {
+  return apiGet<IntegrationJobHealth>("/api/integration-errors/job-health");
+}
+
 export function integrationRecoveryStatusLabel(status: string): string {
   switch (status.toLowerCase()) {
     case "pending":

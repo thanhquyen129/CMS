@@ -6,7 +6,7 @@ import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { SettingsHubNav } from "@/components/SettingsHubNav";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
-import { listIntegrationErrors } from "@/lib/integration-errors";
+import { getIntegrationJobHealth, listIntegrationErrors } from "@/lib/integration-errors";
 import { formatDateTimeVi } from "@/lib/money";
 import { listIntegrationRecords } from "@/lib/tenant-admin";
 
@@ -17,9 +17,10 @@ export default async function SettingsIntegrationsPage() {
   }
 
   const terms = await fetchTerminology();
-  const [recordsResult, errorsResult] = await Promise.all([
+  const [recordsResult, errorsResult, healthResult] = await Promise.all([
     listIntegrationRecords(),
     listIntegrationErrors({ recoveryStatus: "pending" }),
+    getIntegrationJobHealth(),
   ]);
 
   return (
@@ -37,10 +38,53 @@ export default async function SettingsIntegrationsPage() {
         <SettingsHubNav active="integrations" />
         <p className="note">
           Xử lý dead-letter / thử lại tại{" "}
-          <Link href="/integration-errors">Hàng đợi lỗi tích hợp</Link>.
+          <Link href="/integration-errors">Hàng đợi lỗi tích hợp</Link>. Chi tiết lỗi đã che secret.
         </p>
 
         <fieldset className="group-box">
+          <legend>Tình trạng job</legend>
+          {!healthResult.ok ? (
+            <div className="alert alert-error" role="alert">
+              {healthResult.message}
+            </div>
+          ) : (
+            <>
+              <p>
+                Outbox chờ: <strong>{healthResult.data.outboxPending}</strong> · Lỗi chờ:{" "}
+                <strong>{healthResult.data.integrationErrorsPending}</strong> · Dead-letter:{" "}
+                <strong>{healthResult.data.integrationErrorsDeadLetter}</strong>
+              </p>
+              {healthResult.data.topActionableErrors.length > 0 ? (
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Mã</th>
+                        <th scope="col">Nội dung</th>
+                        <th scope="col">Hành động gợi ý</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {healthResult.data.topActionableErrors.map((e) => (
+                        <tr key={e.id}>
+                          <td className="mono-id">{e.errorCode}</td>
+                          <td>{e.message}</td>
+                          <td>{e.nextAction}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="empty-state" role="status">
+                  Không có lỗi cần hành động.
+                </div>
+              )}
+            </>
+          )}
+        </fieldset>
+
+        <fieldset className="group-box" style={{ marginTop: "1.25rem" }}>
           <legend>Bản ghi đồng bộ gần đây</legend>
           {!recordsResult.ok ? (
             <div className="alert alert-error" role="alert">

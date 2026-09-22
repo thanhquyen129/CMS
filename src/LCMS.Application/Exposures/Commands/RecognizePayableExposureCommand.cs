@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
@@ -17,7 +18,8 @@ public sealed record RecognizePayableExposureCommand(
     Guid PayableExposureId,
     decimal Amount,
     DateOnly? DueDate,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class RecognizePayableExposureCommandValidator : AbstractValidator<RecognizePayableExposureCommand>
 {
@@ -37,19 +39,22 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
     private readonly TenantFinancialOptionsResolver _financial;
+    private readonly IIdempotencyGate _idempotency;
 
     public RecognizePayableExposureCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IAuditWriter audit,
-        TenantFinancialOptionsResolver financial)
+        TenantFinancialOptionsResolver financial,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
         _financial = financial;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(RecognizePayableExposureCommand request, CancellationToken cancellationToken)
@@ -57,6 +62,15 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
+        }
+
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.RecognizePayable,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
@@ -143,6 +157,11 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         exposure.TouchRowVersion();
 
         _db.AccountsPayable.Add(ap);
+        _idempotency.Remember(
+            IdempotencyScopes.RecognizePayable,
+            request.IdempotencyKey ?? string.Empty,
+            ap.Id,
+            tenantId);
         _audit.Append(
             AuditActions.AccountsPayableRecognize,
             AuditObjectTypes.AccountsPayable,

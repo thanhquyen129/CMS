@@ -147,15 +147,17 @@ public static class FinancialDocumentEndpoints
 
         var matches = app.MapGroup("/api/document-matches").WithTags("DocumentMatches");
 
-        matches.MapPost("/", async (StartDocumentMatchRequest body, ISender sender, CancellationToken ct) =>
+        matches.MapPost("/", async (StartDocumentMatchRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var id = await sender.Send(
                 new StartDocumentMatchCommand(
                     body.PrimaryDocumentId,
                     body.MatchMethod,
                     body.Notes,
                     body.ToleranceAmount,
-                    body.TolerancePercent),
+                    body.TolerancePercent,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/document-matches/{id}", new { id });
         });

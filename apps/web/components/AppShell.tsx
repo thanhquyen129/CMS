@@ -242,6 +242,7 @@ export async function AppShell({
           <NavLink href="/settings/users">Người dùng</NavLink>
           <NavLink href="/admin/access">Vai trò &amp; Phân quyền</NavLink>
           <NavLink href="/settings/business">Cấu hình nghiệp vụ</NavLink>
+          <NavLink href="/settings/policies">Sổ chính sách</NavLink>
           <NavLink href="/settings">{settingsLabel}</NavLink>
           <NavLink href="/settings/integrations">Tích hợp API</NavLink>
           <NavLink href="/settings/audit">Nhật ký hệ thống</NavLink>

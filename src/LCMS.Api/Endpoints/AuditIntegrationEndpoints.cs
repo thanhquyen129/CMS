@@ -1,6 +1,7 @@
 using LCMS.Application.Audit.Queries;
 using LCMS.Application.Integrations.Commands;
 using LCMS.Application.Integrations.Queries;
+using LCMS.Api.Observability;
 using MediatR;
 
 namespace LCMS.Api.Endpoints;
@@ -94,6 +95,15 @@ public static class AuditIntegrationEndpoints
                 new ListIntegrationErrorsQuery(integrationRecordId, recoveryStatus, take ?? 100),
                 ct);
             return Results.Ok(list);
+        });
+
+        errors.MapGet("/job-health", async (ISender sender, CancellationToken ct) =>
+        {
+            var health = await sender.Send(new GetIntegrationJobHealthQuery(), ct);
+            IntegrationJobMetrics.OutboxPending.Set(health.OutboxPending);
+            IntegrationJobMetrics.IntegrationErrorsPending.Set(health.IntegrationErrorsPending);
+            IntegrationJobMetrics.IntegrationErrorsDeadLetter.Set(health.IntegrationErrorsDeadLetter);
+            return Results.Ok(health);
         });
 
         errors.MapPost("/{id:guid}/mark-retried", async (

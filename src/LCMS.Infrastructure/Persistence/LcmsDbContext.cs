@@ -105,6 +105,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<IntegrationError> IntegrationErrors => Set<IntegrationError>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+    public DbSet<Policy> Policies => Set<Policy>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

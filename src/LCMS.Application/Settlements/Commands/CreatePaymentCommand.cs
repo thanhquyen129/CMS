@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -40,15 +41,18 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ISettlementFxStub _fx;
+    private readonly IIdempotencyGate _idempotency;
 
     public CreatePaymentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ISettlementFxStub fx)
+        ISettlementFxStub fx,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
@@ -59,16 +63,15 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
-        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
-        if (idempotencyKey is not null)
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.Payment,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
         {
-            var prior = await _db.IdempotencyRecords.AsNoTracking()
-                .FirstOrDefaultAsync(r => r.Scope == "payment" && r.Key == idempotencyKey, cancellationToken);
-            if (prior is not null)
-            {
-                return prior.ObjectId;
-            }
+            return priorId.Value;
         }
+
         if (request.BillId.HasValue)
         {
             var billExists = await _db.Bills.AsNoTracking()
@@ -99,16 +102,11 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
         await _fx.ApplyToPaymentAsync(payment, amount, cancellationToken);
 
         _db.Payments.Add(payment);
-        if (idempotencyKey is not null)
-        {
-            _db.IdempotencyRecords.Add(new IdempotencyRecord
-            {
-                TenantId = tenantId,
-                Scope = "payment",
-                Key = idempotencyKey,
-                ObjectId = payment.Id
-            });
-        }
+        _idempotency.Remember(
+            IdempotencyScopes.Payment,
+            request.IdempotencyKey ?? string.Empty,
+            payment.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
 
         var costCountAfter = await _db.Costs.CountAsync(cancellationToken);

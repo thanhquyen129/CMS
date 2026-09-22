@@ -1,5 +1,23 @@
 # Handoff
 
+## 2026-09-22 — Gói H: policy, idempotency, observability, 09B
+
+### User
+làm tiếp gói H Pixel-perfect
+
+### Answer
+Gói H (W-H1…H4) xong. Sổ 13 khóa chính sách (`policies`) có chủ sở hữu, phiên bản, ngày hiệu lực; UI `/settings/policies`. Header `Idempotency-Key` trên tạo chi phí/doanh thu/thu/chứng từ/thanh toán/khớp/ghi nhận AP·AR/mở chốt. Lỗi tích hợp che secret; `job-health` đưa hành động gợi ý; `/metrics` Production cần `Metrics:ScrapeToken` hoặc 404. 09B DEV Status điền DONE + evidence. ADR-0030.
+
+### Files / API / schema
+- Migration `20260922085232_PolicyRegistryPackageH` → `policies`.
+- `POST /api/policies/ensure-catalog`, `GET/PUT /api/policies`, `GET /api/policies/{key}/active`.
+- `IIdempotencyGate` + scopes; `SecretRedactor`; `GET /api/integration-errors/job-health`.
+- MetricsProtectMiddleware; gauges `lcms_outbox_pending` / `lcms_integration_errors_*`.
+- 09B xlsx cập nhật; `HardeningPackageHTests`.
+
+### UI
+Hub cài đặt thêm tab Sổ chính sách; Tích hợp API hiện tình trạng job + gợi ý xử lý.
+
 ## 2026-09-22 — Gói G: chốt kỳ và báo cáo
 
 ### User

@@ -71,8 +71,9 @@ public static class SettlementEndpoints
 
         var collections = app.MapGroup("/api/collections").WithTags("Collections");
 
-        collections.MapPost("/", async (CreateCollectionRequest body, ISender sender, CancellationToken ct) =>
+        collections.MapPost("/", async (CreateCollectionRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var id = await sender.Send(
                 new CreateCollectionCommand(
                     body.Amount,
@@ -81,7 +82,8 @@ public static class SettlementEndpoints
                     body.CounterpartyId,
                     body.BillId,
                     body.ReferenceNo,
-                    body.Notes),
+                    body.Notes,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/collections/{id}", new { id });
         });

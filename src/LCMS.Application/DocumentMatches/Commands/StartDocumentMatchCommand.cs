@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialDocuments;
 using LCMS.Domain.Entities;
@@ -14,7 +15,8 @@ public sealed record StartDocumentMatchCommand(
     string? MatchMethod,
     string? Notes,
     decimal? ToleranceAmount,
-    decimal? TolerancePercent) : IRequest<Guid>;
+    decimal? TolerancePercent,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class StartDocumentMatchCommandValidator : AbstractValidator<StartDocumentMatchCommand>
 {
@@ -45,15 +47,18 @@ public sealed class StartDocumentMatchCommandHandler : IRequestHandler<StartDocu
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly DocumentOptions _options;
+    private readonly IIdempotencyGate _idempotency;
 
     public StartDocumentMatchCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IOptions<DocumentOptions> options)
+        IOptions<DocumentOptions> options,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _options = options.Value;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(StartDocumentMatchCommand request, CancellationToken cancellationToken)
@@ -61,6 +66,15 @@ public sealed class StartDocumentMatchCommandHandler : IRequestHandler<StartDocu
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
+        }
+
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.DocumentMatch,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
@@ -96,6 +110,11 @@ public sealed class StartDocumentMatchCommandHandler : IRequestHandler<StartDocu
         };
 
         _db.DocumentMatches.Add(match);
+        _idempotency.Remember(
+            IdempotencyScopes.DocumentMatch,
+            request.IdempotencyKey ?? string.Empty,
+            match.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
         return match.Id;
     }

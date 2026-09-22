@@ -6,6 +6,7 @@ type Props = {
     | "users"
     | "access"
     | "business"
+    | "policies"
     | "system"
     | "integrations"
     | "audit"
@@ -20,6 +21,7 @@ const TABS: { id: Props["active"]; href: string; title: string; desc: string }[]
   { id: "users", href: "/settings/users", title: "Người dùng", desc: "Tạo, ngừng, mật khẩu" },
   { id: "access", href: "/admin/access", title: "Vai trò & Phân quyền", desc: "Action × phạm vi" },
   { id: "business", href: "/settings/business", title: "Cấu hình nghiệp vụ", desc: "Ngưỡng xóa nợ / phê duyệt" },
+  { id: "policies", href: "/settings/policies", title: "Sổ chính sách", desc: "13 khóa · phiên bản · hiệu lực" },
   { id: "system", href: "/settings", title: "Cấu hình hệ thống", desc: "Giao diện trình duyệt" },
   { id: "integrations", href: "/settings/integrations", title: "Tích hợp API", desc: "Bản ghi và lỗi đồng bộ" },
   { id: "audit", href: "/settings/audit", title: "Nhật ký hệ thống", desc: "Audit theo ngày / hành động" },

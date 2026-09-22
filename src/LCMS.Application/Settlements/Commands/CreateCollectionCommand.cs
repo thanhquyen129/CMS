@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -14,7 +15,8 @@ public sealed record CreateCollectionCommand(
     Guid? CounterpartyId,
     Guid? BillId,
     string? ReferenceNo,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class CreateCollectionCommandValidator : AbstractValidator<CreateCollectionCommand>
 {
@@ -39,15 +41,18 @@ public sealed class CreateCollectionCommandHandler : IRequestHandler<CreateColle
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ISettlementFxStub _fx;
+    private readonly IIdempotencyGate _idempotency;
 
     public CreateCollectionCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ISettlementFxStub fx)
+        ISettlementFxStub fx,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(CreateCollectionCommand request, CancellationToken cancellationToken)
@@ -58,6 +63,15 @@ public sealed class CreateCollectionCommandHandler : IRequestHandler<CreateColle
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.Collection,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
+
         if (request.BillId.HasValue)
         {
             var billExists = await _db.Bills.AsNoTracking()
@@ -88,6 +102,11 @@ public sealed class CreateCollectionCommandHandler : IRequestHandler<CreateColle
         await _fx.ApplyToCollectionAsync(collection, amount, cancellationToken);
 
         _db.Collections.Add(collection);
+        _idempotency.Remember(
+            IdempotencyScopes.Collection,
+            request.IdempotencyKey ?? string.Empty,
+            collection.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
 
         var costCountAfter = await _db.Costs.CountAsync(cancellationToken);

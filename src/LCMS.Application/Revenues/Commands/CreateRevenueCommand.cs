@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
 using LCMS.Application.BusinessParties;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
@@ -20,7 +21,8 @@ public sealed record CreateRevenueCommand(
     string? SourceType,
     Guid? SourceId,
     string? RecognitionPolicyVersion,
-    string? ActualRevenueOwner = null) : IRequest<Guid>;
+    string? ActualRevenueOwner = null,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class CreateRevenueCommandValidator : AbstractValidator<CreateRevenueCommand>
 {
@@ -68,6 +70,7 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
     private readonly IRevenueFxStub _fx;
     private readonly IRevenueApprovalGate _approvalGate;
     private readonly IPartyDirectoryService _parties;
+    private readonly IIdempotencyGate _idempotency;
 
     public CreateRevenueCommandHandler(
         ILcmsDbContext db,
@@ -75,7 +78,8 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         IAuditWriter audit,
         IRevenueFxStub fx,
         IRevenueApprovalGate approvalGate,
-        IPartyDirectoryService parties)
+        IPartyDirectoryService parties,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -83,6 +87,7 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         _fx = fx;
         _approvalGate = approvalGate;
         _parties = parties;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(CreateRevenueCommand request, CancellationToken cancellationToken)
@@ -93,6 +98,15 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.Revenue,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
+
         var currency = request.CurrencyCode.Trim().ToUpperInvariant();
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
 
@@ -175,6 +189,11 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         _approvalGate.RefreshPendingFlag(revenue);
 
         _db.Revenues.Add(revenue);
+        _idempotency.Remember(
+            IdempotencyScopes.Revenue,
+            request.IdempotencyKey ?? string.Empty,
+            revenue.Id,
+            tenantId);
         var owner = string.IsNullOrWhiteSpace(request.ActualRevenueOwner)
             ? null
             : request.ActualRevenueOwner.Trim();

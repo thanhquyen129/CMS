@@ -10,8 +10,9 @@ public static class FinancialCloseEndpoints
     {
         var closes = app.MapGroup("/api/financial-closes").WithTags("FinancialCloses");
 
-        closes.MapPost("/", async (StartFinancialCloseRequest body, ISender sender, CancellationToken ct) =>
+        closes.MapPost("/", async (StartFinancialCloseRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var id = await sender.Send(
                 new StartFinancialCloseCommand(
                     body.ScopeType,
@@ -21,7 +22,8 @@ public static class FinancialCloseEndpoints
                     body.PolicyVersion,
                     body.BaseCurrency,
                     body.Notes,
-                    body.SupersedesCloseId),
+                    body.SupersedesCloseId,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/financial-closes/{id}", new { id });
         });

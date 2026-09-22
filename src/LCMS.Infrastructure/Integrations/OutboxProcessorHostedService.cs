@@ -52,7 +52,10 @@ public sealed class OutboxProcessorHostedService : BackgroundService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogError(ex, "Outbox worker batch failed.");
+                // Actionable, no secret dump — exception message may contain connection strings.
+                _logger.LogError(
+                    "Outbox worker batch failed. Action=check_db_connectivity ErrorType={ErrorType}",
+                    ex.GetType().Name);
             }
 
             try

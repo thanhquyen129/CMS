@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
 using LCMS.Application.BusinessParties;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
@@ -18,7 +19,8 @@ public sealed record RecognizeReceivableExposureCommand(
     Guid ReceivableExposureId,
     decimal Amount,
     DateOnly? DueDate,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class RecognizeReceivableExposureCommandValidator
     : AbstractValidator<RecognizeReceivableExposureCommand>
@@ -41,6 +43,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
     private readonly IAuditWriter _audit;
     private readonly TenantFinancialOptionsResolver _financial;
     private readonly IPartyDirectoryService _parties;
+    private readonly IIdempotencyGate _idempotency;
 
     public RecognizeReceivableExposureCommandHandler(
         ILcmsDbContext db,
@@ -48,7 +51,8 @@ public sealed class RecognizeReceivableExposureCommandHandler
         ICurrentUserContext user,
         IAuditWriter audit,
         TenantFinancialOptionsResolver financial,
-        IPartyDirectoryService parties)
+        IPartyDirectoryService parties,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -56,6 +60,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
         _audit = audit;
         _financial = financial;
         _parties = parties;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(RecognizeReceivableExposureCommand request, CancellationToken cancellationToken)
@@ -63,6 +68,15 @@ public sealed class RecognizeReceivableExposureCommandHandler
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
+        }
+
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.RecognizeReceivable,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
@@ -155,6 +169,11 @@ public sealed class RecognizeReceivableExposureCommandHandler
         exposure.TouchRowVersion();
 
         _db.AccountsReceivable.Add(ar);
+        _idempotency.Remember(
+            IdempotencyScopes.RecognizeReceivable,
+            request.IdempotencyKey ?? string.Empty,
+            ar.Id,
+            tenantId);
         _audit.Append(
             AuditActions.AccountsReceivableRecognize,
             AuditObjectTypes.AccountsReceivable,

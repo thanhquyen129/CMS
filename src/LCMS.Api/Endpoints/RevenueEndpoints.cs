@@ -11,8 +11,9 @@ public static class RevenueEndpoints
     {
         var revenues = app.MapGroup("/api/revenues").WithTags("Revenues");
 
-        revenues.MapPost("/", async (CreateRevenueRequest body, ISender sender, CancellationToken ct) =>
+        revenues.MapPost("/", async (CreateRevenueRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var id = await sender.Send(
                 new CreateRevenueCommand(
                     body.BillId,
@@ -24,7 +25,8 @@ public static class RevenueEndpoints
                     body.SourceType,
                     body.SourceId,
                     body.RecognitionPolicyVersion,
-                    body.ActualRevenueOwner),
+                    body.ActualRevenueOwner,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/revenues/{id}", new { id });
         });

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -15,7 +16,8 @@ public sealed record StartFinancialCloseCommand(
     string? PolicyVersion,
     string? BaseCurrency,
     string? Notes,
-    Guid? SupersedesCloseId) : IRequest<Guid>;
+    Guid? SupersedesCloseId,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class StartFinancialCloseCommandValidator : AbstractValidator<StartFinancialCloseCommand>
 {
@@ -66,15 +68,18 @@ public sealed class StartFinancialCloseCommandHandler : IRequestHandler<StartFin
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IIdempotencyGate _idempotency;
 
     public StartFinancialCloseCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(StartFinancialCloseCommand request, CancellationToken cancellationToken)
@@ -82,6 +87,15 @@ public sealed class StartFinancialCloseCommandHandler : IRequestHandler<StartFin
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
+        }
+
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.FinancialClose,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
@@ -177,6 +191,11 @@ public sealed class StartFinancialCloseCommandHandler : IRequestHandler<StartFin
             };
 
             _db.FinancialCloses.Add(reclose);
+            _idempotency.Remember(
+                IdempotencyScopes.FinancialClose,
+                request.IdempotencyKey ?? string.Empty,
+                reclose.Id,
+                tenantId);
             await _db.SaveChangesAsync(cancellationToken);
             return reclose.Id;
         }
@@ -207,6 +226,11 @@ public sealed class StartFinancialCloseCommandHandler : IRequestHandler<StartFin
         };
 
         _db.FinancialCloses.Add(close);
+        _idempotency.Remember(
+            IdempotencyScopes.FinancialClose,
+            request.IdempotencyKey ?? string.Empty,
+            close.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
         return close.Id;
     }

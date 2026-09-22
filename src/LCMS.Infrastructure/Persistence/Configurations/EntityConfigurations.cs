@@ -2081,3 +2081,23 @@ internal sealed class TenantBackupConfiguration : IEntityTypeConfiguration<Tenan
         builder.HasIndex(e => new { e.TenantId, e.CreatedAt });
     }
 }
+
+internal sealed class PolicyConfiguration : IEntityTypeConfiguration<Policy>
+{
+    public void Configure(EntityTypeBuilder<Policy> builder)
+    {
+        builder.ToTable("policies");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PolicyKey).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Title).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.OwnerUserId).HasColumnType("uuid");
+        builder.Property(e => e.Version).IsRequired();
+        builder.Property(e => e.EffectiveFrom).IsRequired();
+        builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.BodyJson).HasColumnType("text");
+        builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.HasIndex(e => new { e.TenantId, e.PolicyKey, e.Version }).IsUnique();
+        builder.HasIndex(e => new { e.TenantId, e.PolicyKey, e.Status, e.EffectiveFrom });
+    }
+}

@@ -55,6 +55,7 @@ try
     var app = builder.Build();
 
     app.UseMiddleware<SecurityHeadersMiddleware>();
+    app.UseMiddleware<MetricsProtectMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseMiddleware<RateLimitingMiddleware>();
     app.UseMiddleware<RequestLoggingMiddleware>();
@@ -119,6 +120,7 @@ try
     }).AllowAnonymous();
 
     // Prometheus text exposition + HTTP request metrics (UseHttpMetrics).
+    // Production: MetricsProtectMiddleware returns 404 unless Metrics:ScrapeToken is set.
     app.MapMetrics().AllowAnonymous();
 
     app.MapGet("/", () => Results.Ok(new
@@ -137,6 +139,7 @@ try
     app.MapMasterDataEndpoints();
     app.MapReferenceMasterEndpoints();
     app.MapTenantSettingsEndpoints();
+    app.MapPolicyEndpoints();
     app.MapTenantAdminEndpoints();
     app.MapSampleDataEndpoints();
     app.MapOperationalReferenceEndpoints();

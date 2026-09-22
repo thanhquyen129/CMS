@@ -44,11 +44,13 @@ public static class ExposureApArEndpoints
         payableExposures.MapPost("/{id:guid}/recognize", async (
             Guid id,
             RecognizeExposureRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var apId = await sender.Send(
-                new RecognizePayableExposureCommand(id, body.Amount, body.DueDate, body.Notes),
+                new RecognizePayableExposureCommand(id, body.Amount, body.DueDate, body.Notes, idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/accounts-payable/{apId}", new { id = apId });
         });
@@ -102,11 +104,13 @@ public static class ExposureApArEndpoints
         receivableExposures.MapPost("/{id:guid}/recognize", async (
             Guid id,
             RecognizeExposureRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var arId = await sender.Send(
-                new RecognizeReceivableExposureCommand(id, body.Amount, body.DueDate, body.Notes),
+                new RecognizeReceivableExposureCommand(id, body.Amount, body.DueDate, body.Notes, idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/accounts-receivable/{arId}", new { id = arId });
         });

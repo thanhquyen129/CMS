@@ -11,8 +11,9 @@ public static class CostEndpoints
     {
         var costs = app.MapGroup("/api/costs").WithTags("Costs");
 
-        costs.MapPost("/", async (CreateCostRequest body, ISender sender, CancellationToken ct) =>
+        costs.MapPost("/", async (CreateCostRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var id = await sender.Send(
                 new CreateCostCommand(
                     body.BillId,
@@ -24,7 +25,8 @@ public static class CostEndpoints
                     body.VendorPartyId,
                     body.SourceType,
                     body.SourceId,
-                    body.OrganizationId),
+                    body.OrganizationId,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/costs/{id}", new { id });
         });

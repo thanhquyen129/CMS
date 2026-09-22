@@ -286,6 +286,20 @@ public sealed record PricingRuleComponentDto(
     string CurrencyCode,
     int SortOrder);
 
+public sealed record RateBreakDto(
+    Guid Id,
+    Guid PricingRuleId,
+    int SequenceNo,
+    decimal MinQuantity,
+    decimal? MaxQuantity,
+    decimal UnitAmount);
+
+public sealed record ContainerRateDto(
+    Guid Id,
+    Guid PricingRuleId,
+    string ContainerType,
+    decimal UnitAmount);
+
 public sealed record PricingRuleDto(
     Guid Id,
     Guid RateVersionId,
@@ -302,7 +316,9 @@ public sealed record PricingRuleDto(
     decimal? MaxAmount,
     int SortOrder,
     bool IsActive,
-    IReadOnlyList<PricingRuleComponentDto> Components);
+    IReadOnlyList<PricingRuleComponentDto> Components,
+    IReadOnlyList<RateBreakDto> Breaks,
+    IReadOnlyList<ContainerRateDto> ContainerRates);
 
 public sealed record ListPricingRulesQuery(Guid RateVersionId) : IRequest<IReadOnlyList<PricingRuleDto>>;
 
@@ -353,13 +369,41 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
                 c.CostTypeCode, c.RevenueTypeCode, c.Amount, c.CurrencyCode, c.SortOrder))
                 .ToList());
 
+        var breaks = ruleIds.Count == 0
+            ? []
+            : await _db.RateBreaks
+                .AsNoTracking()
+                .Where(b => ruleIds.Contains(b.PricingRuleId))
+                .OrderBy(b => b.SequenceNo)
+                .ToListAsync(cancellationToken);
+        var breaksByRule = breaks
+            .GroupBy(b => b.PricingRuleId)
+            .ToDictionary(g => g.Key, g => g.Select(b => new RateBreakDto(
+                b.Id, b.PricingRuleId, b.SequenceNo, b.MinQuantity, b.MaxQuantity, b.UnitAmount))
+                .ToList());
+
+        var containerRates = ruleIds.Count == 0
+            ? []
+            : await _db.ContainerRatePrices
+                .AsNoTracking()
+                .Where(c => ruleIds.Contains(c.PricingRuleId))
+                .OrderBy(c => c.ContainerType)
+                .ToListAsync(cancellationToken);
+        var containersByRule = containerRates
+            .GroupBy(c => c.PricingRuleId)
+            .ToDictionary(g => g.Key, g => g.Select(c => new ContainerRateDto(
+                c.Id, c.PricingRuleId, c.ContainerType, c.UnitAmount))
+                .ToList());
+
         return rules
             .Select(r => new PricingRuleDto(
                 r.Id, r.RateVersionId, r.Code, r.Name, r.CalcMethod,
                 r.UnitAmount, r.CurrencyCode, r.Applicability,
                 r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode,
                 r.MinAmount, r.MaxAmount, r.SortOrder, r.IsActive,
-                byRule.TryGetValue(r.Id, out var list) ? list : []))
+                byRule.TryGetValue(r.Id, out var list) ? list : [],
+                breaksByRule.TryGetValue(r.Id, out var br) ? br : [],
+                containersByRule.TryGetValue(r.Id, out var cr) ? cr : []))
             .ToList();
     }
 }

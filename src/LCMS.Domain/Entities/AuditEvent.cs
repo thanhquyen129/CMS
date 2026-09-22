@@ -83,6 +83,7 @@ public static class AuditActions
     public const string MeasurementOverride = "measurement.override";
     public const string FieldOverride = "field.override";
     public const string LinkCreate = "link.create";
+    public const string LinkRemove = "link.remove";
     public const string ReportExport = "report.export";
 }
 

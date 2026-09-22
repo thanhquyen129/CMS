@@ -57,6 +57,7 @@ export type BillGraphOrderRef = {
   sourceSystem: string;
   externalId: string;
   operationalStatus: string;
+  linkId?: string | null;
 };
 
 export type BillGraphShipmentRef = {
@@ -65,6 +66,7 @@ export type BillGraphShipmentRef = {
   sourceSystem: string;
   externalId: string;
   operationalStatus: string;
+  linkId?: string | null;
 };
 
 export type BillGraphLegRef = {
@@ -74,6 +76,7 @@ export type BillGraphLegRef = {
   sourceSystem: string;
   externalId: string;
   operationalStatus: string;
+  linkId?: string | null;
 };
 
 export type BillGraphMovementRef = {
@@ -82,6 +85,7 @@ export type BillGraphMovementRef = {
   sourceSystem: string;
   externalId: string;
   operationalStatus: string;
+  linkId?: string | null;
 };
 
 export type BillGraphDto = {

@@ -37,6 +37,22 @@ export type PricingRuleComponent = {
   sortOrder: number;
 };
 
+export type RateBreak = {
+  id: string;
+  pricingRuleId: string;
+  sequenceNo: number;
+  minQuantity: number;
+  maxQuantity: number | null;
+  unitAmount: number;
+};
+
+export type ContainerRate = {
+  id: string;
+  pricingRuleId: string;
+  containerType: string;
+  unitAmount: number;
+};
+
 export type PricingRule = {
   id: string;
   rateVersionId: string;
@@ -53,6 +69,8 @@ export type PricingRule = {
   maxAmount: number | null;
   sortOrder: number;
   components?: PricingRuleComponent[];
+  breaks?: RateBreak[];
+  containerRates?: ContainerRate[];
 };
 
 export type RatingHistoryItem = {
@@ -121,9 +139,21 @@ export function calcMethodLabel(method: string): string {
       return "% trên cơ sở";
     case "min_max_clamp":
       return "Kẹp min/max";
+    case "weight_break_pivot":
+      return "Bậc trọng lượng";
+    case "container_rate":
+      return "Đơn giá container";
     default:
       return method;
   }
+}
+
+export function isWeightBreakMethod(method: string): boolean {
+  return method?.toLowerCase() === "weight_break_pivot";
+}
+
+export function isContainerRateMethod(method: string): boolean {
+  return method?.toLowerCase() === "container_rate";
 }
 
 export function isPublishedVersion(status: string): boolean {

@@ -74,6 +74,16 @@ public static class OperationalReferenceEndpoints
             var linkId = await sender.Send(new LinkOrderToBillCommand(orderId, billId), ct);
             return Results.Ok(new { id = linkId });
         });
+        orders.MapDelete("/{orderId:guid}/bills/{billId:guid}", async (
+            Guid orderId,
+            Guid billId,
+            string? reason,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UnlinkOrderBillCommand(orderId, billId, reason), ct);
+            return Results.NoContent();
+        });
 
         var shipments = app.MapGroup("/api/shipments").WithTags("Shipments");
         shipments.MapPut("/", async (UpsertShipmentRequest body, ISender sender, CancellationToken ct) =>
@@ -128,6 +138,16 @@ public static class OperationalReferenceEndpoints
         {
             var linkId = await sender.Send(new LinkBillToShipmentCommand(billId, shipmentId), ct);
             return Results.Ok(new { id = linkId });
+        });
+        shipments.MapDelete("/{shipmentId:guid}/bills/{billId:guid}", async (
+            Guid shipmentId,
+            Guid billId,
+            string? reason,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UnlinkBillShipmentCommand(billId, shipmentId, reason), ct);
+            return Results.NoContent();
         });
 
         var legs = app.MapGroup("/api/transport-legs").WithTags("TransportLegs");
@@ -219,6 +239,16 @@ public static class OperationalReferenceEndpoints
             var linkId = await sender.Send(new LinkBillToShipmentCommand(billId, shipmentId), ct);
             return Results.Ok(new { id = linkId });
         });
+        bills.MapDelete("/{billId:guid}/shipments/{shipmentId:guid}", async (
+            Guid billId,
+            Guid shipmentId,
+            string? reason,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UnlinkBillShipmentCommand(billId, shipmentId, reason), ct);
+            return Results.NoContent();
+        });
         bills.MapPost("/{billId:guid}/legs/{legId:guid}", async (
             Guid billId,
             Guid legId,
@@ -228,6 +258,16 @@ public static class OperationalReferenceEndpoints
             var linkId = await sender.Send(new LinkBillToLegCommand(billId, legId), ct);
             return Results.Ok(new { id = linkId });
         });
+        bills.MapDelete("/{billId:guid}/legs/{legId:guid}", async (
+            Guid billId,
+            Guid legId,
+            string? reason,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UnlinkBillLegCommand(billId, legId, reason), ct);
+            return Results.NoContent();
+        });
         bills.MapPost("/{billId:guid}/movements/{movementId:guid}", async (
             Guid billId,
             Guid movementId,
@@ -236,6 +276,16 @@ public static class OperationalReferenceEndpoints
         {
             var linkId = await sender.Send(new LinkBillToMovementCommand(billId, movementId), ct);
             return Results.Ok(new { id = linkId });
+        });
+        bills.MapDelete("/{billId:guid}/movements/{movementId:guid}", async (
+            Guid billId,
+            Guid movementId,
+            string? reason,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new UnlinkBillMovementCommand(billId, movementId, reason), ct);
+            return Results.NoContent();
         });
         bills.MapGet("/{id:guid}/graph", async (Guid id, ISender sender, CancellationToken ct) =>
         {

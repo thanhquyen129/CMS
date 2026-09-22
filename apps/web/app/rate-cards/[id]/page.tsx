@@ -11,8 +11,10 @@ import { fetchTerminology, term } from "@/lib/api";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import {
   calcMethodLabel,
+  isContainerRateMethod,
   isDraftVersion,
   isPublishedVersion,
+  isWeightBreakMethod,
   partyTypeLabel,
   versionStatusLabel,
   type PricingRule,
@@ -170,40 +172,100 @@ export default async function RateCardDetailPage({
                           </tr>
                         </thead>
                         <tbody>
-                          {rules.map((r) => (
-                            <tr key={r.id}>
-                              <td>
-                                <code>{r.code}</code>
-                              </td>
-                              <td>{r.name}</td>
-                              <td>{calcMethodLabel(r.calcMethod)}</td>
-                              <td className="num">
-                                {formatMoney(r.unitAmount, r.currencyCode)}
-                              </td>
-                              <td className="muted small">
-                                {[
-                                  r.serviceTypeCode,
-                                  r.partyTypeCode,
-                                  r.routeCode,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · ") || "—"}
-                                {(r.components ?? []).length > 0 ? (
-                                  <div>
-                                    {(r.components ?? []).map((c) => (
-                                      <div key={c.id}>
-                                        {c.code} ·{" "}
-                                        {c.financialNature === "revenue"
-                                          ? "Doanh thu"
-                                          : "Chi phí"}{" "}
-                                        · {formatMoney(c.amount, c.currencyCode)}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : null}
-                              </td>
-                            </tr>
-                          ))}
+                          {rules.map((r) => {
+                            const breaks = r.breaks ?? [];
+                            const containers = r.containerRates ?? [];
+                            const showBreaks =
+                              isWeightBreakMethod(r.calcMethod) ||
+                              breaks.length > 0;
+                            const showContainers =
+                              isContainerRateMethod(r.calcMethod) ||
+                              containers.length > 0;
+
+                            return (
+                              <tr key={r.id}>
+                                <td>
+                                  <code>{r.code}</code>
+                                </td>
+                                <td>{r.name}</td>
+                                <td>{calcMethodLabel(r.calcMethod)}</td>
+                                <td className="num">
+                                  {formatMoney(r.unitAmount, r.currencyCode)}
+                                </td>
+                                <td className="muted small">
+                                  {[
+                                    r.serviceTypeCode,
+                                    r.partyTypeCode,
+                                    r.routeCode,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ") || "—"}
+                                  {(r.components ?? []).length > 0 ? (
+                                    <div>
+                                      {(r.components ?? []).map((c) => (
+                                        <div key={c.id}>
+                                          {c.code} ·{" "}
+                                          {c.financialNature === "revenue"
+                                            ? "Doanh thu"
+                                            : "Chi phí"}{" "}
+                                          ·{" "}
+                                          {formatMoney(
+                                            c.amount,
+                                            c.currencyCode
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                  {showBreaks ? (
+                                    <div style={{ marginTop: "0.5rem" }}>
+                                      <strong>Bậc trọng lượng</strong>
+                                      {breaks.length === 0 ? (
+                                        <div>Chưa có bậc trọng lượng.</div>
+                                      ) : (
+                                        <div>
+                                          {breaks.map((b) => (
+                                            <div key={b.id}>
+                                              #{b.sequenceNo}:{" "}
+                                              {b.minQuantity}
+                                              {b.maxQuantity != null
+                                                ? ` – ${b.maxQuantity}`
+                                                : "+"}{" "}
+                                              ·{" "}
+                                              {formatMoney(
+                                                b.unitAmount,
+                                                r.currencyCode
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : null}
+                                  {showContainers ? (
+                                    <div style={{ marginTop: "0.5rem" }}>
+                                      <strong>Đơn giá container</strong>
+                                      {containers.length === 0 ? (
+                                        <div>Chưa có đơn giá container.</div>
+                                      ) : (
+                                        <div>
+                                          {containers.map((c) => (
+                                            <div key={c.id}>
+                                              {c.containerType} ·{" "}
+                                              {formatMoney(
+                                                c.unitAmount,
+                                                r.currencyCode
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : null}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

@@ -25,6 +25,7 @@ import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { maturityLabelKey, type CostListItem } from "@/lib/costs-revenues";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { WaybillProfilePanel } from "./WaybillProfilePanel";
+import { UnlinkRelationButton } from "./UnlinkRelationButton";
 
 type Labels = {
   bill: string;
@@ -539,6 +540,14 @@ export function BillFinancialDrawer({
                       <Link href={`/operations/orders/${o.id}`}>
                         <strong>{o.orderNo}</strong>
                       </Link>
+                      {o.linkId ? (
+                        <UnlinkRelationButton
+                          billId={bill.id}
+                          relatedId={o.id}
+                          kind="order"
+                          label={o.orderNo}
+                        />
+                      ) : null}
                       <div className="muted small">
                         {operationalStatusLabel(o.operationalStatus)}
                         {o.sourceSystem ? ` · ${o.sourceSystem}` : ""}
@@ -558,6 +567,14 @@ export function BillFinancialDrawer({
                       <Link href={`/operations/shipments/${s.id}`}>
                         <strong>{s.shipmentNo}</strong>
                       </Link>
+                      {s.linkId ? (
+                        <UnlinkRelationButton
+                          billId={bill.id}
+                          relatedId={s.id}
+                          kind="shipment"
+                          label={s.shipmentNo}
+                        />
+                      ) : null}
                       <div className="muted small">
                         {operationalStatusLabel(s.operationalStatus)}
                         {s.sourceSystem ? ` · ${s.sourceSystem}` : ""}
@@ -576,6 +593,16 @@ export function BillFinancialDrawer({
                       <Link href={`/operations/legs/${l.id}`}>
                         <strong>{l.legNo}</strong>
                       </Link>
+                      {l.linkId ? (
+                        <UnlinkRelationButton
+                          billId={bill.id}
+                          relatedId={l.id}
+                          kind="leg"
+                          label={l.legNo}
+                        />
+                      ) : (
+                        <span className="muted small"> · qua lô hàng</span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -590,13 +617,24 @@ export function BillFinancialDrawer({
                       <Link href={`/operations/movements/${m.id}`}>
                         <strong>{m.movementNo}</strong>
                       </Link>
+                      {m.linkId ? (
+                        <UnlinkRelationButton
+                          billId={bill.id}
+                          relatedId={m.id}
+                          kind="movement"
+                          label={m.movementNo}
+                        />
+                      ) : (
+                        <span className="muted small"> · qua chặng/lô</span>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
               <p className="muted small">
                 CMS là lớp kiểm soát tài chính — đây là tham chiếu vận hành
-                (H-002), không thay SoT TMS.
+                (H-002), không thay SoT TMS. Chỉ gỡ liên kết trực tiếp; chặng/chuyến
+                suy ra từ lô không gỡ tại đây.
               </p>
               <p>
                 <Link className="row-link" href="/operations">

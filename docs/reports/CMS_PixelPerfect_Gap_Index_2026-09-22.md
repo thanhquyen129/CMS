@@ -301,7 +301,10 @@ O*  Chỉ khi PO mở scope
 | W-J3–J6 | PARTIAL | J4 DONE (history filter+CSV); J3/J5/J6 còn |
 | W-K1 | **DONE** | Lưới kiện/container trên tạo Bill/Order |
 | W-K2 | **DONE** | CreateWorkspace Chặng/Chuyến |
-| W-K3 | BLOCKED | Unlink API chưa có |
+| W-K3 | **DONE** | Soft-delete unlink + `linkId` graph + drawer CTA · ADR-0032 |
+| W-J3 | **DONE** | Breaks + container rates trên `/rate-cards/[id]` |
+| W-N1–N6 | TEMPLATE | `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md` — chờ runner + login |
+| W-L3 | **DONE** | ADR-0031 giữ `/ap-ar?tab=` |
 | W-K4 | **DONE** | Note VI điểm đi/đến (API ownership chưa expose) |
 | W-K5–K6 | PENDING | Drawer tabs, picker |
 | W-L1 | **DONE** | PC-21 SoD finalize + `AllocationSodTests` |

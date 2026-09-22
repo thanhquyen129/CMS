@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { CommodityItem } from "@/lib/reference-masters";
+import type { CommodityItem } from "@/lib/reference-masters-shared";
 
 const FLAGS = [
   ["isDangerousGoods", "Hàng nguy hiểm (DG)"],

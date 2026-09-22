@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { LOCATION_TYPE_OPTIONS } from "@/lib/reference-masters";
+import { LOCATION_TYPE_OPTIONS } from "@/lib/reference-masters-shared";
 
 export function UpsertLocationForm() {
   const router = useRouter();

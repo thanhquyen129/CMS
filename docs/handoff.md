@@ -8,7 +8,7 @@ Triển khai làm lần lượt từng phần. Làm đầy đủ, chi tiết nh�
 ### Answer
 Gói A (W-A1…A6) xong. Địa điểm canonical (loại, IATA, UN/LOCODE, alias), tuyến (điểm đi ≠ điểm đến, điểm trung gian), loại hàng (cờ DG/lạnh/quá khổ/quá tải/giá trị cao, loại cha). Bill gắn payer / shipper / consignee / bill_to. Chính sách thuê bao chọn vai trò bắt buộc và cho phép vãng lai. Snapshot đóng băng tên đối tác; sửa master không viết lại dòng cũ. Khi thuê bao đã có địa điểm, mã điểm không khớp bị từ chối; chưa có địa điểm thì vẫn nhập tự do. A5 (gợi ý đối tác) giữ nguyên.
 
-Gói B trở đi chưa làm.
+Gói B trở đi chưa làm. Test host tắt outbox worker nền để lệnh process-once không bị worker lấy mất message.
 
 ### Files / API / schema
 - Bảng: `locations`, `location_aliases`, `routes`, `route_stops`, `commodity_types`, `operational_party_snapshots`

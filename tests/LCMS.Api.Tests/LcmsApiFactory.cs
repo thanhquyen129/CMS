@@ -21,6 +21,7 @@ public class LcmsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Auth:RequireJwt", "false");
         builder.UseSetting("Auth:AllowHeaderBootstrap", "true");
         builder.UseSetting("Auth:Jwt:SigningKey", LCMS.Api.Auth.AuthServiceCollectionExtensions.DevFallbackSigningKey);
+        builder.UseSetting("OutboxWorker:Enabled", "false");
 
         builder.ConfigureServices(services =>
         {

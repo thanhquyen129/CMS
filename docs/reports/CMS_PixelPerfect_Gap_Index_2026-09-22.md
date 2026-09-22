@@ -137,7 +137,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-J3 | DS bảng giá: panel bậc trọng lượng / container rate | `/rate-cards`, `[id]` | P1 |
 | W-J4 | Lịch sử: filter thời gian + xuất CSV (không Excel giả) | `/rate-cards/history` | P1 | DONE |
 | W-J5 | Tính giá / So sánh: UAT bố cục 2 cột vs HTML | `rate`, `compare` | P1 | DONE (rate 2-col; compare toolbar + `stat-grid-3` + badge Tốt nhất) |
-| W-J6 | Gộp hoặc cắt trùng `/rate-cards/fx` vs `/admin/fx-rates` | — | P2 |
+| W-J6 | Gộp hoặc cắt trùng `/rate-cards/fx` vs `/admin/fx-rates` | — | P2 | DONE (`/admin/fx-rates` → redirect canonical `/rate-cards/fx`) |
 
 ### Gói K — UI-02 / Ops depth
 | ID | Việc | Route | Prio |
@@ -156,7 +156,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-L2 | Queue / cột ngày ngoại lệ | `/queues/exceptions` | P1 |
 | W-L3 | AP / AR skin full-page hoặc chấp nhận `?tab=` + ghi ADR | `/ap-ar` | P2 |
 | W-L4 | Settlements: timeline allocate đọc được hơn PNG | `/settlements/[id]` | P2 |
-| W-L5 | Close: panel gate visual (checklist chặn chốt) | `/financial-closes/[id]` | P1 |
+| W-L5 | Close: panel gate visual (checklist chặn chốt) | `/financial-closes/[id]` | P1 | DONE (N/M + CTA disabled khi chưa eligible) |
 | W-L6 | Reports: giữ honest — chỉ thêm chart khi có số thật | `/reports*` | P2 | DONE |
 
 ### Gói M — Danh mục / Cài đặt / Workflow
@@ -298,7 +298,7 @@ O*  Chỉ khi PO mở scope
 | W-I4–I5 | PARTIAL | Preview/error trên I1/I2 |
 | W-J1 | **DONE** | KPI + filter + CTA trung thực |
 | W-J2 | **DONE** | KPI + filter + quy trình phụ lục |
-| W-J3–J6 | **J3/J4 DONE** | J5/J6 UAT HTML pixel còn (cần login) |
+| W-J3–J6 | **DONE** | J6: admin FX redirect → `/rate-cards/fx` |
 | W-K1 | **DONE** | Lưới kiện/container trên tạo Bill/Order |
 | W-K2 | **DONE** | CreateWorkspace Chặng/Chuyến |
 | W-K3 | **DONE** | Soft-delete unlink + `linkId` graph + drawer CTA · ADR-0032 |
@@ -308,7 +308,7 @@ O*  Chỉ khi PO mở scope
 | W-K4 | **DONE** | Note VI điểm đi/đến (API ownership chưa expose) |
 | W-K5–K6 | PENDING | Drawer tabs, picker |
 | W-L1 | **DONE** | PC-21 SoD finalize + `AllocationSodTests` |
-| W-L2–L5 | L2 DONE (cột ngày); L4–L5 PENDING | Queue ngày, AP skin, close gate visual… |
+| W-L2–L5 | L2/L5 DONE; L4 PENDING | L5: CTA chốt gated by eligibility |
 | W-L6 | **DONE** | Copy honest API trên `/reports` + `/revenues/report` |
 | W-M1 | **DONE** | Workflow strip + bước import + nav |
 | W-M2 | **DONE** | Link từ Cài đặt |

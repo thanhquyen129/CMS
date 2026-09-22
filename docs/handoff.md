@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-09-22 — W-L5 close CTA gate + W-J6 FX canonical
+
+### User
+tiếp nào chuyên gia
+
+### Answer
+(1) W-L5: `CloseSnapshotButton` nhận `eligible` — disabled + ghi chú khi còn gate Chặn; note N/M điều kiện đạt. (2) W-J6: `/admin/fx-rates` redirect → `/rate-cards/fx`; currencies link cập nhật.
+
+### Files
+- `CloseSnapshotButton.tsx`, `financial-closes/[id]/page.tsx`
+- `admin/fx-rates/page.tsx`, `admin/currencies/page.tsx`, `AppShell.tsx`
+
 ## 2026-09-22 — Nav RBAC (H-009) + UX-13 correlation trên lỗi
 
 ### User

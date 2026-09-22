@@ -145,8 +145,8 @@ export default async function FinancialCloseDetailPage({
               <>
                 <p className="note">
                   {eligibilityRes.data.eligible
-                    ? "Đủ điều kiện tạo bản chốt theo chính sách hiện tại."
-                    : "Còn điều kiện chặn — xử lý xong rồi tạo bản chốt."}
+                    ? `Đủ điều kiện tạo bản chốt (${eligibilityRes.data.gates.filter((g) => g.passed).length}/${eligibilityRes.data.gates.length} điều kiện đạt).`
+                    : `Còn điều kiện chặn — ${eligibilityRes.data.gates.filter((g) => g.passed).length}/${eligibilityRes.data.gates.length} điều kiện đạt. Xử lý xong rồi tạo bản chốt.`}
                 </p>
                 <ul className="close-gate-list" aria-label="Checklist điều kiện chốt">
                   {eligibilityRes.data.gates.map((g) => (
@@ -184,6 +184,16 @@ export default async function FinancialCloseDetailPage({
             terms={terms}
             closeId={close.id}
             canRun={canSnapshot(close.status)}
+            eligible={
+              eligibilityRes?.ok === true && eligibilityRes.data.eligible
+            }
+            blockedHint={
+              eligibilityRes?.ok === true && !eligibilityRes.data.eligible
+                ? `Còn ${eligibilityRes.data.gates.filter((g) => !g.passed).length} điều kiện chặn — xử lý checklist bên trên rồi mới tạo bản chốt.`
+                : eligibilityRes && !eligibilityRes.ok
+                  ? "Không tải được điều kiện chốt — không cho tạo bản chốt."
+                  : null
+            }
           />
           <ReopenCloseButton
             terms={terms}

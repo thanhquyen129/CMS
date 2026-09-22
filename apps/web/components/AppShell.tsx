@@ -235,7 +235,6 @@ export async function AppShell({
             "/admin/routes",
             "/admin/commodities",
             "/admin/currencies",
-            "/admin/fx-rates",
             "/admin/organizations",
           ]}
         >

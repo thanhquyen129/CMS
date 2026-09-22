@@ -4,14 +4,26 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 
 type Props = {
   terms: TerminologyMap;
   closeId: string;
+  /** Status allows snapshot (Open / Reopened). */
   canRun: boolean;
+  /** Server eligibility — all gates passed. */
+  eligible: boolean;
+  /** Optional short reason when blocked (VI). */
+  blockedHint?: string | null;
 };
 
-export function CloseSnapshotButton({ terms, closeId, canRun }: Props) {
+export function CloseSnapshotButton({
+  terms,
+  closeId,
+  canRun,
+  eligible,
+  blockedHint,
+}: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
   const [open, setOpen] = useState(false);
@@ -33,6 +45,7 @@ export function CloseSnapshotButton({ terms, closeId, canRun }: Props) {
   }, [submitting]);
 
   const runSnapshot = useCallback(async () => {
+    if (!eligible) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -47,14 +60,14 @@ export function CloseSnapshotButton({ terms, closeId, canRun }: Props) {
       }
 
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const body = await readApiErrorBody(res);
         setError(
-          body.message ||
-            (res.status === 409
+          formatApiErrorMessage(
+            body,
+            res.status === 409
               ? "Không tạo bản chốt (eligibility / trạng thái). Kiểm tra và thử lại."
-              : "Tạo bản chốt thất bại.")
+              : "Tạo bản chốt thất bại."
+          )
         );
         return;
       }
@@ -66,9 +79,14 @@ export function CloseSnapshotButton({ terms, closeId, canRun }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [closeId, router]);
+  }, [closeId, eligible, router]);
 
   if (!canRun) return null;
+
+  const busy = submitting || isPending;
+  const blockReason =
+    blockedHint?.trim() ||
+    "Còn điều kiện chặn — xử lý checklist bên trên rồi mới tạo bản chốt.";
 
   return (
     <>
@@ -76,13 +94,22 @@ export function CloseSnapshotButton({ terms, closeId, canRun }: Props) {
         type="button"
         className="btn"
         onClick={() => {
+          if (!eligible) return;
           setError(null);
           setOpen(true);
         }}
-        disabled={isPending}
+        disabled={busy || !eligible}
+        title={!eligible ? blockReason : undefined}
+        aria-disabled={!eligible}
       >
         Tạo {snapshotLabel.toLowerCase()}
       </button>
+
+      {!eligible ? (
+        <p className="note" role="status" style={{ marginTop: "0.5rem" }}>
+          {blockReason}
+        </p>
+      ) : null}
 
       {error && !open ? (
         <div
@@ -94,7 +121,7 @@ export function CloseSnapshotButton({ terms, closeId, canRun }: Props) {
         </div>
       ) : null}
 
-      {open ? (
+      {open && eligible ? (
         <div
           className="dialog-backdrop"
           role="presentation"

@@ -33,7 +33,7 @@ export default async function AdminCurrenciesPage() {
         />
         <CatalogHubNav active="currency" />
         <p className="note">
-          Tỷ giá ngày: <a href="/admin/fx-rates">mở danh sách tỷ giá</a>. Không tính lại lịch sử chứng từ khi sửa tỷ giá.
+          Tỷ giá ngày: <a href="/rate-cards/fx">mở danh sách tỷ giá</a>. Không tính lại lịch sử chứng từ khi sửa tỷ giá.
         </p>
 
         <div className="layout-cols-2">

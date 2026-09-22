@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-22 — Trình tự tối ưu: K3 unlink + J3 breaks + N template + L3 ADR
+
+### User
+bạn là chuyên gia mà, hãy làm theo trình tự mà bạn nhận định là tối ưu nhất
+
+### Answer
+Thứ tự chuyên gia: (1) Unlink quan hệ — soft-delete + `link.remove` + CTA drawer khi có `linkId` trực tiếp; chặng/chuyến suy ra không gỡ giả. ADR-0032 + `UnlinkRelationTests`. (2) Panel bậc trọng lượng/container trên `/rate-cards/[id]`. (3) Checklist UAT Pixel Wave 2 (Pass trống). (4) ADR-0031 giữ `/ap-ar?tab=`. Commit `cc6918a`.
+
+### Files
+- `UnlinkCommands.cs`, `GetBillGraphQuery` (+linkId), DELETE API/BFF, `UnlinkRelationButton`, `BillFinancialDrawer`
+- Pricing rules breaks DTO + rate detail UI
+- `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md`, ADR-0031, ADR-0032
+
 ## 2026-09-22 — W-I3: Business Party CSV import (preview → all-or-nothing)
 
 ### User

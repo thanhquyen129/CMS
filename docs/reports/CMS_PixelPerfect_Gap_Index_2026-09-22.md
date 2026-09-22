@@ -298,7 +298,7 @@ O*  Chỉ khi PO mở scope
 | W-I4–I5 | PARTIAL | Preview/error trên I1/I2 |
 | W-J1 | **DONE** | KPI + filter + CTA trung thực |
 | W-J2 | **DONE** | KPI + filter + quy trình phụ lục |
-| W-J3–J6 | PARTIAL | J4 DONE (history filter+CSV); J3/J5/J6 còn |
+| W-J3–J6 | **J3/J4 DONE** | J5/J6 UAT HTML pixel còn (cần login) |
 | W-K1 | **DONE** | Lưới kiện/container trên tạo Bill/Order |
 | W-K2 | **DONE** | CreateWorkspace Chặng/Chuyến |
 | W-K3 | **DONE** | Soft-delete unlink + `linkId` graph + drawer CTA · ADR-0032 |
@@ -313,5 +313,5 @@ O*  Chỉ khi PO mở scope
 | W-M1 | **DONE** | Workflow strip + bước import + nav |
 | W-M2 | **DONE** | Link từ Cài đặt |
 | W-M5 | PARTIAL | `idempotency.ts` + finalize alloc / import |
-| W-N1–N6 | PENDING | UAT evidence + 09B Reviewer |
+| W-N1–N6 | TEMPLATE | `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md` — chờ runner + login |
 | W-O* | OUT / INTENTIONAL | Không mở |

@@ -895,6 +895,9 @@ internal sealed class RateCardConfiguration : IEntityTypeConfiguration<RateCard>
         builder.Property(e => e.PartyType).HasMaxLength(32).IsRequired();
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(1024);
+        builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.RouteCode).HasMaxLength(64);
+        builder.Property(e => e.CarrierName).HasMaxLength(256);
         builder.Property(e => e.IsActive).IsRequired();
 
         builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
@@ -945,6 +948,13 @@ internal sealed class PricingRuleConfiguration : IEntityTypeConfiguration<Pricin
         builder.Property(e => e.RouteCode).HasMaxLength(64);
         builder.Property(e => e.MinAmount).HasPrecision(18, 4);
         builder.Property(e => e.MaxAmount).HasPrecision(18, 4);
+        builder.Property(e => e.ChargeCode).HasMaxLength(64);
+        builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.OriginCode).HasMaxLength(64);
+        builder.Property(e => e.DestinationCode).HasMaxLength(64);
+        builder.Property(e => e.CommodityCode).HasMaxLength(64);
+        builder.Property(e => e.VolumetricFactor).HasPrecision(18, 4);
+        builder.Property(e => e.RoundingStep).HasPrecision(18, 4);
         builder.Property(e => e.SortOrder).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
 
@@ -974,6 +984,8 @@ internal sealed class PricingRuleComponentConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.RevenueTypeCode).HasMaxLength(64);
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.CalcMethod).HasMaxLength(32);
+        builder.Property(e => e.DependsOnCode).HasMaxLength(64);
         builder.Property(e => e.SortOrder).IsRequired();
 
         builder.HasIndex(e => new { e.TenantId, e.PricingRuleId, e.Code }).IsUnique();
@@ -982,6 +994,37 @@ internal sealed class PricingRuleComponentConfiguration : IEntityTypeConfigurati
             .WithMany()
             .HasForeignKey(e => e.PricingRuleId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class RateBreakConfiguration : IEntityTypeConfiguration<RateBreak>
+{
+    public void Configure(EntityTypeBuilder<RateBreak> builder)
+    {
+        builder.ToTable("rate_breaks");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PricingRuleId).IsRequired();
+        builder.Property(e => e.MinQuantity).HasPrecision(18, 4);
+        builder.Property(e => e.MaxQuantity).HasPrecision(18, 4);
+        builder.Property(e => e.UnitAmount).HasPrecision(18, 4);
+        builder.HasIndex(e => new { e.TenantId, e.PricingRuleId, e.SequenceNo }).IsUnique().HasFilter("deleted_at IS NULL");
+        builder.HasOne(e => e.PricingRule).WithMany().HasForeignKey(e => e.PricingRuleId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class ContainerRatePriceConfiguration : IEntityTypeConfiguration<ContainerRatePrice>
+{
+    public void Configure(EntityTypeBuilder<ContainerRatePrice> builder)
+    {
+        builder.ToTable("container_rates");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PricingRuleId).IsRequired();
+        builder.Property(e => e.ContainerType).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.UnitAmount).HasPrecision(18, 4);
+        builder.HasIndex(e => new { e.TenantId, e.PricingRuleId, e.ContainerType }).IsUnique().HasFilter("deleted_at IS NULL");
+        builder.HasOne(e => e.PricingRule).WithMany().HasForeignKey(e => e.PricingRuleId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -1006,6 +1049,15 @@ internal sealed class RatingConfiguration : IEntityTypeConfiguration<Rating>
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
         builder.Property(e => e.SupersedesRatingId);
+        builder.Property(e => e.ContextJson).HasColumnType("text");
+        builder.Property(e => e.ChargeableWeightKg).HasPrecision(18, 4);
+        builder.Property(e => e.ChargeableBasis).HasMaxLength(32);
+        builder.Property(e => e.RateDate);
+        builder.Property(e => e.OriginalAmount).HasPrecision(18, 4);
+        builder.Property(e => e.OriginalCurrency).HasMaxLength(3);
+        builder.Property(e => e.FxRate).HasPrecision(18, 8);
+        builder.Property(e => e.FxSource).HasMaxLength(64);
+        builder.Property(e => e.RoundedAmount).HasPrecision(18, 4);
 
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.RatedAt });
         builder.HasIndex(e => new { e.TenantId, e.RateVersionId });
@@ -1044,6 +1096,7 @@ internal sealed class RatingDetailConfiguration : IEntityTypeConfiguration<Ratin
         builder.Property(e => e.FinancialMaturity).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.FormulaText).HasMaxLength(256);
 
         builder.HasIndex(e => new { e.TenantId, e.RatingId });
 

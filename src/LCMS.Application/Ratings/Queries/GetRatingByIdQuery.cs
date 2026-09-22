@@ -15,7 +15,8 @@ public sealed record RatingDetailDto(
     string FinancialNature,
     string FinancialMaturity,
     decimal Amount,
-    string CurrencyCode);
+    string CurrencyCode,
+    string? FormulaText = null);
 
 public sealed record RatingDto(
     Guid Id,
@@ -32,7 +33,14 @@ public sealed record RatingDto(
     decimal? BaseAmount,
     string Status,
     Guid? SupersedesRatingId,
-    IReadOnlyList<RatingDetailDto> Details);
+    IReadOnlyList<RatingDetailDto> Details,
+    string? ContextJson = null,
+    decimal? ChargeableWeightKg = null,
+    string? ChargeableBasis = null,
+    decimal? OriginalAmount = null,
+    decimal? FxRate = null,
+    string? FxSource = null,
+    decimal? RoundedAmount = null);
 
 public sealed record RatingHistoryItemDto(
     Guid Id,
@@ -90,7 +98,8 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
                 d.FinancialNature,
                 d.FinancialMaturity,
                 d.Amount,
-                d.CurrencyCode))
+                d.CurrencyCode,
+                d.FormulaText))
             .ToListAsync(cancellationToken);
 
         return new RatingDto(
@@ -108,7 +117,14 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
             rating.BaseAmount,
             rating.Status,
             rating.SupersedesRatingId,
-            details);
+            details,
+            rating.ContextJson,
+            rating.ChargeableWeightKg,
+            rating.ChargeableBasis,
+            rating.OriginalAmount,
+            rating.FxRate,
+            rating.FxSource,
+            rating.RoundedAmount);
     }
 }
 

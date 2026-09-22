@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,10 @@ public sealed record CreateRateCardCommand(
     string Name,
     string PartyType,
     string CurrencyCode,
-    string? Description) : IRequest<Guid>;
+    string? Description,
+    string? TransportMode = null,
+    string? RouteCode = null,
+    string? CarrierName = null) : IRequest<Guid>;
 
 public sealed class CreateRateCardCommandValidator : AbstractValidator<CreateRateCardCommand>
 {
@@ -41,11 +45,13 @@ public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCar
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public CreateRateCardCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreateRateCardCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(CreateRateCardCommand request, CancellationToken cancellationToken)
@@ -56,6 +62,9 @@ public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCar
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var partyType = request.PartyType.Trim().ToLowerInvariant();
+        var writeCode = partyType == "customer" ? PermissionCodes.RateSellWrite : PermissionCodes.RateBuyWrite;
+        await _permissions.EnsureAsync(writeCode, "Bạn không có quyền tạo bảng giá này.", cancellationToken);
         var code = request.Code.Trim();
 
         if (await _db.RateCards.AnyAsync(r => r.TenantId == tenantId && r.Code == code, cancellationToken))
@@ -68,9 +77,12 @@ public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCar
             TenantId = tenantId,
             Code = code,
             Name = request.Name.Trim(),
-            PartyType = request.PartyType.Trim().ToLowerInvariant(),
+            PartyType = partyType,
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+            TransportMode = RateCardText.Clean(request.TransportMode),
+            RouteCode = RateCardText.Clean(request.RouteCode),
+            CarrierName = RateCardText.Clean(request.CarrierName),
             IsActive = true
         };
 
@@ -94,7 +106,10 @@ public sealed record UpdateRateCardCommand(
     string PartyType,
     string CurrencyCode,
     string? Description,
-    bool IsActive) : IRequest;
+    bool IsActive,
+    string? TransportMode = null,
+    string? RouteCode = null,
+    string? CarrierName = null) : IRequest;
 
 public sealed class UpdateRateCardCommandValidator : AbstractValidator<UpdateRateCardCommand>
 {
@@ -121,11 +136,13 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public UpdateRateCardCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public UpdateRateCardCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task Handle(UpdateRateCardCommand request, CancellationToken cancellationToken)
@@ -141,10 +158,16 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
             throw new NotFoundAppException("Không tìm thấy bảng giá.");
         }
 
+        var partyType = request.PartyType.Trim().ToLowerInvariant();
+        var writeCode = partyType == "customer" ? PermissionCodes.RateSellWrite : PermissionCodes.RateBuyWrite;
+        await _permissions.EnsureAsync(writeCode, "Bạn không có quyền sửa bảng giá này.", cancellationToken);
         card.Name = request.Name.Trim();
-        card.PartyType = request.PartyType.Trim().ToLowerInvariant();
+        card.PartyType = partyType;
         card.CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant();
         card.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        if (request.TransportMode is not null) card.TransportMode = RateCardText.Clean(request.TransportMode);
+        if (request.RouteCode is not null) card.RouteCode = RateCardText.Clean(request.RouteCode);
+        if (request.CarrierName is not null) card.CarrierName = RateCardText.Clean(request.CarrierName);
         card.IsActive = request.IsActive;
         await _db.SaveChangesAsync(cancellationToken);
     }
@@ -179,4 +202,10 @@ public sealed class SoftDeleteRateCardCommandHandler : IRequestHandler<SoftDelet
         card.SoftDelete(null);
         await _db.SaveChangesAsync(cancellationToken);
     }
+}
+
+file static class RateCardText
+{
+    public static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

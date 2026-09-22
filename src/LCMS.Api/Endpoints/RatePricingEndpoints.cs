@@ -3,6 +3,7 @@ using LCMS.Application.RateCards.Commands;
 using LCMS.Application.RateCards.Queries;
 using LCMS.Application.RateVersions.Commands;
 using LCMS.Application.RateVersions.Queries;
+using LCMS.Application.Ratings;
 using LCMS.Application.Ratings.Commands;
 using LCMS.Application.Ratings.Queries;
 using MediatR;
@@ -22,7 +23,10 @@ public static class RatePricingEndpoints
                     body.Name,
                     body.PartyType,
                     body.CurrencyCode,
-                    body.Description),
+                    body.Description,
+                    body.TransportMode,
+                    body.RouteCode,
+                    body.CarrierName),
                 ct);
             return Results.Created($"/api/rate-cards/{id}", new { id });
         });
@@ -32,11 +36,12 @@ public static class RatePricingEndpoints
             bool? isActive,
             int? page,
             int? pageSize,
+            string? transportMode,
             ISender sender,
             CancellationToken ct) =>
         {
             var list = await sender.Send(
-                new ListRateCardsQuery(q, partyType, isActive, page, pageSize),
+                new ListRateCardsQuery(q, partyType, isActive, page, pageSize, transportMode),
                 ct);
             if (page is null && pageSize is null)
             {
@@ -63,7 +68,10 @@ public static class RatePricingEndpoints
                     body.PartyType,
                     body.CurrencyCode,
                     body.Description,
-                    body.IsActive),
+                    body.IsActive,
+                    body.TransportMode,
+                    body.RouteCode,
+                    body.CarrierName),
                 ct);
             return Results.NoContent();
         });
@@ -127,7 +135,14 @@ public static class RatePricingEndpoints
                     body.RouteCode,
                     body.MinAmount,
                     body.MaxAmount,
-                    body.SortOrder ?? 0),
+                    body.SortOrder ?? 0,
+                    body.ChargeCode,
+                    body.TransportMode,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.CommodityCode,
+                    body.VolumetricFactor,
+                    body.RoundingStep),
                 ct);
             return Results.Created($"/api/pricing-rules/{id}", new { id });
         });
@@ -157,9 +172,23 @@ public static class RatePricingEndpoints
                     body.RevenueTypeCode,
                     body.Amount,
                     body.CurrencyCode,
-                    body.SortOrder ?? 0),
+                    body.SortOrder ?? 0,
+                    body.CalcMethod,
+                    body.DependsOnCode),
                 ct);
             return Results.Created($"/api/pricing-rules/{ruleId}/components/{id}", new { id });
+        });
+        rules.MapPost("/{ruleId:guid}/breaks", async (Guid ruleId, AddRateBreakRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(
+                new AddRateBreakCommand(ruleId, body.SequenceNo, body.MinQuantity, body.MaxQuantity, body.UnitAmount),
+                ct);
+            return Results.Created($"/api/pricing-rules/{ruleId}/breaks/{id}", new { id });
+        });
+        rules.MapPost("/{ruleId:guid}/container-rates", async (Guid ruleId, AddContainerRateRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(new AddContainerRateCommand(ruleId, body.ContainerType, body.UnitAmount), ct);
+            return Results.Created($"/api/pricing-rules/{ruleId}/container-rates/{id}", new { id });
         });
 
         var ratings = app.MapGroup("/api/ratings").WithTags("Ratings");
@@ -177,7 +206,17 @@ public static class RatePricingEndpoints
                     body.BaseAmount,
                     body.SupersedesRatingId,
                     body.SeedExpectedCosts ?? false,
-                    body.SeedExpectedRevenues ?? false),
+                    body.SeedExpectedRevenues ?? false,
+                    body.RateDate,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.TransportMode,
+                    body.CommodityCode,
+                    body.GrossWeightKg,
+                    body.VolumeCbm,
+                    body.ChargeableOverrideReason,
+                    body.TargetCurrency,
+                    body.Containers?.Select(c => new RatingContainerQty(c.ContainerType, c.Quantity)).ToList()),
                 ct);
             return Results.Created($"/api/ratings/{id}", new { id });
         });
@@ -194,6 +233,43 @@ public static class RatePricingEndpoints
             return Results.Ok(list);
         });
 
+        ratings.MapPost("/compare", async (CompareRatesRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var quotes = await sender.Send(
+                new CompareRatesQuery(
+                    body.BillId,
+                    body.PartyType,
+                    body.TransportMode,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.RouteCode,
+                    body.RateDate,
+                    body.Quantity,
+                    body.GrossWeightKg,
+                    body.VolumeCbm),
+                ct);
+            return Results.Ok(quotes);
+        });
+
+        var imports = app.MapGroup("/api/rate-imports").WithTags("RateImports");
+        imports.MapPost("/preview", async (ImportRateCardsRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var preview = await sender.Send(new PreviewRateImportCommand(body.Cards), ct);
+            return Results.Ok(preview);
+        });
+        imports.MapPost("/commit", async (ImportRateCardsRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var count = await sender.Send(new CommitRateImportCommand(body.Cards), ct);
+            return Results.Ok(new { count });
+        });
+
+        app.MapGet("/api/surcharges", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListSurchargesQuery(), ct))).WithTags("Surcharges");
+        app.MapGet("/api/rate-appendices", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListRateAppendicesQuery(), ct))).WithTags("RateAppendices");
+        app.MapGet("/api/rating-history", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListRatingHistoryQuery(), ct))).WithTags("RatingHistory");
+
         return app;
     }
 }
@@ -203,14 +279,20 @@ public sealed record CreateRateCardRequest(
     string Name,
     string PartyType,
     string CurrencyCode,
-    string? Description);
+    string? Description,
+    string? TransportMode = null,
+    string? RouteCode = null,
+    string? CarrierName = null);
 
 public sealed record UpdateRateCardRequest(
     string Name,
     string PartyType,
     string CurrencyCode,
     string? Description,
-    bool IsActive);
+    bool IsActive,
+    string? TransportMode = null,
+    string? RouteCode = null,
+    string? CarrierName = null);
 
 public sealed record CreateRateVersionRequest(
     DateTimeOffset? EffectiveFrom,
@@ -229,7 +311,14 @@ public sealed record AddPricingRuleRequest(
     string? RouteCode,
     decimal? MinAmount,
     decimal? MaxAmount,
-    int? SortOrder);
+    int? SortOrder,
+    string? ChargeCode = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? CommodityCode = null,
+    decimal? VolumetricFactor = null,
+    decimal? RoundingStep = null);
 
 public sealed record AddPricingRuleComponentRequest(
     string Code,
@@ -239,7 +328,13 @@ public sealed record AddPricingRuleComponentRequest(
     string? RevenueTypeCode,
     decimal Amount,
     string CurrencyCode,
-    int? SortOrder);
+    int? SortOrder,
+    string? CalcMethod = null,
+    string? DependsOnCode = null);
+
+public sealed record AddRateBreakRequest(int SequenceNo, decimal MinQuantity, decimal? MaxQuantity, decimal UnitAmount);
+
+public sealed record AddContainerRateRequest(string ContainerType, decimal UnitAmount);
 
 public sealed record CreateRatingRequest(
     Guid BillId,
@@ -252,4 +347,28 @@ public sealed record CreateRatingRequest(
     decimal? BaseAmount,
     Guid? SupersedesRatingId,
     bool? SeedExpectedCosts,
-    bool? SeedExpectedRevenues);
+    bool? SeedExpectedRevenues,
+    DateTimeOffset? RateDate = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? TransportMode = null,
+    string? CommodityCode = null,
+    decimal? GrossWeightKg = null,
+    decimal? VolumeCbm = null,
+    string? ChargeableOverrideReason = null,
+    string? TargetCurrency = null,
+    IReadOnlyList<RatingContainerRequest>? Containers = null);
+
+public sealed record RatingContainerRequest(string ContainerType, int Quantity);
+
+public sealed record CompareRatesRequest(
+    Guid? BillId,
+    string? PartyType,
+    string? TransportMode,
+    string? OriginCode,
+    string? DestinationCode,
+    string? RouteCode,
+    DateTimeOffset? RateDate,
+    decimal? Quantity,
+    decimal? GrossWeightKg,
+    decimal? VolumeCbm);

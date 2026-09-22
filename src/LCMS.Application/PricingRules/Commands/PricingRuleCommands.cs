@@ -20,7 +20,14 @@ public sealed record AddPricingRuleCommand(
     string? RouteCode,
     decimal? MinAmount,
     decimal? MaxAmount,
-    int SortOrder) : IRequest<Guid>;
+    int SortOrder,
+    string? ChargeCode = null,
+    string? TransportMode = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? CommodityCode = null,
+    decimal? VolumetricFactor = null,
+    decimal? RoundingStep = null) : IRequest<Guid>;
 
 public sealed class AddPricingRuleCommandValidator : AbstractValidator<AddPricingRuleCommand>
 {
@@ -36,7 +43,7 @@ public sealed class AddPricingRuleCommandValidator : AbstractValidator<AddPricin
         RuleFor(x => x.CalcMethod)
             .NotEmpty().WithMessage("Phương pháp tính giá không được để trống.")
             .Must(m => PricingCalcMethods.All.Contains(m))
-            .WithMessage("Phương pháp tính giá phải là fixed, unit_rate, percent_of_base hoặc min_max_clamp.");
+            .WithMessage("Phương pháp tính giá không hợp lệ.");
         RuleFor(x => x.UnitAmount)
             .GreaterThanOrEqualTo(0).WithMessage("Đơn giá / số tiền không được âm.");
         RuleFor(x => x.CurrencyCode)
@@ -120,6 +127,13 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             RouteCode = string.IsNullOrWhiteSpace(request.RouteCode) ? null : request.RouteCode.Trim(),
             MinAmount = request.MinAmount,
             MaxAmount = request.MaxAmount,
+            ChargeCode = string.IsNullOrWhiteSpace(request.ChargeCode) ? null : request.ChargeCode.Trim(),
+            TransportMode = string.IsNullOrWhiteSpace(request.TransportMode) ? null : request.TransportMode.Trim(),
+            OriginCode = string.IsNullOrWhiteSpace(request.OriginCode) ? null : request.OriginCode.Trim(),
+            DestinationCode = string.IsNullOrWhiteSpace(request.DestinationCode) ? null : request.DestinationCode.Trim(),
+            CommodityCode = string.IsNullOrWhiteSpace(request.CommodityCode) ? null : request.CommodityCode.Trim(),
+            VolumetricFactor = request.VolumetricFactor,
+            RoundingStep = request.RoundingStep,
             SortOrder = request.SortOrder,
             IsActive = true
         };
@@ -156,7 +170,9 @@ public sealed record AddPricingRuleComponentCommand(
     string? RevenueTypeCode,
     decimal Amount,
     string CurrencyCode,
-    int SortOrder) : IRequest<Guid>;
+    int SortOrder,
+    string? CalcMethod = null,
+    string? DependsOnCode = null) : IRequest<Guid>;
 
 public sealed class AddPricingRuleComponentCommandValidator : AbstractValidator<AddPricingRuleComponentCommand>
 {
@@ -239,7 +255,9 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
             RevenueTypeCode = string.IsNullOrWhiteSpace(request.RevenueTypeCode) ? null : request.RevenueTypeCode.Trim(),
             Amount = request.Amount,
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
-            SortOrder = request.SortOrder
+            SortOrder = request.SortOrder,
+            CalcMethod = string.IsNullOrWhiteSpace(request.CalcMethod) ? null : request.CalcMethod.Trim().ToLowerInvariant(),
+            DependsOnCode = string.IsNullOrWhiteSpace(request.DependsOnCode) ? null : request.DependsOnCode.Trim()
         };
 
         _db.PricingRuleComponents.Add(component);

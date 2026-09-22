@@ -22,6 +22,7 @@ public sealed class RatingDetail : TenantEntityBase
 
     public decimal Amount { get; set; }
     public string CurrencyCode { get; set; } = "VND";
+    public string? FormulaText { get; set; }
 
     public Rating? Rating { get; set; }
 }

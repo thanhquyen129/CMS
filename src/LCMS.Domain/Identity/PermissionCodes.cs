@@ -29,6 +29,14 @@ public static class PermissionCodes
     public const string LicenseManage = "license.manage";
     public const string BackupManage = "backup.manage";
     public const string NotificationManage = "notification.manage";
+    public const string RateBuyRead = "rate.buy.read";
+    public const string RateBuyWrite = "rate.buy.write";
+    public const string RateBuyPublish = "rate.buy.publish";
+    public const string RateSellRead = "rate.sell.read";
+    public const string RateSellWrite = "rate.sell.write";
+    public const string RateSellPublish = "rate.sell.publish";
+    public const string RateQuantityOverride = "rate.quantity.override";
+    public const string RateRerate = "rate.rerate";
 
     public static readonly IReadOnlyList<(string Code, string Name)> CoreCatalog =
     [
@@ -54,7 +62,15 @@ public static class PermissionCodes
         (AuditRead, "Xem nhật ký hệ thống"),
         (LicenseManage, "Quản lý license"),
         (BackupManage, "Sao lưu và khôi phục danh mục"),
-        (NotificationManage, "Cài đặt thông báo")
+        (NotificationManage, "Cài đặt thông báo"),
+        (RateBuyRead, "Xem bảng giá mua"),
+        (RateBuyWrite, "Sửa bảng giá mua"),
+        (RateBuyPublish, "Phát hành bảng giá mua"),
+        (RateSellRead, "Xem bảng giá bán"),
+        (RateSellWrite, "Sửa bảng giá bán"),
+        (RateSellPublish, "Phát hành bảng giá bán"),
+        (RateQuantityOverride, "Ghi đè số lượng tính giá"),
+        (RateRerate, "Tính lại giá")
     ];
 
     public static readonly string[] CoreActionCodes =
@@ -81,7 +97,15 @@ public static class PermissionCodes
         AuditRead,
         LicenseManage,
         BackupManage,
-        NotificationManage
+        NotificationManage,
+        RateBuyRead,
+        RateBuyWrite,
+        RateBuyPublish,
+        RateSellRead,
+        RateSellWrite,
+        RateSellPublish,
+        RateQuantityOverride,
+        RateRerate
     ];
 }
 

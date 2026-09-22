@@ -7,6 +7,9 @@ export type RateCard = {
   description: string | null;
   isActive: boolean;
   createdAt: string;
+  transportMode?: string | null;
+  routeCode?: string | null;
+  carrierName?: string | null;
 };
 
 export type RateVersion = {
@@ -89,9 +92,9 @@ export type Rating = RatingHistoryItem & {
 export function partyTypeLabel(partyType: string): string {
   switch (partyType?.toLowerCase()) {
     case "vendor":
-      return "Nhà cung cấp";
+      return "Giá mua";
     case "customer":
-      return "Khách hàng";
+      return "Giá bán";
     default:
       return partyType;
   }

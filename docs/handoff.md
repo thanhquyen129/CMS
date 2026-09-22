@@ -1,5 +1,22 @@
 # Handoff
 
+## 2026-09-22 — Gói C: sáu mode tính giá, snapshot, phụ phí, so sánh
+
+### User
+làm tiếp gói C, mức Pixel-perfect
+
+### Answer
+Gói C (W-C1…C11) xong. Tính giá lắp Rating Context rồi lưu snapshot bất biến: sửa Bill sau đó không đổi kết quả cũ. Trọng lượng tính cước air lấy max(thực, thể tích × 167), biển lấy W/M; ghi đè số đã xác nhận cần lý do và quyền `rate.quantity.override`. Sáu mode: fixed, unit_rate, weight_break_pivot, weight_step, container_rate, composite. Quy tắc không có mã phí vẫn cộng hết như Sprint 3. Cùng mã phí thì quy tắc cụ thể hơn thắng; hòa thì `AMBIGUOUS_RATE_RULE`; không khớp thì `NO_APPLICABLE_RATE`, không ghi 0. Chỉ phiên bản Published còn trong ngày hiệu lực được chọn. FX lưu nguồn, ngày, tỷ giá, số gốc và số đã làm tròn; cùng tiền tệ thì tổng không đổi. So sánh giá không ghi Rating. Nhập bảng giá xem trước, chặn mã trùng và bậc chồng, commit tất cả hoặc không ghi gì, phiên bản mới là nháp. Quyền xem/sửa/phát hành tách giá mua và giá bán.
+
+Menu Bảng giá & Tính giá có đủ bảy màn mockup UI-03: danh sách (cột mã, tên, loại giá, hãng, tuyến, hiệu lực, trạng thái, KPI, tính giá nhanh), tính giá, so sánh, phụ phí, tỷ giá, phụ lục, lịch sử. Chưa bấm từng nút trên trình duyệt vì không có phiên đăng nhập local.
+
+### Files / API / schema
+- Migration `20260922045304_RatingModesChargeableFx`: cột rating/rule/rate card, bảng `rate_breaks`, `container_rates`.
+- `POST /api/ratings` nhận ngày, điểm đi/đến, phương thức, hàng, kg, CBM, lý do ghi đè, tiền đích, container.
+- `POST /api/ratings/compare`, `POST /api/rate-imports/preview|commit`, `GET /api/surcharges`, `/api/rate-appendices`, `/api/rating-history`.
+- UI: `/rate-cards`, `/rate-cards/rate`, `/compare`, `/surcharges`, `/fx`, `/appendices`, `/history`.
+- ADR-0025.
+
 ## 2026-09-22 — Gói B: đo lường, hàng hóa, sở hữu trường, nhập liệu
 
 ### User

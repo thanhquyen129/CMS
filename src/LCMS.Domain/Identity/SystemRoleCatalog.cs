@@ -50,6 +50,12 @@ public static class SystemRoleCatalog
                 (PermissionCodes.RevenueActualize, DataScopes.All),
                 (PermissionCodes.ApWriteOff, DataScopes.All),
                 (PermissionCodes.ArWriteOff, DataScopes.All),
+                (PermissionCodes.RateBuyRead, DataScopes.All),
+                (PermissionCodes.RateSellRead, DataScopes.All),
+                (PermissionCodes.RateBuyPublish, DataScopes.All),
+                (PermissionCodes.RateSellPublish, DataScopes.All),
+                (PermissionCodes.RateQuantityOverride, DataScopes.All),
+                (PermissionCodes.RateRerate, DataScopes.All),
                 (PermissionCodes.MasterOrgManage, DataScopes.All),
                 (PermissionCodes.MasterPartyManage, DataScopes.All),
                 (PermissionCodes.MasterCurrencyManage, DataScopes.All),
@@ -71,7 +77,10 @@ public static class SystemRoleCatalog
                 (PermissionCodes.CostRead, DataScopes.Organization),
                 (PermissionCodes.CostConfirm, DataScopes.Organization),
                 (PermissionCodes.CostActualize, DataScopes.Organization),
-                (PermissionCodes.ApWriteOff, DataScopes.Organization)
+                (PermissionCodes.ApWriteOff, DataScopes.Organization),
+                (PermissionCodes.RateBuyRead, DataScopes.Organization),
+                (PermissionCodes.RateBuyWrite, DataScopes.Organization),
+                (PermissionCodes.RateBuyPublish, DataScopes.Organization)
             ]),
 
         new(
@@ -85,7 +94,10 @@ public static class SystemRoleCatalog
                 (PermissionCodes.RevenueRead, DataScopes.Organization),
                 (PermissionCodes.RevenueConfirm, DataScopes.Organization),
                 (PermissionCodes.RevenueActualize, DataScopes.Organization),
-                (PermissionCodes.ArWriteOff, DataScopes.Organization)
+                (PermissionCodes.ArWriteOff, DataScopes.Organization),
+                (PermissionCodes.RateSellRead, DataScopes.Organization),
+                (PermissionCodes.RateSellWrite, DataScopes.Organization),
+                (PermissionCodes.RateSellPublish, DataScopes.Organization)
             ]),
 
         new(

@@ -35,6 +35,20 @@ public sealed class PricingRule : TenantEntityBase
     /// <summary>Upper bound for <see cref="PricingCalcMethods.MinMaxClamp"/>.</summary>
     public decimal? MaxAmount { get; set; }
 
+    /// <summary>Rules that share a charge code compete. Null keeps legacy “apply every match”.</summary>
+    public string? ChargeCode { get; set; }
+
+    public string? TransportMode { get; set; }
+    public string? OriginCode { get; set; }
+    public string? DestinationCode { get; set; }
+    public string? CommodityCode { get; set; }
+
+    /// <summary>kg per CBM for air volumetric weight. Null uses 167.</summary>
+    public decimal? VolumetricFactor { get; set; }
+
+    /// <summary>Round chargeable quantity up to this step. Null keeps the raw value.</summary>
+    public decimal? RoundingStep { get; set; }
+
     public int SortOrder { get; set; }
     public bool IsActive { get; set; } = true;
 
@@ -47,12 +61,20 @@ public static class PricingCalcMethods
     public const string UnitRate = "unit_rate";
     public const string PercentOfBase = "percent_of_base";
     public const string MinMaxClamp = "min_max_clamp";
+    public const string WeightBreakPivot = "weight_break_pivot";
+    public const string WeightStep = "weight_step";
+    public const string ContainerRate = "container_rate";
+    public const string Composite = "composite";
 
     public static readonly HashSet<string> All = new(StringComparer.OrdinalIgnoreCase)
     {
         Fixed,
         UnitRate,
         PercentOfBase,
-        MinMaxClamp
+        MinMaxClamp,
+        WeightBreakPivot,
+        WeightStep,
+        ContainerRate,
+        Composite
     };
 }

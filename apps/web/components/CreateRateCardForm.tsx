@@ -24,6 +24,9 @@ export function CreateRateCardForm() {
         .trim()
         .toUpperCase(),
       description: String(fd.get("description") ?? "").trim() || null,
+      transportMode: String(fd.get("transportMode") ?? "").trim() || null,
+      routeCode: String(fd.get("routeCode") ?? "").trim() || null,
+      carrierName: String(fd.get("carrierName") ?? "").trim() || null,
     };
 
     if (!body.code || !body.name) {
@@ -113,11 +116,27 @@ export function CreateRateCardForm() {
           />
         </div>
         <div className="field">
-          <label htmlFor="partyType">Loại đối tác</label>
+          <label htmlFor="partyType">Loại giá</label>
           <select id="partyType" name="partyType" defaultValue="vendor">
-            <option value="vendor">Nhà cung cấp (chi phí)</option>
-            <option value="customer">Khách hàng (doanh thu)</option>
+            <option value="vendor">Giá mua</option>
+            <option value="customer">Giá bán</option>
           </select>
+        </div>
+        <div className="field">
+          <label htmlFor="transportMode">Phương thức</label>
+          <select id="transportMode" name="transportMode" defaultValue="air">
+            <option value="air">Air</option>
+            <option value="sea">Sea</option>
+            <option value="road">Road</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="carrierName">Hãng/NCC</label>
+          <input id="carrierName" name="carrierName" maxLength={128} />
+        </div>
+        <div className="field">
+          <label htmlFor="routeCode">Tuyến</label>
+          <input id="routeCode" name="routeCode" maxLength={64} placeholder="SGN-FRA" />
         </div>
         <div className="field">
           <label htmlFor="currencyCode">Tiền tệ</label>

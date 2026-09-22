@@ -28,6 +28,23 @@ export function isNavHrefActive(
     if ((current.get(key) ?? "") !== value) return false;
   }
 
+  if (target === "/rate-cards") {
+    if (pathname === "/rate-cards") return true;
+    const child = pathname.startsWith("/rate-cards/")
+      ? pathname.slice("/rate-cards/".length).split("/")[0]
+      : "";
+    if (
+      child === "rate" ||
+      child === "compare" ||
+      child === "surcharges" ||
+      child === "fx" ||
+      child === "appendices" ||
+      child === "history"
+    ) {
+      return false;
+    }
+  }
+
   if (pathname === target) return true;
   if (!pathname.startsWith(`${target}/`)) return false;
   const rest = pathname.slice(target.length);

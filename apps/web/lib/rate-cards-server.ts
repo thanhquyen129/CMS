@@ -56,6 +56,7 @@ async function apiGet<T>(path: string): Promise<ApiResult<T>> {
 export function listRateCards(opts?: {
   q?: string;
   partyType?: string;
+  transportMode?: string;
   active?: boolean;
   page?: number;
   pageSize?: number;
@@ -63,6 +64,7 @@ export function listRateCards(opts?: {
   const p = new URLSearchParams();
   if (opts?.q) p.set("q", opts.q);
   if (opts?.partyType) p.set("partyType", opts.partyType);
+  if (opts?.transportMode) p.set("transportMode", opts.transportMode);
   if (opts?.active === true) p.set("isActive", "true");
   if (opts?.active === false) p.set("isActive", "false");
   if (opts?.page != null) p.set("page", String(opts.page));
@@ -103,4 +105,54 @@ export function listRatingsByBill(
 
 export function getRating(id: string): Promise<ApiResult<Rating>> {
   return apiGet<Rating>(`/api/ratings/${encodeURIComponent(id)}`);
+}
+
+export type SurchargeRow = {
+  id: string;
+  code: string;
+  name: string;
+  calcMethod: string | null;
+  amount: number;
+  currencyCode: string;
+  transportMode: string | null;
+  cardCode: string;
+  versionNo: number;
+  versionStatus: string;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+};
+
+export type AppendixRow = {
+  id: string;
+  rateCardId: string;
+  cardCode: string;
+  cardName: string;
+  note: string | null;
+  effectiveFrom: string | null;
+  versionNo: number;
+  status: string;
+};
+
+export type RatingHistoryRow = {
+  id: string;
+  ratedAt: string;
+  billId: string;
+  cardCode: string | null;
+  versionNo: number | null;
+  status: string;
+  totalAmount: number;
+  currencyCode: string;
+  contextJson: string | null;
+};
+
+export function listSurcharges(): Promise<ApiResult<SurchargeRow[]>> {
+  return apiGet<SurchargeRow[]>("/api/surcharges");
+}
+
+export function listAppendices(): Promise<ApiResult<AppendixRow[]>> {
+  return apiGet<AppendixRow[]>("/api/rate-appendices");
+}
+
+export function listRatingHistory(): Promise<ApiResult<RatingHistoryRow[]>> {
+  return apiGet<RatingHistoryRow[]>("/api/rating-history");
 }

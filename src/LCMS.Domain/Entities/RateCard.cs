@@ -13,5 +13,8 @@ public sealed class RateCard : TenantEntityBase
 
     public string CurrencyCode { get; set; } = "VND";
     public string? Description { get; set; }
+    public string? TransportMode { get; set; }
+    public string? RouteCode { get; set; }
+    public string? CarrierName { get; set; }
     public bool IsActive { get; set; } = true;
 }

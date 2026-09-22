@@ -120,9 +120,15 @@ export async function AppShell({
       ) : null}
 
       {show("rates") ? (
-        <NavLink href="/rate-cards" icon="rates">
-          Bảng giá &amp; Tính giá
-        </NavLink>
+        <NavGroup label="Bảng giá &amp; Tính giá" icon="rates" match={["/rate-cards"]}>
+          <NavLink href="/rate-cards">Danh sách bảng giá</NavLink>
+          <NavLink href="/rate-cards/rate">Tính giá</NavLink>
+          <NavLink href="/rate-cards/compare">So sánh giá</NavLink>
+          <NavLink href="/rate-cards/surcharges">Quản lý phụ phí</NavLink>
+          <NavLink href="/rate-cards/fx">Quản lý tỷ giá</NavLink>
+          <NavLink href="/rate-cards/appendices">Quản lý phụ lục giá</NavLink>
+          <NavLink href="/rate-cards/history">Lịch sử giá</NavLink>
+        </NavGroup>
       ) : null}
 
       {show("costs") ? (

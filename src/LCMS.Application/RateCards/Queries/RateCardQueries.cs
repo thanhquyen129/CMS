@@ -1,6 +1,7 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Common.Paging;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +15,10 @@ public sealed record RateCardDto(
     string CurrencyCode,
     string? Description,
     bool IsActive,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? TransportMode = null,
+    string? RouteCode = null,
+    string? CarrierName = null);
 
 public sealed record GetRateCardByIdQuery(Guid Id) : IRequest<RateCardDto>;
 
@@ -49,7 +53,7 @@ public sealed class GetRateCardByIdQueryHandler : IRequestHandler<GetRateCardByI
     }
 
     internal static RateCardDto ToDto(Domain.Entities.RateCard card) =>
-        new(card.Id, card.Code, card.Name, card.PartyType, card.CurrencyCode, card.Description, card.IsActive, card.CreatedAt);
+        new(card.Id, card.Code, card.Name, card.PartyType, card.CurrencyCode, card.Description, card.IsActive, card.CreatedAt, card.TransportMode, card.RouteCode, card.CarrierName);
 }
 
 public sealed record ListRateCardsQuery(
@@ -57,17 +61,20 @@ public sealed record ListRateCardsQuery(
     string? PartyType = null,
     bool? IsActive = null,
     int? Page = null,
-    int? PageSize = null) : IRequest<PagedResult<RateCardDto>>;
+    int? PageSize = null,
+    string? TransportMode = null) : IRequest<PagedResult<RateCardDto>>;
 
 public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQuery, PagedResult<RateCardDto>>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public ListRateCardsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public ListRateCardsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<PagedResult<RateCardDto>> Handle(ListRateCardsQuery request, CancellationToken cancellationToken)
@@ -80,12 +87,36 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
         var (page, pageSize, applyPaging) = PagingNormalize.Normalize(request.Page, request.PageSize);
 
         var query = _db.RateCards.AsNoTracking().AsQueryable();
+        var canBuy = await _permissions.HasPermissionAsync(PermissionCodes.RateBuyRead, cancellationToken);
+        var canSell = await _permissions.HasPermissionAsync(PermissionCodes.RateSellRead, cancellationToken);
+        if (!canBuy && !canSell)
+        {
+            return PagingNormalize.Empty<RateCardDto>(page, pageSize, applyPaging);
+        }
+
+        if (canBuy && !canSell)
+        {
+            query = query.Where(r => r.PartyType == "vendor");
+        }
+        else if (canSell && !canBuy)
+        {
+            query = query.Where(r => r.PartyType == "customer");
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Q))
         {
             var q = request.Q.Trim().ToLowerInvariant();
             query = query.Where(r =>
-                r.Code.ToLower().Contains(q) || r.Name.ToLower().Contains(q));
+                r.Code.ToLower().Contains(q)
+                || r.Name.ToLower().Contains(q)
+                || (r.CarrierName != null && r.CarrierName.ToLower().Contains(q))
+                || (r.RouteCode != null && r.RouteCode.ToLower().Contains(q)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.TransportMode))
+        {
+            var mode = request.TransportMode.Trim().ToLowerInvariant();
+            query = query.Where(r => r.TransportMode != null && r.TransportMode.ToLower() == mode);
         }
 
         if (!string.IsNullOrWhiteSpace(request.PartyType))
@@ -112,7 +143,7 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
 
         var items = await pageQuery
             .Select(r => new RateCardDto(
-                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt))
+                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt, r.TransportMode, r.RouteCode, r.CarrierName))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<RateCardDto>(

@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -81,11 +82,13 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public PublishRateVersionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public PublishRateVersionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task Handle(PublishRateVersionCommand request, CancellationToken cancellationToken)
@@ -111,6 +114,15 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
         {
             throw new ConflictAppException("Phiên bản bảng giá phải có ít nhất một quy tắc tính giá trước khi phát hành.");
         }
+
+        var partyType = await _db.RateCards.AsNoTracking()
+            .Where(c => c.Id == version.RateCardId)
+            .Select(c => c.PartyType)
+            .FirstAsync(cancellationToken);
+        var publishCode = string.Equals(partyType, "customer", StringComparison.OrdinalIgnoreCase)
+            ? PermissionCodes.RateSellPublish
+            : PermissionCodes.RateBuyPublish;
+        await _permissions.EnsureAsync(publishCode, "Bạn không có quyền phát hành bảng giá này.", cancellationToken);
 
         version.Status = RateVersionStatuses.Published;
         version.PublishedAt = DateTimeOffset.UtcNow;

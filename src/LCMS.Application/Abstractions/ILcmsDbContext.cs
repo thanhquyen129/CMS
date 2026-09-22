@@ -50,6 +50,8 @@ public interface ILcmsDbContext
     DbSet<RateVersion> RateVersions { get; }
     DbSet<PricingRule> PricingRules { get; }
     DbSet<PricingRuleComponent> PricingRuleComponents { get; }
+    DbSet<RateBreak> RateBreaks { get; }
+    DbSet<ContainerRatePrice> ContainerRatePrices { get; }
     DbSet<Rating> Ratings { get; }
     DbSet<RatingDetail> RatingDetails { get; }
     DbSet<FinancialDocument> FinancialDocuments { get; }

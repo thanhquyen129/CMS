@@ -33,7 +33,9 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
               <th scope="col">Mã bảng giá</th>
               <th scope="col">Tên bảng giá</th>
               <th scope="col">Loại giá</th>
-              <th scope="col">Tiền tệ</th>
+              <th scope="col">Hãng/NCC</th>
+              <th scope="col">Tuyến</th>
+              <th scope="col">Hiệu lực</th>
               <th scope="col">Trạng thái</th>
               <th scope="col">
                 <span className="sr-only">Mở</span>
@@ -82,8 +84,12 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                   </td>
                   <td>{c.name}</td>
                   <td>
-                    <span className="status-pill">{partyTypeLabel(c.partyType)}</span>
+                    <span className={`status-pill ${c.partyType === "customer" ? "maturity-actual" : "maturity-confirmed"}`}>
+                      {partyTypeLabel(c.partyType)}
+                    </span>
                   </td>
+                  <td>{c.carrierName || "—"}</td>
+                  <td>{c.routeCode || "—"}</td>
                   <td>{c.currencyCode}</td>
                   <td>
                     <span
@@ -144,7 +150,10 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
               tabs={[
                 { id: "overview", label: "Thông tin chung" },
                 { id: "pricing", label: "Chi tiết giá" },
+                { id: "surcharge", label: "Phụ phí" },
+                { id: "terms", label: "Điều kiện áp dụng" },
                 { id: "history", label: "Lịch sử" },
+                { id: "related", label: "Liên quan" },
               ]}
               activeId={tab}
               onChange={setTab}
@@ -154,6 +163,18 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                 <div>
                   <dt>Loại giá</dt>
                   <dd>{partyTypeLabel(selected.partyType)}</dd>
+                </div>
+                <div>
+                  <dt>Hãng/NCC</dt>
+                  <dd>{selected.carrierName || "—"}</dd>
+                </div>
+                <div>
+                  <dt>Phương thức</dt>
+                  <dd>{selected.transportMode || "—"}</dd>
+                </div>
+                <div>
+                  <dt>Tuyến</dt>
+                  <dd>{selected.routeCode || "—"}</dd>
                 </div>
                 <div>
                   <dt>Tiền tệ</dt>
@@ -175,15 +196,22 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                 </div>
               </dl>
             ) : null}
-            {tab === "pricing" ? (
+            {tab === "pricing" || tab === "surcharge" || tab === "terms" ? (
               <p className="muted">
-                Quy tắc / phụ phí / bậc trọng lượng nằm trên hồ sơ phiên bản bảng giá.
-                Mở hồ sơ đầy đủ để xem và chỉnh.
+                Bậc trọng lượng, phụ phí và điều kiện áp dụng nằm trên phiên bản đã phát hành.
+                Mở hồ sơ bảng giá để xem chi tiết; phiên bản đã phát hành không sửa trực tiếp.
               </p>
             ) : null}
             {tab === "history" ? (
               <p className="muted">
-                Lịch sử phiên bản (publish) xem tại trang chi tiết bảng giá.
+                <Link href="/rate-cards/history">Lịch sử giá</Link> giữ snapshot Rating đã tính.
+              </p>
+            ) : null}
+            {tab === "related" ? (
+              <p className="muted">
+                <Link href={`/rate-cards/compare?partyType=${selected.partyType}`}>So sánh giá</Link>
+                {" · "}
+                <Link href="/rate-cards/appendices">Phụ lục giá</Link>
               </p>
             ) : null}
           </>

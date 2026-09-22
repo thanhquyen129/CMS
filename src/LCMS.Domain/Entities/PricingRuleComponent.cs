@@ -21,5 +21,11 @@ public sealed class PricingRuleComponent : TenantEntityBase
     public string CurrencyCode { get; set; } = "VND";
     public int SortOrder { get; set; }
 
+    /// <summary>fixed | unit_rate | percent_of_base. Empty follows the parent rule.</summary>
+    public string? CalcMethod { get; set; }
+
+    /// <summary>Component code this line waits for. A cycle is rejected.</summary>
+    public string? DependsOnCode { get; set; }
+
     public PricingRule? PricingRule { get; set; }
 }

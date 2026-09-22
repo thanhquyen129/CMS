@@ -28,6 +28,19 @@ public sealed class Rating : TenantEntityBase
     /// <summary>Prior rating this row supersedes (re-rate chain).</summary>
     public Guid? SupersedesRatingId { get; set; }
 
+    /// <summary>Frozen inputs for this run. Later Bill edits do not rewrite it.</summary>
+    public string? ContextJson { get; set; }
+
+    public decimal? ChargeableWeightKg { get; set; }
+    public string? ChargeableBasis { get; set; }
+    public DateTimeOffset? RateDate { get; set; }
+    public decimal? OriginalAmount { get; set; }
+    public string? OriginalCurrency { get; set; }
+    public decimal? FxRate { get; set; }
+    public DateOnly? FxAsOf { get; set; }
+    public string? FxSource { get; set; }
+    public decimal? RoundedAmount { get; set; }
+
     public Bill? Bill { get; set; }
     public RateVersion? RateVersion { get; set; }
     public Rating? SupersedesRating { get; set; }

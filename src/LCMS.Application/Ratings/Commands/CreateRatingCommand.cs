@@ -2,7 +2,9 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Commands;
+using LCMS.Application.Fx;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +21,17 @@ public sealed record CreateRatingCommand(
     decimal? BaseAmount,
     Guid? SupersedesRatingId,
     bool SeedExpectedCosts = false,
-    bool SeedExpectedRevenues = false) : IRequest<Guid>;
+    bool SeedExpectedRevenues = false,
+    DateTimeOffset? RateDate = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    string? TransportMode = null,
+    string? CommodityCode = null,
+    decimal? GrossWeightKg = null,
+    decimal? VolumeCbm = null,
+    string? ChargeableOverrideReason = null,
+    string? TargetCurrency = null,
+    IReadOnlyList<RatingContainerQty>? Containers = null) : IRequest<Guid>;
 
 public sealed class CreateRatingCommandValidator : AbstractValidator<CreateRatingCommand>
 {
@@ -56,12 +68,21 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ISender _sender;
+    private readonly IFxRateLookup _fx;
+    private readonly IPermissionService _permissions;
 
-    public CreateRatingCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, ISender sender)
+    public CreateRatingCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ISender sender,
+        IFxRateLookup fx,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _sender = sender;
+        _fx = fx;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(CreateRatingCommand request, CancellationToken cancellationToken)
@@ -72,7 +93,6 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
-        var quantity = request.Quantity ?? request.Weight ?? 1m;
 
         var bill = await _db.Bills.AsNoTracking().FirstOrDefaultAsync(b => b.Id == request.BillId, cancellationToken);
         if (bill is null)
@@ -93,12 +113,27 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             throw new ConflictAppException("Chỉ được tính giá trên phiên bản bảng giá đã phát hành.");
         }
 
+        var rateDate = request.RateDate ?? DateTimeOffset.UtcNow;
+        if (version.EffectiveFrom is DateTimeOffset from && rateDate < from)
+        {
+            throw new ConflictAppException("Phiên bản bảng giá chưa đến ngày hiệu lực.");
+        }
+
+        if (version.EffectiveTo is DateTimeOffset to && rateDate > to)
+        {
+            throw new ConflictAppException("Phiên bản bảng giá không còn hiệu lực theo ngày áp dụng.");
+        }
+
         var card = await _db.RateCards.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == version.RateCardId, cancellationToken);
 
         var serviceType = Normalize(request.ServiceTypeCode) ?? Normalize(bill.BillType);
         var partyType = Normalize(request.PartyTypeCode) ?? Normalize(card?.PartyType);
-        var routeCode = Normalize(request.RouteCode);
+        var routeCode = Normalize(request.RouteCode) ?? Normalize(bill.RouteCode);
+        var transportMode = Normalize(request.TransportMode) ?? Normalize(bill.TransportMode);
+        var originCode = Normalize(request.OriginCode) ?? Normalize(bill.OriginCode);
+        var destinationCode = Normalize(request.DestinationCode) ?? Normalize(bill.DestinationCode);
+        var commodityCode = Normalize(request.CommodityCode);
 
         Rating? prior = null;
         if (request.SupersedesRatingId.HasValue)
@@ -120,6 +155,11 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             {
                 throw new ConflictAppException("Lần tính giá đã bị thay thế; không được ghi đè lịch sử.");
             }
+
+            await _permissions.EnsureAsync(
+                PermissionCodes.RateRerate,
+                "Bạn không có quyền tính lại giá.",
+                cancellationToken);
         }
 
         var rules = await _db.PricingRules
@@ -130,15 +170,12 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             .ToListAsync(cancellationToken);
 
         var applicable = rules
-            .Where(r => MatchesApplicability(r, serviceType, partyType, routeCode))
+            .Where(r => RatingEngine.Matches(
+                r, serviceType, partyType, routeCode, transportMode, originCode, destinationCode, commodityCode))
             .ToList();
+        var selected = RatingEngine.Select(applicable);
 
-        if (applicable.Count == 0)
-        {
-            throw new ConflictAppException("Không có quy tắc tính giá phù hợp với điều kiện áp dụng.");
-        }
-
-        var ruleIds = applicable.Select(r => r.Id).ToList();
+        var ruleIds = selected.Select(r => r.Id).ToList();
         var components = await _db.PricingRuleComponents
             .AsNoTracking()
             .Where(c => ruleIds.Contains(c.PricingRuleId))
@@ -150,21 +187,90 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             .GroupBy(c => c.PricingRuleId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        var breaks = await _db.RateBreaks.AsNoTracking()
+            .Where(b => ruleIds.Contains(b.PricingRuleId))
+            .ToListAsync(cancellationToken);
+        var breaksByRule = breaks.GroupBy(b => b.PricingRuleId).ToDictionary(g => g.Key, g => (IReadOnlyList<RateBreak>)g.ToList());
+        var containerPrices = await _db.ContainerRatePrices.AsNoTracking()
+            .Where(p => ruleIds.Contains(p.PricingRuleId))
+            .ToListAsync(cancellationToken);
+
+        var measures = await _db.OperationalMeasurements.AsNoTracking()
+            .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id)
+            .ToListAsync(cancellationToken);
+        var gross = request.GrossWeightKg
+            ?? measures.FirstOrDefault(m => m.MeasureCode == MeasureCodes.GrossWeightKg)?.Quantity;
+        var volume = request.VolumeCbm
+            ?? measures.FirstOrDefault(m => m.MeasureCode == MeasureCodes.VolumeCbm)?.Quantity;
+        var confirmed = measures.FirstOrDefault(m => m.MeasureCode == MeasureCodes.ChargeableWeightKg && m.IsConfirmed);
+        var factorRule = selected.FirstOrDefault(r => r.VolumetricFactor is not null || r.RoundingStep is not null);
+        var computed = RatingEngine.Chargeable(
+            transportMode ?? card?.TransportMode,
+            gross,
+            volume,
+            factorRule?.VolumetricFactor,
+            factorRule?.RoundingStep);
+
+        string basis;
+        decimal quantity;
+        if (request.Quantity is decimal asked)
+        {
+            quantity = asked;
+            basis = "manual";
+            if (confirmed is not null && confirmed.Quantity != asked)
+            {
+                if (string.IsNullOrWhiteSpace(request.ChargeableOverrideReason))
+                {
+                    throw new ConflictAppException("Trọng lượng tính cước đã xác nhận. Nhập lý do để ghi đè.");
+                }
+
+                await _permissions.EnsureAsync(
+                    PermissionCodes.RateQuantityOverride,
+                    "Bạn không có quyền ghi đè số lượng tính giá.",
+                    cancellationToken);
+                basis = "override";
+            }
+        }
+        else if (request.Weight is decimal weight)
+        {
+            quantity = weight;
+            basis = "weight";
+        }
+        else if (confirmed is not null)
+        {
+            quantity = confirmed.Quantity;
+            basis = "confirmed";
+        }
+        else if (computed is decimal chargeable)
+        {
+            quantity = chargeable;
+            var mode = (transportMode ?? card?.TransportMode)?.ToLowerInvariant();
+            basis = mode is "sea" or "ocean" ? "sea_wm" : "air_volumetric";
+        }
+        else
+        {
+            quantity = 1m;
+            basis = "default";
+        }
+
         var rating = new Rating
         {
             TenantId = tenantId,
             BillId = bill.Id,
             RateVersionId = version.Id,
             RatedAt = DateTimeOffset.UtcNow,
-            CurrencyCode = card?.CurrencyCode ?? applicable[0].CurrencyCode,
+            CurrencyCode = card?.CurrencyCode ?? selected[0].CurrencyCode,
             Quantity = quantity,
-            Weight = request.Weight,
+            Weight = request.Weight ?? gross,
             ServiceTypeCode = serviceType,
             PartyTypeCode = partyType,
             RouteCode = routeCode,
             BaseAmount = request.BaseAmount,
             Status = RatingStatuses.Completed,
-            SupersedesRatingId = prior?.Id
+            SupersedesRatingId = prior?.Id,
+            ChargeableWeightKg = confirmed?.Quantity ?? computed ?? quantity,
+            ChargeableBasis = basis,
+            RateDate = rateDate
         };
 
         var details = new List<RatingDetail>();
@@ -172,8 +278,68 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         decimal runningBase = request.BaseAmount ?? 0m;
         var hasExplicitBase = request.BaseAmount.HasValue;
 
-        foreach (var rule in applicable)
+        foreach (var rule in selected)
         {
+            var method = rule.CalcMethod;
+            if (string.Equals(method, PricingCalcMethods.WeightBreakPivot, StringComparison.OrdinalIgnoreCase))
+            {
+                var line = RatingEngine.WeightBreakPivot(quantity, Breaks(breaksByRule, rule.Id), rule.MinAmount);
+                total += line.Amount;
+                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, "cost", line.Amount, rule.CurrencyCode, line.Formula));
+                continue;
+            }
+
+            if (string.Equals(method, PricingCalcMethods.WeightStep, StringComparison.OrdinalIgnoreCase))
+            {
+                var line = RatingEngine.WeightStep(quantity, rule.RoundingStep, rule.UnitAmount, Breaks(breaksByRule, rule.Id), rule.MinAmount);
+                total += line.Amount;
+                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, "cost", line.Amount, rule.CurrencyCode, line.Formula));
+                continue;
+            }
+
+            if (string.Equals(method, PricingCalcMethods.ContainerRate, StringComparison.OrdinalIgnoreCase))
+            {
+                var prices = containerPrices.Where(p => p.PricingRuleId == rule.Id).ToList();
+                var line = RatingEngine.Containers(request.Containers ?? [], prices);
+                total += line.Amount;
+                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, "cost", line.Amount, rule.CurrencyCode, line.Formula));
+                continue;
+            }
+
+            if (string.Equals(method, PricingCalcMethods.Composite, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!componentsByRule.TryGetValue(rule.Id, out var compositeParts) || compositeParts.Count == 0)
+                {
+                    throw new ConflictAppException("COMPOSITE: Quy tắc thiếu thành phần giá.");
+                }
+
+                var ordered = RatingEngine.OrderComponents(compositeParts);
+                var byCode = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+                foreach (var component in ordered)
+                {
+                    var componentBase = !string.IsNullOrWhiteSpace(component.DependsOnCode) && byCode.TryGetValue(component.DependsOnCode, out var dep)
+                        ? dep
+                        : hasExplicitBase ? request.BaseAmount!.Value : runningBase;
+                    var amount = ComputeAmount(
+                        string.IsNullOrWhiteSpace(component.CalcMethod) ? PricingCalcMethods.Fixed : component.CalcMethod,
+                        component.Amount,
+                        quantity,
+                        componentBase,
+                        rule.MinAmount,
+                        rule.MaxAmount);
+                    byCode[component.Code] = amount;
+                    total += amount;
+                    if (!hasExplicitBase)
+                    {
+                        runningBase += amount;
+                    }
+
+                    details.Add(Line(tenantId, rule, component.Id, component.Code, component.Name, component.FinancialNature, amount, component.CurrencyCode, component.CalcMethod));
+                }
+
+                continue;
+            }
+
             if (componentsByRule.TryGetValue(rule.Id, out var ruleComponents) && ruleComponents.Count > 0)
             {
                 foreach (var component in ruleComponents)
@@ -232,12 +398,58 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                     FinancialNature = "cost",
                     FinancialMaturity = "expected",
                     Amount = amount,
-                    CurrencyCode = rule.CurrencyCode
+                    CurrencyCode = rule.CurrencyCode,
+                    FormulaText = rule.CalcMethod
                 });
             }
         }
 
-        rating.TotalAmount = total;
+        var cardCurrency = card?.CurrencyCode ?? selected[0].CurrencyCode;
+        rating.OriginalAmount = total;
+        rating.OriginalCurrency = cardCurrency;
+        var target = string.IsNullOrWhiteSpace(request.TargetCurrency) ? bill.PreferredCurrency : request.TargetCurrency.Trim();
+        if (!string.IsNullOrWhiteSpace(target)
+            && !string.Equals(target, cardCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            var fx = await _fx.ResolveAsync(cardCurrency, target, DateOnly.FromDateTime(rateDate.UtcDateTime), cancellationToken);
+            if (fx is null)
+            {
+                throw new ConflictAppException($"Không có tỷ giá {cardCurrency}/{target} cho ngày áp dụng.");
+            }
+
+            var converted = RatingEngine.RoundCurrency(total * fx.Rate, target);
+            rating.FxRate = fx.Rate;
+            rating.FxAsOf = fx.RateDate;
+            rating.FxSource = fx.Source;
+            rating.RoundedAmount = converted;
+            rating.TotalAmount = converted;
+            rating.CurrencyCode = target.ToUpperInvariant();
+        }
+        else
+        {
+            rating.FxRate = 1m;
+            rating.FxSource = "identity";
+            rating.RoundedAmount = RatingEngine.RoundCurrency(total, cardCurrency);
+            rating.TotalAmount = total;
+        }
+
+        rating.ContextJson = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            rateDate,
+            serviceType,
+            partyType,
+            routeCode,
+            transportMode,
+            originCode,
+            destinationCode,
+            commodityCode,
+            gross,
+            volume,
+            chargeable = rating.ChargeableWeightKg,
+            basis,
+            versionId = version.Id,
+            rules = selected.Select(r => r.Code).ToArray()
+        });
 
         if (prior is not null)
         {
@@ -329,6 +541,36 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
 
         return decimal.Round(raw, 4, MidpointRounding.AwayFromZero);
     }
+
+    private static IReadOnlyList<RateBreak> Breaks(
+        IReadOnlyDictionary<Guid, IReadOnlyList<RateBreak>> breaksByRule,
+        Guid ruleId) =>
+        breaksByRule.TryGetValue(ruleId, out var rows) ? rows : [];
+
+    private static RatingDetail Line(
+        Guid tenantId,
+        PricingRule rule,
+        Guid? componentId,
+        string code,
+        string name,
+        string nature,
+        decimal amount,
+        string currency,
+        string? formula) =>
+        new()
+        {
+            TenantId = tenantId,
+            PricingRuleId = rule.Id,
+            PricingRuleComponentId = componentId,
+            RuleCode = rule.Code,
+            ComponentCode = code,
+            ComponentName = name,
+            FinancialNature = nature,
+            FinancialMaturity = "expected",
+            Amount = amount,
+            CurrencyCode = currency,
+            FormulaText = formula
+        };
 
     private static decimal Clamp(decimal value, decimal? min, decimal? max)
     {

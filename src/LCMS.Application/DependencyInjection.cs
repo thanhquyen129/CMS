@@ -10,6 +10,7 @@ using LCMS.Application.FinancialDocuments;
 using LCMS.Application.Fx;
 using LCMS.Application.Identity;
 using LCMS.Application.OperationalReferences;
+using LCMS.Application.RateCards.Commands;
 using LCMS.Application.Reconciliations;
 using LCMS.Application.ReferenceMasters;
 using LCMS.Application.Revenues;
@@ -36,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IBillPartyPolicyStore, BillPartyPolicyStore>();
         services.AddScoped<IOperationalCargoStore, OperationalCargoStore>();
         services.AddScoped<OperationalImportBatch>();
+        services.AddScoped<RateImportBatch>();
         services.AddScoped<ITenantSettingsService, TenantSettingsService>();
         services.AddScoped<TenantFinancialOptionsResolver>();
 

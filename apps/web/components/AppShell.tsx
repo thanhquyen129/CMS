@@ -224,6 +224,7 @@ export async function AppShell({
         >
           <NavLink href="/admin/parties?role=customer">Khách hàng</NavLink>
           <NavLink href="/admin/parties?role=vendor">Nhà cung cấp</NavLink>
+          <NavLink href="/admin/parties/import">Nhập đối tác</NavLink>
           <NavLink href="/admin/catalog?kind=service_type">Dịch vụ</NavLink>
           <NavLink href="/admin/catalog?kind=cost_type">Loại chi phí</NavLink>
           <NavLink href="/admin/catalog?kind=revenue_type">Loại doanh thu</NavLink>

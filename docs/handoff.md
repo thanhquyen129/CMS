@@ -1,5 +1,39 @@
 # Handoff
 
+## 2026-09-22 — W-I3: Business Party CSV import (preview → all-or-nothing)
+
+### User
+Implement W-I3: Business Party Excel/CSV import with preview → commit all-or-nothing. … Do not commit/push. Return files + sample CSV header.
+
+### Answer
+Thêm `PreviewPartyImport` / `CommitPartyImport` (create-only, không merge trùng MST/mã). API `POST /api/party-imports/preview|commit`. Web `/admin/parties/import` + `ImportPartiesForm` (CSV) + BFF + nav. Test `PartyImportTests`. Chưa commit/push theo yêu cầu.
+
+Sample CSV header:
+`code,name,taxId,roleCodes,isCustomer,isVendor,isPayer,isPayee,legalName,phone,email,partyKind,countryCode,defaultCurrencyCode,paymentTermDays,creditLimit,groupCode,externalCode,shortName,notes`
+
+### Files
+- `src/LCMS.Application/BusinessParties/Commands/ImportBusinessPartiesCommand.cs`
+- `src/LCMS.Application/DependencyInjection.cs`, `src/LCMS.Api/Endpoints/MasterDataEndpoints.cs`
+- `apps/web/app/admin/parties/import/page.tsx`, `components/ImportPartiesForm.tsx`
+- `apps/web/app/bff/party-imports/preview/route.ts`, `commit/route.ts`
+- `apps/web/app/admin/parties/page.tsx`, `components/AppShell.tsx`
+- `tests/LCMS.Api.Tests/PartyImportTests.cs`
+- `docs/reports/CMS_PixelPerfect_Gap_Index_2026-09-22.md` (W-I3 DONE)
+
+## 2026-09-22 — Wave 2 polish: W-K4 / W-J4 / W-L6
+
+### User
+Implement remaining small Wave 2 polish: W-K4 field ownership note, W-J4 rate history filter+CSV, W-L6 reports honest copy. Do not commit/push. Return files changed.
+
+### Answer
+W-K4: API bill detail / financial-view chưa expose `field_ownerships` → ghi chú VI dưới điểm đi/đến trên form tạo Bill và Order (không matrix UI). W-J4: `/rate-cards/history` lọc từ/đến ngày (client trên list đã tải) + `ExportCsvButton` nhãn «Xuất CSV». W-L6: copy trên `/reports` và `/revenues/report` nêu rõ số từ API. Chưa commit/push.
+
+### Files
+- `apps/web/components/CreateBillWorkspaceForm.tsx`, `CreateOrderForm.tsx`
+- `apps/web/app/rate-cards/history/page.tsx`
+- `apps/web/app/reports/page.tsx`, `revenues/report/page.tsx`
+- `docs/reports/CMS_PixelPerfect_Gap_Index_2026-09-22.md`
+
 ## 2026-09-22 — W-K2: CreateWorkspace Chặng / Chuyến
 
 ### User

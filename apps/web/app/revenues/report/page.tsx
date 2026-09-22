@@ -48,7 +48,9 @@ export default async function RevenueReportPage({
           <span>Báo cáo doanh thu</span>
         </p>
         <h1>Báo cáo doanh thu</h1>
-        <p className="lede">Tổng hợp theo một lớp maturity. Bill nhiều tiền tệ không được cộng vào nhóm.</p>
+        <p className="lede">
+          Tổng hợp theo một lớp maturity từ API lợi nhuận. Bill nhiều tiền tệ không được cộng vào nhóm.
+        </p>
         <p className="cta-row">
           {groups.map(([id, label]) => (
             <Link key={id} className={id === groupBy ? "btn btn-sm" : "btn btn-sm btn-ghost"} href={`/revenues/report?groupBy=${id}&view=${view}`}>

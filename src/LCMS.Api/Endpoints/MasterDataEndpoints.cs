@@ -138,6 +138,19 @@ public static class MasterDataEndpoints
                 ct);
             return Results.File(csv, "text/csv; charset=utf-8", $"doi-tac-{DateTime.UtcNow:yyyyMMdd}.csv");
         });
+
+        var partyImports = app.MapGroup("/api/party-imports").WithTags("PartyImports");
+        partyImports.MapPost("/preview", async (ImportBusinessPartiesRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var preview = await sender.Send(new PreviewPartyImportCommand(body.Rows), ct);
+            return Results.Ok(preview);
+        });
+        partyImports.MapPost("/commit", async (ImportBusinessPartiesRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var count = await sender.Send(new CommitPartyImportCommand(body.Rows), ct);
+            return Results.Ok(new { committed = count });
+        });
+
         parties.MapPost("/", async (CreateBusinessPartyRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(

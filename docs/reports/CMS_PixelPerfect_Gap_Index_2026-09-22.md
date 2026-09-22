@@ -125,7 +125,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 |---|---|---|---|---|
 | W-I1 | Màn nhập vận hành (Order/Bill/Shipment): upload → preview → commit | Mới `/operations/import` hoặc hub UI-02 | P0 | B1 |
 | W-I2 | Màn nhập bảng giá | `/rate-cards/import` | P0 | B2 |
-| W-I3 | Import đối tác Excel + preview | `/admin/parties` | P1 | B11 |
+| W-I3 | Import đối tác CSV + preview | `/admin/parties/import` | P1 | B11 |
 | W-I4 | Empty/error/idempotency trên mọi màn import | Shared | P0 | I1–I3 |
 | W-I5 | Audit + correlation ID trên lỗi import | UI toast/panel | P1 | UX-13 |
 
@@ -135,7 +135,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-J1 | Phụ phí: KPI + filter + form tạo/sửa (không CTA lệch) | `/rate-cards/surcharges` | P0 |
 | W-J2 | Phụ lục: wizard phiên bản mới (amendment) | `/rate-cards/appendices` | P0 |
 | W-J3 | DS bảng giá: panel bậc trọng lượng / container rate | `/rate-cards`, `[id]` | P1 |
-| W-J4 | Lịch sử: filter thời gian + xuất CSV (không Excel giả) | `/rate-cards/history` | P1 |
+| W-J4 | Lịch sử: filter thời gian + xuất CSV (không Excel giả) | `/rate-cards/history` | P1 | DONE |
 | W-J5 | Tính giá / So sánh: UAT bố cục 2 cột vs HTML | `rate`, `compare` | P1 |
 | W-J6 | Gộp hoặc cắt trùng `/rate-cards/fx` vs `/admin/fx-rates` | — | P2 |
 
@@ -145,7 +145,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-K1 | Lưới kiện/container trên tạo Bill/Order (nếu PO xác nhận FR-006 UI) | `*/new` | P0 |
 | W-K2 | CreateWorkspace Chặng / Chuyến | `/operations/new`… | P1 |
 | W-K3 | Unlink quan hệ + audit | Bill drawer / Liên quan | P1 |
-| W-K4 | Field ownership badge + lý do ghi đè hiển thị | Bill/Order forms | P1 |
+| W-K4 | Field ownership badge + lý do ghi đè hiển thị | Bill/Order forms | P1 | DONE (note VI; API chưa expose ownership) |
 | W-K5 | Drawer Bill: tab «Tính giá» hoặc deep-link rõ; căn tabs vs mockup | drawer | P2 |
 | W-K6 | Picker người phụ trách (user) đủ dùng | create forms | P2 |
 
@@ -157,7 +157,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-L3 | AP / AR skin full-page hoặc chấp nhận `?tab=` + ghi ADR | `/ap-ar` | P2 |
 | W-L4 | Settlements: timeline allocate đọc được hơn PNG | `/settlements/[id]` | P2 |
 | W-L5 | Close: panel gate visual (checklist chặn chốt) | `/financial-closes/[id]` | P1 |
-| W-L6 | Reports: giữ honest — chỉ thêm chart khi có số thật | `/reports*` | P2 |
+| W-L6 | Reports: giữ honest — chỉ thêm chart khi có số thật | `/reports*` | P2 | DONE |
 
 ### Gói M — Danh mục / Cài đặt / Workflow
 | ID | Việc | Route | Prio |
@@ -294,17 +294,19 @@ O*  Chỉ khi PO mở scope
 |---|---|---|
 | W-I1 | **DONE** | `/operations/import` + BFF preview/commit |
 | W-I2 | **DONE** | `/rate-cards/import` + BFF preview/commit |
-| W-I3 | PENDING | Import Excel đối tác |
+| W-I3 | DONE | Import CSV đối tác preview→commit (`/admin/parties/import`) |
 | W-I4–I5 | PARTIAL | Preview/error trên I1/I2 |
 | W-J1 | **DONE** | KPI + filter + CTA trung thực |
 | W-J2 | **DONE** | KPI + filter + quy trình phụ lục |
-| W-J3–J6 | PENDING | Breaks panel, lịch sử xuất, UAT HTML |
+| W-J3–J6 | PARTIAL | J4 DONE (history filter+CSV); J3/J5/J6 còn |
 | W-K1 | **DONE** | Lưới kiện/container trên tạo Bill/Order |
 | W-K2 | **DONE** | CreateWorkspace Chặng/Chuyến |
 | W-K3 | BLOCKED | Unlink API chưa có |
-| W-K4–K6 | PENDING | Ownership badge, drawer tabs, picker |
+| W-K4 | **DONE** | Note VI điểm đi/đến (API ownership chưa expose) |
+| W-K5–K6 | PENDING | Drawer tabs, picker |
 | W-L1 | **DONE** | PC-21 SoD finalize + `AllocationSodTests` |
-| W-L2–L6 | PENDING | Queue ngày, AP skin, close gate visual… |
+| W-L2–L5 | PENDING | Queue ngày, AP skin, close gate visual… |
+| W-L6 | **DONE** | Copy honest API trên `/reports` + `/revenues/report` |
 | W-M1 | **DONE** | Workflow strip + bước import + nav |
 | W-M2 | **DONE** | Link từ Cài đặt |
 | W-M5 | PARTIAL | `idempotency.ts` + finalize alloc / import |

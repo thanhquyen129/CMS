@@ -353,6 +353,9 @@ export function CreateOrderForm({
             </div>
             <LocationField id="originCode" name="originCode" label="Điểm đi" required value={origin} onChange={setOrigin} options={locations} disabled={submitting} />
             <LocationField id="destinationCode" name="destinationCode" label="Điểm đến" required value={dest} onChange={setDest} options={locations} disabled={submitting} />
+            <p className="cw-hint muted" style={{ gridColumn: "1 / -1", margin: 0 }}>
+              Nếu hệ thống ngoài sở hữu điểm đi/đến, sửa cần lý do.
+            </p>
             <div className="cw-field">
               <label>Tuyến vận chuyển</label>
               <input readOnly value={route || "Tự xác định từ điểm đi → điểm đến"} />

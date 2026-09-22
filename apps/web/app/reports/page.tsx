@@ -137,8 +137,9 @@ export default async function ReportsPage({
           title="Báo cáo & Phân tích"
           lede={
             <>
-              Chọn maturity và as-of tường minh. Không trộn lớp độ chín. Drill về{" "}
-              {billLabel} và chứng từ nguồn.
+              Số liệu lấy từ API dashboard và aging — không minh họa giả. Chọn maturity
+              và as-of tường minh; không trộn lớp độ chín. Drill về {billLabel} và chứng
+              từ nguồn.
             </>
           }
         />

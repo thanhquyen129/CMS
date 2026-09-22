@@ -382,6 +382,9 @@ export function CreateBillWorkspaceForm({
             </div>
             <LocationField id="originCode" name="originCode" label="Điểm đi" required value={origin} onChange={(v) => { setRouteId(""); setOrigin(v); }} options={locations} disabled={submitting} />
             <LocationField id="destinationCode" name="destinationCode" label="Điểm đến" required value={dest} onChange={(v) => { setRouteId(""); setDest(v); }} options={locations} disabled={submitting} />
+            <p className="cw-hint muted" style={{ gridColumn: "1 / -1", margin: 0 }}>
+              Nếu hệ thống ngoài sở hữu điểm đi/đến, sửa cần lý do.
+            </p>
             <div className="cw-field">
               <label>Tuyến hiển thị</label>
               <input readOnly value={route || "Tự xác định từ điểm đi → điểm đến"} />

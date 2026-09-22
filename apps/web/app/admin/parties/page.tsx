@@ -84,6 +84,9 @@ export default async function AdminPartiesPage({
           lede="Hồ sơ chuẩn tài chính: MST, vai trò, điều khoản, hạn mức, tài khoản ngân hàng, liên hệ và công nợ. Một đối tác có thể mang nhiều vai trò."
           action={
             <div className="page-header-actions">
+              <Link className="btn btn-ghost" href="/admin/parties/import">
+                Nhập CSV
+              </Link>
               <a className="btn btn-ghost" href={exportHref}>
                 Xuất CSV
               </a>

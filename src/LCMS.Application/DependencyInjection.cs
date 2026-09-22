@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Approvals;
 using LCMS.Application.BusinessParties;
+using LCMS.Application.BusinessParties.Commands;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
 using LCMS.Application.Demo;
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IOperationalCargoStore, OperationalCargoStore>();
         services.AddScoped<OperationalImportBatch>();
         services.AddScoped<RateImportBatch>();
+        services.AddScoped<PartyImportBatch>();
         services.AddScoped<ITenantSettingsService, TenantSettingsService>();
         services.AddScoped<TenantFinancialOptionsResolver>();
 

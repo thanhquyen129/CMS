@@ -11,6 +11,7 @@ import { FinColors, StackedCompositionBar } from "@/components/charts/FinanceCha
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listBillProfit, listRevenues } from "@/lib/costs-revenues-server";
+import { getDashboardSummary } from "@/lib/control-desk";
 import {
   parsePage,
   parsePageSize,
@@ -59,7 +60,7 @@ export default async function RevenuesPage({
     Number.parseInt(String(pageRaw ?? "1"), 10) || 1
   );
 
-  const [result, kpiRes, board] = await Promise.all([
+  const [result, kpiRes, board, summary] = await Promise.all([
     listRevenues({
       financialMaturity: maturityFilter,
       page: pageHint,
@@ -67,7 +68,11 @@ export default async function RevenuesPage({
     }),
     listRevenues(),
     listBillProfit({ view: "actual", page: 1, pageSize: 50 }),
+    getDashboardSummary(),
   ]);
+  const canCreateRevenue = summary.ok
+    ? !!summary.data.financialVisibility?.canViewRevenue
+    : false;
   const kpiItems = kpiRes.ok ? kpiRes.data.items : [];
   const countByMaturity = (m: string) =>
     kpiItems.filter((r) => r.financialMaturity?.toLowerCase() === m).length;
@@ -122,9 +127,11 @@ export default async function RevenuesPage({
           title="Danh sách doanh thu"
           lede="Quản lý doanh thu theo bill/shipment và theo dõi lợi nhuận"
           action={
-            <Link className="btn" href="/revenues/new">
-              + Tạo doanh thu
-            </Link>
+            canCreateRevenue ? (
+              <Link className="btn" href="/revenues/new">
+                + Tạo doanh thu
+              </Link>
+            ) : null
           }
         />
 

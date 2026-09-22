@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { formatApiErrorMessage, readApiErrorBody } from "./api-error";
 import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
 import type { ApiResult } from "./bills";
@@ -32,15 +33,17 @@ async function apiGet<T>(path: string): Promise<ApiResult<T>> {
     }
 
     if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      const body = await readApiErrorBody(res);
       return {
         ok: false,
         status: res.status,
-        message:
-          body.message ||
-          (res.status === 403
+        correlationId: body.correlationId,
+        message: formatApiErrorMessage(
+          body,
+          res.status === 403
             ? "Bạn không có quyền xem dữ liệu này."
-            : "Không tải được dữ liệu từ máy chủ."),
+            : "Không tải được dữ liệu từ máy chủ."
+        ),
       };
     }
 

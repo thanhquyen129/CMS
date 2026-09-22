@@ -7,6 +7,7 @@ import { NavLink } from "./NavLink";
 import { TopbarAccount } from "./TopbarAccount";
 import { DISPLAY_NAME_COOKIE } from "@/lib/auth";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { getDashboardSummary } from "@/lib/control-desk";
 import { getTenantLicense, listInbox } from "@/lib/tenant-admin";
 
 /** Level-1 modules per PO UI-15 Navigation Contract (14 modules). */
@@ -72,8 +73,11 @@ export async function AppShell({
   const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const settingsLabel = term(terms, "SETTINGS", "Cài đặt");
-  const license = await getTenantLicense();
-  const inbox = await listInbox(true);
+  const [license, inbox, summary] = await Promise.all([
+    getTenantLicense(),
+    listInbox(true),
+    getDashboardSummary(),
+  ]);
   const unreadNotifications = inbox.ok ? inbox.data.filter((n) => !n.isRead).length : 0;
   const enabled = new Set(
     license.ok
@@ -81,6 +85,17 @@ export async function AppShell({
       : []
   );
   const show = (code: string) => !license.ok || enabled.has(code);
+  // H-009: license opens the module; RBAC still gates cost ≠ revenue visibility.
+  const vis = summary.ok
+    ? summary.data.financialVisibility ?? {
+        canViewCost: false,
+        canViewRevenue: false,
+        canViewMargin: false,
+      }
+    : { canViewCost: false, canViewRevenue: false, canViewMargin: false };
+  const showCosts = show("costs") && vis.canViewCost;
+  const showRevenues = show("revenues") && vis.canViewRevenue;
+  const showProfitReport = showRevenues && vis.canViewMargin;
 
   const brand = (
     <>
@@ -132,7 +147,7 @@ export async function AppShell({
         </NavGroup>
       ) : null}
 
-      {show("costs") ? (
+      {showCosts ? (
         <NavGroup label={costLabel} icon="costs" match={["/costs"]}>
           <NavLink href="/costs">Danh sách {costLabel.toLowerCase()}</NavLink>
           <NavLink href="/costs/shared/new">Tạo {costLabel.toLowerCase()}</NavLink>
@@ -140,11 +155,13 @@ export async function AppShell({
         </NavGroup>
       ) : null}
 
-      {show("revenues") ? (
+      {showRevenues ? (
         <NavGroup label={`${revenueLabel} &amp; Lợi nhuận`} icon="revenues" match={["/revenues"]}>
           <NavLink href="/revenues">Danh sách {revenueLabel.toLowerCase()}</NavLink>
           <NavLink href="/revenues/new">Tạo {revenueLabel.toLowerCase()}</NavLink>
-          <NavLink href="/revenues/report">Báo cáo {revenueLabel.toLowerCase()}</NavLink>
+          {showProfitReport ? (
+            <NavLink href="/revenues/report">Báo cáo {revenueLabel.toLowerCase()}</NavLink>
+          ) : null}
         </NavGroup>
       ) : null}
 

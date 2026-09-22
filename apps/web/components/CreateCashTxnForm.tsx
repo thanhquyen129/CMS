@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "payment" | "collection";
 
@@ -85,16 +86,16 @@ export function CreateCashTxnForm({
       }
 
       if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const payload = await readApiErrorBody(res);
         setError(
-          payload.message ||
-            (res.status === 403
+          formatApiErrorMessage(
+            payload,
+            res.status === 403
               ? `Bạn không có quyền tạo ${label.toLowerCase()}.`
               : res.status === 409
                 ? "Không thể tạo vì xung đột trạng thái (kỳ có thể đã khóa)."
-                : `Tạo ${label.toLowerCase()} thất bại.`)
+                : `Tạo ${label.toLowerCase()} thất bại.`
+          )
         );
         return;
       }

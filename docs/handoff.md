@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-22 — Nav RBAC (H-009) + UX-13 correlation trên lỗi
+
+### User
+còn gì nữa làm tiếp đi chuyên gia
+
+### Answer
+(1) AppShell: costs/revenues = license ∧ financialVisibility; ẩn báo cáo lãi nếu thiếu margin. (2) CTA tạo trên `/costs` `/revenues` theo quyền đọc. (3) UX-13: `lib/api-error.ts` — message + «Mã hỗ trợ: {correlationId}» trên bills/cost-revenue GET + form tiền chính.
+
+### Files
+- `AppShell.tsx`, `revenues/page.tsx`, `costs/page.tsx`
+- `lib/api-error.ts`, `lib/bills.ts`, `lib/costs-revenues-server.ts`
+- CreateCost/Revenue/SharedCost/CashTxn + StartFinancialClose forms
+
 ## 2026-09-22 — Live verify cost@ after cb7f1b7 deploy
 
 ### User

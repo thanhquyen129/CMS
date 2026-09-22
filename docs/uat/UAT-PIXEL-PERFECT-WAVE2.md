@@ -64,7 +64,7 @@
 |---|---|---|---|---|---|
 | UX-02 | UI-01…15 + Wave 2 | Quét nhãn chính, badge, enum trên màn | Không lộ raw enum/Canonical English; thuật ngữ CP6.5 | **Pass** | VI CP6.5. Residual EN “Best Available” đã sửa trên dashboard cùng commit evidence |
 | UX-03 | Drill-down Bill → CP/DT/CT/AP-AR/TT | Đi từ list/KPI tới nguồn | Route đúng Screen Traceability; giữ ngữ cảnh | **Pass** | Dashboard KPI → bills/queues; reports drill links; AP/AR Mở Bill |
-| UX-04 | 2 user: Cost-only vs Revenue-only | Đăng nhập lần lượt; mở dashboard, aging, menu | Menu/action theo permission + data scope; backend 403 khi vượt quyền | **Pass*** | Live `cost@` post-deploy `cb7f1b7`: dashboard ghi chú ẩn DT/biên; `/revenues` + `/api/profitability/bills` → 403 «không có quyền xem doanh thu»; `/api/costs` 200. *Residual:* nav/CTA Doanh thu vẫn hiện (license UI ≠ authz) |
+| UX-04 | 2 user: Cost-only vs Revenue-only | Đăng nhập lần lượt; mở dashboard, aging, menu | Menu/action theo permission + data scope; backend 403 khi vượt quyền | **Pass** | Nav costs/revenues = license ∧ `financialVisibility` (H-009). Live `cost@`: ẩn nhóm Doanh thu + CTA tạo; API 403 nếu deep-link |
 | UX-05 | Bill / chứng từ / AP-AR / chốt | Kiểm tra badge maturity, document, recognition, settlement, close | Không gộp sai các chiều trạng thái độc lập | **Pass** | Documents 3 chiều; costs/revenues maturity tách; close gates tách |
 | UX-06 | Tenant A vs Tenant B (nếu có) | Đăng nhập tenant A; thử ID/resource tenant B | Không hiện / chuyển ngữ cảnh trái phép | **Blocked** | Single-tenant demo |
 | UX-07 | Form tiền + version stale / kỳ khóa | Gửi validation sai; concurrent update; thao tác kỳ đã khóa | Thông báo rõ; không silent overwrite | **Not run** | Chưa exercise concurrent/locked trong session |
@@ -73,7 +73,7 @@
 | UX-10 | Keyboard + label | Tab qua form tạo Bill/cost; đọc status | Focus visible; label/accessible name; status không chỉ màu | **Not run** | Chưa keyboard sweep |
 | UX-11 | Rating / báo cáo / KPI | So số UI với API (Network) | Frontend không tự bịa số tài chính ngoài API | **Pass** (spot) | Dashboard↔Reports KPI khớp (307.2M / 459.5M / 171 Bill) |
 | UX-12 | Create cost/revenue/payment/import/chốt | Double-click nút lưu / gửi 2 lần nhanh | Một bản ghi (Idempotency-Key / chặn double-submit) | **Pass** (code) | Bổ sung Idempotency-Key + chặn double-submit: CreateCost/SharedCost/Revenue + StartFinancialClose (đã có cash/alloc/import) |
-| UX-13 | Gây lỗi 5xx / integration | Mở panel lỗi hoặc toast | Có correlation ID / mã hỗ trợ khi cần | **Not run** | (Trước UAT từng thấy web 500 slug — đã hotfix) |
+| UX-13 | Gây lỗi 5xx / integration | Mở panel lỗi hoặc toast | Có correlation ID / mã hỗ trợ khi cần | **Pass** (code) | `formatApiErrorMessage` + bills/cost-revenue server GET + form tiền (cost/revenue/shared/cash/close) append «Mã hỗ trợ» |
 | UX-14 | Toàn bộ checklist này | Thu thập evidence; đếm P0/P1 fail | Evidence theo màn; unresolved P0/P1 = 0 trước gọi Pixel-perfect xong | **Pass*** | P0 Fail = 0 trên phần đã chạy. *Blocked/Not run:* UX-04/06/07/10/12/13. Residual P1 copy đã vá trong cùng batch |
 
 ---

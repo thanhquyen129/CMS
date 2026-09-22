@@ -12,6 +12,7 @@ import { FinColors, StackedCompositionBar } from "@/components/charts/FinanceCha
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listCosts } from "@/lib/costs-revenues-server";
+import { getDashboardSummary } from "@/lib/control-desk";
 import {
   parsePage,
   parsePageSize,
@@ -88,7 +89,7 @@ export default async function CostsPage({
 
   const denser = { fromDate, toDate, vendorPartyId };
 
-  const [result, kpiRes] = await Promise.all([
+  const [result, kpiRes, summary] = await Promise.all([
     listCosts({
       financialMaturity: maturityFilter,
       attributionType: attributionFilter,
@@ -97,7 +98,11 @@ export default async function CostsPage({
       pageSize,
     }),
     listCosts({ attributionType: attributionFilter }),
+    getDashboardSummary(),
   ]);
+  const canCreateCost = summary.ok
+    ? !!summary.data.financialVisibility?.canViewCost
+    : false;
 
   const kpiItems = kpiRes.ok ? kpiRes.data.items : [];
   const countByMaturity = (m: string) =>
@@ -173,9 +178,11 @@ export default async function CostsPage({
           title={`Danh sách ${costLabel.toLowerCase()}`}
           lede={`Quản lý ${costLabel.toLowerCase()} theo mức độ chín, theo chứng từ và phân bổ cho vận đơn/shipment`}
           action={
-            <Link className="btn" href="/costs/shared/new">
-              + Tạo {costLabel.toLowerCase()} {sharedLabel.toLowerCase()}
-            </Link>
+            canCreateCost ? (
+              <Link className="btn" href="/costs/shared/new">
+                + Tạo {costLabel.toLowerCase()} {sharedLabel.toLowerCase()}
+              </Link>
+            ) : null
           }
         />
 

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { formatApiErrorMessage, readApiErrorBody } from "./api-error";
 import { getApiInternalUrl } from "./auth";
 import { getSessionToken } from "./api";
 import { unwrapPaged, type PagedResult } from "./paging";
@@ -83,7 +84,7 @@ export type BillProfitability = {
 
 export type ApiResult<T> =
   | { ok: true; data: T }
-  | { ok: false; status: number; message: string };
+  | { ok: false; status: number; message: string; correlationId?: string };
 
 async function apiGet<T>(path: string): Promise<ApiResult<T>> {
   const token = await getSessionToken();
@@ -105,15 +106,17 @@ async function apiGet<T>(path: string): Promise<ApiResult<T>> {
     }
 
     if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      const body = await readApiErrorBody(res);
       return {
         ok: false,
         status: res.status,
-        message:
-          body.message ||
-          (res.status === 404
+        correlationId: body.correlationId,
+        message: formatApiErrorMessage(
+          body,
+          res.status === 404
             ? "Không tìm thấy dữ liệu."
-            : "Không tải được dữ liệu từ máy chủ."),
+            : "Không tải được dữ liệu từ máy chủ."
+        ),
       };
     }
 

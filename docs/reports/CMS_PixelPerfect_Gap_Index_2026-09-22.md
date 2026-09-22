@@ -308,7 +308,7 @@ O*  Chỉ khi PO mở scope
 | W-K4 | **DONE** | Note VI điểm đi/đến (API ownership chưa expose) |
 | W-K5–K6 | PENDING | Drawer tabs, picker |
 | W-L1 | **DONE** | PC-21 SoD finalize + `AllocationSodTests` |
-| W-L2–L5 | PENDING | Queue ngày, AP skin, close gate visual… |
+| W-L2–L5 | L2 DONE (cột ngày); L4–L5 PENDING | Queue ngày, AP skin, close gate visual… |
 | W-L6 | **DONE** | Copy honest API trên `/reports` + `/revenues/report` |
 | W-M1 | **DONE** | Workflow strip + bước import + nav |
 | W-M2 | **DONE** | Link từ Cài đặt |

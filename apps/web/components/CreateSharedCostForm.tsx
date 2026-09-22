@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -74,16 +75,16 @@ export function CreateSharedCostForm({
       }
 
       if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const payload = await readApiErrorBody(res);
         setError(
-          payload.message ||
-            (res.status === 403
+          formatApiErrorMessage(
+            payload,
+            res.status === 403
               ? `Bạn không có quyền tạo ${costLabel.toLowerCase()}.`
               : res.status === 409
                 ? "Không thể tạo vì xung đột (nguồn trùng hoặc kỳ khóa)."
-                : `Tạo ${costLabel.toLowerCase()} thất bại.`)
+                : `Tạo ${costLabel.toLowerCase()} thất bại.`
+          )
         );
         return;
       }

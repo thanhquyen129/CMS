@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -73,14 +74,14 @@ export function StartFinancialCloseForm({
       }
 
       if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const payload = await readApiErrorBody(res);
         setError(
-          payload.message ||
-            (res.status === 409
+          formatApiErrorMessage(
+            payload,
+            res.status === 409
               ? "Không mở lần chốt (xung đột / eligibility)."
-              : `Mở ${closeLabel.toLowerCase()} thất bại.`)
+              : `Mở ${closeLabel.toLowerCase()} thất bại.`
+          )
         );
         return;
       }

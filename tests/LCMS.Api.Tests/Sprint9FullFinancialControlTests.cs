@@ -76,7 +76,9 @@ public sealed class Sprint9FullFinancialControlTests : IAsyncLifetime
 
         var roleId = await CreateRoleAsync(tenantId, "viewer", "Viewer");
         var userId = await CreateUserAsync(tenantId, "approver-full@example.com", "Approver Full");
+        var deciderId = await CreateUserAsync(tenantId, "decider-full@example.com", "Decider Full");
         await AssignUserRoleAsync(tenantId, userId, roleId);
+        await AssignUserRoleAsync(tenantId, deciderId, roleId);
 
         // SLA: omit dueAt → default hours for critical (8h)
         var exceptionId = await OpenExceptionAsync(
@@ -122,13 +124,13 @@ public sealed class Sprint9FullFinancialControlTests : IAsyncLifetime
         Assert.Equal(0, pending.CurrentLevel);
         Assert.Equal("pending", (await GetCostAsync(tenantId, costId)).ApprovalStatus);
 
-        await ApproveAsync(tenantId, userId, approvalId, "Cấp 1 OK");
+        await ApproveAsync(tenantId, deciderId, approvalId, "Cấp 1 OK");
         var mid = await GetApprovalAsync(tenantId, approvalId);
         Assert.Equal("pending", mid.Status);
         Assert.Equal(1, mid.CurrentLevel);
         Assert.Equal("pending", (await GetCostAsync(tenantId, costId)).ApprovalStatus);
 
-        await ApproveAsync(tenantId, userId, approvalId, "Cấp 2 OK");
+        await ApproveAsync(tenantId, deciderId, approvalId, "Cấp 2 OK");
         var done = await GetApprovalAsync(tenantId, approvalId);
         Assert.Equal("approved", done.Status);
         Assert.Equal(2, done.CurrentLevel);

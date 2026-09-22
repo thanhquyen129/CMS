@@ -116,7 +116,9 @@ public sealed class Sprint9FinancialControlTests : IAsyncLifetime
         // Seed role + user with NO permissions — PermissionService would deny action checks
         var roleId = await CreateRoleAsync(tenantId, "viewer", "Viewer");
         var userId = await CreateUserAsync(tenantId, "approver@example.com", "Approver");
+        var deciderId = await CreateUserAsync(tenantId, "decider@example.com", "Decider");
         await AssignUserRoleAsync(tenantId, userId, roleId);
+        await AssignUserRoleAsync(tenantId, deciderId, roleId);
 
         var costBefore = await GetCostAsync(tenantId, costId);
         Assert.Equal("not_required", costBefore.ApprovalStatus);
@@ -130,10 +132,22 @@ public sealed class Sprint9FinancialControlTests : IAsyncLifetime
         var costPending = await GetCostAsync(tenantId, costId);
         Assert.Equal("pending", costPending.ApprovalStatus);
 
-        await ApproveAsync(tenantId, userId, approvalId, "OK");
+        using (var self = new HttpRequestMessage(HttpMethod.Post, $"/api/approvals/{approvalId}/approve")
+        {
+            Content = JsonContent.Create(new { decisionReason = "Tự duyệt" })
+        })
+        {
+            self.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            self.Headers.Add("X-User-Id", userId.ToString());
+            var blocked = await _client.SendAsync(self);
+            Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+            Assert.Contains("PC-21", await blocked.Content.ReadAsStringAsync());
+        }
+
+        await ApproveAsync(tenantId, deciderId, approvalId, "OK");
         var approved = await GetApprovalAsync(tenantId, approvalId);
         Assert.Equal("approved", approved.Status);
-        Assert.Equal(userId, approved.DecidedBy);
+        Assert.Equal(deciderId, approved.DecidedBy);
         Assert.NotNull(approved.DecidedAt);
 
         var costApproved = await GetCostAsync(tenantId, costId);

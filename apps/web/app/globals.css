@@ -5050,6 +5050,76 @@ html[data-layout="horizontal"] .login-page {
   .cw-field.s12 { grid-column: span 12; }
 }
 
+/* Settlement allocate timeline (W-L4 / UI-09) */
+.settlement-timeline {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0 0 0 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-left: 2px solid var(--border, #d7e0ec);
+}
+
+.settlement-timeline-item {
+  position: relative;
+  padding: 0.65rem 0 0.85rem 1.15rem;
+}
+
+.settlement-timeline-marker {
+  position: absolute;
+  left: -0.45rem;
+  top: 0.85rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--border, #9aa8bc);
+}
+
+.settlement-timeline-item.is-done .settlement-timeline-marker {
+  border-color: #2f9e6f;
+  background: #2f9e6f;
+}
+
+.settlement-timeline-item.is-draft .settlement-timeline-marker {
+  border-color: #c9a227;
+  background: #fff8e6;
+}
+
+.settlement-timeline-item.is-reversed .settlement-timeline-marker {
+  border-color: #c45c5c;
+  background: #c45c5c;
+}
+
+.settlement-timeline-item.is-pending .settlement-timeline-marker {
+  border-color: #9aa8bc;
+  background: #f4f7fb;
+}
+
+.settlement-timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.settlement-timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.settlement-timeline-amount {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.settlement-timeline-actions {
+  margin-top: 0.35rem;
+}
+
 /* Close eligibility checklist (W-L5) */
 .close-gate-list {
   list-style: none;

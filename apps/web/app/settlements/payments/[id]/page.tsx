@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { AllocateCashForm } from "@/components/AllocateCashForm";
 import { FinalizeAllocationButton } from "@/components/FinalizeAllocationButton";
 import { ReverseAllocationButton } from "@/components/ReverseAllocationButton";
+import { SettlementAllocationTimeline } from "@/components/SettlementAllocationTimeline";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import {
@@ -12,7 +13,6 @@ import {
   listAccountsPayable,
 } from "@/lib/ap-ar";
 import {
-  allocationStatusLabel,
   canReverseAllocation,
   getPayment,
   isDraftAllocation,
@@ -142,68 +142,52 @@ export default async function PaymentDetailPage({
         </dl>
 
         <h2 className="section-title">Phân bổ</h2>
-        {payment.allocations.length === 0 ? (
-          <div className="empty-state" role="status">
-            Chưa có phân bổ. Tạo nháp bên dưới.
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">{apLabel}</th>
-                  <th scope="col" className="num">
-                    Số tiền
-                  </th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payment.allocations.map((a) => (
-                  <tr key={a.id}>
-                    <td>
-                      <code className="mono-id">{a.accountsPayableId.slice(0, 8)}…</code>
-                    </td>
-                    <td className="num">
-                      {formatMoney(a.amount, a.currencyCode)}
-                    </td>
-                    <td>
-                      {allocationStatusLabel(terms, a.allocationStatus)}
-                    </td>
-                    <td>
-                      <div className="row-actions">
-                        {isDraftAllocation(a.allocationStatus) ? (
-                          <FinalizeAllocationButton
-                            terms={terms}
-                            kind="payment"
-                            allocationId={a.id}
-                            amount={a.amount}
-                            currencyCode={a.currencyCode}
-                          />
-                        ) : null}
-                        {canReverseAllocation(a.allocationStatus) ? (
-                          <ReverseAllocationButton
-                            terms={terms}
-                            kind="payment"
-                            allocationId={a.id}
-                            amount={a.amount}
-                            currencyCode={a.currencyCode}
-                            allocationStatus={a.allocationStatus}
-                          />
-                        ) : null}
-                        {!isDraftAllocation(a.allocationStatus) &&
-                        !canReverseAllocation(a.allocationStatus)
-                          ? "—"
-                          : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <p className="note">
+          Tiến trình: ghi nhận {paymentLabel.toLowerCase()} → phân bổ nháp → chốt
+          (mới giảm outstanding {apLabel}). Đảo được khi còn nháp / đã chốt.
+        </p>
+        <SettlementAllocationTimeline
+          terms={terms}
+          cashLabel={paymentLabel}
+          targetLabel={apLabel}
+          valueDate={payment.valueDate}
+          cashAmount={payment.amount}
+          currencyCode={payment.currencyCode}
+          allocations={payment.allocations.map((a) => ({
+            id: a.id,
+            amount: a.amount,
+            currencyCode: a.currencyCode,
+            allocationStatus: a.allocationStatus,
+            createdAt: a.createdAt,
+            finalizedAt: a.finalizedAt,
+            reversedAt: a.reversedAt,
+            reverseReason: a.reverseReason,
+            targetId: a.accountsPayableId,
+          }))}
+          renderActions={(a) => (
+            <>
+              {isDraftAllocation(a.allocationStatus) ? (
+                <FinalizeAllocationButton
+                  terms={terms}
+                  kind="payment"
+                  allocationId={a.id}
+                  amount={a.amount}
+                  currencyCode={a.currencyCode}
+                />
+              ) : null}
+              {canReverseAllocation(a.allocationStatus) ? (
+                <ReverseAllocationButton
+                  terms={terms}
+                  kind="payment"
+                  allocationId={a.id}
+                  amount={a.amount}
+                  currencyCode={a.currencyCode}
+                  allocationStatus={a.allocationStatus}
+                />
+              ) : null}
+            </>
+          )}
+        />
 
         {draftAllocs.length > 0 ? (
           <p className="note">

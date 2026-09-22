@@ -12,6 +12,7 @@ export type PaymentAllocationItem = {
   baseAmount: number | null;
   fxRateId: string | null;
   allocationStatus: string;
+  createdAt: string;
   finalizedAt: string | null;
   reversedAt: string | null;
   reverseReason: string | null;
@@ -48,6 +49,7 @@ export type CollectionAllocationItem = {
   baseAmount: number | null;
   fxRateId: string | null;
   allocationStatus: string;
+  createdAt: string;
   finalizedAt: string | null;
   reversedAt: string | null;
   reverseReason: string | null;

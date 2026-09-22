@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-22 — W-L4 Settlement allocate timeline (Pixel UI-09)
+
+### User
+làm tiếp
+
+### Answer
+Payment/Collection detail: rail timeline (ghi nhận tiền → từng phân bổ nháp/chốt/đảo) thay bảng phẳng; CTA chốt/đảo giữ trên từng bước. API allocation DTO thêm `CreatedAt`.
+
+### Files
+- `SettlementQueries.cs`, `settlements-shared.ts`
+- `SettlementAllocationTimeline.tsx`, `globals.css`
+- `settlements/payments|collections/[id]/page.tsx`
+
 ## 2026-09-22 — W-K5 Bill drawer tab Tính giá (Pixel UI-02)
 
 ### User

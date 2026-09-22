@@ -15,6 +15,7 @@ public sealed record PaymentAllocationDto(
     decimal? BaseAmount,
     Guid? FxRateId,
     string AllocationStatus,
+    DateTimeOffset CreatedAt,
     DateTimeOffset? FinalizedAt,
     DateTimeOffset? ReversedAt,
     string? ReverseReason,
@@ -54,6 +55,7 @@ public sealed record CollectionAllocationDto(
     decimal? BaseAmount,
     Guid? FxRateId,
     string AllocationStatus,
+    DateTimeOffset CreatedAt,
     DateTimeOffset? FinalizedAt,
     DateTimeOffset? ReversedAt,
     string? ReverseReason,
@@ -177,7 +179,7 @@ public sealed class ListPaymentsQueryHandler : IRequestHandler<ListPaymentsQuery
             allocations.Select(a => new PaymentAllocationDto(
                 a.Id, a.PaymentId, a.AccountsPayableId, a.Amount,
                 a.CurrencyCode, a.BaseAmount, a.FxRateId, a.AllocationStatus,
-                a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes,
+                a.CreatedAt, a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes,
                 a.OriginalAmount, a.SettledAmount, a.FxRate, a.FxSource, a.FxRateDate)).ToList());
     }
 }
@@ -274,7 +276,7 @@ public sealed class ListCollectionsQueryHandler : IRequestHandler<ListCollection
             allocations.Select(a => new CollectionAllocationDto(
                 a.Id, a.CollectionId, a.AccountsReceivableId, a.Amount,
                 a.CurrencyCode, a.BaseAmount, a.FxRateId, a.AllocationStatus,
-                a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes,
+                a.CreatedAt, a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes,
                 a.OriginalAmount, a.SettledAmount, a.FxRate, a.FxSource, a.FxRateDate)).ToList());
     }
 }

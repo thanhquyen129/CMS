@@ -155,7 +155,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-L1 | SoD: người tạo phân bổ **không** tự chốt khi có approver | `/costs/shared/[id]` | P0 |
 | W-L2 | Queue / cột ngày ngoại lệ | `/queues/exceptions` | P1 |
 | W-L3 | AP / AR skin full-page hoặc chấp nhận `?tab=` + ghi ADR | `/ap-ar` | P2 |
-| W-L4 | Settlements: timeline allocate đọc được hơn PNG | `/settlements/[id]` | P2 |
+| W-L4 | Settlements: timeline allocate đọc được hơn PNG | `/settlements/[id]` | P2 | DONE (rail timeline cash→alloc + createdAt API) |
 | W-L5 | Close: panel gate visual (checklist chặn chốt) | `/financial-closes/[id]` | P1 | DONE (N/M + CTA disabled khi chưa eligible) |
 | W-L6 | Reports: giữ honest — chỉ thêm chart khi có số thật | `/reports*` | P2 | DONE |
 
@@ -308,7 +308,7 @@ O*  Chỉ khi PO mở scope
 | W-K4 | **DONE** | Note VI điểm đi/đến (API ownership chưa expose) |
 | W-K5–K6 | K5 DONE; K6 PENDING | Drawer tab Tính giá; picker còn |
 | W-L1 | **DONE** | PC-21 SoD finalize + `AllocationSodTests` |
-| W-L2–L5 | L2/L5 DONE; L4 PENDING | L5: CTA chốt gated by eligibility |
+| W-L2–L5 | L2/L4/L5 DONE | L4: settlement allocate timeline |
 | W-L6 | **DONE** | Copy honest API trên `/reports` + `/revenues/report` |
 | W-M1 | **DONE** | Workflow strip + bước import + nav |
 | W-M2 | **DONE** | Link từ Cài đặt |

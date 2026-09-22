@@ -241,6 +241,7 @@ export function BillFinancialDrawer({
                 label: docLabel,
                 badge: view.documentCount,
               },
+              { id: "rating", label: "Tính giá" },
               { id: "history", label: "Lịch sử" },
               { id: "related", label: "Liên quan" },
             ]}
@@ -427,6 +428,12 @@ export function BillFinancialDrawer({
                 </Link>
                 <Link
                   className="btn btn-sm btn-ghost"
+                  href={`/bills/${bill.id}?tab=rating`}
+                >
+                  Tính giá
+                </Link>
+                <Link
+                  className="btn btn-sm btn-ghost"
                   href={`/bills/${bill.id}`}
                 >
                   Thêm…
@@ -517,6 +524,24 @@ export function BillFinancialDrawer({
                 ))}
               </ul>
             )
+          ) : null}
+
+          {tab === "rating" ? (
+            <div className="stack">
+              <p className="note">
+                Tính giá (Rating) nằm trên hồ sơ {labels.bill} — không tự tạo{" "}
+                {labels.cost.toLowerCase()} / {labels.revenue.toLowerCase()}{" "}
+                Thực tế. Mở form và lịch sử tính giá tại đây.
+              </p>
+              <div className="cta-row">
+                <Link className="btn" href={`/bills/${bill.id}?tab=rating`}>
+                  Mở Tính giá trên hồ sơ
+                </Link>
+                <Link className="btn btn-ghost" href="/rate-cards/rate">
+                  Tính giá nhanh
+                </Link>
+              </div>
+            </div>
           ) : null}
 
           {tab === "history" ? (

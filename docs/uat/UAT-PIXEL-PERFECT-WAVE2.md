@@ -28,7 +28,7 @@
 | ID | Screen | Steps | Expected | Pass/Fail | Evidence |
 |---|---|---|---|---|---|
 | UX-01 / UI-01 | Dashboard V2 — `/dashboard` | Đăng nhập → mở Trang chủ; so PNG UI-01 | KPI/layout khớp chức năng cơ bản; số tiền từ API; không widget giả | **Pass** | Login OK → Xin chào Quản trị; KPI 121 đơn / 171 Bill / CP 307.2M / DT 459.5M; công việc cần xử lý thật |
-| UX-01 / UI-02 | Đơn hàng / Bill — `/bills`, `/bills/[id]` | Mở danh sách Bill + hồ sơ / Financial View; so PNG UI-02 | Bill là neo; badge trạng thái độc lập; không God Table giả | **Pass** | `/bills` 171 bản ghi; lọc + Tạo Bill; breadcrumb Đơn hàng vận chuyển |
+| UX-01 / UI-02 | Đơn hàng / Bill — `/bills`, `/bills/[id]` | Mở danh sách Bill + hồ sơ / Financial View; so PNG UI-02 | Bill là neo; badge trạng thái độc lập; không God Table giả | **Pass** | `/bills` 171 bản ghi; drawer có tab **Tính giá** → hồ sơ `?tab=rating` (W-K5) |
 | UX-01 / UI-03 | Bảng giá & Tính giá — `/rate-cards*` | Duyệt DS, detail `[id]`, Tính giá, So sánh, Phụ phí, FX, Phụ lục, Lịch sử; so PNG/HTML UI-03 | Version/snapshot rõ; rating không tạo Actual; bậc trọng lượng/container chỉ hiện khi API có | **Pass** | `/rate-cards` 130 bản ghi + Tính giá nhanh; `/rate-cards/import` preview/commit |
 | UX-01 / UI-04 | Quản lý Chi phí — `/costs*` | DS + detail + phân bổ chung; so PNG UI-04 | Maturity tách; phân bổ bảo toàn; không subnav giả nếu không có luồng | **Pass** | Maturity tabs Dự kiến/Đã xác nhận/Thực tế (59/69/43); link Phân bổ |
 | UX-01 / UI-05 | Doanh thu & Lợi nhuận — `/revenues*` | DS + detail + báo cáo lãi; so PNG UI-05 | Revenue ≠ Invoice/AR/Thu; profit derived từ API | **Pass** | Copy không cộng ĐK+TT; maturity 44/50/43; link Báo cáo |

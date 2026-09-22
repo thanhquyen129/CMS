@@ -146,7 +146,7 @@ Việc **đã DONE trong A–H** không lặp. Chỉ mục dưới đây = **ch�
 | W-K2 | CreateWorkspace Chặng / Chuyến | `/operations/new`… | P1 |
 | W-K3 | Unlink quan hệ + audit | Bill drawer / Liên quan | P1 |
 | W-K4 | Field ownership badge + lý do ghi đè hiển thị | Bill/Order forms | P1 | DONE (note VI; API chưa expose ownership) |
-| W-K5 | Drawer Bill: tab «Tính giá» hoặc deep-link rõ; căn tabs vs mockup | drawer | P2 |
+| W-K5 | Drawer Bill: tab «Tính giá» hoặc deep-link rõ; căn tabs vs mockup | drawer | P2 | DONE (tab + CTA → `?tab=rating`; quick action) |
 | W-K6 | Picker người phụ trách (user) đủ dùng | create forms | P2 |
 
 ### Gói L — Chi phí / Doanh thu / Kiểm soát polish
@@ -306,7 +306,7 @@ O*  Chỉ khi PO mở scope
 | W-N1–N6 | TEMPLATE | `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md` — chờ runner + login |
 | W-L3 | **DONE** | ADR-0031 giữ `/ap-ar?tab=` |
 | W-K4 | **DONE** | Note VI điểm đi/đến (API ownership chưa expose) |
-| W-K5–K6 | PENDING | Drawer tabs, picker |
+| W-K5–K6 | K5 DONE; K6 PENDING | Drawer tab Tính giá; picker còn |
 | W-L1 | **DONE** | PC-21 SoD finalize + `AllocationSodTests` |
 | W-L2–L5 | L2/L5 DONE; L4 PENDING | L5: CTA chốt gated by eligibility |
 | W-L6 | **DONE** | Copy honest API trên `/reports` + `/revenues/report` |

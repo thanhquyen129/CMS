@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-09-22 — W-K5 Bill drawer tab Tính giá (Pixel UI-02)
+
+### User
+tiếp nào chuyên gia, vẫn Pixel-perfect nhé
+
+### Answer
+Bill Financial View drawer: tab «Tính giá» + CTA deep-link `/bills/{id}?tab=rating` (không nhúng form Rating vào client drawer); quick action trên Tổng quan. Khớp tabs hồ sơ Bill / mockup UI-02.
+
+### Files
+- `BillFinancialDrawer.tsx`
+- gap index + UAT UI-02
+
 ## 2026-09-22 — W-L5 close CTA gate + W-J6 FX canonical
 
 ### User

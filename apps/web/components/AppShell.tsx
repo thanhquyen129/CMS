@@ -68,9 +68,7 @@ export async function AppShell({
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
   const collectionLabel = term(terms, "COLLECTION", "Thu tiền");
   const closeLabel = term(terms, "FINANCIAL_CLOSE", "Chốt tài chính");
-  const exceptionQueueLabel = term(terms, "EXCEPTION_QUEUE", "Hàng đợi ngoại lệ");
   const varianceLabel = term(terms, "VARIANCE", "Chênh lệch");
-  const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
   const reconQueueLabel = term(terms, "RECONCILIATION_QUEUE", "Hàng đợi đối soát");
   const bankFeedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const settingsLabel = term(terms, "SETTINGS", "Cài đặt");
@@ -186,8 +184,8 @@ export async function AppShell({
           <NavLink href="/queues/variances">
             Hàng đợi {varianceLabel.toLowerCase()}
           </NavLink>
-          <NavLink href="/queues/exceptions">{exceptionQueueLabel}</NavLink>
-          <NavLink href="/queues/approvals">{approvalQueueLabel}</NavLink>
+          <NavLink href="/queues/exceptions">Chênh lệch &amp; Ngoại lệ</NavLink>
+          <NavLink href="/queues/approvals">Phê duyệt chứng từ</NavLink>
           <NavLink href="/bank-feed">{bankFeedLabel}</NavLink>
           <NavLink href="/reconciliations">Đối soát &amp; Matching</NavLink>
         </NavGroup>

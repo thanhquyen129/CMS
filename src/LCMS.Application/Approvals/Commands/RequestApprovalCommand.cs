@@ -4,6 +4,7 @@ using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.Approvals.Commands;
 
@@ -56,17 +57,20 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IOperatorNotificationPublisher _notifications;
+    private readonly ApprovalMatrixOptions _matrix;
 
     public RequestApprovalCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IOperatorNotificationPublisher notifications)
+        IOperatorNotificationPublisher notifications,
+        IOptions<ApprovalMatrixOptions> matrix)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _notifications = notifications;
+        _matrix = matrix.Value;
     }
 
     public async Task<Guid> Handle(RequestApprovalCommand request, CancellationToken cancellationToken)
@@ -94,7 +98,9 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
             throw new ConflictAppException("Đối tượng đã có yêu cầu phê duyệt đang chờ.");
         }
 
-        var requiredLevel = request.RequiredLevel ?? 1;
+        var amount = await AmountOfAsync(objectType, request.ObjectId, cancellationToken);
+        var requiredLevel = request.RequiredLevel
+            ?? ApprovalMatrixResolver.ResolveRequiredLevel(_matrix, objectType, amount);
 
         var approval = new Approval
         {
@@ -107,7 +113,8 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
             RequestedBy = _user.UserId,
             RequestedAt = DateTimeOffset.UtcNow,
             RequestReason = string.IsNullOrWhiteSpace(request.RequestReason) ? null : request.RequestReason.Trim(),
-            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+            ObjectFingerprint = await FingerprintAsync(objectType, request.ObjectId, cancellationToken)
         };
 
         _db.Approvals.Add(approval);
@@ -150,6 +157,37 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
         }
 
         return approval.Id;
+    }
+
+    private async Task<decimal> AmountOfAsync(string objectType, Guid objectId, CancellationToken cancellationToken)
+    {
+        return objectType switch
+        {
+            ApprovalObjectTypes.Cost => await _db.Costs.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.Revenue => await _db.Revenues.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.AccountsPayable => await _db.AccountsPayable.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.RecognizedAmount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.AccountsReceivable => await _db.AccountsReceivable.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.RecognizedAmount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.Payment => await _db.Payments.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.Collection => await _db.Collections.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
+            _ => 0m
+        };
+    }
+
+    internal async Task<string?> FingerprintAsync(string objectType, Guid objectId, CancellationToken cancellationToken)
+    {
+        var amount = await AmountOfAsync(objectType, objectId, cancellationToken);
+        if (objectType is not (
+            ApprovalObjectTypes.Cost
+            or ApprovalObjectTypes.Revenue
+            or ApprovalObjectTypes.AccountsPayable
+            or ApprovalObjectTypes.AccountsReceivable
+            or ApprovalObjectTypes.Payment
+            or ApprovalObjectTypes.Collection))
+        {
+            return null;
+        }
+
+        return $"{amount:0.####}";
     }
 
     private async Task EnsureObjectExistsAsync(string objectType, Guid objectId, CancellationToken cancellationToken)

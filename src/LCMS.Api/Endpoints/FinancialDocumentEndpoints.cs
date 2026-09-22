@@ -12,8 +12,9 @@ public static class FinancialDocumentEndpoints
     {
         var docs = app.MapGroup("/api/financial-documents").WithTags("FinancialDocuments");
 
-        docs.MapPost("/", async (ReceiveFinancialDocumentRequest body, ISender sender, CancellationToken ct) =>
+        docs.MapPost("/", async (ReceiveFinancialDocumentRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var id = await sender.Send(
                 new ReceiveFinancialDocumentCommand(
                     body.DocumentType,
@@ -26,7 +27,8 @@ public static class FinancialDocumentEndpoints
                     body.BillId,
                     body.Notes,
                     body.SourceSystem,
-                    body.ExternalId),
+                    body.ExternalId,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/financial-documents/{id}", new { id });
         });
@@ -186,6 +188,16 @@ public static class FinancialDocumentEndpoints
             return Results.Ok(list);
         });
 
+        matches.MapPost("/{id:guid}/resolve", async (
+            Guid id,
+            ResolveDocumentMatchRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var detailId = await sender.Send(new ResolveDocumentMatchCommand(id, body.SourceLineId), ct);
+            return Results.Created($"/api/document-matches/{id}/details/{detailId}", new { id = detailId });
+        });
+
         matches.MapPost("/{id:guid}/details", async (
             Guid id,
             AddDocumentMatchDetailRequest body,
@@ -267,6 +279,8 @@ public sealed record StartDocumentMatchRequest(
     string? Notes,
     decimal? ToleranceAmount,
     decimal? TolerancePercent);
+
+public sealed record ResolveDocumentMatchRequest(Guid SourceLineId);
 
 public sealed record AddDocumentMatchDetailRequest(
     Guid SourceLineId,

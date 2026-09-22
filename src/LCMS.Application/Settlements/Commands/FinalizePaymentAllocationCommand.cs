@@ -109,7 +109,7 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
 
         // C-008: AP finalized + this ≤ recognized + adjustment
         var nextSettled = decimal.Round(
-            ap.FinalizedSettledAmount + allocation.Amount, 4, MidpointRounding.AwayFromZero);
+            ap.FinalizedSettledAmount + SettlementCurrency.TargetAmount(allocation), 4, MidpointRounding.AwayFromZero);
         var ceiling = ap.RecognizedAmount + ap.AdjustmentAmount + SettlementHelpers.OverSettlementTolerance;
         if (nextSettled > ceiling)
         {

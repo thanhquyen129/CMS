@@ -89,6 +89,7 @@ public interface ILcmsDbContext
     DbSet<IntegrationRecord> IntegrationRecords { get; }
     DbSet<IntegrationError> IntegrationErrors { get; }
     DbSet<OutboxMessage> OutboxMessages { get; }
+    DbSet<IdempotencyRecord> IdempotencyRecords { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

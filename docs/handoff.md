@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-22 — Gói F: chứng từ, đối soát, phê duyệt
+
+### User
+làm tiếp gói F, vẫn mức Pixel-perfect
+
+### Answer
+Gói F (W-F1…F7) xong. Khớp tự động chỉ chọn khi một ứng viên có chênh lệch nhỏ nhất. Hai ứng viên cùng mức trả `MATCH_AMBIGUOUS`, không lưu. Người dùng vẫn chọn tay. Dòng khớp lưu `matched` hoặc `matched_with_tolerance` và ngưỡng đã dùng. Tất toán khác tiền tệ chỉ khi có tỷ giá đã lưu; thiếu tỷ giá vẫn `Không phân bổ khác tiền tệ (C-014).` Số tiền thanh toán/thu giữ nguyên tiền gốc. Số áp vào AP/AR là số đã quy đổi. Không sửa chi phí hay doanh thu vì chênh lệch tỷ giá. Ngoại lệ nghiêm trọng khi miễn chuyển `waiting` và mở phê duyệt; mức khác miễn ngay. Duyệt xong thì `waived`. Người tạo không tự duyệt khi có user. Đổi số tiền sau yêu cầu thì `needs_rereview`. Chạy lại đối soát tạo phiên nháp mới, phiên đã chốt giữ nguyên. Header `Idempotency-Key` trên nhận chứng từ và tạo thanh toán chỉ tạo một bản ghi. Sổ chính sách đầy đủ và sổ idempotency rộng vẫn là gói H.
+
+Menu kiểm soát giữ các màn đang có. Hàng đợi ngoại lệ đọc “Chênh lệch & Ngoại lệ”, phê duyệt đọc “Phê duyệt chứng từ”. Hàng đợi chênh lệch vẫn riêng vì chênh lệch không phải ngoại lệ. Không thêm Danh sách công việc, Báo cáo kiểm soát, biểu đồ giả, hay Excel. Nút Miễn gọi API thật. Chưa bấm từng nút trên trình duyệt vì không có phiên đăng nhập local.
+
+Gói G chưa làm.
+
+### Files / API / schema
+- Migration `20260922073936_ControlMatchFxApprovalIdempotency`: `document_match_details.outcome_code`, `applied_tolerance`; snapshot FX trên `payment_allocations` và `collection_allocations`; `approvals.object_fingerprint`; bảng `idempotency_records`.
+- `POST /api/document-matches/{id}/resolve`.
+- `POST /api/exceptions/{id}/waive`.
+- `POST /api/reconciliations/{id}/replay`.
+- `Idempotency-Key` trên `POST /api/financial-documents` và `POST /api/payments`.
+- ADR-0028.
+- UI: lede `/control`, nhãn nav, trạng thái `waiting` / `waived` / `needs_rereview`, nút Miễn.
+
+### UI
+Tổng quan kiểm soát vẫn là số đếm thật. Hàng đợi ngoại lệ có Miễn. Không thêm cột ngày phát sinh vì API chưa trả ngày tạo.
+
 ## 2026-09-22 — Gói E: chia doanh thu và lãi gộp theo maturity
 
 ### User

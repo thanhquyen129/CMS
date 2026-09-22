@@ -21,6 +21,11 @@ public sealed class CollectionAllocation : TenantEntityBase
 
     /// <summary>Null while FX stub is in use.</summary>
     public Guid? FxRateId { get; set; }
+    public decimal? OriginalAmount { get; set; }
+    public decimal? SettledAmount { get; set; }
+    public decimal? FxRate { get; set; }
+    public string? FxSource { get; set; }
+    public DateOnly? FxRateDate { get; set; }
 
     /// <summary>draft | finalized | reversed</summary>
     public string AllocationStatus { get; set; } = SettlementAllocationStatuses.Draft;

@@ -14,7 +14,8 @@ public sealed record CreatePaymentCommand(
     Guid? CounterpartyId,
     Guid? BillId,
     string? ReferenceNo,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class CreatePaymentCommandValidator : AbstractValidator<CreatePaymentCommand>
 {
@@ -58,6 +59,16 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null)
+        {
+            var prior = await _db.IdempotencyRecords.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Scope == "payment" && r.Key == idempotencyKey, cancellationToken);
+            if (prior is not null)
+            {
+                return prior.ObjectId;
+            }
+        }
         if (request.BillId.HasValue)
         {
             var billExists = await _db.Bills.AsNoTracking()
@@ -88,6 +99,16 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
         await _fx.ApplyToPaymentAsync(payment, amount, cancellationToken);
 
         _db.Payments.Add(payment);
+        if (idempotencyKey is not null)
+        {
+            _db.IdempotencyRecords.Add(new IdempotencyRecord
+            {
+                TenantId = tenantId,
+                Scope = "payment",
+                Key = idempotencyKey,
+                ObjectId = payment.Id
+            });
+        }
         await _db.SaveChangesAsync(cancellationToken);
 
         var costCountAfter = await _db.Costs.CountAsync(cancellationToken);

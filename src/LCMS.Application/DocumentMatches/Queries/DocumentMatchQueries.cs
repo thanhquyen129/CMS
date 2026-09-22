@@ -14,7 +14,9 @@ public sealed record DocumentMatchDetailDto(
     decimal MatchedAmount,
     string DetailStatus,
     DateTimeOffset? ReversedAt,
-    string? ReverseReason);
+    string? ReverseReason,
+    string OutcomeCode,
+    decimal AppliedTolerance);
 
 public sealed record DocumentMatchDto(
     Guid Id,
@@ -66,7 +68,9 @@ public sealed class GetDocumentMatchByIdQueryHandler : IRequestHandler<GetDocume
                 d.MatchedAmount,
                 d.DetailStatus,
                 d.ReversedAt,
-                d.ReverseReason))
+                d.ReverseReason,
+                d.OutcomeCode,
+                d.AppliedTolerance))
             .ToListAsync(cancellationToken);
 
         return new DocumentMatchDto(

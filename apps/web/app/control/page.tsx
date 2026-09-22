@@ -76,7 +76,7 @@ export default async function ControlHubPage() {
             { label: "Kiểm soát tài chính" },
           ]}
           title="Kiểm soát tài chính"
-          lede="Workbench đối soát, chênh lệch, ngoại lệ và phê duyệt — giữ minh bạch dữ liệu trước khi chốt kỳ."
+          lede="Đối soát, phát hiện chênh lệch, xử lý ngoại lệ và phê duyệt để đảm bảo số liệu chính xác và minh bạch."
         />
 
         {!summary.ok ? (

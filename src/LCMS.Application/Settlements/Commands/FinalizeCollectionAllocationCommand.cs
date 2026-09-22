@@ -109,7 +109,7 @@ public sealed class FinalizeCollectionAllocationCommandHandler
         }
 
         var nextSettled = decimal.Round(
-            ar.FinalizedSettledAmount + allocation.Amount, 4, MidpointRounding.AwayFromZero);
+            ar.FinalizedSettledAmount + SettlementCurrency.TargetAmount(allocation), 4, MidpointRounding.AwayFromZero);
         var ceiling = ar.RecognizedAmount + ar.AdjustmentAmount + SettlementHelpers.OverSettlementTolerance;
         if (nextSettled > ceiling)
         {

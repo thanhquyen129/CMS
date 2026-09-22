@@ -63,6 +63,23 @@ public sealed class DecideApprovalCommandHandler : IRequestHandler<DecideApprova
             throw new ConflictAppException("Chỉ quyết định yêu cầu phê duyệt đang chờ.");
         }
 
+        if (request.Approve && _user.HasUser && approval.RequestedBy == _user.UserId)
+        {
+            throw new ConflictAppException("PC-21: Người tạo không được tự duyệt.");
+        }
+
+        if (request.Approve && approval.ObjectFingerprint is not null)
+        {
+            var now = await new RequestApprovalCommandHandler(_db, _tenantContext, _user, null!, Microsoft.Extensions.Options.Options.Create(new ApprovalMatrixOptions()))
+                .FingerprintAsync(approval.ObjectType, approval.ObjectId, cancellationToken);
+            if (now is not null && now != approval.ObjectFingerprint)
+            {
+                approval.Status = ApprovalStatuses.NeedsRereview;
+                await _db.SaveChangesAsync(cancellationToken);
+                throw new ConflictAppException("Đối tượng đã đổi sau khi yêu cầu. Phê duyệt lại.");
+            }
+        }
+
         var permissionCountBefore = await _db.Permissions.CountAsync(cancellationToken);
         var rolePermissionCountBefore = await _db.RolePermissions.CountAsync(cancellationToken);
 
@@ -152,6 +169,18 @@ public sealed class DecideApprovalCommandHandler : IRequestHandler<DecideApprova
             if (revenue is not null)
             {
                 revenue.ApprovalStatus = statusOnObject;
+            }
+        }
+        else if (approval.ObjectType == ApprovalObjectTypes.Exception
+                 && statusOnObject == "approved")
+        {
+            var exception = await _db.Exceptions.FirstOrDefaultAsync(e => e.Id == approval.ObjectId, cancellationToken);
+            if (exception is not null
+                && string.Equals(exception.Status, ExceptionStatuses.Waiting, StringComparison.OrdinalIgnoreCase))
+            {
+                exception.Status = ExceptionStatuses.Waived;
+                exception.ResolvedAt = DateTimeOffset.UtcNow;
+                exception.ResolvedBy = _user.UserId;
             }
         }
     }

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
-type Action = "resolve" | "close" | "escalate";
+type Action = "resolve" | "close" | "escalate" | "waive";
 
 type Props = {
   terms: TerminologyMap;
@@ -42,6 +42,7 @@ export function ExceptionActionButtons({
     s === "in_progress" ||
     s === "escalated" ||
     s === "resolved";
+  const canWaive = s === "open" || s === "in_progress" || s === "escalated";
 
   const close = useCallback(() => {
     if (submitting) return;
@@ -64,14 +65,18 @@ export function ExceptionActionButtons({
         ? `/bff/exceptions/${exceptionId}/resolve`
         : open === "close"
           ? `/bff/exceptions/${exceptionId}/close`
-          : `/bff/exceptions/${exceptionId}/escalate`;
+          : open === "waive"
+            ? `/bff/exceptions/${exceptionId}/waive`
+            : `/bff/exceptions/${exceptionId}/escalate`;
 
     const body =
       open === "resolve"
         ? { resolutionNotes: trimmed || null }
         : open === "escalate"
           ? { escalationReason: trimmed }
-          : undefined;
+          : open === "waive"
+            ? { reason: trimmed || null }
+            : undefined;
 
     try {
       const res = await fetch(endpoint, {
@@ -113,7 +118,7 @@ export function ExceptionActionButtons({
     }
   }, [exceptionId, notes, open, router]);
 
-  if (!canResolve && !canEscalate && !canClose) {
+  if (!canResolve && !canEscalate && !canClose && !canWaive) {
     return <span className="muted">—</span>;
   }
 
@@ -146,6 +151,20 @@ export function ExceptionActionButtons({
             disabled={isPending}
           >
             Leo thang
+          </button>
+        ) : null}
+        {canWaive ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              setError(null);
+              setNotes("");
+              setOpen("waive");
+            }}
+            disabled={isPending}
+          >
+            Miễn
           </button>
         ) : null}
         {canClose ? (
@@ -193,7 +212,9 @@ export function ExceptionActionButtons({
                 ? "Xử lý ngoại lệ?"
                 : open === "escalate"
                   ? "Leo thang ngoại lệ?"
-                  : "Đóng ngoại lệ?"}
+                  : open === "waive"
+                    ? "Miễn ngoại lệ?"
+                    : "Đóng ngoại lệ?"}
             </h2>
             <p>
               {open === "resolve" ? (
@@ -206,16 +227,25 @@ export function ExceptionActionButtons({
                   Trạng thái → <strong>{escalatedLabel}</strong>. Lý do bắt
                   buộc. Mức độ có thể tăng một bậc.
                 </>
+              ) : open === "waive" ? (
+                <>
+                  Mức nghiêm trọng chuyển sang <strong>Chờ duyệt miễn</strong>.
+                  Mức khác được miễn ngay. Không xóa cứng.
+                </>
               ) : (
                 <>
                   Trạng thái → <strong>{closedLabel}</strong>. Không xóa cứng.
                 </>
               )}
             </p>
-            {open === "resolve" || open === "escalate" ? (
+            {open === "resolve" || open === "escalate" || open === "waive" ? (
               <div className="field">
                 <label htmlFor={`exc-notes-${exceptionId}`}>
-                  {open === "escalate" ? "Lý do leo thang" : "Ghi chú xử lý"}
+                  {open === "escalate"
+                    ? "Lý do leo thang"
+                    : open === "waive"
+                      ? "Lý do miễn"
+                      : "Ghi chú xử lý"}
                 </label>
                 <input
                   id={`exc-notes-${exceptionId}`}
@@ -259,7 +289,9 @@ export function ExceptionActionButtons({
                     ? "Xác nhận xử lý"
                     : open === "escalate"
                       ? "Xác nhận leo thang"
-                      : "Xác nhận đóng"}
+                      : open === "waive"
+                        ? "Xác nhận miễn"
+                        : "Xác nhận đóng"}
               </button>
             </div>
           </div>

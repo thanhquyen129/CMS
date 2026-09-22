@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
+using LCMS.Application.Fx;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -37,17 +38,20 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ISettlementFxStub _fx;
+    private readonly IFxRateLookup _rates;
     private readonly IPeriodLockGate _periodLockGate;
 
     public AllocatePaymentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ISettlementFxStub fx,
+        IFxRateLookup rates,
         IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
+        _rates = rates;
         _periodLockGate = periodLockGate;
     }
 
@@ -80,11 +84,6 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             "phân bổ thanh toán",
             cancellationToken);
 
-        if (!string.Equals(payment.CurrencyCode, ap.CurrencyCode, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ConflictAppException("Không phân bổ khác tiền tệ (C-014).");
-        }
-
         var paymentActiveAmounts = await _db.PaymentAllocations.AsNoTracking()
             .Where(a => a.PaymentId == payment.Id
                 && (a.AllocationStatus == SettlementAllocationStatuses.Draft
@@ -104,18 +103,32 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             .Where(a => a.AccountsPayableId == ap.Id
                 && (a.AllocationStatus == SettlementAllocationStatuses.Draft
                     || a.AllocationStatus == SettlementAllocationStatuses.Finalized))
-            .Select(a => a.Amount)
+            .Select(a => a.SettledAmount ?? a.Amount)
             .ToListAsync(cancellationToken);
         var apActive = apActiveAmounts.Sum();
 
+        decimal settled = amount;
+        await SettlementCurrency.StampAsync(
+            _rates,
+            payment.CurrencyCode,
+            ap.CurrencyCode,
+            amount,
+            payment.ValueDate,
+            (original, target, rate, source, rateDate, rateId) =>
+            {
+                settled = target;
+            },
+            cancellationToken);
+
         var apCeiling = ap.RecognizedAmount + ap.AdjustmentAmount + SettlementHelpers.OverSettlementTolerance;
-        if (apActive + amount > apCeiling)
+        if (apActive + settled > apCeiling)
         {
             throw new ConflictAppException(
                 "Tổng phân bổ vượt số dư còn lại của khoản phải trả (C-008).");
         }
 
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
+        var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);
 
         var allocation = new PaymentAllocation
         {
@@ -126,6 +139,22 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             AllocationStatus = SettlementAllocationStatuses.Draft,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };
+        await SettlementCurrency.StampAsync(
+            _rates,
+            payment.CurrencyCode,
+            ap.CurrencyCode,
+            amount,
+            payment.ValueDate,
+            (original, target, rate, source, rateDate, rateId) =>
+            {
+                allocation.OriginalAmount = original;
+                allocation.SettledAmount = target;
+                allocation.FxRate = rate;
+                allocation.FxSource = source;
+                allocation.FxRateDate = rateDate;
+                allocation.FxRateId = rateId ?? allocation.FxRateId;
+            },
+            cancellationToken);
         await _fx.ApplyToPaymentAllocationAsync(
             allocation,
             payment.CurrencyCode,
@@ -137,9 +166,10 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
         await _db.SaveChangesAsync(cancellationToken);
 
         var costCountAfter = await _db.Costs.CountAsync(cancellationToken);
-        if (costCountAfter != costCountBefore)
+        var revenueCountAfter = await _db.Revenues.CountAsync(cancellationToken);
+        if (costCountAfter != costCountBefore || revenueCountAfter != revenueCountBefore)
         {
-            throw new ConflictAppException("Phân bổ thanh toán không được tạo Chi phí mới (C-003).");
+            throw new ConflictAppException("Phân bổ thanh toán không được tạo Chi phí hoặc Doanh thu mới (C-003/C-004).");
         }
 
         return allocation.Id;

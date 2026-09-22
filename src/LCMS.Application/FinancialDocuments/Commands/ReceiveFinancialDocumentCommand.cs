@@ -24,7 +24,8 @@ public sealed record ReceiveFinancialDocumentCommand(
     Guid? BillId,
     string? Notes,
     string? SourceSystem,
-    string? ExternalId) : IRequest<Guid>;
+    string? ExternalId,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class ReceiveFinancialDocumentCommandValidator : AbstractValidator<ReceiveFinancialDocumentCommand>
 {
@@ -88,6 +89,17 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
+        }
+
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null)
+        {
+            var prior = await _db.IdempotencyRecords.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Scope == "financial_document" && r.Key == idempotencyKey, cancellationToken);
+            if (prior is not null)
+            {
+                return prior.ObjectId;
+            }
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
@@ -176,6 +188,16 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         };
 
         _db.FinancialDocuments.Add(document);
+        if (idempotencyKey is not null)
+        {
+            _db.IdempotencyRecords.Add(new IdempotencyRecord
+            {
+                TenantId = _tenantContext.TenantId!.Value,
+                Scope = "financial_document",
+                Key = idempotencyKey,
+                ObjectId = document.Id
+            });
+        }
         // Explicit: do not create Cost or Revenue rows from document intake (C-003 / C-004).
         await _db.SaveChangesAsync(cancellationToken);
         return document.Id;

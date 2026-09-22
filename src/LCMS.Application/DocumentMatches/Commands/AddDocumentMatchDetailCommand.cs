@@ -131,27 +131,32 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
                 cancellationToken);
         }
 
+        decimal targetAmount = targetLine?.Amount ?? amount;
         if (request.TargetCostId.HasValue)
         {
-            var costExists = await _db.Costs.AsNoTracking()
-                .AnyAsync(c => c.Id == request.TargetCostId, cancellationToken);
-            if (!costExists)
-            {
-                throw new NotFoundAppException("Không tìm thấy chi phí để liên kết khớp.");
-            }
-            // Link only — do not create Cost (C-003).
+            var cost = await _db.Costs.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == request.TargetCostId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy chi phí để liên kết khớp.");
+            targetAmount = cost.Amount;
         }
 
         if (request.TargetRevenueId.HasValue)
         {
-            var revenueExists = await _db.Revenues.AsNoTracking()
-                .AnyAsync(r => r.Id == request.TargetRevenueId, cancellationToken);
-            if (!revenueExists)
-            {
-                throw new NotFoundAppException("Không tìm thấy doanh thu để liên kết khớp.");
-            }
-            // Link only — do not create Revenue (C-004).
+            var revenue = await _db.Revenues.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == request.TargetRevenueId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy doanh thu để liên kết khớp.");
+            targetAmount = revenue.Amount;
         }
+
+        var sourceOpen = decimal.Round(sourceLine.Amount - sourceLine.MatchedAmount, 4, MidpointRounding.AwayFromZero);
+        var delta = Math.Abs(targetAmount - sourceOpen);
+        var appliedTolerance = DocumentMatchTolerance.EffectiveTolerance(
+            sourceLine.Amount,
+            match.ToleranceAmount,
+            match.TolerancePercent);
+        var outcome = delta == 0m
+            ? DocumentMatchOutcomes.Matched
+            : DocumentMatchOutcomes.MatchedWithTolerance;
 
         var detail = new DocumentMatchDetail
         {
@@ -162,6 +167,8 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
             TargetCostId = request.TargetCostId,
             TargetRevenueId = request.TargetRevenueId,
             MatchedAmount = amount,
+            OutcomeCode = outcome,
+            AppliedTolerance = appliedTolerance,
             DetailStatus = DocumentMatchDetailStatuses.Active
         };
 

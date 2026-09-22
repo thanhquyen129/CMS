@@ -86,6 +86,12 @@ public static class FinancialControlEndpoints
             return Results.NoContent();
         });
 
+        reconciliations.MapPost("/{id:guid}/replay", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var nextId = await sender.Send(new ReplayReconciliationCommand(id), ct);
+            return Results.Created($"/api/reconciliations/{nextId}", new { id = nextId });
+        });
+
         var variances = app.MapGroup("/api/variances").WithTags("Variances");
 
         variances.MapGet("/", async (string? status, ISender sender, CancellationToken ct) =>
@@ -203,6 +209,16 @@ public static class FinancialControlEndpoints
             return Results.NoContent();
         });
 
+        exceptions.MapPost("/{id:guid}/waive", async (
+            Guid id,
+            WaiveExceptionRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(new WaiveExceptionCommand(id, body.Reason), ct);
+            return Results.NoContent();
+        });
+
         var approvals = app.MapGroup("/api/approvals").WithTags("Approvals");
 
         approvals.MapPost("/", async (RequestApprovalRequest body, ISender sender, CancellationToken ct) =>
@@ -290,6 +306,8 @@ public sealed record OpenExceptionRequest(
 public sealed record ResolveExceptionRequest(string? ResolutionNotes);
 
 public sealed record EscalateExceptionRequest(string EscalationReason);
+
+public sealed record WaiveExceptionRequest(string? Reason);
 
 public sealed record RequestApprovalRequest(
     string ObjectType,

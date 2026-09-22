@@ -22,6 +22,16 @@ public sealed class PaymentAllocation : TenantEntityBase
     /// <summary>Null while FX stub is in use.</summary>
     public Guid? FxRateId { get; set; }
 
+    /// <summary>Amount in the payment currency before conversion.</summary>
+    public decimal? OriginalAmount { get; set; }
+
+    /// <summary>Amount applied to the payable, in the payable currency.</summary>
+    public decimal? SettledAmount { get; set; }
+
+    public decimal? FxRate { get; set; }
+    public string? FxSource { get; set; }
+    public DateOnly? FxRateDate { get; set; }
+
     /// <summary>draft | finalized | reversed</summary>
     public string AllocationStatus { get; set; } = SettlementAllocationStatuses.Draft;
 

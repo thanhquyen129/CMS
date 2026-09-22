@@ -34,6 +34,9 @@ public sealed class Approval : TenantEntityBase
     public string? DecisionReason { get; set; }
 
     public string? Notes { get; set; }
+
+    /// <summary>Amount and version captured when the request was opened.</summary>
+    public string? ObjectFingerprint { get; set; }
 }
 
 public static class ApprovalObjectTypes
@@ -57,4 +60,5 @@ public static class ApprovalStatuses
     public const string Approved = "approved";
     public const string Rejected = "rejected";
     public const string Cancelled = "cancelled";
+    public const string NeedsRereview = "needs_rereview";
 }

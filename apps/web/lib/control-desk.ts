@@ -269,6 +269,10 @@ export function exceptionStatusLabel(
       return term(terms, "EXCEPTION_RESOLVED", "Ngoại lệ đã xử lý");
     case "closed":
       return term(terms, "EXCEPTION_CLOSED", "Ngoại lệ đã đóng");
+    case "waiting":
+      return "Chờ duyệt miễn";
+    case "waived":
+      return "Đã miễn";
     default:
       return status;
   }
@@ -285,6 +289,8 @@ export function approvalStatusLabel(
       return term(terms, "APPROVAL_APPROVED", "Đã phê duyệt");
     case "rejected":
       return term(terms, "APPROVAL_REJECTED", "Từ chối phê duyệt");
+    case "needs_rereview":
+      return "Cần phê duyệt lại";
     default:
       return status;
   }

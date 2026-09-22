@@ -195,3 +195,76 @@ public sealed class EscalateExceptionCommandHandler : IRequestHandler<EscalateEx
         await _db.SaveChangesAsync(cancellationToken);
     }
 }
+
+public sealed record WaiveExceptionCommand(Guid ExceptionId, string? Reason) : IRequest;
+
+public sealed class WaiveExceptionCommandValidator : AbstractValidator<WaiveExceptionCommand>
+{
+    public WaiveExceptionCommandValidator()
+    {
+        RuleFor(x => x.ExceptionId).NotEmpty().WithMessage("Ngoại lệ không hợp lệ.");
+        RuleFor(x => x.Reason).MaximumLength(2048).When(x => x.Reason is not null);
+    }
+}
+
+/// <summary>Critical waiver waits for approval. Other severities waive immediately.</summary>
+public sealed class WaiveExceptionCommandHandler : IRequestHandler<WaiveExceptionCommand>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+    private readonly ICurrentUserContext _user;
+    private readonly ISender _sender;
+
+    public WaiveExceptionCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        ICurrentUserContext user,
+        ISender sender)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+        _user = user;
+        _sender = sender;
+    }
+
+    public async Task Handle(WaiveExceptionCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var entity = await _db.Exceptions
+            .FirstOrDefaultAsync(e => e.Id == request.ExceptionId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy ngoại lệ.");
+
+        if (string.Equals(entity.Status, ExceptionStatuses.Closed, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entity.Status, ExceptionStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(entity.Status, ExceptionStatuses.Waived, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Không miễn ngoại lệ đã đóng, đã hủy hoặc đã miễn.");
+        }
+
+        var reason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim();
+        if (string.Equals(entity.Severity, ExceptionSeverities.Critical, StringComparison.OrdinalIgnoreCase))
+        {
+            entity.Status = ExceptionStatuses.Waiting;
+            entity.ResolutionNotes = reason;
+            await _sender.Send(
+                new LCMS.Application.Approvals.Commands.RequestApprovalCommand(
+                    ApprovalObjectTypes.Exception,
+                    entity.Id,
+                    "Miễn ngoại lệ mức nghiêm trọng",
+                    reason,
+                    1),
+                cancellationToken);
+            return;
+        }
+
+        entity.Status = ExceptionStatuses.Waived;
+        entity.ResolvedAt = DateTimeOffset.UtcNow;
+        entity.ResolvedBy = _user.UserId;
+        entity.ResolutionNotes = reason;
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+}

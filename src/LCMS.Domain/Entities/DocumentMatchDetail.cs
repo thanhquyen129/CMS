@@ -23,6 +23,12 @@ public sealed class DocumentMatchDetail : TenantEntityBase
 
     public decimal MatchedAmount { get; set; }
 
+    /// <summary>matched | matched_with_tolerance</summary>
+    public string OutcomeCode { get; set; } = DocumentMatchOutcomes.Matched;
+
+    /// <summary>Tolerance that was applied when the line was saved.</summary>
+    public decimal AppliedTolerance { get; set; }
+
     /// <summary>active | reversed</summary>
     public string DetailStatus { get; set; } = DocumentMatchDetailStatuses.Active;
 
@@ -35,6 +41,12 @@ public sealed class DocumentMatchDetail : TenantEntityBase
     public FinancialDocumentLine? TargetLine { get; set; }
     public Cost? TargetCost { get; set; }
     public Revenue? TargetRevenue { get; set; }
+}
+
+public static class DocumentMatchOutcomes
+{
+    public const string Matched = "matched";
+    public const string MatchedWithTolerance = "matched_with_tolerance";
 }
 
 public static class DocumentMatchDetailStatuses

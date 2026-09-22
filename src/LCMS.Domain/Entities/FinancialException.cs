@@ -72,4 +72,6 @@ public static class ExceptionStatuses
     public const string Resolved = "resolved";
     public const string Closed = "closed";
     public const string Cancelled = "cancelled";
+    public const string Waiting = "waiting";
+    public const string Waived = "waived";
 }

@@ -10,8 +10,9 @@ public static class SettlementEndpoints
     {
         var payments = app.MapGroup("/api/payments").WithTags("Payments");
 
-        payments.MapPost("/", async (CreatePaymentRequest body, ISender sender, CancellationToken ct) =>
+        payments.MapPost("/", async (CreatePaymentRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var id = await sender.Send(
                 new CreatePaymentCommand(
                     body.Amount,
@@ -20,7 +21,8 @@ public static class SettlementEndpoints
                     body.CounterpartyId,
                     body.BillId,
                     body.ReferenceNo,
-                    body.Notes),
+                    body.Notes,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/payments/{id}", new { id });
         });

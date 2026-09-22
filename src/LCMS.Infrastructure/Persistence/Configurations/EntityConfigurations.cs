@@ -1249,6 +1249,8 @@ internal sealed class DocumentMatchDetailConfiguration : IEntityTypeConfiguratio
         builder.Property(e => e.MatchId).IsRequired();
         builder.Property(e => e.SourceLineId).IsRequired();
         builder.Property(e => e.MatchedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.OutcomeCode).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.AppliedTolerance).HasPrecision(18, 4);
         builder.Property(e => e.DetailStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.ReverseReason).HasMaxLength(512);
 
@@ -1553,6 +1555,10 @@ internal sealed class PaymentAllocationConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.OriginalAmount).HasPrecision(18, 4);
+        builder.Property(e => e.SettledAmount).HasPrecision(18, 4);
+        builder.Property(e => e.FxRate).HasPrecision(18, 8);
+        builder.Property(e => e.FxSource).HasMaxLength(32);
         builder.Property(e => e.ReverseReason).HasMaxLength(1024);
         builder.Property(e => e.Notes).HasMaxLength(2048);
 
@@ -1584,6 +1590,10 @@ internal sealed class CollectionAllocationConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         builder.Property(e => e.AllocationStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.OriginalAmount).HasPrecision(18, 4);
+        builder.Property(e => e.SettledAmount).HasPrecision(18, 4);
+        builder.Property(e => e.FxRate).HasPrecision(18, 8);
+        builder.Property(e => e.FxSource).HasMaxLength(32);
         builder.Property(e => e.ReverseReason).HasMaxLength(1024);
         builder.Property(e => e.Notes).HasMaxLength(2048);
 
@@ -1746,11 +1756,25 @@ internal sealed class ApprovalConfiguration : IEntityTypeConfiguration<Approval>
         builder.Property(e => e.RequestReason).HasMaxLength(2048);
         builder.Property(e => e.DecisionReason).HasMaxLength(2048);
         builder.Property(e => e.Notes).HasMaxLength(2048);
+        builder.Property(e => e.ObjectFingerprint).HasMaxLength(256);
         builder.Property(e => e.RequestedAt).IsRequired();
 
         builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.Status });
         builder.HasIndex(e => new { e.TenantId, e.Status, e.RequestedAt });
         builder.HasIndex(e => new { e.TenantId, e.RequiredLevel, e.CurrentLevel, e.Status });
+    }
+}
+
+internal sealed class IdempotencyRecordConfiguration : IEntityTypeConfiguration<IdempotencyRecord>
+{
+    public void Configure(EntityTypeBuilder<IdempotencyRecord> builder)
+    {
+        builder.ToTable("idempotency_records");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Scope).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Key).HasMaxLength(128).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.Scope, e.Key }).IsUnique();
     }
 }
 

@@ -2,12 +2,21 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { BillPickTable } from "@/components/BillPickTable";
 import { CreateRevenueForm } from "@/components/CreateRevenueForm";
+import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import { listBills } from "@/lib/bills";
+import { getBill, listBills } from "@/lib/bills";
+import {
+  billTypeLabel,
+  operationalStatusLabel,
+  operationalStatusPillClass,
+  transportModeLabel,
+} from "@/lib/bills-shared";
+import { formatDateVi } from "@/lib/money";
 
-type SearchParams = Promise<{ billId?: string }>;
+type SearchParams = Promise<{ billId?: string; q?: string }>;
 
 export default async function NewRevenuePage({
   searchParams,
@@ -19,35 +28,126 @@ export default async function NewRevenuePage({
     redirect("/login");
   }
 
-  const { billId } = await searchParams;
+  const { billId, q } = await searchParams;
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
-  const bills = await listBills(undefined, { page: 1, pageSize: 50 });
+  const revenueLabel = term(terms, "REVENUE", "Doanh thu");
+  const costLabel = term(terms, "COST", "Chi phí");
+  const profitLabel = term(terms, "PROFIT", "Lợi nhuận");
+
+  const bills = await listBills(q?.trim() || undefined, {
+    page: 1,
+    pageSize: 50,
+  });
+
+  const selectedRes = billId ? await getBill(billId) : null;
+  const selected = selectedRes?.ok ? selectedRes.data : null;
 
   return (
     <AppShell terms={terms} active="revenues">
       <section className="panel panel-wide">
-        <p className="meta-line">
-          <Link href="/revenues">Danh sách doanh thu</Link>
-          <span aria-hidden="true"> / </span>
-          <span>Tạo doanh thu</span>
-        </p>
-        <h1>Tạo doanh thu</h1>
-        <p className="lede">Doanh thu kinh tế gắn một {billLabel}. Chia nhiều {billLabel} sau khi ghi.</p>
+        <ListPageHeader
+          breadcrumbs={[
+            { href: "/dashboard", label: "Trang chủ" },
+            { href: "/revenues", label: "Danh sách doanh thu" },
+            { label: "Tạo doanh thu" },
+          ]}
+          title="Tạo doanh thu"
+          lede={`Doanh thu kinh tế gắn một ${billLabel}. Chọn ${billLabel} như danh sách vận đơn, rồi nhập số tiền. Chia nhiều ${billLabel} sau khi ghi.`}
+        />
+
         {!bills.ok ? (
-          <div className="alert alert-error" role="alert">{bills.message}</div>
-        ) : (
-          <ul className="inline-list">
-            {bills.data.items.map((bill) => (
-              <li key={bill.id}>
-                <Link className={bill.id === billId ? "row-link" : undefined} href={`/revenues/new?billId=${bill.id}`}>
-                  {bill.billNo}
+          <div className="alert alert-error" role="alert">
+            {bills.message}
+          </div>
+        ) : null}
+
+        {billId && selected ? (
+          <fieldset className="group-box">
+            <legend>{billLabel} đã chọn</legend>
+            <div className="detail-head" style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+              <div>
+                <p style={{ margin: 0 }}>
+                  <Link className="row-link" href={`/bills/${selected.id}`}>
+                    <strong>{selected.billNo}</strong>
+                  </Link>{" "}
+                  <span className={operationalStatusPillClass(selected.operationalStatus)}>
+                    {operationalStatusLabel(selected.operationalStatus)}
+                  </span>
+                </p>
+                <p className="meta-line" style={{ marginTop: "0.35rem" }}>
+                  {selected.customerName ?? "—"}
+                  {" · "}
+                  {selected.routeCode ?? "—"}
+                  {" · "}
+                  {selected.transportMode
+                    ? transportModeLabel(selected.transportMode)
+                    : billTypeLabel(selected.billType)}
+                  {" · "}
+                  Ngày tạo: {formatDateVi(selected.createdAt)}
+                </p>
+              </div>
+              <div className="toolbar-row">
+                <Link className="btn btn-secondary" href="/revenues/new">
+                  Đổi {billLabel}
                 </Link>
-              </li>
-            ))}
-          </ul>
+                <Link className="btn btn-ghost" href={`/bills/${selected.id}`}>
+                  Hồ sơ {billLabel}
+                </Link>
+              </div>
+            </div>
+          </fieldset>
+        ) : null}
+
+        {billId && !selected ? (
+          <div className="alert alert-error" role="alert">
+            Không tìm thấy {billLabel}. Chọn lại từ danh sách.
+          </div>
+        ) : null}
+
+        {billId && selected ? (
+          <CreateRevenueForm terms={terms} billId={billId} />
+        ) : (
+          <>
+            <form className="filter-bar" method="get" action="/revenues/new">
+              <label className="field grow">
+                <span className="sr-only">Tìm {billLabel}</span>
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={q ?? ""}
+                  placeholder={`Tìm theo số ${billLabel}, khách hàng, tuyến…`}
+                />
+              </label>
+              <button type="submit" className="btn">
+                Tìm
+              </button>
+              {q ? (
+                <Link className="btn btn-ghost" href="/revenues/new">
+                  Xóa lọc
+                </Link>
+              ) : null}
+            </form>
+            {bills.ok ? (
+              <BillPickTable
+                bills={bills.data.items}
+                totalCount={bills.data.totalCount}
+                billLabel={billLabel}
+                revenueLabel={revenueLabel}
+                costLabel={costLabel}
+                profitLabel={profitLabel}
+                selectedId={billId}
+                pickHrefBase="/revenues/new"
+                emptyMessage={
+                  q
+                    ? `Không có ${billLabel} khớp bộ lọc.`
+                    : `Chưa có ${billLabel}. Tạo ${billLabel} trước khi ghi doanh thu.`
+                }
+              />
+            ) : null}
+            <p className="note">Chọn một dòng {billLabel} để mở form tạo doanh thu.</p>
+          </>
         )}
-        {billId ? <CreateRevenueForm terms={terms} billId={billId} /> : <p className="note">Chọn {billLabel} trước khi nhập số tiền.</p>}
       </section>
     </AppShell>
   );

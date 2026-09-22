@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-09-22 — Fix UI tạo doanh thu: chọn Bill dạng danh sách
+
+### User
+trang tạo doanh thu đang bị lỗi hiển thị. Đề xuất hiển thị như mockup danh sách bill
+
+### Answer
+`/revenues/new` trước đây dump `<ul class="inline-list">` toàn số Bill (VOL-BILL-…) không bảng. Đổi thành bảng chọn Bill theo cột UI-02 (số Bill, khách, tuyến, loại, ngày, trạng thái, DT/CP/LN + nút Chọn). Có ô tìm. Khi đã chọn: thẻ Bill + form tạo; nút Đổi Bill quay lại bảng.
+
+### Files
+- `apps/web/components/BillPickTable.tsx`
+- `apps/web/app/revenues/new/page.tsx`
+
 ## 2026-09-22 — Gói H: policy, idempotency, observability, 09B
 
 ### User

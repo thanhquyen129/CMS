@@ -235,7 +235,7 @@ export default async function BillsPage({
                 value: formatMoney(sumRevExpected, rollCurrency),
                 tone: "success",
                 icon: <KpiGlyph name="revenue" />,
-                hint: "Best-available trên bộ lọc. Không cộng gộp đa tiền tệ.",
+                hint: "Không cộng gộp đa tiền tệ trên cùng một ô.",
               },
               {
                 key: "rev-c",

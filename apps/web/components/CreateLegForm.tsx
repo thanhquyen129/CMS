@@ -301,8 +301,8 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
           hint="Xác nhận số chặng và lô hàng trước khi lưu"
         >
           <p className="muted small">
-            Sau khi lưu, gắn Bill trên hồ sơ chặng nếu cần. Gỡ liên kết (unlink) chưa có trên
-            phiên bản này.
+            Sau khi lưu, gắn Bill trên hồ sơ chặng nếu cần. Gỡ liên kết trực tiếp thực hiện từ
+            hồ sơ Bill (Financial View).
           </p>
         </CreateSection>
       </CreateWorkspace>

@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-09-22 — UAT Pixel Wave 2 (admin demo) + hotfix slug
+
+### User
+user demo: admin@cms.local (password local-only) — chạy UAT.
+
+### Answer
+Prod web 500 do slug `billId`≠`id` → fix `0a2df35` + rebuild VPS; CI success. Đăng nhập demo → walk UI-01…15 + Wave 2; điền `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md`. P0 Fail = 0 trên phần đã chạy. Blocked: UX-04/06. Not run: UX-07/10/12/13. Residual P1: “Best Available” EN; help text unlink trên legs/new lệch. **Không** ghi password.
+
+### Files
+- `apps/web/app/bff/bills/[id]/legs|movements|shipments/…` (slug fix)
+- `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md`, `docs/uat/evidence-2026-09-22/README.md`
+
 ## 2026-09-22 — Hotfix: Next.js slug `billId` ≠ `id` làm web 500
 
 ### User

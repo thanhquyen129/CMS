@@ -236,8 +236,8 @@ export function CreateMovementForm() {
           hint="Xác nhận số chuyến trước khi lưu"
         >
           <p className="muted small">
-            Sau khi lưu, gắn Bill trên hồ sơ chuyến nếu cần. Gỡ liên kết (unlink) chưa có trên
-            phiên bản này.
+            Sau khi lưu, gắn Bill trên hồ sơ chuyến nếu cần. Gỡ liên kết trực tiếp thực hiện từ
+            hồ sơ Bill (Financial View).
           </p>
         </CreateSection>
       </CreateWorkspace>

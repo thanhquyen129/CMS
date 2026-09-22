@@ -237,7 +237,7 @@ export default async function DashboardPage() {
                 <div>
                   <h4>Tổng {costLabel.toLowerCase()}</h4>
                   <div className="big">{formatMoney(costAmt, currency)}</div>
-                  <small>Best Available · {currency}</small>
+                  <small>{bestAvailableLabel} · {currency}</small>
                 </div>
               </div>
             ) : null}
@@ -253,7 +253,7 @@ export default async function DashboardPage() {
                 <div>
                   <h4>Tổng {revenueLabel.toLowerCase()}</h4>
                   <div className="big">{formatMoney(revAmt, currency)}</div>
-                  <small>Best Available · {currency}</small>
+                  <small>{bestAvailableLabel} · {currency}</small>
                 </div>
               </div>
             ) : null}
@@ -271,7 +271,7 @@ export default async function DashboardPage() {
                   <div className={`big${profitAmt < 0 ? " is-neg" : ""}`}>
                     {formatMoney(profitAmt, currency)}
                   </div>
-                  <small>DT − CP (Best Available)</small>
+                  <small>DT − CP ({bestAvailableLabel})</small>
                 </div>
               </div>
             ) : null}
@@ -370,7 +370,7 @@ export default async function DashboardPage() {
                 {vis.canViewCost ? "▰ Chi phí" : null}
                 {vis.canViewCost && vis.canViewRevenue ? "  " : null}
                 {vis.canViewRevenue ? "▰ Doanh thu" : null}
-                {vis.canViewMargin ? "  ● Lợi nhuận (Best Available)" : null}
+                {vis.canViewMargin ? `  ● Lợi nhuận (${bestAvailableLabel})` : null}
               </div>
               {(vis.canViewCost || vis.canViewRevenue) &&
               (costAmt !== 0 || revAmt !== 0) ? (

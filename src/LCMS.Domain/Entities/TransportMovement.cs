@@ -17,5 +17,11 @@ public sealed class TransportMovement : TenantEntityBase
     public string OperationalStatus { get; set; } = "active";
     public bool IsActive { get; set; } = true;
 
+    public DateTimeOffset? MovementOn { get; set; }
+    public Guid? CarrierPartyId { get; set; }
+    public Guid? OriginLocationId { get; set; }
+    public Guid? DestinationLocationId { get; set; }
+    public string? TransportMode { get; set; }
+
     public Tenant? Tenant { get; set; }
 }

@@ -140,3 +140,73 @@ internal sealed class OperationalPartySnapshotConfiguration : IEntityTypeConfigu
         builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.RoleCode, e.SupersededAt });
     }
 }
+
+internal sealed class OperationalMeasurementConfiguration : IEntityTypeConfiguration<OperationalMeasurement>
+{
+    public void Configure(EntityTypeBuilder<OperationalMeasurement> builder)
+    {
+        builder.ToTable("operational_measurements");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ObjectId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.MeasureCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Quantity).HasPrecision(18, 4);
+        builder.Property(e => e.Uom).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.SourceChannel).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.RuleCode).HasMaxLength(64);
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.MeasureCode })
+            .IsUnique()
+            .HasFilter("deleted_at IS NULL");
+    }
+}
+
+internal sealed class CargoPackageConfiguration : IEntityTypeConfiguration<CargoPackage>
+{
+    public void Configure(EntityTypeBuilder<CargoPackage> builder)
+    {
+        builder.ToTable("cargo_packages");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ObjectId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.LengthCm).HasPrecision(18, 4);
+        builder.Property(e => e.WidthCm).HasPrecision(18, 4);
+        builder.Property(e => e.HeightCm).HasPrecision(18, 4);
+        builder.Property(e => e.WeightKg).HasPrecision(18, 4);
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.SequenceNo });
+    }
+}
+
+internal sealed class CargoContainerConfiguration : IEntityTypeConfiguration<CargoContainer>
+{
+    public void Configure(EntityTypeBuilder<CargoContainer> builder)
+    {
+        builder.ToTable("cargo_containers");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ObjectId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ContainerType).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.ContainerNo).HasMaxLength(32);
+        builder.Property(e => e.Teu).HasPrecision(18, 4);
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.SequenceNo });
+    }
+}
+
+internal sealed class FieldOwnershipConfiguration : IEntityTypeConfiguration<FieldOwnership>
+{
+    public void Configure(EntityTypeBuilder<FieldOwnership> builder)
+    {
+        builder.ToTable("field_ownerships");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ObjectId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.FieldName).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.OwnerSystem).HasMaxLength(64).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.FieldName })
+            .IsUnique()
+            .HasFilter("deleted_at IS NULL");
+    }
+}

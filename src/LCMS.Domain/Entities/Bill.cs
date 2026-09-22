@@ -59,5 +59,14 @@ public sealed class Bill : TenantEntityBase
     /// <summary>Rating extras from create Bill (service, incoterm, currency) — not ledger amounts.</summary>
     public string? ContextJson { get; set; }
 
+    public DateTimeOffset? BillDate { get; set; }
+    public string? ServiceTypeCode { get; set; }
+    public string? IncotermCode { get; set; }
+    public string? PreferredCurrency { get; set; }
+    public Guid? CommodityTypeId { get; set; }
+    public string? MasterBillNo { get; set; }
+    public string? RateDatePolicy { get; set; }
+    public Guid? VendorPartyId { get; set; }
+
     public Tenant? Tenant { get; set; }
 }

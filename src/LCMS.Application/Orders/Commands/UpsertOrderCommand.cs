@@ -80,19 +80,22 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
     private readonly IPartyDirectoryService _parties;
     private readonly ICanonicalPlaceBinder _places;
     private readonly IPartySnapshotCapture _snapshots;
+    private readonly IOperationalCargoStore _cargo;
 
     public UpsertOrderCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IPartyDirectoryService parties,
         ICanonicalPlaceBinder places,
-        IPartySnapshotCapture snapshots)
+        IPartySnapshotCapture snapshots,
+        IOperationalCargoStore cargo)
     {
         _db = db;
         _tenantContext = tenantContext;
         _parties = parties;
         _places = places;
         _snapshots = snapshots;
+        _cargo = cargo;
     }
 
     public async Task<Guid> Handle(UpsertOrderCommand request, CancellationToken cancellationToken)
@@ -147,6 +150,12 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
             {
                 await _snapshots.CapturePartyAsync(PartySnapshotObjectTypes.Order, order.Id, PartyRoleCodes.Customer, newCustomer, cancellationToken);
             }
+
+            if (request.ApplyContext)
+            {
+                await _cargo.ApplyAsync(OperationalObjectTypes.Order, order.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
+            }
+
             try
             {
                 await _db.SaveChangesAsync(cancellationToken);
@@ -180,6 +189,11 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
         if (request.ApplyContext && existing.CustomerPartyId is Guid customer)
         {
             await _snapshots.CapturePartyAsync(PartySnapshotObjectTypes.Order, existing.Id, PartyRoleCodes.Customer, customer, cancellationToken);
+        }
+
+        if (request.ApplyContext)
+        {
+            await _cargo.ApplyAsync(OperationalObjectTypes.Order, existing.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);

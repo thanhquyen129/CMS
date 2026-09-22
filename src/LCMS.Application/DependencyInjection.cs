@@ -9,6 +9,7 @@ using LCMS.Application.FinancialControl;
 using LCMS.Application.FinancialDocuments;
 using LCMS.Application.Fx;
 using LCMS.Application.Identity;
+using LCMS.Application.OperationalReferences;
 using LCMS.Application.Reconciliations;
 using LCMS.Application.ReferenceMasters;
 using LCMS.Application.Revenues;
@@ -33,6 +34,8 @@ public static class DependencyInjection
         services.AddScoped<ICanonicalPlaceBinder, CanonicalPlaceBinder>();
         services.AddScoped<IPartySnapshotCapture, PartySnapshotCapture>();
         services.AddScoped<IBillPartyPolicyStore, BillPartyPolicyStore>();
+        services.AddScoped<IOperationalCargoStore, OperationalCargoStore>();
+        services.AddScoped<OperationalImportBatch>();
         services.AddScoped<ITenantSettingsService, TenantSettingsService>();
         services.AddScoped<TenantFinancialOptionsResolver>();
 

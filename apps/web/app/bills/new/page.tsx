@@ -26,6 +26,7 @@ export default async function NewBillPage() {
           vendors={opts.vendors}
           orderHits={opts.orderHits}
           shipmentHits={opts.shipmentHits}
+          commodities={opts.commodities}
         />
       </section>
     </AppShell>

@@ -20,6 +20,12 @@ public sealed class TransportLeg : TenantEntityBase
     public string OperationalStatus { get; set; } = "active";
     public bool IsActive { get; set; } = true;
 
+    public int SequenceNo { get; set; }
+    public Guid? OriginLocationId { get; set; }
+    public Guid? DestinationLocationId { get; set; }
+    public string? OriginCode { get; set; }
+    public string? DestinationCode { get; set; }
+
     public Tenant? Tenant { get; set; }
     public Shipment? Shipment { get; set; }
 }

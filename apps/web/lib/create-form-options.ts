@@ -1,6 +1,6 @@
 import { listAccessUsers } from "@/lib/access";
 import { listCatalog } from "@/lib/catalog";
-import { listLocations, listRoutes } from "@/lib/reference-masters";
+import { listLocations, listRoutes, listCommodities } from "@/lib/reference-masters";
 import { catalogToOptions, type CatalogOption } from "@/lib/create-workspace";
 import { listCurrencies } from "@/lib/master-data";
 import { listBills } from "@/lib/bills";
@@ -22,6 +22,7 @@ export type CreateFormOptions = {
   orderHits: RefHit[];
   billHits: RefHit[];
   shipmentHits: RefHit[];
+  commodities: CatalogOption[];
 };
 
 /** Loads catalog/users/refs for UI-02 create screens. */
@@ -38,6 +39,7 @@ export async function loadCreateFormOptions(): Promise<CreateFormOptions> {
     orders,
     bills,
     shipments,
+    commodities,
   ] = await Promise.all([
     listCatalog("transport_mode"),
     listLocations(true),
@@ -50,6 +52,7 @@ export async function loadCreateFormOptions(): Promise<CreateFormOptions> {
     listOrders(),
     listBills(undefined, { page: 1, pageSize: 30 }),
     listShipments(),
+    listCommodities(true),
   ]);
 
   return {
@@ -90,6 +93,9 @@ export async function loadCreateFormOptions(): Promise<CreateFormOptions> {
       : [],
     shipmentHits: shipments.ok
       ? shipments.data.slice(0, 20).map((s) => ({ id: s.id, code: s.shipmentNo, title: s.routeCode ?? undefined }))
+      : [],
+    commodities: commodities.ok
+      ? commodities.data.filter((c) => c.isActive).map((c) => ({ value: c.id, label: `${c.code} — ${c.name}` }))
       : [],
   };
 }

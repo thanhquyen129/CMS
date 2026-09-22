@@ -34,5 +34,13 @@ public sealed class Shipment : TenantEntityBase
     /// <summary>Remaining create-form fields (cargo totals, rating notes) as JSON.</summary>
     public string? ContextJson { get; set; }
 
+    public Guid? OriginLocationId { get; set; }
+    public Guid? DestinationLocationId { get; set; }
+    public Guid? RouteId { get; set; }
+    public Guid? CarrierPartyId { get; set; }
+    public string? ServiceTypeCode { get; set; }
+    public Guid? CommodityTypeId { get; set; }
+    public string? CarrierName { get; set; }
+
     public Tenant? Tenant { get; set; }
 }

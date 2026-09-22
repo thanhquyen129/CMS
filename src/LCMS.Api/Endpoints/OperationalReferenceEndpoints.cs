@@ -255,6 +255,28 @@ public static class OperationalReferenceEndpoints
             return Results.Ok(hits);
         }).WithTags("Search");
 
+        var imports = app.MapGroup("/api/operational-import").WithTags("OperationalImport");
+        imports.MapPost("/preview", async (OperationalImportRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var preview = await sender.Send(new PreviewOperationalImportCommand(body.SourceSystem, body.Rows), ct);
+            return Results.Ok(preview);
+        });
+        imports.MapPost("/commit", async (OperationalImportRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var count = await sender.Send(new CommitOperationalImportCommand(body.SourceSystem, body.Rows), ct);
+            return Results.Ok(new { committed = count });
+        });
+        imports.MapPost("/packages", async (AddCargoPackageCommand body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(body, ct);
+            return Results.Created($"/api/operational-import/packages/{id}", new { id });
+        });
+        imports.MapPost("/containers", async (AddCargoContainerCommand body, ISender sender, CancellationToken ct) =>
+        {
+            var id = await sender.Send(body, ct);
+            return Results.Created($"/api/operational-import/containers/{id}", new { id });
+        });
+
         return app;
     }
 }
@@ -314,3 +336,7 @@ public sealed record UpsertTransportMovementRequest(
     string? ExternalVersion,
     string? OperationalStatus,
     bool? IsActive);
+
+public sealed record OperationalImportRequest(
+    string SourceSystem,
+    IReadOnlyList<OperationalImportRow> Rows);

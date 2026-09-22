@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-22 — Gói B: đo lường, hàng hóa, sở hữu trường, nhập liệu
+
+### User
+làm tiếp gói B ở mức pixel-perfect
+
+### Answer
+Gói B (W-B1…B9) xong. Form tạo Bill, đơn hàng và Shipment giữ đúng các mục mockup UI-02. Loại hàng là danh sách canonical. Dưới trọng lượng tính cước có dòng “Có thể được hệ thống tính theo cấu hình nghiệp vụ.” Mô tả hàng hóa nằm trong khối hàng của Bill và đơn hàng. Ô lý do ghi đè nằm sau khối đó.
+
+Số đo (kiện, kg, CBM, trọng lượng tính cước, container, TEU) thành dòng `operational_measurements`. Trọng lượng tính cước đã xác nhận không đổi nếu số mới khác mà không có lý do. Kiện và container là bản ghi con, không vẽ lưới dòng trên màn tạo. Trường `origin_code` do hệ thống ngoài ghi lần đầu thì LCMS sửa phải có lý do; lưu lại mà không đụng trường đó thì không chặn. Nhập tệp: xem trước từng dòng, có lỗi thì không ghi gì; mã ngoài trùng thì cập nhật. Liên kết Order–Bill, Bill–Shipment, Bill–chặng, Bill–chuyến, chặng–chuyến ghi audit `link.create` khi tạo mới.
+
+Gói C chưa làm.
+
+### Files / API / schema
+- Bảng: `operational_measurements`, `cargo_packages`, `cargo_containers`, `field_ownerships`
+- Cột Bill: `bill_date`, `service_type_code`, `incoterm_code`, `preferred_currency`, `commodity_type_id`, `master_bill_no`, `rate_date_policy`, `vendor_party_id`
+- Cột Order: `order_date`, `service_type_code`, `incoterm_code`, `requested_at`, `commodity_type_id`, `contact_name`, `contact_channel`, `pickup_place`, `delivery_place`
+- Cột Shipment: `service_type_code`, `commodity_type_id`, `carrier_name`, `carrier_party_id`, `origin_location_id`, `destination_location_id`, `route_id`
+- Cột chặng: `sequence_no`, `origin_code`, `destination_code`, location ids
+- Cột chuyến: `movement_on`, `carrier_party_id`, `transport_mode`, location ids
+- Migration `20260922041527_OperationalCargoAndFieldOwnership`
+- API: `POST /api/operational-import/preview`, `/commit`, `/packages`, `/containers`
+- ADR-0024
+- UI: `CreateCargoFields` — select loại hàng, gợi ý trọng lượng tính cước, xác nhận, lý do ghi đè
+
+### UI
+Ba màn `/bills/new`, `/orders/new`, `/shipments/new`. Không thêm lưới kiện. Chưa bấm được trên trình duyệt (cần đăng nhập); `next build` là bước kiểm UI.
+
+---
+
 ## 2026-09-22 — Gói A: địa điểm, tuyến, loại hàng, vai trò Bill, snapshot đối tác
 
 ### User

@@ -23,6 +23,7 @@ export default async function NewOrderPage() {
           services={opts.services}
           billHits={opts.billHits}
           shipmentHits={opts.shipmentHits}
+          commodities={opts.commodities}
         />
       </section>
     </AppShell>

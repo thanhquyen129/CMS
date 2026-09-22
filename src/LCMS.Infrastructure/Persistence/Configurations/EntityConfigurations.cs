@@ -94,6 +94,13 @@ internal sealed class BillConfiguration : IEntityTypeConfiguration<Bill>
         builder.Property(e => e.DestinationCode).HasMaxLength(64);
         builder.Property(e => e.CustomerReference).HasMaxLength(128);
         builder.Property(e => e.ContextJson).HasColumnType("text");
+        builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
+        builder.Property(e => e.IncotermCode).HasMaxLength(8);
+        builder.Property(e => e.PreferredCurrency).HasMaxLength(3);
+        builder.Property(e => e.MasterBillNo).HasMaxLength(64);
+        builder.Property(e => e.RateDatePolicy).HasMaxLength(32);
+        builder.Property(e => e.CommodityTypeId).HasColumnType("uuid");
+        builder.Property(e => e.VendorPartyId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
         builder.HasIndex(e => new { e.TenantId, e.CustomerPartyId });
         builder.HasIndex(e => new { e.TenantId, e.OriginLocationId });
@@ -616,8 +623,13 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(e => e.CustomerReference).HasMaxLength(128);
         builder.Property(e => e.Description).HasMaxLength(2000);
         builder.Property(e => e.ContextJson).HasColumnType("text");
-
-        // C-002 / sync idempotency — unique external identity per tenant
+        builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
+        builder.Property(e => e.IncotermCode).HasMaxLength(8);
+        builder.Property(e => e.ContactName).HasMaxLength(256);
+        builder.Property(e => e.ContactChannel).HasMaxLength(256);
+        builder.Property(e => e.PickupPlace).HasMaxLength(256);
+        builder.Property(e => e.DeliveryPlace).HasMaxLength(256);
+        builder.Property(e => e.CommodityTypeId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.OrderNo });
         builder.HasIndex(e => new { e.TenantId, e.CustomerPartyId });
@@ -651,9 +663,15 @@ internal sealed class ShipmentConfiguration : IEntityTypeConfiguration<Shipment>
         builder.Property(e => e.CustomerReference).HasMaxLength(128);
         builder.Property(e => e.Description).HasMaxLength(2000);
         builder.Property(e => e.ContextJson).HasColumnType("text");
-
-        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
+        builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
+        builder.Property(e => e.CarrierName).HasMaxLength(256);
+        builder.Property(e => e.OriginLocationId).HasColumnType("uuid");
+        builder.Property(e => e.DestinationLocationId).HasColumnType("uuid");
+        builder.Property(e => e.RouteId).HasColumnType("uuid");
+        builder.Property(e => e.CarrierPartyId).HasColumnType("uuid");
+        builder.Property(e => e.CommodityTypeId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.ShipmentNo });
+        builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.TransportMode });
 
         builder.HasOne(e => e.Tenant)
@@ -732,8 +750,11 @@ internal sealed class TransportLegConfiguration : IEntityTypeConfiguration<Trans
         builder.Property(e => e.ExternalVersion).HasMaxLength(64);
         builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.OriginCode).HasMaxLength(64);
+        builder.Property(e => e.DestinationCode).HasMaxLength(64);
+        builder.Property(e => e.OriginLocationId).HasColumnType("uuid");
+        builder.Property(e => e.DestinationLocationId).HasColumnType("uuid");
 
-        // C-002
         builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.ShipmentId });
         builder.HasIndex(e => new { e.TenantId, e.LegNo });
@@ -764,6 +785,10 @@ internal sealed class TransportMovementConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.ExternalVersion).HasMaxLength(64);
         builder.Property(e => e.OperationalStatus).HasMaxLength(64).IsRequired();
         builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.CarrierPartyId).HasColumnType("uuid");
+        builder.Property(e => e.OriginLocationId).HasColumnType("uuid");
+        builder.Property(e => e.DestinationLocationId).HasColumnType("uuid");
 
         // C-002
         builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();

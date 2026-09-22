@@ -34,6 +34,7 @@ type Props = {
   vendors: CatalogOption[];
   orderHits: RefHit[];
   shipmentHits: RefHit[];
+  commodities: CatalogOption[];
 };
 
 /** UI-02 Tạo Bill — Financial Anchor; does not create cost/revenue. */
@@ -47,6 +48,7 @@ export function CreateBillWorkspaceForm({
   vendors,
   orderHits,
   shipmentHits,
+  commodities,
 }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
@@ -162,7 +164,9 @@ export function CreateBillWorkspaceForm({
             chargeableWeightKg: formNum(fd, "chargeableWeightKg"),
             containerCount: formInt(fd, "containerCount"),
             teu: formNum(fd, "teu"),
-            commodity: formStr(fd, "commodity"),
+            commodityTypeId: formStr(fd, "commodityTypeId"),
+            chargeableConfirmed: fd.get("chargeableConfirmed") === "true",
+            chargeableOverrideReason: formStr(fd, "chargeableOverrideReason"),
             specialFlags: formChecks(fd, "specialFlags"),
             cargoDescription: formStr(fd, "cargoDescription"),
             masterBillNo: formStr(fd, "masterBillNo"),
@@ -375,13 +379,11 @@ export function CreateBillWorkspaceForm({
         </CreateSection>
 
         <CreateSection title="3. Thông tin hàng hóa & đo lường" hint="Dữ liệu phục vụ rating context và phân bổ chi phí/doanh thu">
-          <CreateCargoFields disabled={submitting} />
-          <div className="create-grid" style={{ marginTop: 11 }}>
-            <div className="cw-field s12">
-              <label htmlFor="cargoDescription">Mô tả hàng hóa</label>
-              <textarea id="cargoDescription" name="cargoDescription" disabled={submitting} placeholder="Tên hàng, quy cách đóng gói, đặc tính cần lưu ý..." />
-            </div>
-          </div>
+          <CreateCargoFields
+            disabled={submitting}
+            commodities={commodities}
+            descriptionPlaceholder="Tên hàng, quy cách đóng gói, đặc tính cần lưu ý..."
+          />
         </CreateSection>
 
         <CreateSection title="4. Liên kết nghiệp vụ" hint="Bill có thể liên kết nhiều Order và nhiều Shipment">

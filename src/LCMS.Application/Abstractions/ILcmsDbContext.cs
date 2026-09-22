@@ -27,6 +27,10 @@ public interface ILcmsDbContext
     DbSet<RouteStop> RouteStops { get; }
     DbSet<CommodityType> CommodityTypes { get; }
     DbSet<OperationalPartySnapshot> OperationalPartySnapshots { get; }
+    DbSet<OperationalMeasurement> OperationalMeasurements { get; }
+    DbSet<CargoPackage> CargoPackages { get; }
+    DbSet<CargoContainer> CargoContainers { get; }
+    DbSet<FieldOwnership> FieldOwnerships { get; }
     DbSet<Cost> Costs { get; }
     DbSet<CostAdjustment> CostAdjustments { get; }
     DbSet<CostAllocation> CostAllocations { get; }

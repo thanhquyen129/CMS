@@ -76,6 +76,7 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
     private readonly IPartySnapshotCapture _snapshots;
     private readonly IBillPartyPolicyStore _partyPolicy;
     private readonly ICanonicalPlaceBinder _places;
+    private readonly IOperationalCargoStore _cargo;
 
     public UpdateBillContextCommandHandler(
         ILcmsDbContext db,
@@ -86,7 +87,8 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         IPartyDirectoryService parties,
         IPartySnapshotCapture snapshots,
         IBillPartyPolicyStore partyPolicy,
-        ICanonicalPlaceBinder places)
+        ICanonicalPlaceBinder places,
+        IOperationalCargoStore cargo)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -97,6 +99,7 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         _snapshots = snapshots;
         _partyPolicy = partyPolicy;
         _places = places;
+        _cargo = cargo;
     }
 
     public async Task Handle(UpdateBillContextCommand request, CancellationToken cancellationToken)
@@ -207,6 +210,16 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
 
         await BillPartyRoles.EnsureRequiredAsync(bill, await _partyPolicy.GetAsync(cancellationToken), cancellationToken);
         await BillPartyRoles.CaptureAsync(bill, _parties, _snapshots, cancellationToken);
+        if (request.ApplyExtendedContext)
+        {
+            await _cargo.ApplyAsync(
+                OperationalObjectTypes.Bill,
+                bill.Id,
+                request.Context,
+                OperationalSourceSystems.LcmsManual,
+                request.OriginCode is not null || request.DestinationCode is not null,
+                cancellationToken);
+        }
 
         await _db.SaveChangesAsync(cancellationToken);
     }

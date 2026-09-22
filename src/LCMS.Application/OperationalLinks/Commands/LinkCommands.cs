@@ -22,11 +22,13 @@ public sealed class LinkOrderToBillCommandHandler : IRequestHandler<LinkOrderToB
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public LinkOrderToBillCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public LinkOrderToBillCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(LinkOrderToBillCommand request, CancellationToken cancellationToken)
@@ -68,6 +70,7 @@ public sealed class LinkOrderToBillCommandHandler : IRequestHandler<LinkOrderToB
             BillId = request.BillId
         };
         _db.OrderBillLinks.Add(link);
+        _audit.Append(AuditActions.LinkCreate, AuditObjectTypes.OperationalLink, link.Id, afterJson: $"{request.OrderId}:{request.BillId}");
         try
         {
             await _db.SaveChangesAsync(cancellationToken);
@@ -106,11 +109,13 @@ public sealed class LinkBillToShipmentCommandHandler : IRequestHandler<LinkBillT
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public LinkBillToShipmentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public LinkBillToShipmentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(LinkBillToShipmentCommand request, CancellationToken cancellationToken)
@@ -152,6 +157,7 @@ public sealed class LinkBillToShipmentCommandHandler : IRequestHandler<LinkBillT
             ShipmentId = request.ShipmentId
         };
         _db.BillShipmentLinks.Add(link);
+        _audit.Append(AuditActions.LinkCreate, AuditObjectTypes.OperationalLink, link.Id, afterJson: $"{request.BillId}:{request.ShipmentId}");
         try
         {
             await _db.SaveChangesAsync(cancellationToken);

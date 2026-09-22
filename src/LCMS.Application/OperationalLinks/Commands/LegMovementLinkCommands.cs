@@ -22,11 +22,13 @@ public sealed class LinkBillToLegCommandHandler : IRequestHandler<LinkBillToLegC
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public LinkBillToLegCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public LinkBillToLegCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(LinkBillToLegCommand request, CancellationToken cancellationToken)
@@ -66,6 +68,7 @@ public sealed class LinkBillToLegCommandHandler : IRequestHandler<LinkBillToLegC
             TransportLegId = request.TransportLegId
         };
         _db.BillLegLinks.Add(link);
+        _audit.Append(AuditActions.LinkCreate, AuditObjectTypes.OperationalLink, link.Id, afterJson: $"{request.BillId}:{request.TransportLegId}");
         try
         {
             await _db.SaveChangesAsync(cancellationToken);
@@ -104,11 +107,13 @@ public sealed class LinkLegToMovementCommandHandler : IRequestHandler<LinkLegToM
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public LinkLegToMovementCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public LinkLegToMovementCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(LinkLegToMovementCommand request, CancellationToken cancellationToken)
@@ -148,6 +153,7 @@ public sealed class LinkLegToMovementCommandHandler : IRequestHandler<LinkLegToM
             TransportMovementId = request.TransportMovementId
         };
         _db.LegMovementLinks.Add(link);
+        _audit.Append(AuditActions.LinkCreate, AuditObjectTypes.OperationalLink, link.Id, afterJson: $"{request.TransportLegId}:{request.TransportMovementId}");
         try
         {
             await _db.SaveChangesAsync(cancellationToken);
@@ -186,11 +192,13 @@ public sealed class LinkBillToMovementCommandHandler : IRequestHandler<LinkBillT
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public LinkBillToMovementCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public LinkBillToMovementCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(LinkBillToMovementCommand request, CancellationToken cancellationToken)
@@ -230,6 +238,7 @@ public sealed class LinkBillToMovementCommandHandler : IRequestHandler<LinkBillT
             TransportMovementId = request.TransportMovementId
         };
         _db.BillMovementLinks.Add(link);
+        _audit.Append(AuditActions.LinkCreate, AuditObjectTypes.OperationalLink, link.Id, afterJson: $"{request.BillId}:{request.TransportMovementId}");
         try
         {
             await _db.SaveChangesAsync(cancellationToken);

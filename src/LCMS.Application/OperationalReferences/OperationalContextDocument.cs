@@ -37,6 +37,9 @@ public sealed class OperationalContextDocument
     public DateTimeOffset? RateDate { get; set; }
     public string? RatingNote { get; set; }
     public string? MasterBillNo { get; set; }
+    public Guid? CommodityTypeId { get; set; }
+    public bool? ChargeableConfirmed { get; set; }
+    public string? ChargeableOverrideReason { get; set; }
 }
 
 /// <summary>JSON helpers for <see cref="OperationalContextDocument"/>.</summary>
@@ -110,5 +113,8 @@ public static class OperationalContextJson
         && d.BuyRateCardId is null
         && d.RateDate is null
         && d.RatingNote is null
-        && d.MasterBillNo is null;
+        && d.MasterBillNo is null
+        && d.CommodityTypeId is null
+        && d.ChargeableConfirmed is null
+        && d.ChargeableOverrideReason is null;
 }

@@ -42,6 +42,10 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<RouteStop> RouteStops => Set<RouteStop>();
     public DbSet<CommodityType> CommodityTypes => Set<CommodityType>();
     public DbSet<OperationalPartySnapshot> OperationalPartySnapshots => Set<OperationalPartySnapshot>();
+    public DbSet<OperationalMeasurement> OperationalMeasurements => Set<OperationalMeasurement>();
+    public DbSet<CargoPackage> CargoPackages => Set<CargoPackage>();
+    public DbSet<CargoContainer> CargoContainers => Set<CargoContainer>();
+    public DbSet<FieldOwnership> FieldOwnerships => Set<FieldOwnership>();
     public DbSet<Cost> Costs => Set<Cost>();
     public DbSet<CostAdjustment> CostAdjustments => Set<CostAdjustment>();
     public DbSet<CostAllocation> CostAllocations => Set<CostAllocation>();

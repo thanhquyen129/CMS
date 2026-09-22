@@ -24,6 +24,7 @@ export default async function NewShipmentPage() {
           vendors={opts.vendors}
           rateCards={opts.rateCards}
           billHits={opts.billHits}
+          commodities={opts.commodities}
         />
       </section>
     </AppShell>

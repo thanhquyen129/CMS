@@ -41,5 +41,15 @@ public sealed class Order : TenantEntityBase
     /// <summary>Remaining create-form fields (cargo, extra services) as JSON — not TMS execution state.</summary>
     public string? ContextJson { get; set; }
 
+    public DateTimeOffset? OrderDate { get; set; }
+    public string? ServiceTypeCode { get; set; }
+    public string? IncotermCode { get; set; }
+    public DateTimeOffset? RequestedAt { get; set; }
+    public Guid? CommodityTypeId { get; set; }
+    public string? ContactName { get; set; }
+    public string? ContactChannel { get; set; }
+    public string? PickupPlace { get; set; }
+    public string? DeliveryPlace { get; set; }
+
     public Tenant? Tenant { get; set; }
 }

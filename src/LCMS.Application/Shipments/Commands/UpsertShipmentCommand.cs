@@ -71,11 +71,13 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IOperationalCargoStore _cargo;
 
-    public UpsertShipmentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public UpsertShipmentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IOperationalCargoStore cargo)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _cargo = cargo;
     }
 
     public async Task<Guid> Handle(UpsertShipmentCommand request, CancellationToken cancellationToken)
@@ -116,6 +118,11 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
             };
             ApplyContext(shipment, request);
             _db.Shipments.Add(shipment);
+            if (request.ApplyContext)
+            {
+                await _cargo.ApplyAsync(OperationalObjectTypes.Shipment, shipment.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
+            }
+
             try
             {
                 await _db.SaveChangesAsync(cancellationToken);
@@ -145,6 +152,11 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
         ApplyContext(existing, request);
+        if (request.ApplyContext)
+        {
+            await _cargo.ApplyAsync(OperationalObjectTypes.Shipment, existing.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }

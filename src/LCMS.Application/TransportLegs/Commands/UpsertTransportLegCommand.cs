@@ -18,7 +18,12 @@ public sealed record UpsertTransportLegCommand(
     string ExternalId,
     string? ExternalVersion,
     string? OperationalStatus,
-    bool IsActive = true) : IRequest<Guid>;
+    bool IsActive = true,
+    int? SequenceNo = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    Guid? OriginLocationId = null,
+    Guid? DestinationLocationId = null) : IRequest<Guid>;
 
 public sealed class UpsertTransportLegCommandValidator : AbstractValidator<UpsertTransportLegCommand>
 {
@@ -101,7 +106,12 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
                 ExternalId = externalId,
                 ExternalVersion = externalVersion,
                 OperationalStatus = status,
-                IsActive = request.IsActive
+                IsActive = request.IsActive,
+                SequenceNo = request.SequenceNo ?? 0,
+                OriginCode = request.OriginCode,
+                DestinationCode = request.DestinationCode,
+                OriginLocationId = request.OriginLocationId,
+                DestinationLocationId = request.DestinationLocationId
             };
             _db.TransportLegs.Add(leg);
             try
@@ -133,6 +143,15 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
         existing.ExternalVersion = externalVersion;
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
+        if (request.SequenceNo is int sequence)
+        {
+            existing.SequenceNo = sequence;
+        }
+
+        existing.OriginCode = request.OriginCode ?? existing.OriginCode;
+        existing.DestinationCode = request.DestinationCode ?? existing.DestinationCode;
+        existing.OriginLocationId = request.OriginLocationId ?? existing.OriginLocationId;
+        existing.DestinationLocationId = request.DestinationLocationId ?? existing.DestinationLocationId;
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }

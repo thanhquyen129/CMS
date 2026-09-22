@@ -32,6 +32,7 @@ type Props = {
   services: CatalogOption[];
   billHits: RefHit[];
   shipmentHits: RefHit[];
+  commodities: CatalogOption[];
 };
 
 /** UI-02 Tạo đơn hàng — persists operational reference + context, no financial facts. */
@@ -43,6 +44,7 @@ export function CreateOrderForm({
   services,
   billHits,
   shipmentHits,
+  commodities,
 }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
@@ -117,7 +119,9 @@ export function CreateOrderForm({
         chargeableWeightKg: formNum(fd, "chargeableWeightKg"),
         containerCount: formInt(fd, "containerCount"),
         teu: formNum(fd, "teu"),
-        commodity: formStr(fd, "commodity"),
+        commodityTypeId: formStr(fd, "commodityTypeId"),
+        chargeableConfirmed: fd.get("chargeableConfirmed") === "true",
+        chargeableOverrideReason: formStr(fd, "chargeableOverrideReason"),
         specialFlags: formChecks(fd, "specialFlags"),
         cargoDescription: formStr(fd, "cargoDescription"),
         quoteReference: formStr(fd, "quoteReference"),
@@ -355,13 +359,11 @@ export function CreateOrderForm({
         </CreateSection>
 
         <CreateSection title="3. Thông tin hàng hóa" hint="Dữ liệu ban đầu phục vụ tạo Bill, Shipment và Rating Context">
-          <CreateCargoFields disabled={submitting} />
-          <div className="create-grid" style={{ marginTop: 11 }}>
-            <div className="cw-field s12">
-              <label htmlFor="cargoDescription">Mô tả hàng hóa</label>
-              <textarea id="cargoDescription" name="cargoDescription" disabled={submitting} placeholder="Tên hàng, quy cách đóng gói, kích thước, đặc tính cần lưu ý..." />
-            </div>
-          </div>
+          <CreateCargoFields
+            disabled={submitting}
+            commodities={commodities}
+            descriptionPlaceholder="Tên hàng, quy cách đóng gói, kích thước, đặc tính cần lưu ý..."
+          />
         </CreateSection>
 
         <CreateSection title="4. Yêu cầu dịch vụ & tham chiếu" hint="Thông tin khách hàng cung cấp và các yêu cầu bổ sung">

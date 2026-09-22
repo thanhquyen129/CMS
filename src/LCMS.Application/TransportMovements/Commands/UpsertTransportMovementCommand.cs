@@ -16,7 +16,12 @@ public sealed record UpsertTransportMovementCommand(
     string ExternalId,
     string? ExternalVersion,
     string? OperationalStatus,
-    bool IsActive = true) : IRequest<Guid>;
+    bool IsActive = true,
+    DateTimeOffset? MovementOn = null,
+    Guid? CarrierPartyId = null,
+    string? TransportMode = null,
+    Guid? OriginLocationId = null,
+    Guid? DestinationLocationId = null) : IRequest<Guid>;
 
 public sealed class UpsertTransportMovementCommandValidator : AbstractValidator<UpsertTransportMovementCommand>
 {
@@ -90,7 +95,12 @@ public sealed class UpsertTransportMovementCommandHandler
                 ExternalId = externalId,
                 ExternalVersion = externalVersion,
                 OperationalStatus = status,
-                IsActive = request.IsActive
+                IsActive = request.IsActive,
+                MovementOn = request.MovementOn,
+                CarrierPartyId = request.CarrierPartyId,
+                TransportMode = request.TransportMode,
+                OriginLocationId = request.OriginLocationId,
+                DestinationLocationId = request.DestinationLocationId
             };
             _db.TransportMovements.Add(movement);
             try
@@ -121,6 +131,11 @@ public sealed class UpsertTransportMovementCommandHandler
         existing.ExternalVersion = externalVersion;
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
+        existing.MovementOn = request.MovementOn ?? existing.MovementOn;
+        existing.CarrierPartyId = request.CarrierPartyId ?? existing.CarrierPartyId;
+        existing.TransportMode = request.TransportMode ?? existing.TransportMode;
+        existing.OriginLocationId = request.OriginLocationId ?? existing.OriginLocationId;
+        existing.DestinationLocationId = request.DestinationLocationId ?? existing.DestinationLocationId;
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }

@@ -30,6 +30,7 @@ type Props = {
   vendors: CatalogOption[];
   rateCards: CatalogOption[];
   billHits: RefHit[];
+  commodities: CatalogOption[];
 };
 
 /** UI-02 Tạo Shipment — cost collection point; does not seed cost lines. */
@@ -42,6 +43,7 @@ export function CreateShipmentForm({
   vendors,
   rateCards,
   billHits,
+  commodities,
 }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
@@ -108,7 +110,9 @@ export function CreateShipmentForm({
             volumeCbm: formNum(fd, "volumeCbm"),
             chargeableWeightKg: formNum(fd, "chargeableWeightKg"),
             teu: formNum(fd, "teu"),
-            commodity: formStr(fd, "commodity"),
+            commodityTypeId: formStr(fd, "commodityTypeId"),
+            chargeableConfirmed: fd.get("chargeableConfirmed") === "true",
+            chargeableOverrideReason: formStr(fd, "chargeableOverrideReason"),
             specialFlags: formChecks(fd, "specialFlags"),
             preferredCurrency: formStr(fd, "preferredCurrency") || "VND",
             vendorPartyId: formStr(fd, "vendorPartyId"),
@@ -354,7 +358,7 @@ export function CreateShipmentForm({
         </CreateSection>
 
         <CreateSection title="4. Hàng hóa & đo lường" hint="Tổng hợp từ Bill liên kết hoặc nhập theo nguồn dữ liệu được phép; phục vụ Rating Context và phân bổ">
-          <CreateCargoFields disabled={submitting} />
+          <CreateCargoFields disabled={submitting} commodities={commodities} />
         </CreateSection>
 
         <CreateSection title="5. Ngữ cảnh chi phí & tính giá" hint="Thông tin tham chiếu cho Rating Engine và Cost Allocation; không tạo giao dịch tài chính tại màn hình này">

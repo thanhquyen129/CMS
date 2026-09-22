@@ -79,6 +79,9 @@ public static class AuditActions
     public const string CommodityUpsert = "commodity.upsert";
     public const string PartySnapshotCapture = "party_snapshot.capture";
     public const string BillPartyPolicyUpdate = "bill_party_policy.update";
+    public const string MeasurementOverride = "measurement.override";
+    public const string FieldOverride = "field.override";
+    public const string LinkCreate = "link.create";
 }
 
 public static class AuditObjectTypes
@@ -102,6 +105,7 @@ public static class AuditObjectTypes
     public const string Route = "route";
     public const string CommodityType = "commodity_type";
     public const string PartySnapshot = "party_snapshot";
+    public const string OperationalLink = "operational_link";
     public const string User = "user";
     public const string Tenant = "tenant";
     public const string License = "license";

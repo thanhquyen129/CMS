@@ -32,6 +32,9 @@ export type OperationalContext = {
   rateDate?: string | null;
   ratingNote?: string | null;
   masterBillNo?: string | null;
+  commodityTypeId?: string | null;
+  chargeableConfirmed?: boolean | null;
+  chargeableOverrideReason?: string | null;
 };
 
 export const TRANSPORT_MODES: CatalogOption[] = [

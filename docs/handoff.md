@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-09-22 — Live verify cost@ after cb7f1b7 deploy
+
+### User
+tiếp tục nào chuyên gia
+
+### Answer
+CI `35720900541` success. `cost@`: profit+revenues API/UI 403; costs 200; dashboard note ẩn DT/biên. UX-04 Pass* (residual nav/CTA Doanh thu).
+
 ## 2026-09-22 — UX-04/12 + J5 + CostAccountant revenue grant leak
 
 ### User

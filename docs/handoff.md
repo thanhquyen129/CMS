@@ -1,5 +1,13 @@
 # Handoff
 
+## 2026-09-23 — Tạm tắt dotnet test trên CI
+
+### User
+Bước test trên Actions lâu. Tạm bỏ qua đến khi được báo bật lại. Bỏ qua thì ảnh hưởng gì?
+
+### Answer
+Chỉ tắt bước `dotnet test` trong job `test` (`.github/workflows/ci.yml`, `if: false`). Build, health smoke (API + Postgres), build web và deploy vẫn chạy. Ảnh hưởng: lỗi biên dịch, API không lên, web không build vẫn chặn deploy. Lỗi nghiệp vụ tiền, đăng nhập, đơn hàng, tính giá không còn bị chặn trước production. Bật lại bằng cách xóa `if: false`.
+
 ## 2026-09-23 — Tạo đơn hàng báo lỗi hệ thống
 
 ### User

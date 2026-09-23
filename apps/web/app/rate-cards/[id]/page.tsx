@@ -8,6 +8,7 @@ import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import { ComposeTariffForm } from "@/components/ComposeTariffForm";
 import { TariffMatrix } from "@/components/TariffMatrix";
 import { formatDateTimeVi, formatDateVi, formatMoney } from "@/lib/money";
 import {
@@ -167,13 +168,14 @@ export default async function RateCardDetailPage({
                       currencyCode={card.currencyCode}
                       transportMode={card.transportMode}
                     />
+                  ) : rules.length === 0 && draft ? (
+                    <ComposeTariffForm
+                      versionId={v.id}
+                      currencyCode={card.currencyCode}
+                      transportMode={card.transportMode}
+                    />
                   ) : rules.length === 0 ? (
-                    <p className="note">
-                      Chưa có quy tắc.{" "}
-                      {draft
-                        ? "Thêm ít nhất một quy tắc trước khi phát hành."
-                        : null}
-                    </p>
+                    <p className="note">Chưa có quy tắc.</p>
                   ) : (
                     <div className="table-wrap">
                       <table className="data-table">
@@ -288,7 +290,7 @@ export default async function RateCardDetailPage({
                     </div>
                   )}
 
-                  {draft ? (
+                  {draft && rules.length > 0 ? (
                     <>
                       <AddPricingRuleForm
                         versionId={v.id}

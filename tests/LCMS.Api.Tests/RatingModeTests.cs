@@ -450,6 +450,57 @@ public sealed class RatingModeTests : IAsyncLifetime
         Assert.Contains("trọng lượng", seaErr!.Message);
     }
 
+    [Fact]
+    public async Task ComposeTariff_UsesNextBandAsCeiling_AndSkipsEmptyExpressCell()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "BL-GRID");
+        using var compose = Tenant(HttpMethod.Post, "/api/rate-cards/compose", tenantId);
+        compose.Content = JsonContent.Create(new
+        {
+            code = "GRID-AIR",
+            name = "Lưới air",
+            partyType = "vendor",
+            currencyCode = "VND",
+            transportMode = "air",
+            columns = new[]
+            {
+                new { code = "GENERAL", name = "Hàng thường" },
+                new { code = "EXPRESS", name = "Chuyển nhanh" }
+            },
+            bands = new object[]
+            {
+                new { minQuantity = 0m, maxQuantity = 6m, prices = new decimal?[] { 100_000m, null } },
+                new { minQuantity = 6m, maxQuantity = 11m, prices = new decimal?[] { 65_000m, null } },
+                new { minQuantity = 11m, maxQuantity = (decimal?)null, prices = new decimal?[] { 60_000m, 87_000m } }
+            }
+        });
+        var created = await _client.SendAsync(compose);
+        created.EnsureSuccessStatusCode();
+        var ids = await created.Content.ReadFromJsonAsync<ComposeBody>(Json);
+        await PublishAsync(tenantId, ids!.RateVersionId);
+
+        var rated = await GetAsync(tenantId, await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = ids.RateVersionId,
+            quantity = 10.5m,
+            commodityCode = "GENERAL"
+        }));
+        Assert.Equal(682_500m, rated.TotalAmount);
+
+        using var express = Tenant(HttpMethod.Post, "/api/ratings", tenantId);
+        express.Content = JsonContent.Create(new
+        {
+            billId,
+            rateVersionId = ids.RateVersionId,
+            quantity = 5m,
+            commodityCode = "EXPRESS"
+        });
+        var blocked = await _client.SendAsync(express);
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+    }
+
     private async Task<Guid> PublishReferenceCardAsync(Guid tenantId, ReferenceTariffCatalog.ReferenceRateCard card)
     {
         using var cardReq = Tenant(HttpMethod.Post, "/api/rate-cards", tenantId);
@@ -586,6 +637,7 @@ public sealed class RatingModeTests : IAsyncLifetime
     }
 
     private sealed record IdBody(Guid Id);
+    private sealed record ComposeBody(Guid RateCardId, Guid RateVersionId);
     private sealed record Err(string Message);
     private sealed record RatingBody(decimal TotalAmount, string? ContextJson, string? ChargeableBasis, List<DetailBody> Details);
     private sealed record DetailBody(string RuleCode, string? FormulaText);

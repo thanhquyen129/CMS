@@ -30,6 +30,29 @@ public static class RatePricingEndpoints
                 ct);
             return Results.Created($"/api/rate-cards/{id}", new { id });
         });
+        cards.MapPost("/compose", async (ComposeTariffRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(
+                new ComposeTariffCommand(
+                    body.Code,
+                    body.Name,
+                    body.PartyType,
+                    body.CurrencyCode,
+                    body.Description,
+                    body.TransportMode,
+                    body.RouteCode,
+                    body.CarrierName,
+                    body.EffectiveFrom,
+                    body.Note,
+                    body.RateVersionId,
+                    body.MinimumQuantity,
+                    body.Columns,
+                    body.Bands,
+                    body.Delivery,
+                    body.Remote),
+                ct);
+            return Results.Created($"/api/rate-cards/{result.RateCardId}", result);
+        });
         cards.MapGet("/", async (
             string? q,
             string? partyType,
@@ -273,6 +296,24 @@ public static class RatePricingEndpoints
         return app;
     }
 }
+
+public sealed record ComposeTariffRequest(
+    string? Code,
+    string? Name,
+    string? PartyType,
+    string? CurrencyCode,
+    string? Description,
+    string? TransportMode,
+    string? RouteCode,
+    string? CarrierName,
+    DateTimeOffset? EffectiveFrom,
+    string? Note,
+    Guid? RateVersionId,
+    decimal? MinimumQuantity,
+    IReadOnlyList<ComposeTariffColumn> Columns,
+    IReadOnlyList<ComposeTariffBand> Bands,
+    ComposeDeliveryFee? Delivery,
+    ComposeRemoteFee? Remote);
 
 public sealed record CreateRateCardRequest(
     string Code,

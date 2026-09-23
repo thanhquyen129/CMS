@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { CreateRateCardForm } from "@/components/CreateRateCardForm";
+import { ComposeTariffForm } from "@/components/ComposeTariffForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 
@@ -16,14 +16,14 @@ export default async function NewRateCardPage() {
 
   return (
     <AppShell terms={terms} active="rate-cards">
-      <section className="panel">
+      <section className="panel panel-wide">
         <p className="meta-line">
           <Link className="row-link" href="/rate-cards">
             ← Bảng giá
           </Link>
         </p>
         <h1>Tạo bảng giá</h1>
-        <CreateRateCardForm />
+        <ComposeTariffForm />
       </section>
     </AppShell>
   );

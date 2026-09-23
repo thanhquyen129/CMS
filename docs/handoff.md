@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-23 — Màn tạo bảng giá theo lưới khung × loại hàng
+
+### User
+Làm tiếp màn tạo bảng giá giống bảng Air đã phát hành (khung kg/CBM × cột loại hàng).
+
+### Answer
+`/rate-cards/new` soạn đúng lưới đó: khung Air hoặc Sea, ô trống = không có giá, mức Đến trùng mức Từ khung sau thì số lẻ thuộc khung dưới. Lưu một lần thành phiên bản nháp (`POST /api/rate-cards/compose`). Phát hành vẫn trên hồ sơ bảng giá. Phiên bản nháp chưa có quy tắc cũng dùng form này. Phí giao dưới ngưỡng và phụ phí vùng (SBH/SWK, đ/kg) là tuỳ chọn.
+
+### Files
+- `src/LCMS.Application/RateCards/Commands/ComposeTariffCommand.cs`
+- `apps/web/components/ComposeTariffForm.tsx`, `app/rate-cards/new/page.tsx`, `app/bff/rate-cards/compose/route.ts`
+- Test: `ComposeTariff_UsesNextBandAsCeiling_AndSkipsEmptyExpressCell` (10,5 kg = 682.500 đ; chuyển nhanh dưới 11 kg bị từ chối)
+
 ## 2026-09-23 — Bảng giá mẫu NewSkyExpress VN–MY
 
 ### User

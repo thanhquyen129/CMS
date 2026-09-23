@@ -88,7 +88,9 @@ public sealed class OperationalCargoStore : IOperationalCargoStore
     {
         if (type == OperationalObjectTypes.Bill)
         {
-            var bill = await _db.Bills.FirstAsync(b => b.Id == objectId, cancellationToken);
+            // Create upserts Add the parent before SaveChanges. A database query misses that row and surfaces as HTTP 500.
+            var bill = _db.Bills.Local.FirstOrDefault(b => b.Id == objectId)
+                ?? await _db.Bills.FirstAsync(b => b.Id == objectId, cancellationToken);
             bill.BillDate ??= DateTimeOffset.UtcNow;
             bill.ServiceTypeCode = Trim(context.ServiceType) ?? bill.ServiceTypeCode;
             bill.IncotermCode = Trim(context.Incoterm) ?? bill.IncotermCode;
@@ -107,7 +109,8 @@ public sealed class OperationalCargoStore : IOperationalCargoStore
 
         if (type == OperationalObjectTypes.Order)
         {
-            var order = await _db.Orders.FirstAsync(o => o.Id == objectId, cancellationToken);
+            var order = _db.Orders.Local.FirstOrDefault(o => o.Id == objectId)
+                ?? await _db.Orders.FirstAsync(o => o.Id == objectId, cancellationToken);
             order.OrderDate ??= DateTimeOffset.UtcNow;
             order.ServiceTypeCode = Trim(context.ServiceType) ?? order.ServiceTypeCode;
             order.IncotermCode = Trim(context.Incoterm) ?? order.IncotermCode;
@@ -120,7 +123,8 @@ public sealed class OperationalCargoStore : IOperationalCargoStore
             return;
         }
 
-        var shipment = await _db.Shipments.FirstAsync(s => s.Id == objectId, cancellationToken);
+        var shipment = _db.Shipments.Local.FirstOrDefault(s => s.Id == objectId)
+            ?? await _db.Shipments.FirstAsync(s => s.Id == objectId, cancellationToken);
         shipment.ServiceTypeCode = Trim(context.ServiceType) ?? shipment.ServiceTypeCode;
         shipment.CommodityTypeId = context.CommodityTypeId ?? shipment.CommodityTypeId;
         shipment.CarrierName = Trim(context.CarrierName) ?? shipment.CarrierName;

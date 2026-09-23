@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-23 — Tạo đơn hàng báo lỗi hệ thống
+
+### User
+Tạo order bị lỗi (banner: «Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.» trên `/orders/new`, đơn ORD-UAT-001).
+
+### Answer
+Form tạo luôn gửi `context`. Handler thêm đơn vào change tracker rồi gọi cargo store, store lại `FirstAsync` xuống database trước `SaveChanges` nên ném `InvalidOperationException` → HTTP 500. Cùng lỗi với tạo Shipment khi có `context`. Sửa: lấy Bill/đơn/Shipment đang theo dõi trong context trước, chỉ query database khi bản ghi đã có.
+
+### Files
+- `src/LCMS.Application/OperationalReferences/OperationalCargoStore.cs`
+- Test: `Ui02OperationalCreateContextTests.UpsertOrder_WithCustomerAndContext_PersistsOnFirstSave`, `UpsertShipment_WithContextDocument_PersistsOnFirstSave`
+
+### API
+`PUT /api/orders` và `PUT /api/shipments` với `applyContext` + `context` (khách hàng, điểm đi/đến, kiện). Không đổi contract.
+
 ## 2026-09-23 — Màn tạo bảng giá theo lưới khung × loại hàng
 
 ### User

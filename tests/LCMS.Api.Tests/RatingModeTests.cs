@@ -50,6 +50,7 @@ public sealed class RatingModeTests : IAsyncLifetime
         var ratingId = await RateAsync(tenantId, new { billId, rateVersionId = versionId, quantity = 100, transportMode = "air" });
         var rating = await GetAsync(tenantId, ratingId);
         Assert.Equal(250m, rating.TotalAmount);
+        Assert.Equal("cost", rating.Details[0].FinancialNature);
         Assert.Contains("100", rating.Details[0].FormulaText);
         Assert.False(string.IsNullOrWhiteSpace(rating.ContextJson));
 
@@ -59,6 +60,54 @@ public sealed class RatingModeTests : IAsyncLifetime
         var again = await GetAsync(tenantId, ratingId);
         Assert.Equal(rating.ContextJson, again.ContextJson);
         Assert.Equal(250m, again.TotalAmount);
+    }
+
+    [Fact]
+    public async Task SellWeightBreak_SeedsExpectedRevenue_WithoutAnExtraComponent()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "BL-SELL-WB");
+        var cardId = await CreateCardAsync(tenantId, "RC-SELL-WB", "customer");
+        using var versionReq = Tenant(HttpMethod.Post, $"/api/rate-cards/{cardId}/versions", tenantId);
+        versionReq.Content = JsonContent.Create(new { note = "sell" });
+        var versionRes = await _client.SendAsync(versionReq);
+        versionRes.EnsureSuccessStatusCode();
+        var versionId = (await versionRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+
+        var ruleId = await AddRuleAsync(tenantId, versionId, new
+        {
+            code = "AIR",
+            name = "Cước bán",
+            calcMethod = "weight_break_pivot",
+            unitAmount = 0,
+            currencyCode = "USD",
+            chargeCode = "FREIGHT",
+            sortOrder = 1
+        });
+        await AddBreakAsync(tenantId, ruleId, 1, 21, 100, 5m);
+        await PublishAsync(tenantId, versionId);
+
+        var ratingId = await RateAsync(tenantId, new { billId, rateVersionId = versionId, quantity = 60, transportMode = "air" });
+        var rating = await GetAsync(tenantId, ratingId);
+        Assert.Equal(300m, rating.TotalAmount);
+        var line = Assert.Single(rating.Details);
+        Assert.Equal("revenue", line.FinancialNature);
+        Assert.Equal(300m, line.Amount);
+
+        using var seed = Tenant(HttpMethod.Post, $"/api/ratings/{ratingId}/seed-expected-revenues", tenantId);
+        var seedRes = await _client.SendAsync(seed);
+        Assert.Equal(HttpStatusCode.OK, seedRes.StatusCode);
+        var seeded = await seedRes.Content.ReadFromJsonAsync<SeedBody>(Json);
+        Assert.Equal(1, seeded!.CreatedCount);
+
+        using var list = Tenant(HttpMethod.Get, $"/api/revenues?billId={billId}", tenantId);
+        var revenues = await (await _client.SendAsync(list)).Content.ReadFromJsonAsync<List<RevenueBody>>(Json);
+        var revenue = Assert.Single(revenues!);
+        Assert.Equal(300m, revenue.Amount);
+        Assert.Equal("expected", revenue.FinancialMaturity);
+
+        using var costs = Tenant(HttpMethod.Post, $"/api/ratings/{ratingId}/seed-expected-costs", tenantId);
+        Assert.Equal(HttpStatusCode.Conflict, (await _client.SendAsync(costs)).StatusCode);
     }
 
     [Fact]
@@ -604,10 +653,10 @@ public sealed class RatingModeTests : IAsyncLifetime
         return (await res.Content.ReadFromJsonAsync<RatingBody>(Json))!;
     }
 
-    private async Task<Guid> CreateCardAsync(Guid tenantId, string code)
+    private async Task<Guid> CreateCardAsync(Guid tenantId, string code, string partyType = "vendor")
     {
         using var req = Tenant(HttpMethod.Post, "/api/rate-cards", tenantId);
-        req.Content = JsonContent.Create(new { code, name = code, partyType = "vendor", currencyCode = "USD" });
+        req.Content = JsonContent.Create(new { code, name = code, partyType, currencyCode = "USD" });
         var res = await _client.SendAsync(req);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
@@ -640,7 +689,9 @@ public sealed class RatingModeTests : IAsyncLifetime
     private sealed record ComposeBody(Guid RateCardId, Guid RateVersionId);
     private sealed record Err(string Message);
     private sealed record RatingBody(decimal TotalAmount, string? ContextJson, string? ChargeableBasis, List<DetailBody> Details);
-    private sealed record DetailBody(string RuleCode, string? FormulaText);
+    private sealed record DetailBody(string RuleCode, string? FormulaText, string? FinancialNature, decimal Amount);
+    private sealed record SeedBody(int CreatedCount);
+    private sealed record RevenueBody(decimal Amount, string FinancialMaturity);
     private sealed record QuoteBody(decimal TotalAmount);
     private sealed record PreviewBody(bool CanCommit, List<IssueBody> Issues);
     private sealed record IssueBody(string Message);

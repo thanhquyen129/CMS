@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-09-23 — Bậc kg bảng giá bán seed thành doanh thu dự kiến
+
+### User
+Bậc 21–100 kg = 5 USD, rating 60 kg = 300 USD đúng, nhưng seed doanh thu báo không có dòng doanh thu. Làm engine ghi 300 USD đó thành Expected Revenue mà không cộng thêm tiền.
+
+### Answer
+Dòng tính từ chính quy tắc (bậc kg, bậc bước, container, đơn giá không có thành phần) lấy tính chất theo loại bảng giá: `customer` = doanh thu, còn lại = chi phí. Thành phần giá vẫn dùng tính chất riêng và vẫn cộng thêm vào tổng. Bảng giá bán 60 kg × 5 = 300 USD seed một doanh thu dự kiến 300 USD. Seed chi phí trên lần tính đó bị từ chối vì không còn dòng chi phí. Bảng giá mua giữ dòng chi phí như cũ.
+
+### Files
+- `src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs`
+- Test: `RatingModeTests.SellWeightBreak_SeedsExpectedRevenue_WithoutAnExtraComponent`
+
 ## 2026-09-23 — Gán lại vai trò đối tác và danh sách hãng vận chuyển
 
 ### User

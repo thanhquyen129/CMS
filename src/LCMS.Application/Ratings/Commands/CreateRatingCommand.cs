@@ -285,6 +285,9 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         decimal total = 0m;
         decimal runningBase = request.BaseAmount ?? 0m;
         var hasExplicitBase = request.BaseAmount.HasValue;
+        var ruleNature = string.Equals(card?.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
+            ? "revenue"
+            : "cost";
 
         foreach (var rule in selected)
         {
@@ -293,7 +296,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             {
                 var line = RatingEngine.WeightBreakPivot(quantity, Breaks(breaksByRule, rule.Id), rule.MinAmount);
                 total += line.Amount;
-                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, "cost", line.Amount, rule.CurrencyCode, line.Formula));
+                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, ruleNature, line.Amount, rule.CurrencyCode, line.Formula));
                 continue;
             }
 
@@ -301,7 +304,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             {
                 var line = RatingEngine.WeightStep(quantity, rule.RoundingStep, rule.UnitAmount, Breaks(breaksByRule, rule.Id), rule.MinAmount);
                 total += line.Amount;
-                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, "cost", line.Amount, rule.CurrencyCode, line.Formula));
+                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, ruleNature, line.Amount, rule.CurrencyCode, line.Formula));
                 continue;
             }
 
@@ -310,7 +313,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                 var prices = containerPrices.Where(p => p.PricingRuleId == rule.Id).ToList();
                 var line = RatingEngine.Containers(request.Containers ?? [], prices);
                 total += line.Amount;
-                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, "cost", line.Amount, rule.CurrencyCode, line.Formula));
+                details.Add(Line(tenantId, rule, null, rule.Code, rule.Name, ruleNature, line.Amount, rule.CurrencyCode, line.Formula));
                 continue;
             }
 
@@ -415,7 +418,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                     RuleCode = rule.Code,
                     ComponentCode = rule.Code,
                     ComponentName = rule.Name,
-                    FinancialNature = "cost",
+                    FinancialNature = ruleNature,
                     FinancialMaturity = "expected",
                     Amount = cardAmount,
                     CurrencyCode = cardCcy,

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using LCMS.Application.Demo;
 
 namespace LCMS.Api.Tests;
 
@@ -356,6 +357,148 @@ public sealed class RatingModeTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
         var err = await blocked.Content.ReadFromJsonAsync<Err>(Json);
         Assert.Contains("COMPOSITE", err!.Message);
+    }
+
+    [Fact]
+    public async Task ReferenceTariff_RatesBillByBandCommodityAndRemoteFee()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "BL-NSE");
+        var versions = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        foreach (var card in ReferenceTariffCatalog.Cards)
+        {
+            versions[card.Code] = await PublishReferenceCardAsync(tenantId, card);
+        }
+
+        var air = versions[ReferenceTariffCatalog.AirCode];
+        var sea = versions[ReferenceTariffCatalog.SeaCode];
+
+        var general = await GetAsync(tenantId, await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = air,
+            quantity = 10.5m,
+            commodityCode = ReferenceTariffCatalog.CommodityGeneral
+        }));
+        Assert.Equal(682_500m, general.TotalAmount);
+
+        var light = await GetAsync(tenantId, await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = air,
+            quantity = 1.5m,
+            commodityCode = ReferenceTariffCatalog.CommodityGeneral
+        }));
+        Assert.Equal(200_000m, light.TotalAmount);
+
+        var remote = await GetAsync(tenantId, await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = air,
+            quantity = 10m,
+            commodityCode = ReferenceTariffCatalog.CommodityGeneral,
+            destinationCode = "SBH"
+        }));
+        Assert.Equal(1_500_000m, remote.TotalAmount);
+
+        using var express = Tenant(HttpMethod.Post, "/api/ratings", tenantId);
+        express.Content = JsonContent.Create(new
+        {
+            billId,
+            rateVersionId = air,
+            quantity = 5m,
+            commodityCode = ReferenceTariffCatalog.CommodityExpress
+        });
+        var blocked = await _client.SendAsync(express);
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        var err = await blocked.Content.ReadFromJsonAsync<Err>(Json);
+        Assert.Contains("NO_APPLICABLE_RATE", err!.Message);
+
+        var seaMin = await GetAsync(tenantId, await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = sea,
+            quantity = 0.5m,
+            commodityCode = ReferenceTariffCatalog.CommodityGeneral,
+            transportMode = "sea"
+        }));
+        Assert.Equal(170m, seaMin.TotalAmount);
+
+        var seaBand = await GetAsync(tenantId, await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = sea,
+            quantity = 8m,
+            commodityCode = ReferenceTariffCatalog.CommodityCosmeticsFood,
+            transportMode = "sea"
+        }));
+        Assert.Equal(1_320m, seaBand.TotalAmount);
+
+        using var seaRemote = Tenant(HttpMethod.Post, "/api/ratings", tenantId);
+        seaRemote.Content = JsonContent.Create(new
+        {
+            billId,
+            rateVersionId = sea,
+            quantity = 2m,
+            commodityCode = ReferenceTariffCatalog.CommodityGeneral,
+            destinationCode = "SWK",
+            transportMode = "sea"
+        });
+        var seaBlocked = await _client.SendAsync(seaRemote);
+        Assert.Equal(HttpStatusCode.Conflict, seaBlocked.StatusCode);
+        var seaErr = await seaBlocked.Content.ReadFromJsonAsync<Err>(Json);
+        Assert.Contains("trọng lượng", seaErr!.Message);
+    }
+
+    private async Task<Guid> PublishReferenceCardAsync(Guid tenantId, ReferenceTariffCatalog.ReferenceRateCard card)
+    {
+        using var cardReq = Tenant(HttpMethod.Post, "/api/rate-cards", tenantId);
+        cardReq.Content = JsonContent.Create(new
+        {
+            code = card.Code,
+            name = card.Name,
+            partyType = "vendor",
+            currencyCode = card.CurrencyCode,
+            description = card.Description,
+            transportMode = card.TransportMode,
+            routeCode = ReferenceTariffCatalog.Route,
+            carrierName = ReferenceTariffCatalog.Carrier
+        });
+        var cardRes = await _client.SendAsync(cardReq);
+        cardRes.EnsureSuccessStatusCode();
+        var cardId = (await cardRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+
+        using var versionReq = Tenant(HttpMethod.Post, $"/api/rate-cards/{cardId}/versions", tenantId);
+        versionReq.Content = JsonContent.Create(new { effectiveFrom = card.EffectiveFrom, note = card.Note });
+        var versionRes = await _client.SendAsync(versionReq);
+        versionRes.EnsureSuccessStatusCode();
+        var versionId = (await versionRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+
+        foreach (var rule in card.Rules)
+        {
+            var ruleId = await AddRuleAsync(tenantId, versionId, new
+            {
+                code = rule.Code,
+                name = rule.Name,
+                calcMethod = rule.CalcMethod,
+                unitAmount = rule.UnitAmount,
+                currencyCode = rule.CurrencyCode,
+                chargeCode = rule.ChargeCode,
+                commodityCode = rule.CommodityCode,
+                destinationCode = rule.DestinationCode,
+                applicability = rule.Applicability,
+                minAmount = rule.MinAmount,
+                volumetricFactor = rule.VolumetricFactor,
+                sortOrder = rule.SortOrder
+            });
+            foreach (var band in rule.Breaks)
+            {
+                await AddBreakAsync(tenantId, ruleId, band.SequenceNo, band.MinQuantity, band.MaxQuantity, band.UnitAmount);
+            }
+        }
+
+        await PublishAsync(tenantId, versionId);
+        return versionId;
     }
 
     private async Task<Guid> PublishedVersionAsync(Guid tenantId, string code)

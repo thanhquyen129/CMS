@@ -1,5 +1,52 @@
 # Handoff
 
+## 2026-09-23 — Bảng giá mẫu NewSkyExpress VN–MY
+
+### User
+`docs/po/Bảng giá tham khảo` là bảng giá tham khảo. Sabah/Sarawak là 85.000 đ/kg. Nhập hai bảng thành bảng giá mẫu (Published, tính được trên Bill) và lấy chúng làm khuôn khi sửa màn bảng giá.
+
+### Answer
+Hai bảng NewSkyExpress thành bảng giá nhà cung cấp đã phát hành, idempotent theo mã, gắn vào seed dữ liệu mẫu (kể cả tenant đã có marker demo):
+
+- `NSE-AIR-VN-MY` — AVMCC26_002, hiệu lực 24/03/2026, VND/kg, bậc trọng lượng × Hàng thường / Thực phẩm khô / Mỹ phẩm / Chuyển nhanh. Chuyển nhanh không có giá dưới 11 kg. Phí giao dưới 2 kg: 50.000 đ/đơn. 10,5 kg hàng thường = 682.500 đ.
+- `NSE-SEA-VN-MY` — SYMCC23_002_CBM, hiệu lực 05/08/2023, USD/CBM, tối thiểu 1 CBM. Cột Hàng thường và Mỹ phẩm/thực phẩm. Khung 4–6 gồm đến dưới 7 CBM.
+- Sabah/Sarawak: 85.000 đ/kg khi điểm đến `SBH` hoặc `SWK`. Air nhân trên kg tính cước. Sea nhân trên kg thực (`per_gross_kg`) và quy đổi VND→USD; thiếu kg hoặc thiếu tỷ giá thì từ chối, không cộng nhầm vào tổng USD.
+
+Màn chi tiết bảng giá có bậc thì hiện lưới khung × loại hàng và bảng phụ phí, theo khuôn ảnh tham khảo. Form tính giá trên Bill có loại hàng, điểm đến vùng, kg thực.
+
+### Files
+- `src/LCMS.Application/Demo/ReferenceTariffCatalog.cs`, `DemoDataSeeder.EnsureReferenceTariffsAsync`
+- `src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs` (loại hàng trên Bill, phụ phí theo kg thực)
+- `apps/web/components/TariffMatrix.tsx`, `app/rate-cards/[id]/page.tsx`, `components/RateBillForm.tsx`
+- Test: `RatingModeTests.ReferenceTariff_RatesBillByBandCommodityAndRemoteFee`
+
+### API
+Không endpoint mới. Seed qua `POST /api/sample-data/ensure` (quyền `settings.manage`). Production `Demo:SeedOnStartup` = false — bấm Cài đặt → Dữ liệu mẫu để có hai bảng.
+
+## 2026-09-22 — Xuất canvas Commercial Ready → Word
+
+### User
+xuất canvas sang file word
+
+### Answer
+Sinh `docs/reports/CMS_Commercial_Ready_Product_Plan_2026-09-22.docx` từ nội dung canvas (verdict, maturity L0–L5, 4 pha, backlog CRP-01…21, OUT, DoD). Script: `_gen_commercial_ready_plan_docx.py`.
+
+### Files
+- `docs/reports/CMS_Commercial_Ready_Product_Plan_2026-09-22.docx`
+- `docs/reports/_gen_commercial_ready_plan_docx.py`
+
+## 2026-09-22 — Rà soát hệ thống → kế hoạch Commercial Ready Product
+
+### User
+rà soát toàn hệ thống 1 lần nữa, lên kế hoạch làm ở cấp độ Commercial Ready Product toàn dự án.
+
+### Answer
+Verdict: L0 Financial Go-Live + L1 Standalone SCP (ADR-0017) đã đủ vận hành Bill→Close; commercial bị chặn ở Trust Gate + Acceptance, không thiếu module M04–M11. Kế hoạch 4 pha: **P0 Trust** (TLS 443, SoD Cost≠Revenue UAT, FX bỏ stub, Idempotency client, approval enforce, AC-010) → **P1 Package** (Global Search, field ownership UI, SMTP, pricing components, dashboard series, backup runbook, tenant bootstrap) → **P2 Accept** (UAT Wave2 N1–N5, 09B Reviewer, a11y, multi-tenant UAT) → **P3 Enterprise PO-gate** (OIDC, soak/SLO, OTLP, bank connector). OUT: TMS, Budget/Forecast, party merge, AP/AR full-page split, fake MoM/Excel. DoD CRP = P0+P1 prod + P2 ký + AC-SCP-01…10 trên tenant không connector.
+
+### Files
+- Canvas: `commercial-ready-product-plan.canvas.tsx` (IDE canvases)
+- Tham chiếu: `docs/ops/go-live-checklist.md`, `docs/reports/CMS_PixelPerfect_Gap_Index_2026-09-22.md`, ADR-0017, handoff A–H
+
 ## 2026-09-22 — UX-07 period_locked vs concurrency (commercial money path)
 
 ### User

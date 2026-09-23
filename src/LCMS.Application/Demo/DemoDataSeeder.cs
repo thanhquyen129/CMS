@@ -72,7 +72,8 @@ public sealed class DemoDataSeeder
         }
 
         var volume = await _volume.EnsureAsync(tenant.Id, cancellationToken);
-        var summary = $"{scenarioSummary} {volume.Summary}";
+        var tariffs = await EnsureReferenceTariffsAsync(tenant.Id, cancellationToken);
+        var summary = $"{scenarioSummary} {volume.Summary} {tariffs}";
         _logger.LogInformation("Demo seed completed for tenant {Code}: {Summary}", tenant.Code, summary);
         return new DemoSeedResult(tenant.Id, Skipped: exists && volume.Skipped, Summary: summary, Counts: volume.Counts);
     }
@@ -1045,6 +1046,121 @@ public sealed class DemoDataSeeder
         PolicyVersion = FinancialClosePolicies.Controlled,
         BaseCurrency = "VND"
     };
+
+    private async Task<string> EnsureReferenceTariffsAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var existingCodes = await _db.RateCards.IgnoreQueryFilters()
+            .Where(r => r.TenantId == tenantId)
+            .Select(r => r.Code)
+            .ToListAsync(cancellationToken);
+        var have = existingCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var commodityCodes = await _db.CommodityTypes.IgnoreQueryFilters()
+            .Where(c => c.TenantId == tenantId)
+            .Select(c => c.Code)
+            .ToListAsync(cancellationToken);
+        var commodities = commodityCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var pending = false;
+        foreach (var (code, name) in ReferenceTariffCatalog.Commodities)
+        {
+            if (!commodities.Add(code))
+            {
+                continue;
+            }
+
+            _db.CommodityTypes.Add(new CommodityType
+            {
+                TenantId = tenantId,
+                Code = code,
+                Name = name,
+                Category = "reference-tariff",
+                IsActive = true
+            });
+            pending = true;
+        }
+
+        var added = new List<string>();
+        foreach (var spec in ReferenceTariffCatalog.Cards)
+        {
+            if (!have.Add(spec.Code))
+            {
+                continue;
+            }
+
+            var card = new RateCard
+            {
+                TenantId = tenantId,
+                Code = spec.Code,
+                Name = spec.Name,
+                PartyType = "vendor",
+                CurrencyCode = spec.CurrencyCode,
+                Description = spec.Description,
+                TransportMode = spec.TransportMode,
+                RouteCode = ReferenceTariffCatalog.Route,
+                CarrierName = ReferenceTariffCatalog.Carrier,
+                IsActive = true
+            };
+            var version = new RateVersion
+            {
+                TenantId = tenantId,
+                RateCardId = card.Id,
+                VersionNo = 1,
+                Status = RateVersionStatuses.Published,
+                EffectiveFrom = spec.EffectiveFrom,
+                PublishedAt = spec.EffectiveFrom,
+                Note = spec.Note
+            };
+            _db.RateCards.Add(card);
+            _db.RateVersions.Add(version);
+
+            foreach (var ruleSpec in spec.Rules)
+            {
+                var rule = new PricingRule
+                {
+                    TenantId = tenantId,
+                    RateVersionId = version.Id,
+                    Code = ruleSpec.Code,
+                    Name = ruleSpec.Name,
+                    CalcMethod = ruleSpec.CalcMethod,
+                    UnitAmount = ruleSpec.UnitAmount,
+                    CurrencyCode = ruleSpec.CurrencyCode,
+                    ChargeCode = ruleSpec.ChargeCode,
+                    CommodityCode = ruleSpec.CommodityCode,
+                    DestinationCode = ruleSpec.DestinationCode,
+                    Applicability = ruleSpec.Applicability,
+                    MinAmount = ruleSpec.MinAmount,
+                    VolumetricFactor = ruleSpec.VolumetricFactor,
+                    SortOrder = ruleSpec.SortOrder,
+                    IsActive = true
+                };
+                _db.PricingRules.Add(rule);
+                foreach (var band in ruleSpec.Breaks)
+                {
+                    _db.RateBreaks.Add(new RateBreak
+                    {
+                        TenantId = tenantId,
+                        PricingRuleId = rule.Id,
+                        SequenceNo = band.SequenceNo,
+                        MinQuantity = band.MinQuantity,
+                        MaxQuantity = band.MaxQuantity,
+                        UnitAmount = band.UnitAmount
+                    });
+                }
+            }
+
+            added.Add(spec.Code);
+            pending = true;
+        }
+
+        if (pending)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return added.Count == 0
+            ? "Bảng giá mẫu VN–MY đã có."
+            : "Đã phát hành bảng giá mẫu: " + string.Join(", ", added) + ".";
+    }
 }
 
 public sealed record DemoSeedResult(

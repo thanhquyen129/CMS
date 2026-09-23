@@ -4,7 +4,11 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { RateCard, RateVersion } from "@/lib/rate-cards";
-import { isPublishedVersion, partyTypeLabel } from "@/lib/rate-cards";
+import {
+  isPublishedVersion,
+  partyTypeLabel,
+  tariffCommodityOptions,
+} from "@/lib/rate-cards";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type CardWithVersions = {
@@ -50,6 +54,10 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
     );
   }
 
+  const selectedCard =
+    cardsWithPublished.find((c) => c.card.id === cardId) ??
+    cardsWithPublished[0];
+
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -75,11 +83,22 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
       return;
     }
 
+    const weightRaw = String(fd.get("weight") ?? "").trim();
+    const weight = weightRaw ? Number(weightRaw.replace(",", ".")) : null;
+    if (weightRaw && (weight === null || !Number.isFinite(weight) || weight <= 0)) {
+      setError("Trọng lượng thực phải > 0.");
+      setSubmitting(false);
+      return;
+    }
+
     const body = {
       billId,
       rateVersionId: String(fd.get("rateVersionId") ?? "").trim(),
       quantity,
-      weight: null,
+      weight,
+      commodityCode: String(fd.get("commodityCode") ?? "").trim() || null,
+      destinationCode: String(fd.get("destinationCode") ?? "").trim() || null,
+      transportMode: selectedCard?.card.transportMode ?? null,
       serviceTypeCode: String(fd.get("serviceTypeCode") ?? "").trim() || null,
       partyTypeCode: String(fd.get("partyTypeCode") ?? "").trim() || null,
       routeCode: String(fd.get("routeCode") ?? "").trim() || null,
@@ -138,15 +157,15 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
   }
 
   const busy = submitting || isPending;
-  const selectedCard =
-    cardsWithPublished.find((c) => c.card.id === cardId) ??
-    cardsWithPublished[0];
 
   return (
     <form className="receive-form" onSubmit={onSubmit} noValidate>
       <p className="note">
-        Tính giá theo phiên bản đã phát hành. Tick seed để tạo{" "}
-        {costLabel.toLowerCase()} lớp {expected} (idempotent theo dòng rating).
+        Tính giá theo phiên bản đã phát hành. Air nhập kg, Sea nhập CBM.
+        Loại hàng chọn đúng cột bảng giá. Sabah/Sarawak cộng 85.000 đ/kg khi
+        điểm đến là SBH hoặc SWK; bảng Sea cần thêm trọng lượng thực và tỷ giá
+        VND/USD. Tick seed để tạo {costLabel.toLowerCase()} lớp{" "}
+        {expected} (idempotent theo dòng rating).
       </p>
 
       {error ? (
@@ -197,13 +216,55 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="quantity">Số lượng</label>
+          <label htmlFor="quantity">
+            {selectedCard?.card.transportMode?.toLowerCase() === "sea"
+              ? "Khối tính cước (CBM)"
+              : "Khối tính cước (kg)"}
+          </label>
           <input
             id="quantity"
             name="quantity"
             defaultValue="1"
             inputMode="decimal"
             required
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="commodityCode">Loại hàng</label>
+          <select
+            id="commodityCode"
+            name="commodityCode"
+            defaultValue="GENERAL"
+            key={`${cardId}-commodity`}
+          >
+            {tariffCommodityOptions
+              .filter((opt) => {
+                const mode = selectedCard?.card.transportMode?.toLowerCase();
+                if (mode !== "air" && mode !== "sea") return true;
+                return (opt.modes as readonly string[]).includes(mode);
+              })
+              .map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="destinationCode">Điểm đến (phụ phí vùng)</label>
+          <select id="destinationCode" name="destinationCode" defaultValue="">
+            <option value="">Không áp Sabah/Sarawak</option>
+            <option value="SBH">Sabah (SBH)</option>
+            <option value="SWK">Sarawak (SWK)</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="weight">Trọng lượng thực (kg)</label>
+          <input
+            id="weight"
+            name="weight"
+            inputMode="decimal"
+            placeholder="Bắt buộc nếu Sea + SBH/SWK"
           />
         </div>
         <div className="field">

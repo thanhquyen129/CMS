@@ -8,7 +8,8 @@ import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import { formatDateTimeVi, formatMoney } from "@/lib/money";
+import { TariffMatrix } from "@/components/TariffMatrix";
+import { formatDateTimeVi, formatDateVi, formatMoney } from "@/lib/money";
 import {
   calcMethodLabel,
   isContainerRateMethod,
@@ -107,6 +108,9 @@ export default async function RateCardDetailPage({
         <p className="lede meta-line">
           Mã: <code>{card.code}</code> · {partyTypeLabel(card.partyType)} ·{" "}
           {card.currencyCode}
+          {card.carrierName ? ` · ${card.carrierName}` : ""}
+          {card.transportMode ? ` · ${card.transportMode}` : ""}
+          {card.routeCode ? ` · ${card.routeCode}` : ""}
           {card.isActive ? "" : " · Ngưng dùng"}
           {card.description ? ` · ${card.description}` : ""}
         </p>
@@ -140,16 +144,29 @@ export default async function RateCardDetailPage({
                     v{v.versionNo} — {versionStatusLabel(v.status)}
                   </h3>
                   <p className="muted small">
+                    {v.effectiveFrom
+                      ? `Hiệu lực: ${formatDateVi(v.effectiveFrom)}`
+                      : "Chưa ghi ngày hiệu lực"}
                     {v.publishedAt
-                      ? `Phát hành: ${formatDateTimeVi(v.publishedAt)}`
-                      : "Chưa phát hành"}
-                    {v.note ? ` · ${v.note}` : ""}
+                      ? ` · Phát hành: ${formatDateTimeVi(v.publishedAt)}`
+                      : " · Chưa phát hành"}
                   </p>
+                  {v.note ? <p className="note">{v.note}</p> : null}
 
                   {ruleBag?.error ? (
                     <div className="alert alert-error" role="alert">
                       {ruleBag.error}
                     </div>
+                  ) : rules.some(
+                      (r) =>
+                        isWeightBreakMethod(r.calcMethod) &&
+                        (r.breaks?.length ?? 0) > 0
+                    ) ? (
+                    <TariffMatrix
+                      rules={rules}
+                      currencyCode={card.currencyCode}
+                      transportMode={card.transportMode}
+                    />
                   ) : rules.length === 0 ? (
                     <p className="note">
                       Chưa có quy tắc.{" "}

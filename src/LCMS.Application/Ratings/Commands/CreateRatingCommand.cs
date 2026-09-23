@@ -134,6 +134,14 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         var originCode = Normalize(request.OriginCode) ?? Normalize(bill.OriginCode);
         var destinationCode = Normalize(request.DestinationCode) ?? Normalize(bill.DestinationCode);
         var commodityCode = Normalize(request.CommodityCode);
+        if (commodityCode is null && bill.CommodityTypeId is Guid commodityId)
+        {
+            var fromBill = await _db.CommodityTypes.AsNoTracking()
+                .Where(c => c.Id == commodityId)
+                .Select(c => c.Code)
+                .FirstOrDefaultAsync(cancellationToken);
+            commodityCode = Normalize(fromBill);
+        }
 
         Rating? prior = null;
         if (request.SupersedesRatingId.HasValue)
@@ -374,17 +382,29 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             }
             else
             {
+                var lineQty = QuantityFor(rule, quantity, request.Weight ?? gross);
                 var amount = ComputeAmount(
                     rule.CalcMethod,
                     rule.UnitAmount,
-                    quantity,
+                    lineQty,
                     hasExplicitBase ? request.BaseAmount!.Value : runningBase,
                     rule.MinAmount,
                     rule.MaxAmount);
-                total += amount;
+                var perKg = string.Equals(rule.Applicability, RatingEngine.PerGrossKg, StringComparison.OrdinalIgnoreCase);
+                var formula = perKg ? $"{lineQty} kg × {rule.UnitAmount}" : rule.CalcMethod;
+                var cardAmount = amount;
+                var cardCcy = rule.CurrencyCode;
+                string? cardFormula = formula;
+                if (perKg)
+                {
+                    (cardAmount, cardCcy, cardFormula) = await ToCardCurrencyAsync(
+                        amount, rule.CurrencyCode, card?.CurrencyCode ?? rule.CurrencyCode, formula, rateDate, cancellationToken);
+                }
+
+                total += cardAmount;
                 if (!hasExplicitBase)
                 {
-                    runningBase += amount;
+                    runningBase += cardAmount;
                 }
 
                 details.Add(new RatingDetail
@@ -397,9 +417,9 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                     ComponentName = rule.Name,
                     FinancialNature = "cost",
                     FinancialMaturity = "expected",
-                    Amount = amount,
-                    CurrencyCode = rule.CurrencyCode,
-                    FormulaText = rule.CalcMethod
+                    Amount = cardAmount,
+                    CurrencyCode = cardCcy,
+                    FormulaText = cardFormula
                 });
             }
         }
@@ -540,6 +560,52 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         }
 
         return decimal.Round(raw, 4, MidpointRounding.AwayFromZero);
+    }
+
+    private static decimal QuantityFor(PricingRule rule, decimal quantity, decimal? grossKg)
+    {
+        if (!string.Equals(rule.Applicability, RatingEngine.PerGrossKg, StringComparison.OrdinalIgnoreCase))
+        {
+            return quantity;
+        }
+
+        if (grossKg is null || grossKg <= 0)
+        {
+            throw new ConflictAppException("Phụ phí theo kg cần trọng lượng thực.");
+        }
+
+        return grossKg.Value;
+    }
+
+    private async Task<(decimal Amount, string Currency, string? Formula)> ToCardCurrencyAsync(
+        decimal amount,
+        string amountCurrency,
+        string cardCurrency,
+        string? formula,
+        DateTimeOffset rateDate,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(amountCurrency, cardCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            return (amount, cardCurrency, formula);
+        }
+
+        var fx = await _fx.ResolveAsync(
+            amountCurrency,
+            cardCurrency,
+            DateOnly.FromDateTime(rateDate.UtcDateTime),
+            cancellationToken);
+        if (fx is null)
+        {
+            throw new ConflictAppException(
+                $"Không có tỷ giá {amountCurrency}/{cardCurrency} để cộng phụ phí vào tổng bảng giá.");
+        }
+
+        var converted = RatingEngine.RoundCurrency(amount * fx.Rate, cardCurrency);
+        var text = string.IsNullOrWhiteSpace(formula)
+            ? $"{amount} {amountCurrency} × {fx.Rate}"
+            : $"{formula} · {amount} {amountCurrency} × {fx.Rate}";
+        return (converted, cardCurrency, text);
     }
 
     private static IReadOnlyList<RateBreak> Breaks(

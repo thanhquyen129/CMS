@@ -12,6 +12,9 @@ public static class RatingEngine
 {
     public const decimal DefaultAirFactor = 167m;
 
+    /// <summary>Unit rate uses gross kg, not the freight quantity (CBM on sea).</summary>
+    public const string PerGrossKg = "per_gross_kg";
+
     public static decimal? Chargeable(
         string? transportMode,
         decimal? grossKg,

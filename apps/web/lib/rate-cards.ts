@@ -68,10 +68,21 @@ export type PricingRule = {
   minAmount: number | null;
   maxAmount: number | null;
   sortOrder: number;
+  chargeCode?: string | null;
+  commodityCode?: string | null;
+  destinationCode?: string | null;
   components?: PricingRuleComponent[];
   breaks?: RateBreak[];
   containerRates?: ContainerRate[];
 };
+
+export const tariffCommodityOptions = [
+  { value: "GENERAL", label: "Hàng thường", modes: ["air", "sea"] },
+  { value: "DRY_FOOD", label: "Thực phẩm khô", modes: ["air"] },
+  { value: "COSMETICS", label: "Mỹ phẩm", modes: ["air"] },
+  { value: "COSMETICS_FOOD", label: "Mỹ phẩm, thực phẩm", modes: ["sea"] },
+  { value: "EXPRESS", label: "Chuyển nhanh", modes: ["air"] },
+] as const;
 
 export type RatingHistoryItem = {
   id: string;

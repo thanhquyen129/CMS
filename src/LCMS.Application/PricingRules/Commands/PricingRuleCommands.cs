@@ -318,7 +318,10 @@ public sealed record PricingRuleDto(
     bool IsActive,
     IReadOnlyList<PricingRuleComponentDto> Components,
     IReadOnlyList<RateBreakDto> Breaks,
-    IReadOnlyList<ContainerRateDto> ContainerRates);
+    IReadOnlyList<ContainerRateDto> ContainerRates,
+    string? ChargeCode = null,
+    string? CommodityCode = null,
+    string? DestinationCode = null);
 
 public sealed record ListPricingRulesQuery(Guid RateVersionId) : IRequest<IReadOnlyList<PricingRuleDto>>;
 
@@ -403,7 +406,10 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
                 r.MinAmount, r.MaxAmount, r.SortOrder, r.IsActive,
                 byRule.TryGetValue(r.Id, out var list) ? list : [],
                 breaksByRule.TryGetValue(r.Id, out var br) ? br : [],
-                containersByRule.TryGetValue(r.Id, out var cr) ? cr : []))
+                containersByRule.TryGetValue(r.Id, out var cr) ? cr : [],
+                r.ChargeCode,
+                r.CommodityCode,
+                r.DestinationCode))
             .ToList();
     }
 }

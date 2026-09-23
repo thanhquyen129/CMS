@@ -35,7 +35,7 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
               <th scope="col">Loại giá</th>
               <th scope="col">Hãng/NCC</th>
               <th scope="col">Tuyến</th>
-              <th scope="col">Hiệu lực</th>
+              <th scope="col">Tiền tệ</th>
               <th scope="col">Trạng thái</th>
               <th scope="col">
                 <span className="sr-only">Mở</span>
@@ -89,7 +89,10 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                     </span>
                   </td>
                   <td>{c.carrierName || "—"}</td>
-                  <td>{c.routeCode || "—"}</td>
+                  <td>
+                    {[c.transportMode, c.routeCode].filter(Boolean).join(" · ") ||
+                      "—"}
+                  </td>
                   <td>{c.currencyCode}</td>
                   <td>
                     <span
@@ -198,8 +201,8 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
             ) : null}
             {tab === "pricing" || tab === "surcharge" || tab === "terms" ? (
               <p className="muted">
-                Bậc trọng lượng, phụ phí và điều kiện áp dụng nằm trên phiên bản đã phát hành.
-                Mở hồ sơ bảng giá để xem chi tiết; phiên bản đã phát hành không sửa trực tiếp.
+                Lưới đơn giá (bậc × loại hàng) và phụ phí nằm trên phiên bản đã phát hành.
+                Mở hồ sơ bảng giá để xem; phiên bản đã phát hành không sửa trực tiếp.
               </p>
             ) : null}
             {tab === "history" ? (

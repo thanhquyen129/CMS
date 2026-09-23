@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-23 — Gán lại vai trò đối tác và danh sách hãng vận chuyển
+
+### User
+Bỏ vai trò Nhà cung cấp / Hãng vận chuyển rồi chọn lại thì báo «Vai trò đối tác đã tồn tại». Đối tác chỉ có vai trò Hãng vận chuyển không hiện trong danh sách Khách hàng hay Nhà cung cấp, phải tìm mã trên ô tìm kiếm.
+
+### Answer
+Thu hồi vai trò là xóa mềm, unique `(tenant, party, role)` vẫn giữ dòng cũ nên gán lại bị 409. Gán lại giờ mở dòng đã xóa. Danh sách Khách hàng gồm cả bên trả tiền, người gửi, người nhận, bên nhận hóa đơn. Danh sách Nhà cung cấp gồm cả bên nhận tiền, hãng vận chuyển, đại lý. Ô chọn đối tác trên Bill/chi phí vẫn lọc đúng một vai trò.
+
+### Files
+- `src/LCMS.Application/PartyRoles/Commands/PartyRoleCommands.cs`
+- `src/LCMS.Domain/Entities/PartyRole.cs` (`ForDirectory`)
+- `src/LCMS.Application/BusinessParties/Queries/BusinessPartyDirectoryQueries.cs`
+- `apps/web/components/PartyRolesPanel.tsx`
+- Test: `PartyRoles_AssignListRevoke_AndOrgTreeChildren` (gán lại sau thu hồi), `CarrierOnly_AppearsOnVendorDirectory_NotCustomer`
+
 ## 2026-09-23 — Nhập đối tác dùng được cho kế toán
 
 ### User

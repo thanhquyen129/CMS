@@ -226,6 +226,15 @@ public sealed class Sprint1FullIdentityMasterTests : IAsyncLifetime
         var after = await (await _client.SendAsync(listAfter)).Content
             .ReadFromJsonAsync<List<PartyRoleDto>>(JsonOptions);
         Assert.Empty(after!);
+
+        using var reassign = WithTenant(HttpMethod.Post, $"/api/business-parties/{partyId}/roles", tenantId);
+        reassign.Content = JsonContent.Create(new { roleCode = "vendor" });
+        Assert.Equal(HttpStatusCode.Created, (await _client.SendAsync(reassign)).StatusCode);
+
+        using var listAgain = WithTenant(HttpMethod.Get, $"/api/business-parties/{partyId}/roles", tenantId);
+        var again = await (await _client.SendAsync(listAgain)).Content
+            .ReadFromJsonAsync<List<PartyRoleDto>>(JsonOptions);
+        Assert.Contains(again!, r => r.RoleCode == "vendor" && r.IsActive);
     }
 
     [Fact]

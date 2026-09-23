@@ -57,17 +57,24 @@ public sealed class AssignPartyRoleCommandHandler : IRequestHandler<AssignPartyR
         var party = await _db.BusinessParties.FirstOrDefaultAsync(p => p.Id == request.PartyId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy đối tác.");
 
-        var existing = await _db.PartyRoles.FirstOrDefaultAsync(
-            r => r.TenantId == tenantId && r.PartyId == party.Id && r.RoleCode == roleCode,
-            cancellationToken);
+        var existing = await _db.PartyRoles
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                r => r.TenantId == tenantId && r.PartyId == party.Id && r.RoleCode == roleCode,
+                cancellationToken);
         if (existing is not null)
         {
-            if (!existing.IsActive)
+            if (existing.IsActive && existing.DeletedAt is null)
             {
-                existing.IsActive = true;
-                await _db.SaveChangesAsync(cancellationToken);
+                return existing.Id;
             }
 
+            existing.IsActive = true;
+            existing.DeletedAt = null;
+            existing.DeletedBy = null;
+            existing.UpdatedAt = DateTimeOffset.UtcNow;
+            existing.TouchRowVersion();
+            await _db.SaveChangesAsync(cancellationToken);
             return existing.Id;
         }
 

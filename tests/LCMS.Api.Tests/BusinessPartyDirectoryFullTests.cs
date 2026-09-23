@@ -102,6 +102,28 @@ public sealed class BusinessPartyDirectoryFullTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CarrierOnly_AppearsOnVendorDirectory_NotCustomer()
+    {
+        var tenantId = await CreateTenantAsync("TN-PARTY-CARR", "Party Carrier");
+        using var create = WithTenant(HttpMethod.Post, "/api/business-parties", tenantId);
+        create.Content = JsonContent.Create(new
+        {
+            code = "VEN-UAT-AIR",
+            name = "Singapore Airlines Cargo UAT",
+            roleCodes = new[] { PartyRoleCodes.Carrier }
+        });
+        var partyId = (await (await _client.SendAsync(create)).Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+
+        using var vendors = WithTenant(HttpMethod.Get, "/api/business-parties/directory?roleCode=vendor&page=1&pageSize=50", tenantId);
+        var vendorPage = await (await _client.SendAsync(vendors)).Content.ReadFromJsonAsync<DirectoryPage>(JsonOptions);
+        Assert.Contains(vendorPage!.Items, i => i.Id == partyId);
+
+        using var customers = WithTenant(HttpMethod.Get, "/api/business-parties/directory?roleCode=customer&page=1&pageSize=50", tenantId);
+        var customerPage = await (await _client.SendAsync(customers)).Content.ReadFromJsonAsync<DirectoryPage>(JsonOptions);
+        Assert.DoesNotContain(customerPage!.Items, i => i.Id == partyId);
+    }
+
+    [Fact]
     public async Task Inactive_Vendor_Cannot_Receive_Payable_Document()
     {
         var tenantId = await CreateTenantAsync("TN-PARTY-INACT", "Party Inact");

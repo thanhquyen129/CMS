@@ -58,4 +58,21 @@ public static class PartyRoleCodes
         Carrier,
         Agent
     ];
+
+    /// <summary>Directory tabs: Khách hàng includes the customer side; Nhà cung cấp includes the vendor side.</summary>
+    public static IReadOnlyList<string> ForDirectory(string roleCode)
+    {
+        var role = roleCode.Trim().ToLowerInvariant();
+        if (role == Customer)
+        {
+            return CustomerSide;
+        }
+
+        if (role == Vendor)
+        {
+            return VendorSide;
+        }
+
+        return [role];
+    }
 }

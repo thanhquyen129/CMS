@@ -56,8 +56,7 @@ export function PartyRolesPanel({
     <fieldset className="group-box">
       <legend>Vai trò đối tác</legend>
       <p className="muted" style={{ marginTop: 0 }}>
-        Một đối tác có thể vừa là khách hàng vừa là nhà cung cấp (canonical +
-        roles).
+        Một đối tác có thể vừa là khách hàng vừa là nhà cung cấp. Hãng vận chuyển và đại lý nằm trong danh sách Nhà cung cấp.
       </p>
       <div className="form-grid cols-2">
         {PARTY_ROLE_OPTIONS.map((r) => {

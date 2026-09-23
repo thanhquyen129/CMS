@@ -496,9 +496,9 @@ internal static class PartySearch
 
         if (!string.IsNullOrWhiteSpace(roleCode))
         {
-            var role = roleCode.Trim().ToLowerInvariant();
+            var roles = PartyRoleCodes.ForDirectory(roleCode).ToArray();
             var partyIds = db.PartyRoles.AsNoTracking()
-                .Where(r => r.RoleCode == role && r.IsActive)
+                .Where(r => roles.Contains(r.RoleCode) && r.IsActive)
                 .Select(r => r.PartyId);
             query = query.Where(p => partyIds.Contains(p.Id));
         }

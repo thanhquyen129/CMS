@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-23 — Nhập đối tác dùng được cho kế toán
+
+### User
+Hoàn thiện chức năng Nhập đối tác ở mức commercial ready.
+
+### Answer
+`/admin/parties/import` có file mẫu `mau-nhap-doi-tac.csv`, nút chọn file tiếng Việt, và bảng xem trước (mã, tên, MST, vai trò, tài khoản, liên hệ, đạt/lỗi) trước khi ghi. CSV nhận dấu phẩy hoặc chấm phẩy, tên có dấu phẩy trong ngoặc kép, header tiếng Việt hoặc tiếng Anh. Vai trò ghi «Khách hàng;Nhà cung cấp». Một dòng có thể kèm địa chỉ, một tài khoản ngân hàng mặc định và một người liên hệ chính (Kế toán). Một dòng lỗi thì không ghi gì. Không gộp hồ sơ trùng mã/MST.
+
+### Files
+- `apps/web/components/ImportPartiesForm.tsx`, `apps/web/lib/party-csv.ts`, `apps/web/app/admin/parties/import/page.tsx`
+- `src/LCMS.Application/BusinessParties/Commands/ImportBusinessPartiesCommand.cs`
+- Test: `PartyImportTests.Commit_VietnameseRoles_WritesBankAndContact`
+
+### API
+`POST /api/party-imports/preview` và `/commit`. Thêm trường tùy chọn: `addressLine1`, `city`, `province`, `bankName`, `bankAccountNumber`, `bankAccountName`, `bankCurrencyCode`, `contactName`, `contactPhone`, `contactEmail`, `contactFunction`. `roleCodes` và `partyKind` nhận nhãn tiếng Việt.
+
 ## 2026-09-23 — Tạm tắt dotnet test trên CI
 
 ### User

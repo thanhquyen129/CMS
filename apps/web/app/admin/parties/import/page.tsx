@@ -23,7 +23,7 @@ export default async function PartyImportPage() {
             { label: "Nhập đối tác" },
           ]}
           title="Nhập đối tác"
-          lede="Nhập hàng loạt đối tác từ CSV — xem trước rồi ghi tất cả hoặc không ghi gì. Không gộp hồ sơ trùng."
+          lede="Tải file mẫu, điền khách hàng và nhà cung cấp, xem trước từng dòng rồi ghi một lần. Gồm MST, vai trò, hạn mức, tài khoản nhận tiền và người liên hệ."
         />
         <ImportPartiesForm />
       </section>

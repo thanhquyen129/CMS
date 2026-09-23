@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
@@ -32,7 +34,18 @@ public sealed record PartyImportRow(
     bool? IsCustomer = null,
     bool? IsVendor = null,
     bool? IsPayer = null,
-    bool? IsPayee = null);
+    bool? IsPayee = null,
+    string? AddressLine1 = null,
+    string? City = null,
+    string? Province = null,
+    string? BankName = null,
+    string? BankAccountNumber = null,
+    string? BankAccountName = null,
+    string? BankCurrencyCode = null,
+    string? ContactName = null,
+    string? ContactPhone = null,
+    string? ContactEmail = null,
+    string? ContactFunction = null);
 
 public sealed record PartyImportIssue(int Row, string Field, string Message);
 
@@ -219,10 +232,28 @@ public sealed class PartyImportBatch
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(row.PartyKind) && !PartyKinds.IsKnown(row.PartyKind))
+            if (!string.IsNullOrWhiteSpace(row.PartyKind) && CanonicalPartyKind(row.PartyKind) is null)
             {
-                issues.Add(new PartyImportIssue(rowNo, "partyKind", "Loại đối tác phải là organization hoặc individual."));
+                issues.Add(new PartyImportIssue(rowNo, "partyKind", "Loại đối tác phải là Tổ chức hoặc Cá nhân."));
             }
+
+            if (row.AddressLine1 is { Length: > 256 })
+            {
+                issues.Add(new PartyImportIssue(rowNo, "addressLine1", "Địa chỉ không được vượt quá 256 ký tự."));
+            }
+
+            if (row.City is { Length: > 128 })
+            {
+                issues.Add(new PartyImportIssue(rowNo, "city", "Thành phố không được vượt quá 128 ký tự."));
+            }
+
+            if (row.Province is { Length: > 128 })
+            {
+                issues.Add(new PartyImportIssue(rowNo, "province", "Tỉnh không được vượt quá 128 ký tự."));
+            }
+
+            ValidateBank(rowNo, row, currencySet, issues);
+            ValidateContact(rowNo, row, issues);
 
             var countryCode = BusinessPartyFieldRules.NormalizeCountry(row.CountryCode);
             if (countryCode is not null
@@ -256,7 +287,7 @@ public sealed class PartyImportBatch
                     issues.Add(new PartyImportIssue(
                         rowNo,
                         "roleCodes",
-                        $"Vai trò '{role}' không hợp lệ. Dùng customer, vendor, payer, payee, …"));
+                        $"Vai trò '{role}' không hợp lệ. Dùng Khách hàng, Nhà cung cấp, Bên trả tiền, Bên nhận tiền."));
                 }
             }
         }
@@ -297,11 +328,14 @@ public sealed class PartyImportBatch
                 CreditLimitCurrencyCode: row.CreditLimitCurrencyCode,
                 Notes: row.Notes,
                 RoleCodes: roleCodes,
-                PartyKind: row.PartyKind,
+                PartyKind: CanonicalPartyKind(row.PartyKind),
                 ShortName: row.ShortName,
                 GroupCode: row.GroupCode,
                 ExternalCode: row.ExternalCode,
-                CountryCode: row.CountryCode);
+                CountryCode: row.CountryCode,
+                AddressLine1: row.AddressLine1,
+                City: row.City,
+                Province: row.Province);
 
             var party = new BusinessParty
             {
@@ -324,6 +358,9 @@ public sealed class PartyImportBatch
                 });
             }
 
+            AddBank(tenantId, party.Id, row);
+            AddContact(tenantId, party.Id, row);
+
             _audit.Append(
                 AuditActions.BusinessPartyCreate,
                 AuditObjectTypes.BusinessParty,
@@ -336,6 +373,8 @@ public sealed class PartyImportBatch
                     party.TaxId,
                     party.PartyKind,
                     roles = roleCodes,
+                    bankAccount = BusinessPartyFieldRules.Normalize(row.BankAccountNumber),
+                    contact = BusinessPartyFieldRules.Normalize(row.ContactName),
                     source = "party_import"
                 }));
         }
@@ -366,10 +405,12 @@ public sealed class PartyImportBatch
 
                 foreach (var part in raw.Split([';', '|', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    if (part.Length > 0)
+                    if (part.Length == 0)
                     {
-                        set.Add(part.ToLowerInvariant());
+                        continue;
                     }
+
+                    set.Add(CanonicalRole(part) ?? part.Trim().ToLowerInvariant());
                 }
             }
         }
@@ -380,6 +421,190 @@ public sealed class PartyImportBatch
         if (row.IsPayee == true) set.Add(PartyRoleCodes.Payee);
 
         return set.ToList();
+    }
+
+    private static void ValidateBank(
+        int rowNo,
+        PartyImportRow row,
+        HashSet<string> currencySet,
+        List<PartyImportIssue> issues)
+    {
+        var bankName = BusinessPartyFieldRules.Normalize(row.BankName);
+        var account = BusinessPartyFieldRules.Normalize(row.BankAccountNumber);
+        var accountName = BusinessPartyFieldRules.Normalize(row.BankAccountName);
+        var hasAny = bankName is not null || account is not null || accountName is not null
+            || BusinessPartyFieldRules.Normalize(row.BankCurrencyCode) is not null;
+        if (!hasAny)
+        {
+            return;
+        }
+
+        if (bankName is null)
+        {
+            issues.Add(new PartyImportIssue(rowNo, "bankName", "Thiếu tên ngân hàng."));
+        }
+        else if (bankName.Length > 256)
+        {
+            issues.Add(new PartyImportIssue(rowNo, "bankName", "Tên ngân hàng không được vượt quá 256 ký tự."));
+        }
+
+        if (account is null)
+        {
+            issues.Add(new PartyImportIssue(rowNo, "bankAccountNumber", "Thiếu số tài khoản."));
+        }
+        else if (account.Length > 64)
+        {
+            issues.Add(new PartyImportIssue(rowNo, "bankAccountNumber", "Số tài khoản không được vượt quá 64 ký tự."));
+        }
+
+        if (accountName is { Length: > 256 })
+        {
+            issues.Add(new PartyImportIssue(rowNo, "bankAccountName", "Tên tài khoản không được vượt quá 256 ký tự."));
+        }
+
+        var currency = BusinessPartyFieldRules.NormalizeCurrency(row.BankCurrencyCode) ?? "VND";
+        ValidateCurrency(rowNo, "bankCurrencyCode", currency, currencySet, issues);
+    }
+
+    private static void ValidateContact(int rowNo, PartyImportRow row, List<PartyImportIssue> issues)
+    {
+        var name = BusinessPartyFieldRules.Normalize(row.ContactName);
+        var phone = BusinessPartyFieldRules.Normalize(row.ContactPhone);
+        var email = BusinessPartyFieldRules.Normalize(row.ContactEmail);
+        var function = BusinessPartyFieldRules.Normalize(row.ContactFunction);
+        var hasAny = name is not null || phone is not null || email is not null || function is not null;
+        if (!hasAny)
+        {
+            return;
+        }
+
+        if (name is null)
+        {
+            issues.Add(new PartyImportIssue(rowNo, "contactName", "Thiếu tên người liên hệ."));
+        }
+        else if (name.Length > 256)
+        {
+            issues.Add(new PartyImportIssue(rowNo, "contactName", "Tên người liên hệ không được vượt quá 256 ký tự."));
+        }
+
+        if (phone is { Length: > 64 })
+        {
+            issues.Add(new PartyImportIssue(rowNo, "contactPhone", "Điện thoại liên hệ không được vượt quá 64 ký tự."));
+        }
+
+        if (email is not null && !IsSimpleEmail(email))
+        {
+            issues.Add(new PartyImportIssue(rowNo, "contactEmail", "Email liên hệ không hợp lệ."));
+        }
+
+        if (function is not null && CanonicalContactFunction(function) is null)
+        {
+            issues.Add(new PartyImportIssue(rowNo, "contactFunction", "Chức năng liên hệ phải là Kế toán, Điều vận, Pháp lý hoặc Chung."));
+        }
+    }
+
+    private void AddBank(Guid tenantId, Guid partyId, PartyImportRow row)
+    {
+        var bankName = BusinessPartyFieldRules.Normalize(row.BankName);
+        var account = BusinessPartyFieldRules.Normalize(row.BankAccountNumber);
+        if (bankName is null || account is null)
+        {
+            return;
+        }
+
+        _db.PartyBankAccounts.Add(new PartyBankAccount
+        {
+            TenantId = tenantId,
+            PartyId = partyId,
+            BankName = bankName,
+            AccountNumber = account,
+            AccountName = BusinessPartyFieldRules.Normalize(row.BankAccountName),
+            CurrencyCode = BusinessPartyFieldRules.NormalizeCurrency(row.BankCurrencyCode) ?? "VND",
+            IsDefault = true,
+            IsActive = true
+        });
+    }
+
+    private void AddContact(Guid tenantId, Guid partyId, PartyImportRow row)
+    {
+        var name = BusinessPartyFieldRules.Normalize(row.ContactName);
+        if (name is null)
+        {
+            return;
+        }
+
+        _db.PartyContacts.Add(new PartyContact
+        {
+            TenantId = tenantId,
+            PartyId = partyId,
+            FullName = name,
+            Phone = BusinessPartyFieldRules.Normalize(row.ContactPhone),
+            Email = BusinessPartyFieldRules.Normalize(row.ContactEmail),
+            FunctionCode = CanonicalContactFunction(row.ContactFunction) ?? PartyContactFunctions.General,
+            IsPrimary = true,
+            IsActive = true
+        });
+    }
+
+    private static string? CanonicalPartyKind(string? raw)
+    {
+        var key = Fold(raw);
+        return key switch
+        {
+            "organization" or "to chuc" or "org" or "cong ty" => PartyKinds.Organization,
+            "individual" or "ca nhan" or "nguoi" => PartyKinds.Individual,
+            _ => null
+        };
+    }
+
+    private static string? CanonicalRole(string raw)
+    {
+        return Fold(raw) switch
+        {
+            "customer" or "khach hang" or "kh" => PartyRoleCodes.Customer,
+            "vendor" or "nha cung cap" or "ncc" => PartyRoleCodes.Vendor,
+            "payer" or "ben tra tien" => PartyRoleCodes.Payer,
+            "payee" or "ben nhan tien" => PartyRoleCodes.Payee,
+            "bill to" or "bill_to" or "ben nhan hoa don" => PartyRoleCodes.BillTo,
+            "shipper" or "nguoi gui hang" => PartyRoleCodes.Shipper,
+            "consignee" or "nguoi nhan hang" => PartyRoleCodes.Consignee,
+            "carrier" or "hang van chuyen" => PartyRoleCodes.Carrier,
+            "agent" or "dai ly" => PartyRoleCodes.Agent,
+            _ => null
+        };
+    }
+
+    private static string? CanonicalContactFunction(string? raw)
+    {
+        return Fold(raw) switch
+        {
+            "general" or "chung" => PartyContactFunctions.General,
+            "billing" or "ke toan" or "thu chi" => PartyContactFunctions.Billing,
+            "ops" or "dieu van" => PartyContactFunctions.Ops,
+            "legal" or "phap ly" => PartyContactFunctions.Legal,
+            _ => null
+        };
+    }
+
+    private static string? Fold(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var lowered = raw.Trim().ToLowerInvariant().Replace('đ', 'd');
+        var formD = lowered.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(formD.Length);
+        foreach (var c in formD)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            {
+                sb.Append(c);
+            }
+        }
+
+        return sb.ToString().Normalize(NormalizationForm.FormC);
     }
 
     private static void ValidateCurrency(

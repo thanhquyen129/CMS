@@ -1,4 +1,5 @@
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -65,4 +66,32 @@ public static class IdempotencyScopes
     public const string CostAllocation = "cost_allocation";
     public const string PaymentAllocation = "payment_allocation";
     public const string CollectionAllocation = "collection_allocation";
+    public const string CostConfirm = "cost_confirm";
+    public const string CostActualize = "cost_actualize";
+    public const string RevenueConfirm = "revenue_confirm";
+    public const string RevenueActualize = "revenue_actualize";
+}
+
+public static class IdempotencyReplay
+{
+    public static async Task<bool> AlreadyAppliedAsync(
+        IIdempotencyGate gate,
+        string scope,
+        string? key,
+        Guid objectId,
+        CancellationToken cancellationToken)
+    {
+        var prior = await gate.FindAsync(scope, key, cancellationToken);
+        if (!prior.HasValue)
+        {
+            return false;
+        }
+
+        if (prior.Value != objectId)
+        {
+            throw new ConflictAppException("Khóa idempotency đã dùng cho bản ghi khác.");
+        }
+
+        return true;
+    }
 }

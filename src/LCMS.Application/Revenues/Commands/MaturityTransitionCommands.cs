@@ -12,7 +12,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Revenues.Commands;
 
-public sealed record ConfirmRevenueCommand(Guid RevenueId, decimal? ConfirmedAmount, string? IfMatch = null) : IRequest;
+public sealed record ConfirmRevenueCommand(
+    Guid RevenueId,
+    decimal? ConfirmedAmount,
+    string? IfMatch = null,
+    string? IdempotencyKey = null) : IRequest;
 
 public sealed class ConfirmRevenueCommandValidator : AbstractValidator<ConfirmRevenueCommand>
 {
@@ -42,6 +46,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
     private readonly IPeriodLockGate _periodLockGate;
     private readonly IPermissionService _permissions;
     private readonly IRowVersionGuard _versions;
+    private readonly IIdempotencyGate _idempotency;
 
     public ConfirmRevenueCommandHandler(
         ILcmsDbContext db,
@@ -52,7 +57,8 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         ICriticalExceptionConfirmGate criticalExceptionGate,
         IPeriodLockGate periodLockGate,
         IPermissionService permissions,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -63,6 +69,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         _periodLockGate = periodLockGate;
         _permissions = permissions;
         _versions = versions;
+        _idempotency = idempotency;
     }
 
     public async Task Handle(ConfirmRevenueCommand request, CancellationToken cancellationToken)
@@ -76,6 +83,16 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
             PermissionCodes.RevenueConfirm,
             "Bạn không có quyền xác nhận doanh thu.",
             cancellationToken);
+
+        if (await IdempotencyReplay.AlreadyAppliedAsync(
+                _idempotency,
+                IdempotencyScopes.RevenueConfirm,
+                request.IdempotencyKey,
+                request.RevenueId,
+                cancellationToken))
+        {
+            return;
+        }
 
         var revenue = await _db.Revenues.FirstOrDefaultAsync(r => r.Id == request.RevenueId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");
@@ -124,6 +141,11 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         revenue.ConfirmedBy = _user.UserId;
         await _fx.ApplyToRevenueAsync(revenue, confirmed, cancellationToken);
 
+        _idempotency.Remember(
+            IdempotencyScopes.RevenueConfirm,
+            request.IdempotencyKey ?? "",
+            revenue.Id,
+            _tenantContext.TenantId!.Value);
         await _db.SaveChangesAsync(cancellationToken);
     }
 }
@@ -133,7 +155,8 @@ public sealed record ActualizeRevenueCommand(
     decimal? ActualAmount,
     string? SourceSystem = null,
     string? OverrideReason = null,
-    string? IfMatch = null) : IRequest;
+    string? IfMatch = null,
+    string? IdempotencyKey = null) : IRequest;
 
 public sealed class ActualizeRevenueCommandValidator : AbstractValidator<ActualizeRevenueCommand>
 {
@@ -158,6 +181,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
     private readonly IPermissionService _permissions;
     private readonly IAuditWriter _audit;
     private readonly IRowVersionGuard _versions;
+    private readonly IIdempotencyGate _idempotency;
 
     public ActualizeRevenueCommandHandler(
         ILcmsDbContext db,
@@ -166,7 +190,8 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         IRevenueFxStub fx,
         IPermissionService permissions,
         IAuditWriter audit,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -175,6 +200,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         _permissions = permissions;
         _audit = audit;
         _versions = versions;
+        _idempotency = idempotency;
     }
 
     public async Task Handle(ActualizeRevenueCommand request, CancellationToken cancellationToken)
@@ -188,6 +214,16 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
             PermissionCodes.RevenueActualize,
             "Bạn không có quyền thực tế hóa doanh thu.",
             cancellationToken);
+
+        if (await IdempotencyReplay.AlreadyAppliedAsync(
+                _idempotency,
+                IdempotencyScopes.RevenueActualize,
+                request.IdempotencyKey,
+                request.RevenueId,
+                cancellationToken))
+        {
+            return;
+        }
 
         var revenue = await _db.Revenues.FirstOrDefaultAsync(r => r.Id == request.RevenueId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");
@@ -237,6 +273,11 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         revenue.ActualizedBy = _user.UserId;
         await _fx.ApplyToRevenueAsync(revenue, actual, cancellationToken);
 
+        _idempotency.Remember(
+            IdempotencyScopes.RevenueActualize,
+            request.IdempotencyKey ?? "",
+            revenue.Id,
+            _tenantContext.TenantId!.Value);
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

@@ -13,7 +13,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Costs.Commands;
 
-public sealed record ConfirmCostCommand(Guid CostId, decimal? ConfirmedAmount, string? IfMatch = null) : IRequest;
+public sealed record ConfirmCostCommand(
+    Guid CostId,
+    decimal? ConfirmedAmount,
+    string? IfMatch = null,
+    string? IdempotencyKey = null) : IRequest;
 
 public sealed class ConfirmCostCommandValidator : AbstractValidator<ConfirmCostCommand>
 {
@@ -44,6 +48,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     private readonly IPeriodLockGate _periodLockGate;
     private readonly IPermissionService _permissions;
     private readonly IRowVersionGuard _versions;
+    private readonly IIdempotencyGate _idempotency;
 
     public ConfirmCostCommandHandler(
         ILcmsDbContext db,
@@ -55,7 +60,8 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         ICriticalExceptionConfirmGate criticalExceptionGate,
         IPeriodLockGate periodLockGate,
         IPermissionService permissions,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -67,6 +73,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         _periodLockGate = periodLockGate;
         _permissions = permissions;
         _versions = versions;
+        _idempotency = idempotency;
     }
 
     public async Task Handle(ConfirmCostCommand request, CancellationToken cancellationToken)
@@ -80,6 +87,16 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
             PermissionCodes.CostConfirm,
             "Bạn không có quyền xác nhận chi phí.",
             cancellationToken);
+
+        if (await IdempotencyReplay.AlreadyAppliedAsync(
+                _idempotency,
+                IdempotencyScopes.CostConfirm,
+                request.IdempotencyKey,
+                request.CostId,
+                cancellationToken))
+        {
+            return;
+        }
 
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == request.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
@@ -161,6 +178,11 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
                 baseAmount = cost.BaseAmount
             }));
 
+        _idempotency.Remember(
+            IdempotencyScopes.CostConfirm,
+            request.IdempotencyKey ?? "",
+            cost.Id,
+            _tenantContext.TenantId!.Value);
         await _db.SaveChangesAsync(cancellationToken);
     }
 
@@ -180,7 +202,11 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     }
 }
 
-public sealed record ActualizeCostCommand(Guid CostId, decimal? ActualAmount, string? IfMatch = null) : IRequest;
+public sealed record ActualizeCostCommand(
+    Guid CostId,
+    decimal? ActualAmount,
+    string? IfMatch = null,
+    string? IdempotencyKey = null) : IRequest;
 
 public sealed class ActualizeCostCommandValidator : AbstractValidator<ActualizeCostCommand>
 {
@@ -204,6 +230,7 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
     private readonly ICostFxStub _fx;
     private readonly IPermissionService _permissions;
     private readonly IRowVersionGuard _versions;
+    private readonly IIdempotencyGate _idempotency;
 
     public ActualizeCostCommandHandler(
         ILcmsDbContext db,
@@ -211,7 +238,8 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
         ICurrentUserContext user,
         ICostFxStub fx,
         IPermissionService permissions,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -219,6 +247,7 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
         _fx = fx;
         _permissions = permissions;
         _versions = versions;
+        _idempotency = idempotency;
     }
 
     public async Task Handle(ActualizeCostCommand request, CancellationToken cancellationToken)
@@ -232,6 +261,16 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
             PermissionCodes.CostActualize,
             "Bạn không có quyền thực tế hóa chi phí.",
             cancellationToken);
+
+        if (await IdempotencyReplay.AlreadyAppliedAsync(
+                _idempotency,
+                IdempotencyScopes.CostActualize,
+                request.IdempotencyKey,
+                request.CostId,
+                cancellationToken))
+        {
+            return;
+        }
 
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == request.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
@@ -259,6 +298,11 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
         cost.ActualizedBy = _user.UserId;
         await _fx.ApplyToCostAsync(cost, actual, cancellationToken);
 
+        _idempotency.Remember(
+            IdempotencyScopes.CostActualize,
+            request.IdempotencyKey ?? "",
+            cost.Id,
+            _tenantContext.TenantId!.Value);
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

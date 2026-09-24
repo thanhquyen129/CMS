@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — CRP-04 key xác nhận / thực tế
+
+### User
+xem còn bao nhiêu đầu việc, chia ra mỗi bacth 5 việc rồi làm tuần tự. xong báo mình
+
+### Answer
+Còn 15 đầu việc chưa Done. Đợt 1 làm được CRP-04: xác nhận và thực tế chi phí/doanh thu lưu Idempotency-Key. Gửi lại cùng key trả 204 và giữ số đã ghi, kể cả khi If-Match không còn khớp. Cùng key trên bản ghi khác trả 409 «đã dùng cho bản ghi khác». Không có key thì lần xác nhận thứ hai vẫn 409 vì lớp đã chuyển. Test `ConfirmReplay_KeepsTheAmount_AndRejectsTheSameKeyOnAnotherCost` (3 s, Passed). CRP-01, 09, 14, 15, 16, 17 và CRP-18…21 không đóng trong lượt này: thiếu hostname/chứng chỉ, SMTP, phiên đăng nhập, chữ ký reviewer, hoặc đang khóa PO.
+
+### Files
+- `IdempotencyGate.cs`
+- `Costs/Commands/MaturityTransitionCommands.cs`
+- `Revenues/Commands/MaturityTransitionCommands.cs`
+- `CostEndpoints.cs`, `RevenueEndpoints.cs`
+- `tests/LCMS.Api.Tests/MaturityIdempotencyTests.cs`
+
 ## 2026-09-24 — CRP-17 cô lập hai thuê bao
 
 ### User

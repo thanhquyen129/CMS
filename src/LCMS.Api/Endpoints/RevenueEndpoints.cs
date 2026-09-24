@@ -64,7 +64,10 @@ public static class RevenueEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("If-Match", out var ifMatch);
-            await sender.Send(new ConfirmRevenueCommand(id, body?.ConfirmedAmount, ifMatch.ToString()), ct);
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            await sender.Send(
+                new ConfirmRevenueCommand(id, body?.ConfirmedAmount, ifMatch.ToString(), idempotencyKey.ToString()),
+                ct);
             return Results.NoContent();
         });
 
@@ -76,8 +79,14 @@ public static class RevenueEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("If-Match", out var ifMatch);
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             await sender.Send(new ActualizeRevenueCommand(
-                id, body?.ActualAmount, body?.SourceSystem, body?.OverrideReason, ifMatch.ToString()), ct);
+                id,
+                body?.ActualAmount,
+                body?.SourceSystem,
+                body?.OverrideReason,
+                ifMatch.ToString(),
+                idempotencyKey.ToString()), ct);
             return Results.NoContent();
         });
 

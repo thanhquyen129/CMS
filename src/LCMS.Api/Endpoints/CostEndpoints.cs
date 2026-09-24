@@ -76,7 +76,10 @@ public static class CostEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("If-Match", out var ifMatch);
-            await sender.Send(new ConfirmCostCommand(id, body?.ConfirmedAmount, ifMatch.ToString()), ct);
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            await sender.Send(
+                new ConfirmCostCommand(id, body?.ConfirmedAmount, ifMatch.ToString(), idempotencyKey.ToString()),
+                ct);
             return Results.NoContent();
         });
 
@@ -88,7 +91,10 @@ public static class CostEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("If-Match", out var ifMatch);
-            await sender.Send(new ActualizeCostCommand(id, body?.ActualAmount, ifMatch.ToString()), ct);
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            await sender.Send(
+                new ActualizeCostCommand(id, body?.ActualAmount, ifMatch.ToString(), idempotencyKey.ToString()),
+                ct);
             return Results.NoContent();
         });
 

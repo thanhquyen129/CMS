@@ -19,7 +19,7 @@ P0/P1 mở không bằng 0. Không gọi Pixel-perfect xong.
 | W-N1 | Ảnh UI-01…15 đối chiếu PNG | Mở — chưa có file ảnh |
 | W-N2 | UX-02…06 | Mở — UX-06 API đã cô lập Bill/Chi phí; hai phiên đăng nhập trên host chưa chạy |
 | W-N3 | UX-07…10 | Mở — UX-10 chưa chạy bàn phím; UX-09 chưa đo 1280/1440 |
-| W-N4 | UX-11…13 | Mở một phần — KPI đã đối chiếu điểm; xác nhận/thực tế chưa lưu Idempotency-Key phía server |
+| W-N4 | UX-11…13 | Mở một phần — KPI đã đối chiếu điểm; xác nhận/thực tế đã lưu key, chưa chạy double-click trên host |
 | W-N5 | P0/P1 mở = 0 | Không đạt |
 
 Đóng cổng khi có đủ 15 ảnh, UX-10 đã Tab trên host, UX-06 đã mở hai phiên trên host, và bảng dưới không còn Blocked / Not run.

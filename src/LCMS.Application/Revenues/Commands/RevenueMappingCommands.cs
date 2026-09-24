@@ -357,15 +357,18 @@ public sealed class CancelRevenueMappingCommandHandler : IRequestHandler<CancelR
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IRowVersionGuard _versions;
+    private readonly IAuditWriter _audit;
 
     public CancelRevenueMappingCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _versions = versions;
+        _audit = audit;
     }
 
     public async Task Handle(CancelRevenueMappingCommand request, CancellationToken cancellationToken)
@@ -385,6 +388,13 @@ public sealed class CancelRevenueMappingCommandHandler : IRequestHandler<CancelR
         }
 
         mapping.MappingStatus = CostAllocationStatuses.Cancelled;
+        _audit.Append(
+            AuditActions.RevenueMappingCancel,
+            AuditObjectTypes.RevenueMapping,
+            mapping.Id,
+            CostAllocationStatuses.Draft,
+            CostAllocationStatuses.Cancelled,
+            null);
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

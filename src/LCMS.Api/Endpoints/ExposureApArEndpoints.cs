@@ -163,7 +163,8 @@ public static class ExposureApArEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("If-Match", out var ifMatch);
-            var adjId = await sender.Send(new AdjustAccountsPayableCommand(id, body.DeltaAmount, body.Reason, ifMatch.ToString()), ct);
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            var adjId = await sender.Send(new AdjustAccountsPayableCommand(id, body.DeltaAmount, body.Reason, ifMatch.ToString(), idempotencyKey.ToString()), ct);
             return Results.Created($"/api/accounts-payable/{id}/adjustments/{adjId}", new { id = adjId });
         });
 
@@ -249,7 +250,8 @@ public static class ExposureApArEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("If-Match", out var ifMatch);
-            var adjId = await sender.Send(new AdjustAccountsReceivableCommand(id, body.DeltaAmount, body.Reason, ifMatch.ToString()), ct);
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            var adjId = await sender.Send(new AdjustAccountsReceivableCommand(id, body.DeltaAmount, body.Reason, ifMatch.ToString(), idempotencyKey.ToString()), ct);
             return Results.Created($"/api/accounts-receivable/{id}/adjustments/{adjId}", new { id = adjId });
         });
 

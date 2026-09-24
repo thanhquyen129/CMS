@@ -39,6 +39,7 @@ public static class AuditActions
     public const string CostConfirm = "cost.confirm";
     public const string RevenueCreate = "revenue.create";
     public const string RevenueMappingFinalize = "revenue.mapping.finalize";
+    public const string RevenueMappingCancel = "revenue.mapping.cancel";
     public const string PaymentAllocationFinalize = "payment_allocation.finalize";
     public const string CollectionAllocationFinalize = "collection_allocation.finalize";
     public const string AccountsPayableWriteOff = "accounts_payable.write_off";
@@ -100,6 +101,7 @@ public static class AuditObjectTypes
 {
     public const string Cost = "cost";
     public const string Revenue = "revenue";
+    public const string RevenueMapping = "revenue_mapping";
     public const string Payment = "payment";
     public const string Collection = "collection";
     public const string PaymentAllocation = "payment_allocation";

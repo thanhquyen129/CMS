@@ -70,6 +70,8 @@ public static class IdempotencyScopes
     public const string CostActualize = "cost_actualize";
     public const string RevenueConfirm = "revenue_confirm";
     public const string RevenueActualize = "revenue_actualize";
+    public const string ApAdjustment = "ap_adjustment";
+    public const string ArAdjustment = "ar_adjustment";
 }
 
 public static class IdempotencyReplay

@@ -56,6 +56,22 @@ const rows: { object: string; state: string; edit: string; remove: string; voidO
     permission: "Chi phí hoặc doanh thu",
   },
   {
+    object: "Chia doanh thu",
+    state: "Nháp",
+    edit: "Chưa chốt thì hủy phiên",
+    remove: "Không xóa doanh thu",
+    voidOrReverse: "Hủy phiên + audit; chia lại sau khi hủy",
+    permission: "Doanh thu",
+  },
+  {
+    object: "Chia doanh thu",
+    state: "Đã chốt",
+    edit: "Không sửa dòng đã chốt",
+    remove: "Không xóa",
+    voidOrReverse: "Chia lại thì phiên cũ bị thay",
+    permission: "Doanh thu",
+  },
+  {
     object: "Phân bổ chi phí chung",
     state: "Nháp",
     edit: "Sửa phiên",
@@ -89,8 +105,8 @@ const rows: { object: string; state: string; edit: string; remove: string; voidO
   },
   {
     object: "Phải trả / Phải thu",
-    state: "Còn outstanding, chưa tất toán",
-    edit: "Không sửa số đã ghi nhận",
+    state: "Đang hiệu lực",
+    edit: "Điều chỉnh +/- có lý do, không ghi đè số ghi nhận",
     remove: "Không xóa",
     voidOrReverse: "Xóa sổ phần còn lại, hoặc đảo ghi nhận khi chưa tất toán",
     permission: "AP / AR",

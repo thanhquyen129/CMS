@@ -83,6 +83,13 @@ export type CostDto = CostListItem & {
   allocations: CostAllocation[];
 };
 
+export type RevenueMappingSummary = {
+  id: string;
+  mappingStatus: string;
+  versionNo: number;
+  rowVersion?: string | null;
+};
+
 export type RevenueDto = RevenueListItem & {
   expectedAmount: number;
   confirmedAmount: number | null;
@@ -97,6 +104,7 @@ export type RevenueDto = RevenueListItem & {
   confirmedAt: string | null;
   actualizedAt: string | null;
   adjustments: CostAdjustmentItem[];
+  mappings?: RevenueMappingSummary[] | null;
 };
 
 export type AllocationBasis =

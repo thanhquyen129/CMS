@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — Hủy phiên chia doanh thu và điều chỉnh AP/AR
+
+### User
+Còn gì nữa không, làm tiếp đến mức commercial-ready.
+
+### Answer
+Phiên chia doanh thu nháp hiện trên hồ sơ doanh thu và có nút Hủy (audit `revenue.mapping.cancel`). Hủy xong mới chia lại. Khoản phải trả/phải thu đang hiệu lực có nút Điều chỉnh (+/−, lý do, If-Match). Cùng Idempotency-Key không cộng outstanding lần hai. Không phải xóa nợ và không phải thanh toán. TLS, SMTP, chữ ký reviewer 09B và ảnh UAT vẫn mở vì thiếu hostname, tài khoản thư, hoặc chữ ký PO.
+
+### Files / API
+- `GET /api/revenues/{id}` thêm `mappings`
+- `POST /api/revenue-mappings/{id}/cancel` ghi audit
+- `POST /api/accounts-payable/{id}/adjust` và `POST /api/accounts-receivable/{id}/adjust` nhận `Idempotency-Key`
+- UI: `CancelRevenueMappingButton`, `AdjustApArButton`
+- Test `DraftRevenueSplit_IsListed_AndCancelLetsANewSplitStart` Passed (2 s). `AdjustReplay_KeepsTheSameDelta` Passed (686 ms). `tsc` web Passed. Chưa bấm nút trên trình duyệt.
+
 ## 2026-09-24 — UAT-UI-004 ma trận thao tác và hủy phiếu mở
 
 ### User

@@ -12,7 +12,8 @@ public sealed record AdjustAccountsReceivableCommand(
     Guid AccountsReceivableId,
     decimal DeltaAmount,
     string Reason,
-    string? IfMatch = null) : IRequest<Guid>;
+    string? IfMatch = null,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class AdjustAccountsReceivableCommandValidator
     : AbstractValidator<AdjustAccountsReceivableCommand>
@@ -34,17 +35,20 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IRowVersionGuard _versions;
+    private readonly IIdempotencyGate _idempotency;
 
     public AdjustAccountsReceivableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _versions = versions;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(AdjustAccountsReceivableCommand request, CancellationToken cancellationToken)
@@ -52,6 +56,15 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
         if (!_tenantContext.HasTenant)
         {
             throw new TenantRequiredAppException();
+        }
+
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.ArAdjustment,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
         }
 
         var ar = await _db.AccountsReceivable
@@ -96,6 +109,15 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
             OutstandingAfter = ar.DeriveOutstanding()
         };
         _db.AccountsReceivableAdjustments.Add(row);
+        if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
+        {
+            _idempotency.Remember(
+                IdempotencyScopes.ArAdjustment,
+                request.IdempotencyKey,
+                row.Id,
+                _tenantContext.TenantId!.Value);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
         return row.Id;
     }

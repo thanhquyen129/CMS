@@ -169,6 +169,39 @@ public sealed class Sprint7ExposureApArTests : IAsyncLifetime
         Assert.NotEqual(ar.Id, exposure.Id);
     }
 
+    [Fact]
+    public async Task AdjustReplay_KeepsTheSameDelta()
+    {
+        var tenantId = await CreateTenantAsync("TN-E09-ADJ", "Adjust Replay");
+        var billId = await CreateBillAsync(tenantId, "BL-E09-ADJ", "freight");
+        var exposureId = await CreatePayableExposureAsync(tenantId, billId, 1000m);
+        var apId = await RecognizePayableAsync(tenantId, exposureId, 300m);
+
+        using (var first = new HttpRequestMessage(HttpMethod.Post, $"/api/accounts-payable/{apId}/adjust")
+        {
+            Content = JsonContent.Create(new { deltaAmount = 25m, reason = "Phí phát sinh" })
+        })
+        {
+            first.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            first.Headers.TryAddWithoutValidation("Idempotency-Key", "adj-replay-1");
+            Assert.Equal(HttpStatusCode.Created, (await _client.SendAsync(first)).StatusCode);
+        }
+
+        using (var again = new HttpRequestMessage(HttpMethod.Post, $"/api/accounts-payable/{apId}/adjust")
+        {
+            Content = JsonContent.Create(new { deltaAmount = 999m, reason = "Không cộng lần hai" })
+        })
+        {
+            again.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            again.Headers.TryAddWithoutValidation("Idempotency-Key", "adj-replay-1");
+            Assert.Equal(HttpStatusCode.Created, (await _client.SendAsync(again)).StatusCode);
+        }
+
+        var ap = await GetAccountsPayableAsync(tenantId, apId);
+        Assert.Equal(25m, ap.AdjustmentAmount);
+        Assert.Equal(325m, ap.Outstanding);
+    }
+
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code, name });

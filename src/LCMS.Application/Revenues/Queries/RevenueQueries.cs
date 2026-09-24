@@ -21,6 +21,12 @@ public sealed record RevenueAdjustmentDto(
     decimal AmountAfter,
     DateTimeOffset CreatedAt);
 
+public sealed record RevenueMappingSummaryDto(
+    Guid Id,
+    string MappingStatus,
+    int VersionNo,
+    byte[] RowVersion);
+
 public sealed record RevenueDto(
     Guid Id,
     Guid BillId,
@@ -43,7 +49,8 @@ public sealed record RevenueDto(
     DateTimeOffset? ConfirmedAt,
     DateTimeOffset? ActualizedAt,
     IReadOnlyList<RevenueAdjustmentDto> Adjustments,
-    byte[] RowVersion);
+    byte[] RowVersion,
+    IReadOnlyList<RevenueMappingSummaryDto>? Mappings = null);
 
 public sealed record RevenueListItemDto(
     Guid Id,
@@ -118,6 +125,12 @@ public sealed class GetRevenueByIdQueryHandler : IRequestHandler<GetRevenueByIdQ
                 a.CreatedAt))
             .ToListAsync(cancellationToken);
 
+        var mappings = await _db.RevenueMappings.AsNoTracking()
+            .Where(m => m.RevenueId == revenue.Id)
+            .OrderByDescending(m => m.VersionNo)
+            .Select(m => new RevenueMappingSummaryDto(m.Id, m.MappingStatus, m.VersionNo, m.RowVersion))
+            .ToListAsync(cancellationToken);
+
         return new RevenueDto(
             revenue.Id,
             revenue.BillId,
@@ -140,7 +153,8 @@ public sealed class GetRevenueByIdQueryHandler : IRequestHandler<GetRevenueByIdQ
             revenue.ConfirmedAt,
             revenue.ActualizedAt,
             adjustments,
-            revenue.RowVersion);
+            revenue.RowVersion,
+            mappings);
     }
 }
 

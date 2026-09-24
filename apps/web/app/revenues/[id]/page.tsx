@@ -8,6 +8,7 @@ import {
   LineDetailBackLink,
 } from "@/components/AdjustmentHistoryTable";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
+import { CancelRevenueMappingButton } from "@/components/CancelRevenueMappingButton";
 import { MapRevenueForm } from "@/components/MapRevenueForm";
 import { MaturityTransitionButton } from "@/components/MaturityTransitionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -159,12 +160,36 @@ export default async function RevenueDetailPage({
           </p>
         ) : null}
 
-        <MapRevenueForm
-          revenueId={revenue.id}
-          amount={revenue.amount}
-          currencyCode={revenue.currencyCode}
-          bills={billOptions}
-        />
+        {(() => {
+          const drafts = (revenue.mappings ?? []).filter(
+            (m) => m.mappingStatus.toLowerCase() === "draft"
+          );
+          if (drafts.length === 0) {
+            return (
+              <MapRevenueForm
+                revenueId={revenue.id}
+                amount={revenue.amount}
+                currencyCode={revenue.currencyCode}
+                bills={billOptions}
+              />
+            );
+          }
+          return (
+            <section>
+              <h2>Chia doanh thu cho nhiều Bill</h2>
+              <p className="note">
+                Đã có phiên chia chưa chốt. Hủy phiên trước khi chia lại. Phiên đã chốt không xóa — chia lại sẽ thay phiên cũ.
+              </p>
+              {drafts.map((m) => (
+                <CancelRevenueMappingButton
+                  key={m.id}
+                  mappingId={m.id}
+                  rowVersion={m.rowVersion}
+                />
+              ))}
+            </section>
+          );
+        })()}
 
         <h2>{adjLabel} — lịch sử</h2>
         <p className="note">

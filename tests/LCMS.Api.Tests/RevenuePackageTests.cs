@@ -190,6 +190,37 @@ public sealed class RevenuePackageTests : IAsyncLifetime
         Assert.Contains(rows!, g => g.Label == "sea · VND" && g.RevenueAmount == 20m);
     }
 
+    [Fact]
+    public async Task DraftRevenueSplit_IsListed_AndCancelLetsANewSplitStart()
+    {
+        var tenantId = await CreateTenantAsync();
+        var a = await CreateBillAsync(tenantId, "BL-E-DRF-A");
+        var b = await CreateBillAsync(tenantId, "BL-E-DRF-B");
+        var revenueId = await CreateRevenueAsync(tenantId, a, 40m, null);
+        var mappingId = await MapEqual(tenantId, revenueId, new[] { a, b });
+
+        var listed = await GetRevenueAsync(tenantId, revenueId);
+        var draft = Assert.Single(listed.Mappings!, m => m.MappingStatus == "draft");
+        Assert.Equal(mappingId, draft.Id);
+
+        using var cancel = Tenant(HttpMethod.Post, $"/api/revenue-mappings/{mappingId}/cancel", tenantId);
+        cancel.Headers.TryAddWithoutValidation("If-Match", draft.RowVersion);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(cancel)).StatusCode);
+
+        var after = await GetRevenueAsync(tenantId, revenueId);
+        Assert.DoesNotContain(after.Mappings ?? [], m => m.MappingStatus == "draft");
+        var second = await MapEqual(tenantId, revenueId, new[] { a, b });
+        Assert.NotEqual(mappingId, second);
+    }
+
+    private async Task<RevenueBody> GetRevenueAsync(Guid tenantId, Guid id)
+    {
+        using var req = Tenant(HttpMethod.Get, $"/api/revenues/{id}", tenantId);
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<RevenueBody>(Json))!;
+    }
+
     private async Task PatchMode(Guid tenantId, Guid billId, string mode)
     {
         using var req = Tenant(HttpMethod.Patch, $"/api/bills/{billId}/context", tenantId);
@@ -271,6 +302,8 @@ public sealed class RevenuePackageTests : IAsyncLifetime
 
     private sealed record IdBody(Guid Id);
     private sealed record Err(string? Code, string Message);
+    private sealed record RevenueBody(List<MappingBody>? Mappings);
+    private sealed record MappingBody(Guid Id, string MappingStatus, string RowVersion);
     private sealed record ProfitBody(
         bool HasMixedCurrencies,
         List<Bucket> ByCurrency,

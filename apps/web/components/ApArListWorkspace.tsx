@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { DetailDrawer } from "./DetailDrawer";
 import { DrawerTabs } from "./list/DrawerTabs";
+import { AdjustApArButton } from "./AdjustApArButton";
 import { ReverseRecognizeButton } from "./ReverseRecognizeButton";
 import { WriteOffButton } from "./WriteOffButton";
 import {
@@ -246,6 +247,15 @@ export function ApArListWorkspace({
               </ul>
             ) : null}
             <div className="cta-row" style={{ marginTop: "1rem" }}>
+              {selected.recordStatus.toLowerCase() === "active" ? (
+                <AdjustApArButton
+                  kind={kind}
+                  accountsId={selected.id}
+                  currencyCode={selected.currencyCode}
+                  outstanding={selected.outstanding}
+                  rowVersion={selected.rowVersion}
+                />
+              ) : null}
               {selected.outstanding > 0 ? (
                 <WriteOffButton
                   terms={terms}

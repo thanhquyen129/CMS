@@ -73,6 +73,26 @@ public sealed class RevenuePackageTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task FinalizeMapping_StaleIfMatch_LeavesTheSplitOffTheOtherBill()
+    {
+        var tenantId = await CreateTenantAsync();
+        var a = await CreateBillAsync(tenantId, "BL-E-VER-A");
+        var b = await CreateBillAsync(tenantId, "BL-E-VER-B");
+        var revenueId = await CreateRevenueAsync(tenantId, a, 100m, null);
+        var mappingId = await MapEqual(tenantId, revenueId, new[] { a, b });
+
+        using var fin = Tenant(HttpMethod.Post, $"/api/revenue-mappings/{mappingId}/finalize", tenantId);
+        fin.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+        var blocked = await _client.SendAsync(fin);
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        var err = await blocked.Content.ReadFromJsonAsync<Err>(Json);
+        Assert.Equal("concurrency_conflict", err!.Code);
+
+        var other = await GetProfit(tenantId, b, "expected");
+        Assert.Empty(other.ByCurrency);
+    }
+
+    [Fact]
     public async Task MarginIsNullWhenRevenueIsZero_AndFxDoesNotAddRawCurrencies()
     {
         var tenantId = await CreateTenantAsync();
@@ -230,7 +250,7 @@ public sealed class RevenuePackageTests : IAsyncLifetime
     }
 
     private sealed record IdBody(Guid Id);
-    private sealed record Err(string Message);
+    private sealed record Err(string? Code, string Message);
     private sealed record ProfitBody(
         bool HasMixedCurrencies,
         List<Bucket> ByCurrency,

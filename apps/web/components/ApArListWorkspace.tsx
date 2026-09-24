@@ -253,6 +253,7 @@ export function ApArListWorkspace({
                   accountsId={selected.id}
                   outstanding={selected.outstanding}
                   currencyCode={selected.currencyCode}
+                  rowVersion={selected.rowVersion}
                 />
               ) : null}
               <ReverseRecognizeButton

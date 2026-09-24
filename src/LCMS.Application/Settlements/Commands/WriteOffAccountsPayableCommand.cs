@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Approvals;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
@@ -24,7 +25,8 @@ public sealed record WriteOffResult(bool AppliedImmediately, Guid? ApprovalId, i
 public sealed record WriteOffAccountsPayableCommand(
     Guid AccountsPayableId,
     decimal Amount,
-    string Reason) : IRequest<WriteOffResult>;
+    string Reason,
+    string? IfMatch = null) : IRequest<WriteOffResult>;
 
 public sealed class WriteOffAccountsPayableCommandValidator : AbstractValidator<WriteOffAccountsPayableCommand>
 {
@@ -50,6 +52,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
     private readonly ApprovalMatrixOptions _matrix;
     private readonly TenantFinancialOptionsResolver _financial;
     private readonly IPermissionService _permissions;
+    private readonly IRowVersionGuard _versions;
 
     public WriteOffAccountsPayableCommandHandler(
         ILcmsDbContext db,
@@ -59,7 +62,8 @@ public sealed class WriteOffAccountsPayableCommandHandler
         IOptions<SettlementOptions> options,
         IOptions<ApprovalMatrixOptions> matrix,
         TenantFinancialOptionsResolver financial,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -69,6 +73,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
         _matrix = matrix.Value;
         _financial = financial;
         _permissions = permissions;
+        _versions = versions;
     }
 
     public async Task<WriteOffResult> Handle(
@@ -94,6 +99,7 @@ public sealed class WriteOffAccountsPayableCommandHandler
         var ap = await _db.AccountsPayable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsPayableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+        _versions.EnsureCurrent(ap, request.IfMatch);
 
         if (ap.RecordStatus != "active")
         {

@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Approvals;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
@@ -18,7 +19,8 @@ namespace LCMS.Application.Settlements.Commands;
 public sealed record WriteOffAccountsReceivableCommand(
     Guid AccountsReceivableId,
     decimal Amount,
-    string Reason) : IRequest<WriteOffResult>;
+    string Reason,
+    string? IfMatch = null) : IRequest<WriteOffResult>;
 
 public sealed class WriteOffAccountsReceivableCommandValidator
     : AbstractValidator<WriteOffAccountsReceivableCommand>
@@ -44,6 +46,7 @@ public sealed class WriteOffAccountsReceivableCommandHandler
     private readonly ApprovalMatrixOptions _matrix;
     private readonly TenantFinancialOptionsResolver _financial;
     private readonly IPermissionService _permissions;
+    private readonly IRowVersionGuard _versions;
 
     public WriteOffAccountsReceivableCommandHandler(
         ILcmsDbContext db,
@@ -52,7 +55,8 @@ public sealed class WriteOffAccountsReceivableCommandHandler
         IAuditWriter audit,
         IOptions<ApprovalMatrixOptions> matrix,
         TenantFinancialOptionsResolver financial,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -61,6 +65,7 @@ public sealed class WriteOffAccountsReceivableCommandHandler
         _matrix = matrix.Value;
         _financial = financial;
         _permissions = permissions;
+        _versions = versions;
     }
 
     public async Task<WriteOffResult> Handle(
@@ -86,6 +91,7 @@ public sealed class WriteOffAccountsReceivableCommandHandler
         var ar = await _db.AccountsReceivable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsReceivableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
+        _versions.EnsureCurrent(ar, request.IfMatch);
 
         if (ar.RecordStatus != "active")
         {

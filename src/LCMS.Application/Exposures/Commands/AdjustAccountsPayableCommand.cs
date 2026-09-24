@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -13,7 +14,8 @@ namespace LCMS.Application.Exposures.Commands;
 public sealed record AdjustAccountsPayableCommand(
     Guid AccountsPayableId,
     decimal DeltaAmount,
-    string Reason) : IRequest<Guid>;
+    string Reason,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class AdjustAccountsPayableCommandValidator : AbstractValidator<AdjustAccountsPayableCommand>
 {
@@ -33,15 +35,18 @@ public sealed class AdjustAccountsPayableCommandHandler : IRequestHandler<Adjust
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRowVersionGuard _versions;
 
     public AdjustAccountsPayableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(AdjustAccountsPayableCommand request, CancellationToken cancellationToken)
@@ -54,6 +59,7 @@ public sealed class AdjustAccountsPayableCommandHandler : IRequestHandler<Adjust
         var ap = await _db.AccountsPayable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsPayableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+        _versions.EnsureCurrent(ap, request.IfMatch);
 
         if (ap.RecordStatus != ApArRecordStatuses.Active)
         {

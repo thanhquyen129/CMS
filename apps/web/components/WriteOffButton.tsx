@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
+import { withRowVersion } from "@/lib/idempotency";
 import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -20,6 +21,7 @@ type Props = {
   accountsId: string;
   outstanding: number;
   currencyCode: string;
+  rowVersion?: string | null;
 };
 
 function estimateApprovalLevel(amount: number): 1 | 2 {
@@ -32,6 +34,7 @@ export function WriteOffButton({
   accountsId,
   outstanding,
   currencyCode,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -113,10 +116,13 @@ export function WriteOffButton({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withRowVersion(
+          {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          rowVersion
+        ),
         body: JSON.stringify({ amount: parsed, reason: trimmed }),
       });
 
@@ -172,7 +178,7 @@ export function WriteOffButton({
     } finally {
       setSubmitting(false);
     }
-  }, [accountsId, amount, currencyCode, kind, outstanding, reason, router]);
+  }, [accountsId, amount, currencyCode, kind, outstanding, reason, router, rowVersion]);
 
   if (outstanding <= 0) return null;
 

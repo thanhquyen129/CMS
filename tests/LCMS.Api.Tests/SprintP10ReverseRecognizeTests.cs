@@ -111,6 +111,45 @@ public sealed class SprintP10ReverseRecognizeTests : IAsyncLifetime
         Assert.Equal(2, body.RequiredLevel);
     }
 
+    [Fact]
+    public async Task StaleIfMatch_DoesNotAdjustOrWriteOffPayable()
+    {
+        var tenantId = await CreateTenantAsync("TN-P10-VER", "P10 Version");
+        var billId = await CreateBillAsync(tenantId, "BL-P10-VER", "freight");
+        var expId = await CreatePayableExposureAsync(tenantId, billId, 1_000m);
+        var apId = await RecognizePayableAsync(tenantId, expId, 1_000m);
+
+        using (var adj = new HttpRequestMessage(HttpMethod.Post, $"/api/accounts-payable/{apId}/adjust")
+        {
+            Content = JsonContent.Create(new { deltaAmount = 10m, reason = "phiên cũ" })
+        })
+        {
+            adj.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            adj.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+            var blocked = await _client.SendAsync(adj);
+            Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+            var err = await blocked.Content.ReadFromJsonAsync<CodeBody>(JsonOptions);
+            Assert.Equal("concurrency_conflict", err!.Code);
+        }
+
+        using (var wo = new HttpRequestMessage(HttpMethod.Post, $"/api/accounts-payable/{apId}/write-off")
+        {
+            Content = JsonContent.Create(new { amount = 10m, reason = "phiên cũ" })
+        })
+        {
+            wo.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            wo.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+            var blocked = await _client.SendAsync(wo);
+            Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        }
+
+        using var getAp = new HttpRequestMessage(HttpMethod.Get, $"/api/accounts-payable/{apId}");
+        getAp.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var ap = await (await _client.SendAsync(getAp)).Content.ReadFromJsonAsync<ApMoney>(JsonOptions);
+        Assert.Equal(1_000m, ap!.Outstanding);
+        Assert.Equal(0m, ap.AdjustmentAmount);
+    }
+
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code, name });
@@ -162,6 +201,8 @@ public sealed class SprintP10ReverseRecognizeTests : IAsyncLifetime
 
     private sealed record IdResponse(Guid Id);
     private sealed record ApDto(string RecordStatus, decimal Outstanding);
+    private sealed record ApMoney(decimal Outstanding, decimal AdjustmentAmount);
+    private sealed record CodeBody(string Code);
     private sealed record ExposureDto(decimal RecognizedAmount, string Status);
     private sealed record AdjDto(string AdjustmentType);
     private sealed record WriteOffAccepted(bool RequiresApproval, int? RequiredLevel);

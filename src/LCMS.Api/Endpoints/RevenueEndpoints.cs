@@ -138,7 +138,7 @@ public static class RevenueEndpoints
 
         revenues.MapPost("/{id:guid}/mappings", async (Guid id, CreateRevenueMappingRequest body, ISender sender, CancellationToken ct) =>
         {
-            var mappingId = await sender.Send(
+            var created = await sender.Send(
                 new CreateRevenueMappingCommand(
                     id,
                     body.AllocationBasis,
@@ -147,13 +147,14 @@ public static class RevenueEndpoints
                     body.ScopeId,
                     body.ConditionCode),
                 ct);
-            return Results.Created($"/api/revenue-mappings/{mappingId}", new { id = mappingId });
+            return Results.Created($"/api/revenue-mappings/{created.Id}", new { id = created.Id, rowVersion = created.RowVersion });
         });
 
         var mappings = app.MapGroup("/api/revenue-mappings").WithTags("Revenues");
-        mappings.MapPost("/{id:guid}/finalize", async (Guid id, ISender sender, CancellationToken ct) =>
+        mappings.MapPost("/{id:guid}/finalize", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new FinalizeRevenueMappingCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new FinalizeRevenueMappingCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
         mappings.MapPost("/{id:guid}/cancel", async (Guid id, ISender sender, CancellationToken ct) =>

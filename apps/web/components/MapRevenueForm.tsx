@@ -1,5 +1,6 @@
 "use client";
 
+import { withRowVersion } from "@/lib/idempotency";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -44,12 +45,19 @@ export function MapRevenueForm({
           details: selected.map((billId) => ({ billId })),
         }),
       });
-      const payload = (await created.json().catch(() => ({}))) as { id?: string; message?: string };
+      const payload = (await created.json().catch(() => ({}))) as {
+        id?: string;
+        rowVersion?: string;
+        message?: string;
+      };
       if (!created.ok || !payload.id) {
         setError(payload.message || "Không tạo được phiên chia.");
         return;
       }
-      const fin = await fetch(`/bff/revenue-mappings/${payload.id}/finalize`, { method: "POST" });
+      const fin = await fetch(`/bff/revenue-mappings/${payload.id}/finalize`, {
+        method: "POST",
+        headers: withRowVersion({ Accept: "application/json" }, payload.rowVersion),
+      });
       if (!fin.ok) {
         const body = (await fin.json().catch(() => ({}))) as { message?: string };
         setError(body.message || "Không chốt được phiên chia.");

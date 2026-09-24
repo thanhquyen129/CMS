@@ -1,5 +1,25 @@
 # Handoff
 
+## 2026-09-24 — CRP-06 If-Match điều chỉnh, xóa nợ, chốt chia doanh thu
+
+### User
+tiếp
+
+### Answer
+Điều chỉnh AP/AR, xóa nợ AP/AR, và chốt phiên chia doanh thu đọc `If-Match` sau khi tải dòng, trước kiểm tra trạng thái. Token sai → 409 `concurrency_conflict`, không đổi số dư và không đẩy doanh thu sang Bill kia. Tạo phiên chia trả `rowVersion`; nút chia doanh thu gửi token đó khi chốt. Nút xóa nợ gửi `rowVersion` của khoản đang mở. Màn AP/AR chưa có nút điều chỉnh — API vẫn chặn token sai. Development vẫn cho phép thiếu header. CRP-06 vẫn Partial: còn tính/gửi/hủy phân bổ chi phí, hủy chia doanh thu, hủy khớp chứng từ. Test `StaleIfMatch_DoesNotAdjustOrWriteOffPayable` (522 ms) và `FinalizeMapping_StaleIfMatch_LeavesTheSplitOffTheOtherBill` (2 s), cả hai Passed. Chưa bấm nút trên trình duyệt.
+
+### Files
+- `Exposures/Commands/AdjustAccountsPayableCommand.cs`
+- `Exposures/Commands/AdjustAccountsReceivableCommand.cs`
+- `Settlements/Commands/WriteOffAccountsPayableCommand.cs`
+- `Settlements/Commands/WriteOffAccountsReceivableCommand.cs`
+- `Revenues/Commands/RevenueMappingCommands.cs`
+- `ExposureApArEndpoints.cs`, `RevenueEndpoints.cs`
+- `WriteOffButton.tsx`, `ApArListWorkspace.tsx`, `MapRevenueForm.tsx`
+- `tests/LCMS.Api.Tests/SprintP10ReverseRecognizeTests.cs`
+- `tests/LCMS.Api.Tests/RevenuePackageTests.cs`
+- `docs/adr/ADR-0036-money-if-match.md`
+
 ## 2026-09-24 — CRP-06 If-Match chốt phân bổ, đảo ghi nhận, khớp chứng từ
 
 ### User

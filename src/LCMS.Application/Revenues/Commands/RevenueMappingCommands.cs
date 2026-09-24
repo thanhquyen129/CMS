@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Application.Costs.Commands;
@@ -17,13 +18,15 @@ public sealed record RevenueMappingLineInput(
     decimal? ManualOverrideAmount,
     string? OverrideReason);
 
+public sealed record RevenueMappingCreated(Guid Id, byte[] RowVersion);
+
 public sealed record CreateRevenueMappingCommand(
     Guid RevenueId,
     string AllocationBasis,
     IReadOnlyList<RevenueMappingLineInput> Details,
     string? ApplicabilityMode = null,
     Guid? ScopeId = null,
-    string? ConditionCode = null) : IRequest<Guid>;
+    string? ConditionCode = null) : IRequest<RevenueMappingCreated>;
 
 public sealed class CreateRevenueMappingCommandValidator : AbstractValidator<CreateRevenueMappingCommand>
 {
@@ -34,7 +37,7 @@ public sealed class CreateRevenueMappingCommandValidator : AbstractValidator<Cre
     }
 }
 
-public sealed class CreateRevenueMappingCommandHandler : IRequestHandler<CreateRevenueMappingCommand, Guid>
+public sealed class CreateRevenueMappingCommandHandler : IRequestHandler<CreateRevenueMappingCommand, RevenueMappingCreated>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
@@ -50,7 +53,7 @@ public sealed class CreateRevenueMappingCommandHandler : IRequestHandler<CreateR
         _permissions = permissions;
     }
 
-    public async Task<Guid> Handle(CreateRevenueMappingCommand request, CancellationToken cancellationToken)
+    public async Task<RevenueMappingCreated> Handle(CreateRevenueMappingCommand request, CancellationToken cancellationToken)
     {
         if (!_tenantContext.HasTenant)
         {
@@ -170,7 +173,7 @@ public sealed class CreateRevenueMappingCommandHandler : IRequestHandler<CreateR
         _db.RevenueMappings.Add(mapping);
         _db.RevenueMappingDetails.AddRange(details);
         await _db.SaveChangesAsync(cancellationToken);
-        return mapping.Id;
+        return new RevenueMappingCreated(mapping.Id, mapping.RowVersion);
     }
 
     private async Task<IReadOnlyList<RevenueMappingLineInput>> ResolveTargetsAsync(
@@ -250,7 +253,7 @@ public sealed class CreateRevenueMappingCommandHandler : IRequestHandler<CreateR
     };
 }
 
-public sealed record FinalizeRevenueMappingCommand(Guid MappingId) : IRequest;
+public sealed record FinalizeRevenueMappingCommand(Guid MappingId, string? IfMatch = null) : IRequest;
 
 public sealed class FinalizeRevenueMappingCommandHandler : IRequestHandler<FinalizeRevenueMappingCommand>
 {
@@ -258,17 +261,20 @@ public sealed class FinalizeRevenueMappingCommandHandler : IRequestHandler<Final
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly IRowVersionGuard _versions;
 
     public FinalizeRevenueMappingCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _versions = versions;
     }
 
     public async Task Handle(FinalizeRevenueMappingCommand request, CancellationToken cancellationToken)
@@ -281,6 +287,7 @@ public sealed class FinalizeRevenueMappingCommandHandler : IRequestHandler<Final
         var mapping = await _db.RevenueMappings
             .FirstOrDefaultAsync(m => m.Id == request.MappingId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên chia doanh thu.");
+        _versions.EnsureCurrent(mapping, request.IfMatch);
         if (mapping.MappingStatus is CostAllocationStatuses.Finalized
             or CostAllocationStatuses.Cancelled
             or CostAllocationStatuses.Superseded)

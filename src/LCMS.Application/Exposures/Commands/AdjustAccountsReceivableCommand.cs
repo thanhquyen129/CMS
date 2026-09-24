@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -10,7 +11,8 @@ namespace LCMS.Application.Exposures.Commands;
 public sealed record AdjustAccountsReceivableCommand(
     Guid AccountsReceivableId,
     decimal DeltaAmount,
-    string Reason) : IRequest<Guid>;
+    string Reason,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class AdjustAccountsReceivableCommandValidator
     : AbstractValidator<AdjustAccountsReceivableCommand>
@@ -31,15 +33,18 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRowVersionGuard _versions;
 
     public AdjustAccountsReceivableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(AdjustAccountsReceivableCommand request, CancellationToken cancellationToken)
@@ -52,6 +57,7 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
         var ar = await _db.AccountsReceivable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsReceivableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
+        _versions.EnsureCurrent(ar, request.IfMatch);
 
         if (ar.RecordStatus != ApArRecordStatuses.Active)
         {

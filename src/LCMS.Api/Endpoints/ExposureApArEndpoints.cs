@@ -156,10 +156,12 @@ public static class ExposureApArEndpoints
         ap.MapPost("/{id:guid}/adjust", async (
             Guid id,
             AdjustApArRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            var adjId = await sender.Send(new AdjustAccountsPayableCommand(id, body.DeltaAmount, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            var adjId = await sender.Send(new AdjustAccountsPayableCommand(id, body.DeltaAmount, body.Reason, ifMatch.ToString()), ct);
             return Results.Created($"/api/accounts-payable/{id}/adjustments/{adjId}", new { id = adjId });
         });
 
@@ -184,12 +186,14 @@ public static class ExposureApArEndpoints
         ap.MapPost("/{id:guid}/write-off", async (
             Guid id,
             WriteOffRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var result = await sender.Send(
                 new LCMS.Application.Settlements.Commands.WriteOffAccountsPayableCommand(
-                    id, body.Amount, body.Reason),
+                    id, body.Amount, body.Reason, ifMatch.ToString()),
                 ct);
             if (!result.AppliedImmediately)
             {
@@ -238,10 +242,12 @@ public static class ExposureApArEndpoints
         ar.MapPost("/{id:guid}/adjust", async (
             Guid id,
             AdjustApArRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            var adjId = await sender.Send(new AdjustAccountsReceivableCommand(id, body.DeltaAmount, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            var adjId = await sender.Send(new AdjustAccountsReceivableCommand(id, body.DeltaAmount, body.Reason, ifMatch.ToString()), ct);
             return Results.Created($"/api/accounts-receivable/{id}/adjustments/{adjId}", new { id = adjId });
         });
 
@@ -266,12 +272,14 @@ public static class ExposureApArEndpoints
         ar.MapPost("/{id:guid}/write-off", async (
             Guid id,
             WriteOffRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var result = await sender.Send(
                 new LCMS.Application.Settlements.Commands.WriteOffAccountsReceivableCommand(
-                    id, body.Amount, body.Reason),
+                    id, body.Amount, body.Reason, ifMatch.ToString()),
                 ct);
             if (!result.AppliedImmediately)
             {

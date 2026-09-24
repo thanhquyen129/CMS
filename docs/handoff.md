@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-24 — CRP-12 sao lưu sổ tiền
+
+### User
+ok, tiếp
+
+### Answer
+Nút Sao lưu chỉ khôi phục danh mục và cấu hình. Khôi phục với cụm `RESTORE {mã thuê bao}` không đổi trạng thái bản chốt đã khóa và không đổi `immutableHash`. Runbook `docs/ops/money-backup-restore.md`: RPO nút = lần bấm gần nhất; RPO sổ tiền = tuổi file `pg_dump` đưa ra khỏi máy (chưa có lịch). Compose không đặt `wal_level` / `archive_command`, nên không có PITR. Khôi phục tiền vào database `lcms_drill`, so hash bản chốt, không `pg_restore` đè `lcms` đang ghi. Test: `BackupRestore_IsTenantIsolated_AndDoesNotTouchMoney` (7 s, Passed). Chưa bấm màn Sao lưu trên trình duyệt.
+
+### Files
+- `docs/ops/money-backup-restore.md`
+- `apps/web/app/settings/backup/page.tsx`
+- `tests/LCMS.Api.Tests/AdminSettingsFullTests.cs`
+
 ## 2026-09-24 — CRP-11 chuỗi tháng trung thực
 
 ### User

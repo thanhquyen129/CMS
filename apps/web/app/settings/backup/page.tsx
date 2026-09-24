@@ -30,7 +30,7 @@ export default async function SettingsBackupPage() {
             { label: "Sao lưu" },
           ]}
           title="Sao lưu &amp; Khôi phục"
-          lede="Bản sao logic danh mục/cấu hình của thuê bao. Khôi phục không đụng sổ tiền. PITR database là việc vận hành máy chủ."
+          lede="Bản sao danh mục và cấu hình. Khôi phục không đụng sổ tiền và không ghi đè bản chốt đã khóa. Khôi phục database là việc vận hành máy chủ, không phải nút này."
         />
         <SettingsHubNav active="backup" />
         {!profileResult.ok ? (

@@ -297,6 +297,58 @@ public sealed class AdminSettingsFullTests : IAsyncLifetime
         var billId = (await (await _client.SendAsync(billReq)).Content
             .ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
 
+        using (var cost = WithTenant(HttpMethod.Post, "/api/costs", tenantA))
+        {
+            cost.Content = JsonContent.Create(new
+            {
+                billId,
+                attributionType = "direct",
+                amount = 1000m,
+                currencyCode = "VND",
+                costTypeCode = "FREIGHT"
+            });
+            (await _client.SendAsync(cost)).EnsureSuccessStatusCode();
+        }
+
+        using (var revenue = WithTenant(HttpMethod.Post, "/api/revenues", tenantA))
+        {
+            revenue.Content = JsonContent.Create(new
+            {
+                billId,
+                amount = 1500m,
+                currencyCode = "VND",
+                revenueTypeCode = "FREIGHT"
+            });
+            (await _client.SendAsync(revenue)).EnsureSuccessStatusCode();
+        }
+
+        Guid closeId;
+        using (var start = WithTenant(HttpMethod.Post, "/api/financial-closes", tenantA))
+        {
+            start.Content = JsonContent.Create(new
+            {
+                scopeType = "bill",
+                scopeId = billId,
+                periodFrom = new DateOnly(2026, 9, 1),
+                periodTo = new DateOnly(2026, 9, 30),
+                policyVersion = "controlled",
+                baseCurrency = "VND"
+            });
+            var started = await _client.SendAsync(start);
+            started.EnsureSuccessStatusCode();
+            closeId = (await started.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        Guid snapshotId;
+        using (var snap = WithTenant(HttpMethod.Post, $"/api/financial-closes/{closeId}/snapshot", tenantA))
+        {
+            var snapped = await _client.SendAsync(snap);
+            snapped.EnsureSuccessStatusCode();
+            snapshotId = (await snapped.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        var hashBefore = await SnapshotHashAsync(tenantA, snapshotId);
+
         using var backupReq = WithTenant(HttpMethod.Post, "/api/tenant-backups", tenantA);
         backupReq.Content = JsonContent.Create(new { note = "trước khi sửa danh mục" });
         var backupRes = await _client.SendAsync(backupReq);
@@ -338,6 +390,20 @@ public sealed class AdminSettingsFullTests : IAsyncLifetime
 
         using var getBill = WithTenant(HttpMethod.Get, $"/api/bills/{billId}", tenantA);
         Assert.Equal(HttpStatusCode.OK, (await _client.SendAsync(getBill)).StatusCode);
+
+        using var close = WithTenant(HttpMethod.Get, $"/api/financial-closes/{closeId}", tenantA);
+        var closeBody = await (await _client.SendAsync(close)).Content
+            .ReadFromJsonAsync<CloseStatusBody>(JsonOptions);
+        Assert.Equal("locked", closeBody!.Status);
+        Assert.Equal(hashBefore, await SnapshotHashAsync(tenantA, snapshotId));
+    }
+
+    private async Task<string> SnapshotHashAsync(Guid tenantId, Guid snapshotId)
+    {
+        using var req = WithTenant(HttpMethod.Get, $"/api/financial-close-snapshots/{snapshotId}", tenantId);
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<SnapshotHashBody>(JsonOptions))!.ImmutableHash;
     }
 
     [Fact]
@@ -389,6 +455,8 @@ public sealed class AdminSettingsFullTests : IAsyncLifetime
     }
 
     private sealed record IdResponse(Guid Id);
+    private sealed record CloseStatusBody(string Status);
+    private sealed record SnapshotHashBody(string ImmutableHash);
     private sealed record UserResponse(Guid Id, string Email, bool IsActive, bool PasswordSet);
     private sealed record RoleResponse(Guid Id, string Code);
     private sealed record AuditResponse(Guid ObjectId, string Action);

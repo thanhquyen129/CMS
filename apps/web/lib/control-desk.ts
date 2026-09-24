@@ -55,6 +55,13 @@ export type DashboardMaturityPipeline = {
   revenueActualCount: number;
 };
 
+export type DashboardMonthPoint = {
+  year: number;
+  month: number;
+  costBestAvailable: number | null;
+  revenueBestAvailable: number | null;
+};
+
 export type DashboardSummary = {
   asOfTimestamp: string;
   billCount: number;
@@ -74,6 +81,8 @@ export type DashboardSummary = {
   settlements: DashboardSettlementCluster | null;
   maturityPipeline: DashboardMaturityPipeline | null;
   financialVisibility: DashboardFinancialVisibility | null;
+  monthlySeries?: DashboardMonthPoint[] | null;
+  monthlySeriesNote?: string | null;
 };
 
 export type ExceptionQueueItem = {

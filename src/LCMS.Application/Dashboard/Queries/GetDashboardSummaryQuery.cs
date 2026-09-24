@@ -65,6 +65,13 @@ public sealed record DashboardMaturityPipelineDto(
     int RevenueConfirmedOnlyCount,
     int RevenueActualCount);
 
+/// <summary>One calendar month of Best Available, by effective date. Null means no lines that month.</summary>
+public sealed record DashboardMonthPointDto(
+    int Year,
+    int Month,
+    decimal? CostBestAvailable,
+    decimal? RevenueBestAvailable);
+
 public sealed record DashboardSummaryDto(
     DateTimeOffset AsOfTimestamp,
     int BillCount,
@@ -83,7 +90,9 @@ public sealed record DashboardSummaryDto(
     DashboardApArClusterDto? ApAr = null,
     DashboardSettlementClusterDto? Settlements = null,
     DashboardMaturityPipelineDto? MaturityPipeline = null,
-    DashboardFinancialVisibilityDto? FinancialVisibility = null);
+    DashboardFinancialVisibilityDto? FinancialVisibility = null,
+    IReadOnlyList<DashboardMonthPointDto>? MonthlySeries = null,
+    string? MonthlySeriesNote = null);
 
 public sealed class GetDashboardSummaryQueryHandler
     : IRequestHandler<GetDashboardSummaryQuery, DashboardSummaryDto>
@@ -216,14 +225,14 @@ public sealed class GetDashboardSummaryQueryHandler
         var costs = canViewCost
             ? await _db.Costs.AsNoTracking()
                 .Where(c => c.RecordStatus == "active")
-                .Select(c => new { c.CurrencyCode, c.ExpectedAmount, c.ConfirmedAmount, c.ActualAmount })
+                .Select(c => new { c.CurrencyCode, c.ExpectedAmount, c.ConfirmedAmount, c.ActualAmount, c.EffectiveDate })
                 .ToListAsync(cancellationToken)
             : [];
 
         var revenues = canViewRevenue
             ? await _db.Revenues.AsNoTracking()
                 .Where(r => r.RecordStatus == "active")
-                .Select(r => new { r.CurrencyCode, r.ExpectedAmount, r.ConfirmedAmount, r.ActualAmount })
+                .Select(r => new { r.CurrencyCode, r.ExpectedAmount, r.ConfirmedAmount, r.ActualAmount, r.EffectiveDate })
                 .ToListAsync(cancellationToken)
             : [];
 
@@ -331,6 +340,51 @@ public sealed class GetDashboardSummaryQueryHandler
                 $"Quy đổi theo sổ tỷ giá ngày {asOfDate:yyyy-MM-dd}.{fxGapNote}");
         }
 
+        var year = asOf.Year;
+        IReadOnlyList<DashboardMonthPointDto> monthlySeries;
+        string monthlySeriesNote;
+        if (totals.Count != 1)
+        {
+            monthlySeries = [];
+            monthlySeriesNote = totals.Count == 0
+                ? "Chưa có dòng chi phí hoặc doanh thu. Không vẽ chuỗi tháng."
+                : "Nhiều loại tiền — không gộp một cột theo tháng.";
+        }
+        else
+        {
+            var seriesCurrency = totals[0].CurrencyCode;
+            monthlySeries = Enumerable.Range(1, 12)
+                .Select(month =>
+                {
+                    var monthCosts = costs.Where(c =>
+                        c.EffectiveDate.Year == year
+                        && c.EffectiveDate.Month == month
+                        && string.Equals(c.CurrencyCode, seriesCurrency, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    var monthRevenues = revenues.Where(r =>
+                        r.EffectiveDate.Year == year
+                        && r.EffectiveDate.Month == month
+                        && string.Equals(r.CurrencyCode, seriesCurrency, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    decimal? costPoint = canViewCost && monthCosts.Count > 0
+                        ? decimal.Round(
+                            monthCosts.Sum(c => BestAvailable(c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount)),
+                            4,
+                            MidpointRounding.AwayFromZero)
+                        : null;
+                    decimal? revenuePoint = canViewRevenue && monthRevenues.Count > 0
+                        ? decimal.Round(
+                            monthRevenues.Sum(r => BestAvailable(r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount)),
+                            4,
+                            MidpointRounding.AwayFromZero)
+                        : null;
+                    return new DashboardMonthPointDto(year, month, costPoint, revenuePoint);
+                })
+                .ToList();
+            monthlySeriesNote =
+                $"Theo ngày hiệu lực năm {year}, tiền {seriesCurrency}. Tháng không có dòng để trống. Không so với tháng trước.";
+        }
+
         var mixed = totals.Count > 1;
         var visibilityNote = !canViewCost && !canViewRevenue
             ? " Không có quyền xem chi phí/doanh thu — đã ẩn số tiền."
@@ -363,7 +417,9 @@ public sealed class GetDashboardSummaryQueryHandler
             apAr,
             settlements,
             maturity,
-            visibility);
+            visibility,
+            monthlySeries,
+            monthlySeriesNote);
     }
 
     private static decimal BestAvailable(decimal? actual, decimal? confirmed, decimal expected)

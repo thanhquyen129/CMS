@@ -34,46 +34,48 @@ function statusPillClass(status: string): string {
   return "po-pill";
 }
 
-/** Month bars: current month uses real CP/DT heights; other months stay empty (no fake series). */
+/** Twelve months of Best Available by effective date. A missing amount is an empty month, not zero. */
 function YearBars({
-  costAmt,
-  revAmt,
+  points,
   canCost,
   canRev,
 }: {
-  costAmt: number;
-  revAmt: number;
+  points: { month: number; costBestAvailable: number | null; revenueBestAvailable: number | null }[];
   canCost: boolean;
   canRev: boolean;
 }) {
-  const now = new Date();
-  const month = now.getMonth();
-  const max = Math.max(Math.abs(costAmt), Math.abs(revAmt), 1);
-  const costH = canCost ? Math.max(4, Math.round((Math.abs(costAmt) / max) * 88)) : 0;
-  const revH = canRev ? Math.max(4, Math.round((Math.abs(revAmt) / max) * 88)) : 0;
+  const magnitudes = points.flatMap((p) => [
+    canCost && p.costBestAvailable != null ? Math.abs(p.costBestAvailable) : 0,
+    canRev && p.revenueBestAvailable != null ? Math.abs(p.revenueBestAvailable) : 0,
+  ]);
+  const max = Math.max(1, ...magnitudes);
 
   return (
     <div className="po-bars" aria-hidden="true">
-      {Array.from({ length: 12 }, (_, i) => (
-        <div className="po-month" key={i}>
-          {i === month ? (
-            <>
-              {canCost ? (
-                <i className="po-bar b1" style={{ height: `${costH}%` }} />
-              ) : null}
-              {canRev ? (
-                <i className="po-bar b2" style={{ height: `${revH}%` }} />
-              ) : null}
-            </>
-          ) : (
-            <>
-              <i className="po-bar b1" style={{ height: "0%" }} />
-              <i className="po-bar b2" style={{ height: "0%" }} />
-            </>
-          )}
-          <span>Th{String(i + 1).padStart(2, "0")}</span>
-        </div>
-      ))}
+      {Array.from({ length: 12 }, (_, i) => {
+        const point = points.find((p) => p.month === i + 1);
+        const cost = canCost ? point?.costBestAvailable ?? null : null;
+        const rev = canRev ? point?.revenueBestAvailable ?? null : null;
+        const costH =
+          cost != null && cost !== 0
+            ? Math.max(4, Math.round((Math.abs(cost) / max) * 88))
+            : 0;
+        const revH =
+          rev != null && rev !== 0
+            ? Math.max(4, Math.round((Math.abs(rev) / max) * 88))
+            : 0;
+        return (
+          <div className="po-month" key={i}>
+            {cost != null ? (
+              <i className="po-bar b1" style={{ height: `${costH}%` }} />
+            ) : null}
+            {rev != null ? (
+              <i className="po-bar b2" style={{ height: `${revH}%` }} />
+            ) : null}
+            <span>Th{String(i + 1).padStart(2, "0")}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -114,6 +116,13 @@ export default async function DashboardPage() {
   const greetingName = displayName ? `Xin chào, ${displayName}!` : "Xin chào!";
   const dateLine = `${weekdayVi(now)}, ${now.toLocaleDateString("vi-VN")}`;
   const year = now.getFullYear();
+  const monthSeries = result.ok ? result.data.monthlySeries ?? [] : [];
+  const monthNote = result.ok ? result.data.monthlySeriesNote : null;
+  const hasMonthAmount = monthSeries.some(
+    (p) =>
+      (vis.canViewCost && p.costBestAvailable != null) ||
+      (vis.canViewRevenue && p.revenueBestAvailable != null)
+  );
 
   const vis = result.ok
     ? result.data.financialVisibility ?? {
@@ -364,29 +373,32 @@ export default async function DashboardPage() {
                   {costLabel}, {revenueLabel.toLowerCase()} và{" "}
                   {profitLabel.toLowerCase()}
                 </b>
-                <span className="muted">Năm {year}</span>
+                <span className="muted">Năm {year} · ngày hiệu lực</span>
               </div>
               <div className="po-chart-legend">
                 {vis.canViewCost ? "▰ Chi phí" : null}
                 {vis.canViewCost && vis.canViewRevenue ? "  " : null}
                 {vis.canViewRevenue ? "▰ Doanh thu" : null}
-                {vis.canViewMargin ? `  ● Lợi nhuận (${bestAvailableLabel})` : null}
               </div>
-              {(vis.canViewCost || vis.canViewRevenue) &&
-              (costAmt !== 0 || revAmt !== 0) ? (
+              {hasMonthAmount ? (
                 <div className="po-chart">
                   <YearBars
-                    costAmt={costAmt}
-                    revAmt={revAmt}
+                    points={monthSeries}
                     canCost={!!vis.canViewCost}
                     canRev={!!vis.canViewRevenue}
                   />
                 </div>
               ) : (
                 <p className="empty-state" role="status" style={{ margin: "1rem" }}>
-                  Chưa có số CP/DT để vẽ. Ghi dòng trên {billLabel} rồi quay lại.
+                  {monthNote ||
+                    `Chưa có số CP/DT theo tháng. Ghi dòng trên ${billLabel} rồi quay lại.`}
                 </p>
               )}
+              {hasMonthAmount && monthNote ? (
+                <p className="muted small" style={{ margin: "0.75rem 1rem 0" }}>
+                  {monthNote}
+                </p>
+              ) : null}
             </section>
 
             <section className="po-card po-best" aria-labelledby="po-ba">

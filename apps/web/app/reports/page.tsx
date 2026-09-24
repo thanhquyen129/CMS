@@ -216,6 +216,45 @@ export default async function ReportsPage({
                   caption={`${costLabel} / ${revenueLabel} / ${profitLabel}`}
                   series={plBars}
                 />
+                {summary.data.monthlySeriesNote ? (
+                  <p className="muted small">{summary.data.monthlySeriesNote}</p>
+                ) : null}
+                {(summary.data.monthlySeries ?? []).some(
+                  (p) => p.costBestAvailable != null || p.revenueBestAvailable != null
+                ) ? (
+                  <table className="data-table">
+                    <caption className="sr-only">Chuỗi tháng theo ngày hiệu lực</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Tháng</th>
+                        <th scope="col" className="num">{costLabel}</th>
+                        <th scope="col" className="num">{revenueLabel}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(summary.data.monthlySeries ?? [])
+                        .filter(
+                          (p) =>
+                            p.costBestAvailable != null || p.revenueBestAvailable != null
+                        )
+                        .map((p) => (
+                          <tr key={p.month}>
+                            <th scope="row">Tháng {p.month}</th>
+                            <td className="num">
+                              {p.costBestAvailable != null
+                                ? formatMoney(p.costBestAvailable, row0?.currencyCode ?? currency)
+                                : "—"}
+                            </td>
+                            <td className="num">
+                              {p.revenueBestAvailable != null
+                                ? formatMoney(p.revenueBestAvailable, row0?.currencyCode ?? currency)
+                                : "—"}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                ) : null}
               </div>
               <div className="panel">
                 {!aging.ok ? (

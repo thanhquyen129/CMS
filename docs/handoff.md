@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-24 — CRP-11 chuỗi tháng trung thực
+
+### User
+ok, tiếp
+
+### Answer
+Dashboard không còn gắn tổng cả đời vào tháng đang mở. `monthlySeries` là 12 tháng của năm UTC, Best Available theo `effectiveDate`, một loại tiền. Tháng không có dòng là null (cột trống), không phải 0 và không phải tổng năm. Nhiều loại tiền thì chuỗi rỗng, ghi chú «không gộp một cột theo tháng». Không có phần trăm so với tháng trước. Báo cáo liệt kê các tháng có số, cùng ghi chú. Test: `MonthlySeries_UsesEffectiveDate_AndDoesNotFillTheCurrentMonthWithTheLifetimeTotal` (tháng 1 = 1000 CP, tháng 9 trống). Chưa bấm biểu đồ trên trình duyệt.
+
+### Files
+- `GetDashboardSummaryQuery.cs`
+- `apps/web/app/dashboard/page.tsx`, `apps/web/app/reports/page.tsx`
+- `apps/web/lib/control-desk.ts`
+- `Sprint11FullFinancialProfileReportingTests.cs`
+
 ## 2026-09-24 — CRP-09 SMTP chưa có, CRP-10 sửa/xóa thành phần giá
 
 ### User

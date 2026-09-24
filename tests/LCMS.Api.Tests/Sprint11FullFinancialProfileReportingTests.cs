@@ -136,6 +136,39 @@ public sealed class Sprint11FullFinancialProfileReportingTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MonthlySeries_UsesEffectiveDate_AndDoesNotFillTheCurrentMonthWithTheLifetimeTotal()
+    {
+        var tenantId = await CreateTenantAsync("TN-E13-MO", "Month series");
+        var billId = await CreateBillAsync(tenantId, "BL-MO-1", "freight");
+        await CreateDirectCostAsync(tenantId, billId, 1000m, "FREIGHT", "VND", new DateOnly(2026, 1, 15));
+        await CreateDirectCostAsync(tenantId, billId, 300m, "THC", "VND", new DateOnly(2026, 3, 2));
+        await CreateRevenueAsync(tenantId, billId, 2500m, "FREIGHT", "VND", new DateOnly(2026, 2, 1));
+
+        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/dashboard/summary");
+        req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        var summary = (await res.Content.ReadFromJsonAsync<MonthSeriesSummary>(JsonOptions))!;
+
+        Assert.Equal(12, summary.MonthlySeries.Count);
+        Assert.Equal(1000m, Assert.Single(summary.MonthlySeries, p => p.Month == 1).CostBestAvailable);
+        Assert.Null(Assert.Single(summary.MonthlySeries, p => p.Month == 1).RevenueBestAvailable);
+        Assert.Equal(2500m, Assert.Single(summary.MonthlySeries, p => p.Month == 2).RevenueBestAvailable);
+        Assert.Equal(300m, Assert.Single(summary.MonthlySeries, p => p.Month == 3).CostBestAvailable);
+        Assert.Null(Assert.Single(summary.MonthlySeries, p => p.Month == 9).CostBestAvailable);
+        Assert.Null(Assert.Single(summary.MonthlySeries, p => p.Month == 9).RevenueBestAvailable);
+        Assert.DoesNotContain("%", summary.MonthlySeriesNote);
+        Assert.Contains("Không so với tháng trước", summary.MonthlySeriesNote);
+
+        await CreateDirectCostAsync(tenantId, billId, 10m, "FREIGHT", "USD", new DateOnly(2026, 1, 20));
+        using var mixedReq = new HttpRequestMessage(HttpMethod.Get, "/api/dashboard/summary");
+        mixedReq.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var mixed = (await (await _client.SendAsync(mixedReq)).Content.ReadFromJsonAsync<MonthSeriesSummary>(JsonOptions))!;
+        Assert.Empty(mixed.MonthlySeries);
+        Assert.Contains("Nhiều loại tiền", mixed.MonthlySeriesNote);
+    }
+
+    [Fact]
     public async Task Queues_FilterStatusSeverityOverdueObjectType_RequiredLevel_AndReconciliationsStub()
     {
         var tenantId = await CreateTenantAsync("TN-E13F-Q", "Queues FULL");
@@ -682,6 +715,9 @@ public sealed class Sprint11FullFinancialProfileReportingTests : IAsyncLifetime
         decimal RevenueBestAvailableBase,
         decimal ProfitBestAvailableBase,
         string FxStubNote);
+
+    private sealed record MonthPoint(int Year, int Month, decimal? CostBestAvailable, decimal? RevenueBestAvailable);
+    private sealed record MonthSeriesSummary(List<MonthPoint> MonthlySeries, string MonthlySeriesNote);
 
     private sealed record DashboardSummaryResponse(
         DateTimeOffset AsOfTimestamp,

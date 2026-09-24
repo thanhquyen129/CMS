@@ -49,8 +49,9 @@ public static class ExposureApArEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var apId = await sender.Send(
-                new RecognizePayableExposureCommand(id, body.Amount, body.DueDate, body.Notes, idempotencyKey.ToString()),
+                new RecognizePayableExposureCommand(id, body.Amount, body.DueDate, body.Notes, idempotencyKey.ToString(), ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/accounts-payable/{apId}", new { id = apId });
         });
@@ -109,8 +110,9 @@ public static class ExposureApArEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var arId = await sender.Send(
-                new RecognizeReceivableExposureCommand(id, body.Amount, body.DueDate, body.Notes, idempotencyKey.ToString()),
+                new RecognizeReceivableExposureCommand(id, body.Amount, body.DueDate, body.Notes, idempotencyKey.ToString(), ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/accounts-receivable/{arId}", new { id = arId });
         });

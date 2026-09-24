@@ -1,5 +1,29 @@
 # Handoff
 
+## 2026-09-24 — CRP-06 If-Match ghi nhận exposure và chi tiết khớp
+
+### User
+batch tiếp
+
+### Answer
+Ghi nhận exposure phải trả/phải thu, thêm chi tiết khớp, chọn ứng viên khớp, và đảo chi tiết khớp đọc `If-Match` sau khi tải dòng, trước kiểm tra trạng thái. Phát lại cùng idempotency key của ghi nhận vẫn trả id cũ trước khi xét phiên bản. Thêm hoặc đảo chi tiết chạm `rowVersion` của phiên khớp, nên lần sau phải tải lại. Token sai → 409 `concurrency_conflict`. Exposure 1.000 giữ `open`, số đã ghi nhận 0. Chi tiết khớp giữ `active`. Form ghi nhận, form thêm chi tiết, và nút đảo khớp gửi `rowVersion`. CRP-06 chuyển Done. Test `StaleIfMatch_DoesNotRecognizePayable` (701 ms) và `StaleIfMatch_DoesNotAddOrReverseMatchDetail` (2 s), cả hai Passed. Chưa bấm nút trên trình duyệt.
+
+### Files
+- `Exposures/Commands/RecognizePayableExposureCommand.cs`
+- `Exposures/Commands/RecognizeReceivableExposureCommand.cs`
+- `DocumentMatches/Commands/AddDocumentMatchDetailCommand.cs`
+- `DocumentMatches/Commands/ReverseDocumentMatchDetailCommand.cs`
+- `DocumentMatches/Commands/ResolveDocumentMatchCommand.cs`
+- `Exposures/Queries/ExposureQueries.cs`
+- `ExposureApArEndpoints.cs`, `FinancialDocumentEndpoints.cs`
+- `RecognizeExposureForm.tsx`, `AddMatchDetailForm.tsx`, `ReverseMatchDetailButton.tsx`
+- `apps/web/app/ap-ar/exposures/[id]/recognize/page.tsx`
+- `apps/web/app/documents/[id]/matches/[matchId]/page.tsx`
+- `apps/web/lib/ap-ar-shared.ts`
+- `tests/LCMS.Api.Tests/SprintP10ReverseRecognizeTests.cs`
+- `tests/LCMS.Api.Tests/SprintP09ConfirmMatchSuggestTests.cs`
+- `docs/adr/ADR-0036-money-if-match.md`
+
 ## 2026-09-24 — CRP-06 If-Match tính, gửi, hủy phân bổ và hủy phiên
 
 ### User

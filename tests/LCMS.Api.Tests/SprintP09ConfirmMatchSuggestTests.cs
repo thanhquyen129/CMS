@@ -180,6 +180,68 @@ public sealed class SprintP09ConfirmMatchSuggestTests : IAsyncLifetime
         Assert.Equal("draft", match!.MatchStatus);
     }
 
+    [Fact]
+    public async Task StaleIfMatch_DoesNotAddOrReverseMatchDetail()
+    {
+        var tenantId = await CreateTenantAsync("TN-P09-DET", "P09 Detail");
+        var billId = await CreateBillAsync(tenantId, "BL-P09-DET", "freight");
+        var costId = await CreateCostAsync(tenantId, billId, 100m);
+        var docId = await ReceiveDocumentAsync(tenantId, billId, "INV-P09-DET", 100m, "payable");
+        var lineId = await AddLineAsync(tenantId, docId, 100m, "Freight");
+        await AcceptDocumentAsync(tenantId, docId);
+        var matchId = await StartMatchAsync(tenantId, docId, "line_to_cost", toleranceAmount: 0m);
+
+        using (var staleAdd = new HttpRequestMessage(HttpMethod.Post, $"/api/document-matches/{matchId}/details")
+        {
+            Content = JsonContent.Create(new
+            {
+                sourceLineId = lineId,
+                targetCostId = costId,
+                matchedAmount = 100m
+            })
+        })
+        {
+            staleAdd.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            staleAdd.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+            var blocked = await _client.SendAsync(staleAdd);
+            Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+            Assert.Equal("concurrency_conflict", (await blocked.Content.ReadFromJsonAsync<CodeBody>(JsonOptions))!.Code);
+        }
+
+        Guid detailId;
+        using (var add = new HttpRequestMessage(HttpMethod.Post, $"/api/document-matches/{matchId}/details")
+        {
+            Content = JsonContent.Create(new
+            {
+                sourceLineId = lineId,
+                targetCostId = costId,
+                matchedAmount = 100m
+            })
+        })
+        {
+            add.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(add);
+            created.EnsureSuccessStatusCode();
+            detailId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var staleRev = new HttpRequestMessage(
+            HttpMethod.Post, $"/api/document-matches/{matchId}/details/{detailId}/reverse")
+        {
+            Content = JsonContent.Create(new { reason = "phiên cũ" })
+        })
+        {
+            staleRev.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            staleRev.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+            Assert.Equal(HttpStatusCode.Conflict, (await _client.SendAsync(staleRev)).StatusCode);
+        }
+
+        using var get = new HttpRequestMessage(HttpMethod.Get, $"/api/document-matches/{matchId}");
+        get.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var match = await (await _client.SendAsync(get)).Content.ReadFromJsonAsync<MatchWithDetails>(JsonOptions);
+        Assert.Equal("active", Assert.Single(match!.Details).DetailStatus);
+    }
+
     private async Task<Guid> CreateCostAsync(Guid tenantId, Guid billId, decimal amount)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/costs")
@@ -280,6 +342,8 @@ public sealed class SprintP09ConfirmMatchSuggestTests : IAsyncLifetime
     private sealed record CodeBody(string Code);
 
     private sealed record MatchDto(string MatchStatus, DateTimeOffset? ConfirmedAt);
+    private sealed record MatchWithDetails(List<DetailRow> Details);
+    private sealed record DetailRow(string DetailStatus);
 
     private sealed record SuggestionDto(
         Guid SourceLineId,

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -10,7 +11,8 @@ namespace LCMS.Application.DocumentMatches.Commands;
 public sealed record ReverseDocumentMatchDetailCommand(
     Guid MatchId,
     Guid DetailId,
-    string Reason) : IRequest;
+    string Reason,
+    string? IfMatch = null) : IRequest;
 
 public sealed class ReverseDocumentMatchDetailCommandValidator
     : AbstractValidator<ReverseDocumentMatchDetailCommand>
@@ -34,15 +36,18 @@ public sealed class ReverseDocumentMatchDetailCommandHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRowVersionGuard _versions;
 
     public ReverseDocumentMatchDetailCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _versions = versions;
     }
 
     public async Task Handle(ReverseDocumentMatchDetailCommand request, CancellationToken cancellationToken)
@@ -55,6 +60,7 @@ public sealed class ReverseDocumentMatchDetailCommandHandler
         var match = await _db.DocumentMatches
             .FirstOrDefaultAsync(m => m.Id == request.MatchId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên khớp chứng từ.");
+        _versions.EnsureCurrent(match, request.IfMatch);
 
         if (string.Equals(match.MatchStatus, DocumentMatchStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {
@@ -95,6 +101,7 @@ public sealed class ReverseDocumentMatchDetailCommandHandler
         detail.ReversedAt = DateTimeOffset.UtcNow;
         detail.ReversedBy = _user.UserId;
         detail.ReverseReason = request.Reason.Trim();
+        match.TouchRowVersion();
 
         await _db.SaveChangesAsync(cancellationToken);
 

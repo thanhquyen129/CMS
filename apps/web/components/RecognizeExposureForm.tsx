@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { withIdempotency } from "@/lib/idempotency";
+import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
@@ -18,6 +18,7 @@ type Props = {
   currencyCode: string;
   billId?: string | null;
   defaultDueDate?: string | null;
+  rowVersion?: string | null;
 };
 
 export function RecognizeExposureForm({
@@ -28,6 +29,7 @@ export function RecognizeExposureForm({
   currencyCode,
   billId,
   defaultDueDate,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -82,9 +84,9 @@ export function RecognizeExposureForm({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: withIdempotency(
-          { "Content-Type": "application/json" },
-          idemKey
+        headers: withRowVersion(
+          withIdempotency({ "Content-Type": "application/json" }, idemKey),
+          rowVersion
         ),
         body: JSON.stringify(body),
       });

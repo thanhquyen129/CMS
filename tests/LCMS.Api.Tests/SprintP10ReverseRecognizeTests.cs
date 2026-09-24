@@ -150,6 +150,30 @@ public sealed class SprintP10ReverseRecognizeTests : IAsyncLifetime
         Assert.Equal(0m, ap.AdjustmentAmount);
     }
 
+    [Fact]
+    public async Task StaleIfMatch_DoesNotRecognizePayable()
+    {
+        var tenantId = await CreateTenantAsync("TN-P10-REC", "P10 Recognize");
+        var billId = await CreateBillAsync(tenantId, "BL-P10-REC", "freight");
+        var expId = await CreatePayableExposureAsync(tenantId, billId, 1_000m);
+
+        using var rec = new HttpRequestMessage(HttpMethod.Post, $"/api/payable-exposures/{expId}/recognize")
+        {
+            Content = JsonContent.Create(new { amount = 100m })
+        };
+        rec.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        rec.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+        var blocked = await _client.SendAsync(rec);
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        Assert.Equal("concurrency_conflict", (await blocked.Content.ReadFromJsonAsync<CodeBody>(JsonOptions))!.Code);
+
+        using var getExp = new HttpRequestMessage(HttpMethod.Get, $"/api/payable-exposures/{expId}");
+        getExp.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var exp = await (await _client.SendAsync(getExp)).Content.ReadFromJsonAsync<ExposureDto>(JsonOptions);
+        Assert.Equal(0m, exp!.RecognizedAmount);
+        Assert.Equal("open", exp.Status);
+    }
+
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code, name });

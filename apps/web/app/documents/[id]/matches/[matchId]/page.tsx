@@ -314,6 +314,7 @@ export default async function DocumentMatchSessionPage({
                             detailId={d.id}
                             matchedAmount={d.matchedAmount}
                             currencyCode={currency}
+                            rowVersion={match.rowVersion}
                           />
                         ) : (
                           "—"
@@ -382,6 +383,7 @@ export default async function DocumentMatchSessionPage({
               targets={targets}
               targetDocHint={targetDocHint}
               documentId={doc.id}
+              rowVersion={match.rowVersion}
             />
           </>
         ) : (

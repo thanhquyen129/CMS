@@ -4,7 +4,7 @@ using MediatR;
 
 namespace LCMS.Application.DocumentMatches.Commands;
 
-public sealed record ResolveDocumentMatchCommand(Guid MatchId, Guid SourceLineId) : IRequest<Guid>;
+public sealed record ResolveDocumentMatchCommand(Guid MatchId, Guid SourceLineId, string? IfMatch = null) : IRequest<Guid>;
 
 /// <summary>
 /// Picks a single best candidate. Two candidates with the same delta are MATCH_AMBIGUOUS and nothing is saved.
@@ -39,7 +39,8 @@ public sealed class ResolveDocumentMatchCommandHandler : IRequestHandler<Resolve
                 pick.TargetKind == "line" ? pick.TargetId : null,
                 pick.TargetKind == "cost" ? pick.TargetId : null,
                 pick.TargetKind == "revenue" ? pick.TargetId : null,
-                pick.SuggestedMatchedAmount),
+                pick.SuggestedMatchedAmount,
+                request.IfMatch),
             cancellationToken);
     }
 }

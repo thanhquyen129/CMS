@@ -29,7 +29,8 @@ public sealed record PayableExposureDto(
     Guid? FinancialDocumentId,
     string? Notes,
     string RecordStatus,
-    IReadOnlyList<ExposureRecognitionDto> Recognitions);
+    IReadOnlyList<ExposureRecognitionDto> Recognitions,
+    byte[]? RowVersion = null);
 
 public sealed record ReceivableExposureDto(
     Guid Id,
@@ -46,7 +47,8 @@ public sealed record ReceivableExposureDto(
     Guid? FinancialDocumentId,
     string? Notes,
     string RecordStatus,
-    IReadOnlyList<ExposureRecognitionDto> Recognitions);
+    IReadOnlyList<ExposureRecognitionDto> Recognitions,
+    byte[]? RowVersion = null);
 
 public sealed record ListPayableExposuresQuery(string? Status) : IRequest<IReadOnlyList<PayableExposureDto>>;
 public sealed record GetPayableExposureByIdQuery(Guid Id) : IRequest<PayableExposureDto>;
@@ -125,7 +127,8 @@ public sealed class ListPayableExposuresQueryHandler
             e.FinancialDocumentId,
             e.Notes,
             e.RecordStatus,
-            recognitions);
+            recognitions,
+            e.RowVersion);
 }
 
 public sealed class GetPayableExposureByIdQueryHandler
@@ -242,7 +245,8 @@ public sealed class ListReceivableExposuresQueryHandler
             e.FinancialDocumentId,
             e.Notes,
             e.RecordStatus,
-            recognitions);
+            recognitions,
+            e.RowVersion);
 }
 
 public sealed class GetReceivableExposureByIdQueryHandler

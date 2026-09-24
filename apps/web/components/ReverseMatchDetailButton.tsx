@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
+import { withRowVersion } from "@/lib/idempotency";
 import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -11,6 +12,7 @@ type Props = {
   detailId: string;
   matchedAmount: number;
   currencyCode: string;
+  rowVersion?: string | null;
 };
 
 export function ReverseMatchDetailButton({
@@ -19,6 +21,7 @@ export function ReverseMatchDetailButton({
   detailId,
   matchedAmount,
   currencyCode,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -48,10 +51,13 @@ export function ReverseMatchDetailButton({
         `/bff/document-matches/${matchId}/details/${detailId}/reverse`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
+          headers: withRowVersion(
+            {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            rowVersion
+          ),
           body: JSON.stringify({ reason: trimmed }),
         }
       );
@@ -82,7 +88,7 @@ export function ReverseMatchDetailButton({
     } finally {
       setSubmitting(false);
     }
-  }, [detailId, matchId, reason, router]);
+  }, [detailId, matchId, reason, router, rowVersion]);
 
   return (
     <>

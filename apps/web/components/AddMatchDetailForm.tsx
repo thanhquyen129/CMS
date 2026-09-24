@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { withRowVersion } from "@/lib/idempotency";
 import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -29,6 +30,7 @@ type Props = {
   targetDocHint?: string | null;
   /** Link back to add lines when no open source lines */
   documentId?: string;
+  rowVersion?: string | null;
 };
 
 export function AddMatchDetailForm({
@@ -39,6 +41,7 @@ export function AddMatchDetailForm({
   targets,
   targetDocHint,
   documentId,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -136,10 +139,13 @@ export function AddMatchDetailForm({
     try {
       const res = await fetch(`/bff/document-matches/${matchId}/details`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withRowVersion(
+          {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          rowVersion
+        ),
         body: JSON.stringify(body),
       });
 

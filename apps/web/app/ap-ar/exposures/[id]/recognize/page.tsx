@@ -96,6 +96,7 @@ export default async function RecognizeExposurePage({
           currencyCode={exp.currencyCode}
           billId={exp.billId}
           defaultDueDate={exp.dueDate}
+          rowVersion={exp.rowVersion}
         />
       </section>
     </AppShell>

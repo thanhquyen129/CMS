@@ -58,6 +58,7 @@ export type PayableExposureItem = {
   financialDocumentId: string | null;
   notes: string | null;
   recordStatus: string;
+  rowVersion?: string | null;
 };
 
 export type ReceivableExposureItem = {
@@ -75,6 +76,7 @@ export type ReceivableExposureItem = {
   financialDocumentId: string | null;
   notes: string | null;
   recordStatus: string;
+  rowVersion?: string | null;
 };
 
 export type AgingBucketSummary = {

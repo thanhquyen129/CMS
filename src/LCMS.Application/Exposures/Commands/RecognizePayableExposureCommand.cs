@@ -20,7 +20,8 @@ public sealed record RecognizePayableExposureCommand(
     decimal Amount,
     DateOnly? DueDate,
     string? Notes,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class RecognizePayableExposureCommandValidator : AbstractValidator<RecognizePayableExposureCommand>
 {
@@ -42,6 +43,7 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
     private readonly TenantFinancialOptionsResolver _financial;
     private readonly IIdempotencyGate _idempotency;
     private readonly IRecognitionApprovalGate _recognitionApproval;
+    private readonly IRowVersionGuard _versions;
 
     public RecognizePayableExposureCommandHandler(
         ILcmsDbContext db,
@@ -50,7 +52,8 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         IAuditWriter audit,
         TenantFinancialOptionsResolver financial,
         IIdempotencyGate idempotency,
-        IRecognitionApprovalGate recognitionApproval)
+        IRecognitionApprovalGate recognitionApproval,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -59,6 +62,7 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         _financial = financial;
         _idempotency = idempotency;
         _recognitionApproval = recognitionApproval;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(RecognizePayableExposureCommand request, CancellationToken cancellationToken)
@@ -81,6 +85,7 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         var exposure = await _db.PayableExposures
             .FirstOrDefaultAsync(e => e.Id == request.PayableExposureId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy nghĩa vụ phải trả (exposure).");
+        _versions.EnsureCurrent(exposure, request.IfMatch);
 
         if (exposure.Status == ExposureStatuses.Cancelled)
         {

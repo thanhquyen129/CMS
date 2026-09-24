@@ -196,19 +196,23 @@ public static class FinancialDocumentEndpoints
         matches.MapPost("/{id:guid}/resolve", async (
             Guid id,
             ResolveDocumentMatchRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            var detailId = await sender.Send(new ResolveDocumentMatchCommand(id, body.SourceLineId), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            var detailId = await sender.Send(new ResolveDocumentMatchCommand(id, body.SourceLineId, ifMatch.ToString()), ct);
             return Results.Created($"/api/document-matches/{id}/details/{detailId}", new { id = detailId });
         });
 
         matches.MapPost("/{id:guid}/details", async (
             Guid id,
             AddDocumentMatchDetailRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var detailId = await sender.Send(
                 new AddDocumentMatchDetailCommand(
                     id,
@@ -216,7 +220,8 @@ public static class FinancialDocumentEndpoints
                     body.TargetLineId,
                     body.TargetCostId,
                     body.TargetRevenueId,
-                    body.MatchedAmount),
+                    body.MatchedAmount,
+                    ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/document-matches/{id}/details/{detailId}", new { id = detailId });
         });
@@ -225,10 +230,12 @@ public static class FinancialDocumentEndpoints
             Guid id,
             Guid detailId,
             ReverseDocumentMatchDetailRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ReverseDocumentMatchDetailCommand(id, detailId, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ReverseDocumentMatchDetailCommand(id, detailId, body.Reason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

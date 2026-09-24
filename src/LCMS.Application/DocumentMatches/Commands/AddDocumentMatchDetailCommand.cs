@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialDocuments;
 using LCMS.Domain.Entities;
@@ -16,7 +17,8 @@ public sealed record AddDocumentMatchDetailCommand(
     Guid? TargetLineId,
     Guid? TargetCostId,
     Guid? TargetRevenueId,
-    decimal MatchedAmount) : IRequest<Guid>;
+    decimal MatchedAmount,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class AddDocumentMatchDetailCommandValidator : AbstractValidator<AddDocumentMatchDetailCommand>
 {
@@ -49,17 +51,20 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
     private readonly ITenantContext _tenantContext;
     private readonly DocumentOptions _options;
     private readonly IAuditWriter _audit;
+    private readonly IRowVersionGuard _versions;
 
     public AddDocumentMatchDetailCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IOptions<DocumentOptions> options,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _options = options.Value;
         _audit = audit;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(AddDocumentMatchDetailCommand request, CancellationToken cancellationToken)
@@ -73,6 +78,7 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
         var match = await _db.DocumentMatches
             .FirstOrDefaultAsync(m => m.Id == request.MatchId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên khớp chứng từ.");
+        _versions.EnsureCurrent(match, request.IfMatch);
 
         if (!string.Equals(match.MatchStatus, DocumentMatchStatuses.Draft, StringComparison.OrdinalIgnoreCase))
         {
@@ -183,6 +189,7 @@ public sealed class AddDocumentMatchDetailCommandHandler : IRequestHandler<AddDo
         });
 
         _db.DocumentMatchDetails.Add(detail);
+        match.TouchRowVersion();
 
         sourceLine.MatchedAmount = decimal.Round(sourceLine.MatchedAmount + amount, 4, MidpointRounding.AwayFromZero);
         if (targetLine is not null)

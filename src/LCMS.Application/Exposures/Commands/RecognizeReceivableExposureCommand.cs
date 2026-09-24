@@ -21,7 +21,8 @@ public sealed record RecognizeReceivableExposureCommand(
     decimal Amount,
     DateOnly? DueDate,
     string? Notes,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class RecognizeReceivableExposureCommandValidator
     : AbstractValidator<RecognizeReceivableExposureCommand>
@@ -46,6 +47,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
     private readonly IPartyDirectoryService _parties;
     private readonly IIdempotencyGate _idempotency;
     private readonly IRecognitionApprovalGate _recognitionApproval;
+    private readonly IRowVersionGuard _versions;
 
     public RecognizeReceivableExposureCommandHandler(
         ILcmsDbContext db,
@@ -55,7 +57,8 @@ public sealed class RecognizeReceivableExposureCommandHandler
         TenantFinancialOptionsResolver financial,
         IPartyDirectoryService parties,
         IIdempotencyGate idempotency,
-        IRecognitionApprovalGate recognitionApproval)
+        IRecognitionApprovalGate recognitionApproval,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -65,6 +68,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
         _parties = parties;
         _idempotency = idempotency;
         _recognitionApproval = recognitionApproval;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(RecognizeReceivableExposureCommand request, CancellationToken cancellationToken)
@@ -87,6 +91,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
         var exposure = await _db.ReceivableExposures
             .FirstOrDefaultAsync(e => e.Id == request.ReceivableExposureId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy quyền thu dự kiến (exposure).");
+        _versions.EnsureCurrent(exposure, request.IfMatch);
 
         if (exposure.Status == ExposureStatuses.Cancelled)
         {

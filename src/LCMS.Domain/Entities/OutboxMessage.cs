@@ -10,7 +10,7 @@ public sealed class OutboxMessage : TenantEntityBase
     public string Topic { get; set; } = string.Empty;
     public string PayloadJson { get; set; } = "{}";
 
-    /// <summary>pending | processed | failed</summary>
+    /// <summary>pending | processed | failed | skipped</summary>
     public string Status { get; set; } = OutboxMessageStatuses.Pending;
 
     public int AttemptNo { get; set; }
@@ -25,4 +25,7 @@ public static class OutboxMessageStatuses
     public const string Pending = "pending";
     public const string Processed = "processed";
     public const string Failed = "failed";
+
+    /// <summary>Closed without delivery. SMTP missing must not look like a sent message.</summary>
+    public const string Skipped = "skipped";
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AddPricingRuleForm } from "@/components/AddPricingRuleForm";
 import { AddPricingRuleComponentForm } from "@/components/AddPricingRuleComponentForm";
+import { PricingRuleComponentActions } from "@/components/PricingRuleComponentActions";
 import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -232,6 +233,17 @@ export default async function RateCardDetailPage({
                                             c.amount,
                                             c.currencyCode
                                           )}
+                                          {draft ? (
+                                            <PricingRuleComponentActions
+                                              componentId={c.id}
+                                              name={c.name}
+                                              amount={c.amount}
+                                              currencyCode={c.currencyCode}
+                                              financialNature={c.financialNature}
+                                              costTypeCode={c.costTypeCode}
+                                              revenueTypeCode={c.revenueTypeCode}
+                                            />
+                                          ) : null}
                                         </div>
                                       ))}
                                     </div>

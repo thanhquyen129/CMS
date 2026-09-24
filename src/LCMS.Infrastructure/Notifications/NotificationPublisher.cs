@@ -96,18 +96,21 @@ public sealed class NotificationPublisher : IOperatorNotificationPublisher
                 smtpConfigured = _mail.IsConfigured,
                 recipients = recipients.Select(r => r.Email).ToArray()
             });
+            var configured = _mail.IsConfigured;
             _db.OutboxMessages.Add(new OutboxMessage
             {
                 TenantId = tenantId,
                 Topic = "notification.email",
                 PayloadJson = payload,
-                Status = OutboxMessageStatuses.Pending,
-                EnqueuedAt = DateTimeOffset.UtcNow
+                Status = configured ? OutboxMessageStatuses.Pending : OutboxMessageStatuses.Skipped,
+                LastError = configured ? null : "SMTP chưa cấu hình. Thư chưa gửi.",
+                EnqueuedAt = DateTimeOffset.UtcNow,
+                ProcessedAt = configured ? null : DateTimeOffset.UtcNow
             });
-            if (!_mail.IsConfigured)
+            if (!configured)
             {
                 _logger.LogInformation(
-                    "Notification email queued but SMTP is not configured for tenant {TenantId}.",
+                    "Notification email skipped because SMTP is not configured for tenant {TenantId}.",
                     tenantId);
             }
         }

@@ -187,6 +187,101 @@ public sealed class Sprint3RatePricingTests : IAsyncLifetime
         Assert.NotEqual(created.Id, again!.Id);
     }
 
+    [Fact]
+    public async Task DraftComponent_CanUpdateAndDelete_PublishedVersionRejectsDelete()
+    {
+        var tenantId = await CreateTenantAsync("TN-COMP-CRUD", "Component CRUD");
+        var cardId = await CreateRateCardAsync(tenantId, "RC-COMP", "Bảng thành phần");
+        var versionId = await CreateVersionAsync(tenantId, cardId);
+        var ruleId = await AddRuleAsync(tenantId, versionId, "FREIGHT", "Cước", "fixed", 1000m);
+
+        Guid componentId;
+        using (var add = new HttpRequestMessage(HttpMethod.Post, $"/api/pricing-rules/{ruleId}/components")
+        {
+            Content = JsonContent.Create(new
+            {
+                code = "LINE",
+                name = "Cước dòng",
+                financialNature = "cost",
+                amount = 100m,
+                currencyCode = "VND"
+            })
+        })
+        {
+            add.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(add);
+            created.EnsureSuccessStatusCode();
+            componentId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var update = new HttpRequestMessage(HttpMethod.Put, $"/api/pricing-rules/components/{componentId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                name = "Cước dòng sửa",
+                financialNature = "cost",
+                amount = 250m,
+                currencyCode = "VND"
+            })
+        })
+        {
+            update.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(update)).StatusCode);
+        }
+
+        var afterUpdate = await ListRuleComponentsAsync(tenantId, versionId);
+        Assert.Contains(afterUpdate, c => c.Id == componentId && c.Amount == 250m && c.Name == "Cước dòng sửa");
+
+        using (var delete = new HttpRequestMessage(HttpMethod.Delete, $"/api/pricing-rules/components/{componentId}"))
+        {
+            delete.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(delete)).StatusCode);
+        }
+
+        Assert.DoesNotContain(await ListRuleComponentsAsync(tenantId, versionId), c => c.Id == componentId);
+
+        Guid lockedId;
+        using (var add = new HttpRequestMessage(HttpMethod.Post, $"/api/pricing-rules/{ruleId}/components")
+        {
+            Content = JsonContent.Create(new
+            {
+                code = "LOCK",
+                name = "Khóa",
+                financialNature = "revenue",
+                amount = 10m,
+                currencyCode = "VND"
+            })
+        })
+        {
+            add.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(add);
+            created.EnsureSuccessStatusCode();
+            lockedId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var publish = new HttpRequestMessage(HttpMethod.Post, $"/api/rate-versions/{versionId}/publish"))
+        {
+            publish.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            (await _client.SendAsync(publish)).EnsureSuccessStatusCode();
+        }
+
+        using var blocked = new HttpRequestMessage(HttpMethod.Delete, $"/api/pricing-rules/components/{lockedId}");
+        blocked.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var blockedRes = await _client.SendAsync(blocked);
+        Assert.Equal(HttpStatusCode.Conflict, blockedRes.StatusCode);
+        Assert.Contains(await ListRuleComponentsAsync(tenantId, versionId), c => c.Id == lockedId);
+    }
+
+    private async Task<List<ComponentBody>> ListRuleComponentsAsync(Guid tenantId, Guid versionId)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"/api/rate-versions/{versionId}/rules");
+        req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        var rules = await res.Content.ReadFromJsonAsync<List<RuleWithComponents>>(JsonOptions);
+        return rules?.SelectMany(r => r.Components ?? []).ToList() ?? [];
+    }
+
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code, name });
@@ -269,6 +364,8 @@ public sealed class Sprint3RatePricingTests : IAsyncLifetime
     }
 
     private sealed record IdResponse(Guid Id);
+    private sealed record ComponentBody(Guid Id, string Name, decimal Amount);
+    private sealed record RuleWithComponents(Guid Id, List<ComponentBody>? Components);
 
     private sealed record RateVersionResponse(
         Guid Id,

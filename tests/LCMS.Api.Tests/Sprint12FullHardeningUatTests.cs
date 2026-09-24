@@ -281,6 +281,62 @@ public sealed class Sprint12FullHardeningUatTests : IAsyncLifetime
         Assert.Equal(2, snap2.SnapshotVersion);
     }
 
+    [Fact]
+    public async Task EmailWithoutSmtp_IsSkipped_AndProcessOnceDoesNotMarkItSent()
+    {
+        var tenantId = await CreateTenantAsync("TN-SMTP-SKIP", "SMTP skip");
+        Guid userId;
+        using (var create = new HttpRequestMessage(HttpMethod.Post, "/api/users")
+        {
+            Content = JsonContent.Create(new { email = "smtp-skip@lcms.local", displayName = "SMTP" })
+        })
+        {
+            create.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(create);
+            created.EnsureSuccessStatusCode();
+            userId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var settings = new HttpRequestMessage(HttpMethod.Put, "/api/notifications/settings")
+        {
+            Content = JsonContent.Create(new
+            {
+                inAppEnabled = true,
+                emailEnabled = true,
+                events = new[]
+                {
+                    new { code = "user.password_set", name = "Mật khẩu", inApp = true, email = true }
+                }
+            })
+        })
+        {
+            settings.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            (await _client.SendAsync(settings)).EnsureSuccessStatusCode();
+        }
+
+        using (var password = new HttpRequestMessage(HttpMethod.Post, $"/api/users/{userId}/password")
+        {
+            Content = JsonContent.Create(new { password = "Matkhau1234" })
+        })
+        {
+            password.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(password)).StatusCode);
+        }
+
+        var skipped = await ListOutboxAsync(tenantId, "skipped");
+        var mail = Assert.Single(skipped, m => m.Topic == "notification.email");
+        Assert.Contains("chưa gửi", mail.LastError, StringComparison.OrdinalIgnoreCase);
+
+        using (var once = new HttpRequestMessage(HttpMethod.Post, "/api/outbox/process-once"))
+        {
+            once.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            (await _client.SendAsync(once)).EnsureSuccessStatusCode();
+        }
+
+        var still = await ListOutboxAsync(tenantId, "skipped");
+        Assert.Contains(still, m => m.Id == mail.Id && m.Status == "skipped");
+    }
+
     // --- helpers ---
 
     private async Task<Guid> CreateTenantAsync(string code, string name)
@@ -766,7 +822,7 @@ public sealed class Sprint12FullHardeningUatTests : IAsyncLifetime
 
     private sealed record ProcessOutboxResult(bool Processed, Guid? MessageId, string? Topic, string? Status);
 
-    private sealed record OutboxDto(Guid Id, string Topic, string Status, int AttemptNo);
+    private sealed record OutboxDto(Guid Id, string Topic, string Status, int AttemptNo, string? LastError);
 
     private sealed record AccountsPayableDto(
         Guid Id,

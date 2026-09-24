@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — CRP-09 SMTP chưa có, CRP-10 sửa/xóa thành phần giá
+
+### User
+tạm thời chưa có cấu hình SMTP, cứ làm tiếp
+
+### Answer
+Không có SMTP thì email thông báo ghi outbox `skipped` với lỗi «SMTP chưa cấu hình. Thư chưa gửi.» Worker chỉ lấy `pending`, nên không đổi thành đã xử lý. Màn cài đặt vẫn nói chưa gửi. Gửi thử thật chờ khi có host/cổng/tài khoản. Trên phiên bản bảng giá nháp: sửa tên/số tiền và xóa thành phần. Đã phát hành thì xóa trả 409, dòng còn. Nút tạo doanh thu dự kiến từ tính giá vẫn ở Bill. Test: `EmailWithoutSmtp_IsSkipped_AndProcessOnceDoesNotMarkItSent`, `DraftComponent_CanUpdateAndDelete_PublishedVersionRejectsDelete`. Chưa bấm form trên trình duyệt.
+
+### Files
+- `NotificationPublisher.cs`, `OutboxMessage.cs`
+- `PricingRuleCommands.cs`, `RatePricingEndpoints.cs`
+- `PricingRuleComponentActions.tsx`, `rate-cards/[id]/page.tsx`
+- `apps/web/app/bff/pricing-rules/components/[id]/route.ts`
+- `Sprint12FullHardeningUatTests.cs`, `Sprint3RatePricingTests.cs`
+
 ## 2026-09-24 — CRP-08 quyền sở hữu trường
 
 ### User

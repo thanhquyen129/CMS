@@ -201,6 +201,29 @@ public static class RatePricingEndpoints
                 ct);
             return Results.Created($"/api/pricing-rules/{ruleId}/components/{id}", new { id });
         });
+        rules.MapPut("/components/{id:guid}", async (
+            Guid id,
+            UpdatePricingRuleComponentRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new UpdatePricingRuleComponentCommand(
+                    id,
+                    body.Name,
+                    body.FinancialNature,
+                    body.CostTypeCode,
+                    body.RevenueTypeCode,
+                    body.Amount,
+                    body.CurrencyCode),
+                ct);
+            return Results.NoContent();
+        });
+        rules.MapDelete("/components/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new DeletePricingRuleComponentCommand(id), ct);
+            return Results.NoContent();
+        });
         rules.MapPost("/{ruleId:guid}/breaks", async (Guid ruleId, AddRateBreakRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
@@ -372,6 +395,14 @@ public sealed record AddPricingRuleComponentRequest(
     int? SortOrder,
     string? CalcMethod = null,
     string? DependsOnCode = null);
+
+public sealed record UpdatePricingRuleComponentRequest(
+    string Name,
+    string FinancialNature,
+    string? CostTypeCode,
+    string? RevenueTypeCode,
+    decimal Amount,
+    string CurrencyCode);
 
 public sealed record AddRateBreakRequest(int SequenceNo, decimal MinQuantity, decimal? MaxQuantity, decimal UnitAmount);
 

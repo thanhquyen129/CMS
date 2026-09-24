@@ -274,6 +274,105 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
     }
 }
 
+public sealed record UpdatePricingRuleComponentCommand(
+    Guid ComponentId,
+    string Name,
+    string FinancialNature,
+    string? CostTypeCode,
+    string? RevenueTypeCode,
+    decimal Amount,
+    string CurrencyCode) : IRequest;
+
+public sealed class UpdatePricingRuleComponentCommandValidator : AbstractValidator<UpdatePricingRuleComponentCommand>
+{
+    public UpdatePricingRuleComponentCommandValidator()
+    {
+        RuleFor(x => x.ComponentId).NotEmpty().WithMessage("Thành phần không hợp lệ.");
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("Tên thành phần không được để trống.")
+            .MaximumLength(256).WithMessage("Tên thành phần không được vượt quá 256 ký tự.");
+        RuleFor(x => x.FinancialNature)
+            .Must(n => n is "cost" or "revenue")
+            .WithMessage("Tính chất tài chính phải là cost hoặc revenue.");
+        RuleFor(x => x.Amount)
+            .GreaterThanOrEqualTo(0).WithMessage("Số tiền thành phần không được âm.");
+        RuleFor(x => x.CurrencyCode)
+            .NotEmpty().WithMessage("Mã tiền tệ không được để trống.")
+            .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.");
+    }
+}
+
+public sealed class UpdatePricingRuleComponentCommandHandler : IRequestHandler<UpdatePricingRuleComponentCommand>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public UpdatePricingRuleComponentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task Handle(UpdatePricingRuleComponentCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var component = await _db.PricingRuleComponents
+            .FirstOrDefaultAsync(c => c.Id == request.ComponentId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy thành phần giá.");
+        var rule = await _db.PricingRules.FirstOrDefaultAsync(r => r.Id == component.PricingRuleId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy quy tắc tính giá.");
+        var version = await _db.RateVersions.FirstOrDefaultAsync(v => v.Id == rule.RateVersionId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy phiên bản bảng giá.");
+        AddPricingRuleCommandHandler.EnsureDraft(version);
+
+        component.Name = request.Name.Trim();
+        component.FinancialNature = request.FinancialNature.Trim().ToLowerInvariant();
+        component.CostTypeCode = string.IsNullOrWhiteSpace(request.CostTypeCode) ? null : request.CostTypeCode.Trim();
+        component.RevenueTypeCode = string.IsNullOrWhiteSpace(request.RevenueTypeCode) ? null : request.RevenueTypeCode.Trim();
+        component.Amount = request.Amount;
+        component.CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant();
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed record DeletePricingRuleComponentCommand(Guid ComponentId) : IRequest;
+
+public sealed class DeletePricingRuleComponentCommandHandler : IRequestHandler<DeletePricingRuleComponentCommand>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public DeletePricingRuleComponentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task Handle(DeletePricingRuleComponentCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var component = await _db.PricingRuleComponents
+            .FirstOrDefaultAsync(c => c.Id == request.ComponentId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy thành phần giá.");
+        var rule = await _db.PricingRules.FirstOrDefaultAsync(r => r.Id == component.PricingRuleId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy quy tắc tính giá.");
+        var version = await _db.RateVersions.FirstOrDefaultAsync(v => v.Id == rule.RateVersionId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy phiên bản bảng giá.");
+        AddPricingRuleCommandHandler.EnsureDraft(version);
+
+        component.SoftDelete(null);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+}
+
 public sealed record PricingRuleComponentDto(
     Guid Id,
     Guid PricingRuleId,

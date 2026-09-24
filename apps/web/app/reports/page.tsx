@@ -95,9 +95,9 @@ export default async function ReportsPage({
       desc: `Maturity tường minh: ${viewLabel}. Drill theo nhóm khách, dịch vụ, tuyến.`,
     },
     {
-      href: "/bills",
+      href: `/reports/bills?view=${encodeURIComponent(view)}${sp.asOf ? `&asOf=${encodeURIComponent(sp.asOf)}` : ""}`,
       title: `Lợi nhuận theo ${billLabel}`,
-      desc: "Hồ sơ tài chính từng Bill (Financial Anchor).",
+      desc: "Báo cáo theo maturity và tiền tệ báo cáo. Mở hồ sơ Bill để đối chiếu.",
     },
     {
       href: "/costs",

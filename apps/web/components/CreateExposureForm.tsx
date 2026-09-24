@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 
@@ -203,18 +204,12 @@ export function CreateExposureForm({
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
-            <div className="field">
-              <label htmlFor="currencyCode">Tiền tệ</label>
-              <input
-                id="currencyCode"
-                name="currencyCode"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                maxLength={3}
-                required
-                disabled={busy}
-              />
-            </div>
+            <CurrencySelect
+              id="currencyCode"
+              value={currency}
+              onChange={setCurrency}
+              disabled={busy}
+            />
             <div className="field">
               <label htmlFor="effectiveDate">Ngày hiệu lực</label>
               <input

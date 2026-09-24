@@ -31,6 +31,7 @@ public sealed record FinancialDocumentDto(
     DateOnly DocumentDate,
     Guid? CounterpartyId,
     Guid? BillId,
+    string? BillNo,
     string ReceiptStatus,
     string AcceptanceStatus,
     string MatchingStatus,
@@ -118,6 +119,15 @@ public sealed class GetFinancialDocumentByIdQueryHandler
                 l.RevenueTypeCode))
             .ToListAsync(cancellationToken);
 
+        string? billNo = null;
+        if (document.BillId.HasValue)
+        {
+            billNo = await _db.Bills.AsNoTracking()
+                .Where(b => b.Id == document.BillId.Value)
+                .Select(b => b.BillNo)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         return new FinancialDocumentDto(
             document.Id,
             document.DocumentType,
@@ -128,6 +138,7 @@ public sealed class GetFinancialDocumentByIdQueryHandler
             document.DocumentDate,
             document.CounterpartyId,
             document.BillId,
+            billNo,
             document.ReceiptStatus,
             document.AcceptanceStatus,
             document.MatchingStatus,

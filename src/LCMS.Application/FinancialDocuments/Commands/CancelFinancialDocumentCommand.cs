@@ -34,15 +34,18 @@ public sealed class CancelFinancialDocumentCommandHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IAuditWriter _audit;
 
     public CancelFinancialDocumentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _audit = audit;
     }
 
     public async Task Handle(CancelFinancialDocumentCommand request, CancellationToken cancellationToken)
@@ -87,8 +90,12 @@ public sealed class CancelFinancialDocumentCommandHandler
         document.CancelledAt = DateTimeOffset.UtcNow;
         document.CancelledBy = _user.UserId;
         document.CancelReason = request.Reason.Trim();
-        // Receipt / Acceptance / Matching dimensions remain independent (AC-005).
-
+        _audit.Append(
+            AuditActions.FinancialDocumentCancel,
+            AuditObjectTypes.FinancialDocument,
+            document.Id,
+            afterJson: $"{{\"recordStatus\":\"{document.RecordStatus}\"}}",
+            reason: document.CancelReason);
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

@@ -80,6 +80,11 @@ export type BillProfitability = {
   byCurrency: ProfitabilityCurrencyBucket[];
   hasMixedCurrencies: boolean;
   note: string;
+  reportingCurrency?: string | null;
+  reportingRevenue?: number | null;
+  reportingCost?: number | null;
+  reportingProfit?: number | null;
+  unconvertedCurrencies?: string[] | null;
 };
 
 export type ApiResult<T> =
@@ -158,10 +163,13 @@ export function getFinancialProfile(
 
 export function getProfitability(
   id: string,
-  view = "best"
+  view = "best",
+  reportingCurrency?: string | null
 ): Promise<ApiResult<BillProfitability>> {
+  const params = new URLSearchParams({ view });
+  if (reportingCurrency) params.set("reportingCurrency", reportingCurrency);
   return apiGet<BillProfitability>(
-    `/api/bills/${id}/profitability?view=${encodeURIComponent(view)}`
+    `/api/bills/${id}/profitability?${params.toString()}`
   );
 }
 

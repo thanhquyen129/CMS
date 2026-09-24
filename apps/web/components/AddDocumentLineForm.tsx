@@ -2,8 +2,11 @@
 
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { BillTypeahead } from "@/components/BillTypeahead";
+import { CatalogCodeSelect } from "@/components/CatalogCodeSelect";
 import { formatMoney } from "@/lib/money";
+import { formatApiErrorMessage } from "@/lib/api-error";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -15,6 +18,7 @@ type Props = {
   /** Prefill = max(0, total − sum lines); parity UAT first line = header. */
   defaultAmount: number;
   defaultBillId?: string | null;
+  defaultBillNo?: string | null;
   direction?: string;
   formKey: string;
 };
@@ -27,6 +31,7 @@ export function AddDocumentLineForm({
   linesSum,
   defaultAmount,
   defaultBillId,
+  defaultBillNo,
   direction,
   formKey,
 }: Props) {
@@ -38,6 +43,11 @@ export function AddDocumentLineForm({
   const [amountDraft, setAmountDraft] = useState(
     defaultAmount > 0 ? String(defaultAmount) : ""
   );
+  const filled = defaultAmount <= 0.0000001;
+
+  useEffect(() => {
+    setAmountDraft(defaultAmount > 0 ? String(defaultAmount) : "");
+  }, [formKey, defaultAmount]);
 
   const lineLabel = term(terms, "FINANCIAL_DOCUMENT_LINE", "Dòng chứng từ");
   const billLabel = term(terms, "BILL", "Bill");
@@ -103,14 +113,17 @@ export function AddDocumentLineForm({
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
           message?: string;
+          errors?: Record<string, string[]>;
         };
         setError(
-          payload.message ||
-            (res.status === 403
+          formatApiErrorMessage(
+            payload,
+            res.status === 403
               ? `Bạn không có quyền thêm ${lineLabel.toLowerCase()}.`
               : res.status === 409
                 ? "Không thêm được dòng (chứng từ chưa nhận / hết hiệu lực / tiền tệ lệch)."
-                : `Thêm ${lineLabel.toLowerCase()} thất bại.`)
+                : `Thêm ${lineLabel.toLowerCase()} thất bại.`
+          )
         );
         return;
       }
@@ -151,7 +164,12 @@ export function AddDocumentLineForm({
           {success}
         </div>
       ) : null}
-      {overTotal ? (
+      {filled ? (
+        <div className="alert alert-info" role="status">
+          Đã phân bổ đủ tổng chứng từ. Không thêm dòng mới.
+        </div>
+      ) : null}
+      {!filled && overTotal ? (
         <div className="alert alert-error" role="alert">
           Tổng dòng sau khi thêm (
           {formatMoney(projectedSum, currencyCode)}) vượt tổng chứng từ (
@@ -171,9 +189,9 @@ export function AddDocumentLineForm({
             min={0}
             step="any"
             required
-            disabled={busy}
+            disabled={busy || filled}
             autoFocus
-            value={amountDraft}
+            value={filled ? "" : amountDraft}
             onChange={(ev) => setAmountDraft(ev.target.value)}
           />
           {defaultAmount > 0 ? (
@@ -196,49 +214,36 @@ export function AddDocumentLineForm({
           />
         </div>
 
-        <div className="field">
-          <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
-          <input
-            id="billId"
-            name="billId"
-            defaultValue={defaultBillId ?? ""}
-            disabled={busy}
-            placeholder="Mặc định theo chứng từ nếu trống"
-            autoComplete="off"
-          />
-        </div>
+        <BillTypeahead
+          label={`${billLabel} (tuỳ chọn)`}
+          disabled={busy || filled}
+          defaultId={defaultBillId}
+          defaultLabel={defaultBillNo}
+        />
 
         {isPayable || !isReceivable ? (
-          <div className="field">
-            <label htmlFor="costTypeCode">Mã loại {costLabel.toLowerCase()}</label>
-            <input
-              id="costTypeCode"
-              name="costTypeCode"
-              maxLength={64}
-              disabled={busy}
-              autoComplete="off"
-            />
-          </div>
+          <CatalogCodeSelect
+            id="costTypeCode"
+            name="costTypeCode"
+            kind="cost_type"
+            label={`Loại ${costLabel.toLowerCase()}`}
+            disabled={busy || filled}
+          />
         ) : null}
 
         {isReceivable || !isPayable ? (
-          <div className="field">
-            <label htmlFor="revenueTypeCode">
-              Mã loại {revenueLabel.toLowerCase()}
-            </label>
-            <input
-              id="revenueTypeCode"
-              name="revenueTypeCode"
-              maxLength={64}
-              disabled={busy}
-              autoComplete="off"
-            />
-          </div>
+          <CatalogCodeSelect
+            id="revenueTypeCode"
+            name="revenueTypeCode"
+            kind="revenue_type"
+            label={`Loại ${revenueLabel.toLowerCase()}`}
+            disabled={busy || filled}
+          />
         ) : null}
       </div>
 
       <div className="cta-row">
-        <button type="submit" className="btn" disabled={busy || overTotal}>
+        <button type="submit" className="btn" disabled={busy || overTotal || filled}>
           {busy ? "Đang thêm…" : `Thêm ${lineLabel.toLowerCase()}`}
         </button>
       </div>

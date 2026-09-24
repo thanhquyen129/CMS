@@ -3,18 +3,32 @@ export type ApiErrorBody = {
   message?: string;
   correlationId?: string;
   code?: string;
+  errors?: Record<string, string[] | string>;
 };
+
+function firstFieldError(body: ApiErrorBody | null | undefined): string | null {
+  const errors = body?.errors;
+  if (!errors) return null;
+  for (const value of Object.values(errors)) {
+    const text = Array.isArray(value) ? value[0] : value;
+    if (typeof text === "string" && text.trim()) return text.trim();
+  }
+  return null;
+}
 
 /**
  * UX-13: surface support id so ops can find the request in logs/audit.
  * Keeps Vietnamese message first; appends mã hỗ trợ when present.
+ * Field validation errors win over the generic "Dữ liệu không hợp lệ."
  */
 export function formatApiErrorMessage(
   body: ApiErrorBody | null | undefined,
   fallback: string
 ): string {
-  const msg =
-    typeof body?.message === "string" && body.message.trim().length > 0
+  const field = firstFieldError(body);
+  const msg = field
+    ? field
+    : typeof body?.message === "string" && body.message.trim().length > 0
       ? body.message.trim()
       : fallback;
   const cid =

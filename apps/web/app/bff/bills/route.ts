@@ -1,5 +1,9 @@
 import { NextRequest } from "next/server";
-import { forwardApiMutation } from "@/lib/bff-api";
+import { forwardApiGet, forwardApiMutation } from "@/lib/bff-api";
+
+export async function GET(req: NextRequest) {
+  return forwardApiGet(`/api/bills${req.nextUrl.search}`);
+}
 
 export async function POST(req: NextRequest) {
   let body: unknown = {};

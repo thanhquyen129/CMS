@@ -40,6 +40,7 @@ export type FinancialDocument = {
   documentDate: string;
   counterpartyId: string | null;
   billId: string | null;
+  billNo: string | null;
   receiptStatus: string;
   acceptanceStatus: string;
   matchingStatus: string;

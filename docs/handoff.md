@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-24 — UAT checkpoint chứng từ: neo Bill, tiền tệ, sửa header
+
+### User
+Cái nào chưa làm trong register/spec UAT 24/09 thì triển khai.
+
+### Answer
+Nhận chứng từ nhận mã Bill (`HAWB-UAT-001`) hoặc UUID, lưu `bill_id`, chi tiết hiện `billNo`. Tiền tệ không có trong danh mục bị từ chối. Đối khớp lấy chi phí theo Bill của chứng từ (header hoặc dòng), cùng tiền tệ/đối tác, và nói rõ khi chưa neo Bill — không tạo chi phí mới. Form nhận/chi phí/doanh thu/chi phí chung/thanh toán-thu/exposure chọn tiền tệ từ danh mục. Bill là ô tìm. Chứng từ đã nhận, chưa chấp nhận, chưa khớp: Sửa header (lý do + audit) hoặc Void. Dòng đủ tổng thì khóa thêm dòng. Hàng đợi phê duyệt hiện mã nghiệp vụ, số tiền, người yêu cầu, link (kể cả phân bổ). Matching hiện số chứng từ. Báo cáo «Lợi nhuận theo Bill» mở `/reports/bills` với maturity và tiền tệ báo cáo, drill hồ sơ Bill. Thành phần giá chọn loại chi phí/doanh thu từ danh mục khi thuê bao đã có danh mục. FUNC-003…006 không đụng. UAT-UI-004 ma trận toàn bộ object chưa lập riêng — mới khóa vòng đời chứng từ. Test `ReceiveDocument_ByBillBusinessCode_StoresBill_AndRejectsUnknownCurrency` Passed (1 s). `tsc --noEmit` web Passed. Chưa bấm trên trình duyệt.
+
+### Files / API
+- `POST /api/financial-documents` `billId` là mã Bill hoặc UUID
+- `POST /api/financial-documents/{id}/correct-header` `{ reason, currencyCode, billId }`
+- `POST /api/financial-documents/{id}/cancel` void kèm reason
+- `GET /api/financial-documents/{id}` thêm `billNo`
+- Hàng đợi phê duyệt thêm `businessCode`, `amount`, `currencyCode`, `requestedByName`, `detailPath`
+- UI: `ReceiveDocumentForm`, `BillTypeahead`, `CurrencySelect`, `CorrectDocumentHeaderForm`, `VoidDocumentButton`, `/reports/bills`
+
 ## 2026-09-24 — CRP-06 If-Match ghi nhận exposure và chi tiết khớp
 
 ### User

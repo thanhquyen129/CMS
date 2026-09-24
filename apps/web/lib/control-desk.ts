@@ -125,6 +125,11 @@ export type ApprovalQueueItem = {
   decidedAt: string | null;
   decisionReason: string | null;
   notes: string | null;
+  businessCode?: string | null;
+  amount?: number | null;
+  currencyCode?: string | null;
+  requestedByName?: string | null;
+  detailPath?: string | null;
 };
 
 async function apiGet<T>(path: string): Promise<ApiResult<T>> {
@@ -251,6 +256,7 @@ export function objectTypeLabel(
   const map: Record<string, string> = {
     BILL: term(terms, "BILL", "Bill"),
     COST: term(terms, "COST", "Chi phí"),
+  COST_ALLOCATION: term(terms, "COST_ALLOCATION", "Phân bổ chi phí"),
     REVENUE: term(terms, "REVENUE", "Doanh thu"),
     VARIANCE: term(terms, "VARIANCE", "Chênh lệch"),
     RECONCILIATION: term(terms, "RECONCILIATION", "Đối soát"),
@@ -341,7 +347,8 @@ export function objectHrefFromApproval(item: ApprovalQueueItem): string | null {
   if (t === "accounts_payable" || t === "accounts_receivable") {
     return "/ap-ar";
   }
-  return null;
+  if (t === "cost_allocation") return item.detailPath ?? null;
+  return item.detailPath ?? null;
 }
 
 /** Pending approval can still be decided from the queue. */

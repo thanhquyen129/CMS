@@ -19,7 +19,12 @@ public sealed record ApprovalDto(
     Guid? DecidedBy,
     DateTimeOffset? DecidedAt,
     string? DecisionReason,
-    string? Notes);
+    string? Notes,
+    string? BusinessCode = null,
+    decimal? Amount = null,
+    string? CurrencyCode = null,
+    string? RequestedByName = null,
+    string? DetailPath = null);
 
 public sealed record ListApprovalsQuery(string? Status, string? ObjectType) : IRequest<IReadOnlyList<ApprovalDto>>;
 public sealed record GetApprovalByIdQuery(Guid Id) : IRequest<ApprovalDto>;

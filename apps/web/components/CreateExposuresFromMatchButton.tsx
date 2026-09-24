@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -28,9 +29,14 @@ type CreateResult = {
 type Props = {
   matchId: string;
   documentId: string;
+  documentNo?: string | null;
 };
 
-export function CreateExposuresFromMatchButton({ matchId, documentId }: Props) {
+export function CreateExposuresFromMatchButton({
+  matchId,
+  documentId,
+  documentNo,
+}: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -219,7 +225,10 @@ export function CreateExposuresFromMatchButton({ matchId, documentId }: Props) {
           </div>
         )
       ) : null}
-      <p className="muted small">Chứng từ neo: {documentId.slice(0, 8)}…</p>
+      <p className="muted small">
+        Chứng từ neo:{" "}
+        <Link href={`/documents/${documentId}`}>{documentNo || documentId}</Link>
+      </p>
     </div>
   );
 }

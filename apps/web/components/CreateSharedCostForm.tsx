@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { withIdempotency } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
@@ -140,17 +141,11 @@ export function CreateSharedCostForm({
                 disabled={busy}
               />
             </div>
-            <div className="field">
-              <label htmlFor="currencyCode">Tiền tệ</label>
-              <input
-                id="currencyCode"
-                name="currencyCode"
-                defaultValue={defaultCurrency}
-                maxLength={3}
-                required
-                disabled={busy}
-              />
-            </div>
+            <CurrencySelect
+              id="currencyCode"
+              defaultValue={defaultCurrency}
+              disabled={busy}
+            />
           </div>
         </fieldset>
         <fieldset className="group-box">

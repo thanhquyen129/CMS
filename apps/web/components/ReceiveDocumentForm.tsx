@@ -3,7 +3,10 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { BillTypeahead } from "@/components/BillTypeahead";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
+import { formatApiErrorMessage } from "@/lib/api-error";
 import { withIdempotency } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -84,14 +87,18 @@ export function ReceiveDocumentForm({
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
           message?: string;
+          errors?: Record<string, string[]>;
+          correlationId?: string;
         };
         setError(
-          payload.message ||
-            (res.status === 403
+          formatApiErrorMessage(
+            payload,
+            res.status === 403
               ? "Bạn không có quyền nhận chứng từ."
               : res.status === 409
                 ? "Chứng từ trùng hoặc xung đột. Kiểm tra số chứng từ / đối tác."
-                : "Nhận chứng từ thất bại.")
+                : "Nhận chứng từ thất bại."
+          )
         );
         return;
       }
@@ -195,29 +202,13 @@ export function ReceiveDocumentForm({
               />
             </div>
 
-            <div className="field">
-              <label htmlFor="currencyCode">Tiền tệ</label>
-              <input
-                id="currencyCode"
-                name="currencyCode"
-                defaultValue="VND"
-                maxLength={3}
-                required
-                disabled={busy}
-              />
-            </div>
+            <CurrencySelect id="currencyCode" disabled={busy} />
 
-            <div className="field">
-              <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
-              <input
-                id="billId"
-                name="billId"
-                defaultValue={defaultBillId ?? ""}
-                disabled={busy}
-                placeholder="Để trống nếu chưa gắn Bill"
-                autoComplete="off"
-              />
-            </div>
+            <BillTypeahead
+              label={`${billLabel} (tuỳ chọn)`}
+              disabled={busy}
+              defaultId={defaultBillId}
+            />
 
             <PartyTypeahead
               name="counterpartyId"

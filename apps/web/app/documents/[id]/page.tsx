@@ -3,9 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddDocumentLineForm } from "@/components/AddDocumentLineForm";
 import { AppShell } from "@/components/AppShell";
+import { CorrectDocumentHeaderForm } from "@/components/CorrectDocumentHeaderForm";
 import { DocumentAcceptButton } from "@/components/DocumentAcceptButton";
 import { DocumentStatusTriad } from "@/components/DocumentStatusTriad";
 import { EditDocumentLineForm } from "@/components/EditDocumentLineForm";
+import { VoidDocumentButton } from "@/components/VoidDocumentButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { canStartMatch } from "@/lib/document-matches";
@@ -87,6 +89,11 @@ export default async function DocumentDetailPage({
   const coverage = documentLineCoverage(doc);
   const remainingTowardTotal = Math.max(0, coverage.remainingTowardTotal);
   const acceptBlockedBySum = canAccept && !coverage.sumsEqual;
+  const canCorrectHeader =
+    doc.recordStatus?.toLowerCase() === "active" &&
+    doc.receiptStatus?.toLowerCase() === "received" &&
+    doc.acceptanceStatus?.toLowerCase() === "not_accepted" &&
+    doc.matchingStatus?.toLowerCase() === "unmatched";
   const counterparty = doc.counterpartyId
     ? partyById.get(doc.counterpartyId)
     : null;
@@ -143,7 +150,7 @@ export default async function DocumentDetailPage({
             <dd>
               {doc.billId ? (
                 <Link className="row-link" href={`/bills/${doc.billId}`}>
-                  Mở {billLabel}
+                  {doc.billNo || billLabel}
                 </Link>
               ) : (
                 "—"
@@ -188,6 +195,18 @@ export default async function DocumentDetailPage({
             <Link className="btn" href={`/documents/${doc.id}/match`}>
               Khớp chứng từ
             </Link>
+          ) : null}
+          {canCorrectHeader ? (
+            <>
+              <CorrectDocumentHeaderForm
+                documentId={doc.id}
+                currencyCode={doc.currencyCode}
+                billId={doc.billId}
+                billNo={doc.billNo}
+                billLabel={billLabel}
+              />
+              <VoidDocumentButton documentId={doc.id} />
+            </>
           ) : null}
           {!canAccept && !canMatch && !acceptBlockedBySum ? (
             <p className="muted small">
@@ -346,6 +365,7 @@ export default async function DocumentDetailPage({
               linesSum={coverage.linesSum}
               defaultAmount={remainingTowardTotal}
               defaultBillId={doc.billId}
+              defaultBillNo={doc.billNo}
               direction={doc.direction}
               formKey={`${doc.lines.length}-${remainingTowardTotal}`}
             />

@@ -198,6 +198,54 @@ public sealed class ControlPackageTests : IAsyncLifetime
         Assert.Single(docs);
     }
 
+    [Fact]
+    public async Task ReceiveDocument_ByBillBusinessCode_StoresBill_AndRejectsUnknownCurrency()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "HAWB-UAT-001");
+        var documentId = await PostId(tenantId, "/api/financial-documents", new
+        {
+            documentType = "invoice",
+            documentNo = "UAT-INV-NEW-" + Guid.NewGuid().ToString("N")[..8],
+            direction = "payable",
+            totalAmount = 235m,
+            currencyCode = "USD",
+            billId = "HAWB-UAT-001"
+        });
+
+        var doc = await GetAsync<DocDetail>(tenantId, $"/api/financial-documents/{documentId}");
+        Assert.Equal(billId, doc.BillId);
+        Assert.Equal("HAWB-UAT-001", doc.BillNo);
+        Assert.Equal("USD", doc.CurrencyCode);
+
+        using var badCurrency = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
+        badCurrency.Content = JsonContent.Create(new
+        {
+            documentType = "invoice",
+            documentNo = "BAD-CCY-" + Guid.NewGuid().ToString("N")[..8],
+            direction = "payable",
+            totalAmount = 1m,
+            currencyCode = "ZZZ"
+        });
+        var rejected = await _client.SendAsync(badCurrency);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        Assert.Contains("ZZZ", await rejected.Content.ReadAsStringAsync());
+
+        using var missingBill = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
+        missingBill.Content = JsonContent.Create(new
+        {
+            documentType = "invoice",
+            documentNo = "BAD-BILL-" + Guid.NewGuid().ToString("N")[..8],
+            direction = "payable",
+            totalAmount = 1m,
+            currencyCode = "USD",
+            billId = "NO-SUCH-BILL"
+        });
+        var missing = await _client.SendAsync(missingBill);
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        Assert.Contains("NO-SUCH-BILL", (await missing.Content.ReadFromJsonAsync<Err>(Json))!.Message);
+    }
+
     private async Task<Guid> ReceiveAsync(Guid tenantId, Guid billId, string documentNo, string key)
     {
         using var req = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
@@ -328,4 +376,5 @@ public sealed class ControlPackageTests : IAsyncLifetime
     private sealed record ApprovalBody(Guid Id, Guid ObjectId, string Status);
     private sealed record ReconBody(string Status, int VersionNo);
     private sealed record DocBody(Guid Id, string DocumentNo);
+    private sealed record DocDetail(Guid BillId, string? BillNo, string CurrencyCode);
 }

@@ -1,3 +1,4 @@
+using LCMS.Application.Bills.Queries;
 using LCMS.Application.DocumentMatches.Commands;
 using LCMS.Application.DocumentMatches.Queries;
 using LCMS.Application.FinancialDocuments.Commands;
@@ -15,6 +16,7 @@ public static class FinancialDocumentEndpoints
         docs.MapPost("/", async (ReceiveFinancialDocumentRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            var billId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
             var id = await sender.Send(
                 new ReceiveFinancialDocumentCommand(
                     body.DocumentType,
@@ -24,7 +26,7 @@ public static class FinancialDocumentEndpoints
                     body.CurrencyCode,
                     body.DocumentDate,
                     body.CounterpartyId,
-                    body.BillId,
+                    billId,
                     body.Notes,
                     body.SourceSystem,
                     body.ExternalId,
@@ -96,18 +98,35 @@ public static class FinancialDocumentEndpoints
             return Results.NoContent();
         });
 
+        docs.MapPost("/{id:guid}/correct-header", async (
+            Guid id,
+            CorrectFinancialDocumentHeaderRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            await sender.Send(
+                new CorrectFinancialDocumentHeaderCommand(
+                    id,
+                    body.Reason,
+                    body.CurrencyCode,
+                    body.BillId),
+                ct);
+            return Results.NoContent();
+        });
+
         docs.MapPost("/{id:guid}/lines", async (
             Guid id,
             AddFinancialDocumentLineRequest body,
             ISender sender,
             CancellationToken ct) =>
         {
+            var lineBillId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
             var lineId = await sender.Send(
                 new AddFinancialDocumentLineCommand(
                     id,
                     body.Amount,
                     body.Description,
-                    body.BillId,
+                    lineBillId,
                     body.CostTypeCode,
                     body.RevenueTypeCode,
                     body.CurrencyCode),
@@ -122,13 +141,14 @@ public static class FinancialDocumentEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
+            var lineBillId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
             await sender.Send(
                 new UpdateFinancialDocumentLineCommand(
                     id,
                     lineId,
                     body.Amount,
                     body.Description,
-                    body.BillId,
+                    lineBillId,
                     body.CostTypeCode,
                     body.RevenueTypeCode),
                 ct);
@@ -263,7 +283,7 @@ public sealed record ReceiveFinancialDocumentRequest(
     string CurrencyCode,
     DateOnly? DocumentDate,
     Guid? CounterpartyId,
-    Guid? BillId,
+    string? BillId,
     string? Notes,
     string? SourceSystem,
     string? ExternalId);
@@ -271,7 +291,7 @@ public sealed record ReceiveFinancialDocumentRequest(
 public sealed record AddFinancialDocumentLineRequest(
     decimal Amount,
     string? Description,
-    Guid? BillId,
+    string? BillId,
     string? CostTypeCode,
     string? RevenueTypeCode,
     string? CurrencyCode);
@@ -279,9 +299,14 @@ public sealed record AddFinancialDocumentLineRequest(
 public sealed record UpdateFinancialDocumentLineRequest(
     decimal Amount,
     string? Description,
-    Guid? BillId,
+    string? BillId,
     string? CostTypeCode,
     string? RevenueTypeCode);
+
+public sealed record CorrectFinancialDocumentHeaderRequest(
+    string Reason,
+    string? CurrencyCode,
+    string? BillId);
 
 public sealed record CancelFinancialDocumentRequest(string Reason, bool Void = false);
 

@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { CurrencySelect } from "@/components/CurrencySelect";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { withIdempotency } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
@@ -164,17 +165,11 @@ export function CreateCashTxnForm({
                 disabled={busy}
               />
             </div>
-            <div className="field">
-              <label htmlFor="currencyCode">Tiền tệ</label>
-              <input
-                id="currencyCode"
-                name="currencyCode"
-                defaultValue={defaultCurrency}
-                maxLength={3}
-                required
-                disabled={busy}
-              />
-            </div>
+            <CurrencySelect
+              id="currencyCode"
+              defaultValue={defaultCurrency}
+              disabled={busy}
+            />
             <div className="field">
               <label htmlFor="valueDate">Ngày giá trị</label>
               <input

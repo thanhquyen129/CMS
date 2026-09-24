@@ -27,7 +27,7 @@ import { listFinancialDocuments } from "@/lib/documents";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ tab?: string }>;
+type SearchParams = Promise<{ tab?: string; view?: string; reportingCurrency?: string }>;
 
 type BillTab =
   | "overview"
@@ -182,8 +182,14 @@ export default async function BillDetailPage({
   }
 
   const { id } = await params;
-  const { tab: tabRaw } = await searchParams;
-  const tab = parseTab(tabRaw);
+  const sp = await searchParams;
+  const tab = parseTab(sp.tab);
+  const profitView = ["expected", "confirmed", "actual", "best"].includes(
+    sp.view ?? ""
+  )
+    ? sp.view!
+    : "best";
+  const reportingCurrency = (sp.reportingCurrency ?? "").trim().toUpperCase();
 
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
@@ -201,7 +207,7 @@ export default async function BillDetailPage({
     await Promise.all([
       getBill(id),
       getFinancialProfile(id),
-      getProfitability(id, "best"),
+      getProfitability(id, profitView, reportingCurrency || null),
       listCostsByBill(id),
       listRevenuesByBill(id),
       listAccountsPayable(),
@@ -457,6 +463,21 @@ export default async function BillDetailPage({
                 </p>
                 {profitRes.data.note ? (
                   <p className="note">{profitRes.data.note}</p>
+                ) : null}
+                {profitRes.data.reportingCurrency ? (
+                  <p className="note">
+                    Tiền tệ báo cáo {profitRes.data.reportingCurrency}:{" "}
+                    {profitRes.data.reportingProfit != null
+                      ? formatMoney(
+                          profitRes.data.reportingProfit,
+                          profitRes.data.reportingCurrency
+                        )
+                      : "chưa quy đổi được"}
+                    {profitRes.data.unconvertedCurrencies?.length
+                      ? ` · thiếu tỷ giá ${profitRes.data.unconvertedCurrencies.join(", ")}`
+                      : ""}
+                    . Đối chiếu với hồ sơ tài chính cùng maturity.
+                  </p>
                 ) : null}
                 <div className="table-wrap">
                   <table className="data-table">

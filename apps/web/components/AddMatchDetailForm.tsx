@@ -91,9 +91,10 @@ export function AddMatchDetailForm({
         {method === "line_to_line"
           ? targetDocHint ||
             "Chọn chứng từ đích (đã chấp nhận) rồi tải lại để lấy dòng."
-          : method === "line_to_cost"
-            ? `Không có ${costLabel.toLowerCase()} trên Bill để liên kết. Tạo/xác nhận chi phí trước.`
-            : `Không có ${revenueLabel.toLowerCase()} trên Bill để liên kết. Tạo/xác nhận doanh thu trước.`}
+          : targetDocHint ||
+            (method === "line_to_cost"
+              ? `Không có ${costLabel.toLowerCase()} đủ điều kiện trên Bill (cùng tiền tệ, còn hiệu lực). Không tạo chi phí mới để khớp.`
+              : `Không có ${revenueLabel.toLowerCase()} đủ điều kiện trên Bill. Không tạo doanh thu mới để khớp.`)}
       </div>
     );
   }

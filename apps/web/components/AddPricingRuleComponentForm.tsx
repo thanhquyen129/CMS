@@ -3,6 +3,9 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { CatalogCodeSelect } from "@/components/CatalogCodeSelect";
+import { CurrencySelect } from "@/components/CurrencySelect";
+import { formatApiErrorMessage } from "@/lib/api-error";
 
 type Props = {
   ruleId: string;
@@ -73,12 +76,15 @@ export function AddPricingRuleComponentForm({
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
           message?: string;
+          errors?: Record<string, string[]>;
         };
         setError(
-          payload.message ||
-            (res.status === 409
+          formatApiErrorMessage(
+            payload,
+            res.status === 409
               ? "Chỉ thêm thành phần trên phiên bản nháp."
-              : "Thêm thành phần thất bại.")
+              : "Thêm thành phần thất bại."
+          )
         );
         return;
       }
@@ -135,18 +141,15 @@ export function AddPricingRuleComponentForm({
             <option value="revenue">Doanh thu</option>
           </select>
         </div>
-        <div className="field">
-          <label htmlFor={`comp-type-${ruleId}`}>
-            {nature === "revenue" ? "Loại doanh thu" : "Loại chi phí"}
-          </label>
-          <input
-            id={`comp-type-${ruleId}`}
-            name="typeCode"
-            maxLength={64}
-            disabled={busy}
-            placeholder="VD: FREIGHT"
-          />
-        </div>
+        <CatalogCodeSelect
+          key={nature}
+          id={`comp-type-${ruleId}`}
+          name="typeCode"
+          kind={nature === "revenue" ? "revenue_type" : "cost_type"}
+          label={nature === "revenue" ? "Loại doanh thu" : "Loại chi phí"}
+          disabled={busy}
+          required
+        />
         <div className="field">
           <label htmlFor={`comp-amount-${ruleId}`}>Số tiền</label>
           <input
@@ -157,17 +160,11 @@ export function AddPricingRuleComponentForm({
             disabled={busy}
           />
         </div>
-        <div className="field">
-          <label htmlFor={`comp-ccy-${ruleId}`}>Tiền tệ</label>
-          <input
-            id={`comp-ccy-${ruleId}`}
-            name="currencyCode"
-            defaultValue={defaultCurrency}
-            maxLength={3}
-            required
-            disabled={busy}
-          />
-        </div>
+        <CurrencySelect
+          id={`comp-ccy-${ruleId}`}
+          defaultValue={defaultCurrency}
+          disabled={busy}
+        />
       </div>
       <div className="cta-row">
         <button className="btn" type="submit" disabled={busy}>

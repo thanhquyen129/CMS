@@ -237,6 +237,29 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
 
         AddPricingRuleCommandHandler.EnsureDraft(version);
 
+        var nature = request.FinancialNature.Trim().ToLowerInvariant();
+        if (nature == "cost")
+        {
+            await EnsureCatalogCodeAsync(
+                MasterCatalogKinds.CostType, request.CostTypeCode, "Loại chi phí", cancellationToken);
+        }
+        else if (nature == "revenue")
+        {
+            await EnsureCatalogCodeAsync(
+                MasterCatalogKinds.RevenueType, request.RevenueTypeCode, "Loại doanh thu", cancellationToken);
+        }
+
+        var currency = request.CurrencyCode.Trim().ToUpperInvariant();
+        var currencyRow = await _db.Currencies.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Code == currency && c.IsActive, cancellationToken);
+        if (currencyRow is null)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["currencyCode"] = [$"Tiền tệ {currency} không có trong danh mục hoặc đã ngừng dùng."]
+            });
+        }
+
         var code = request.Code.Trim();
         if (await _db.PricingRuleComponents.AnyAsync(
                 c => c.PricingRuleId == rule.Id && c.Code == code, cancellationToken))
@@ -250,11 +273,15 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
             PricingRuleId = rule.Id,
             Code = code,
             Name = request.Name.Trim(),
-            FinancialNature = request.FinancialNature.Trim().ToLowerInvariant(),
-            CostTypeCode = string.IsNullOrWhiteSpace(request.CostTypeCode) ? null : request.CostTypeCode.Trim(),
-            RevenueTypeCode = string.IsNullOrWhiteSpace(request.RevenueTypeCode) ? null : request.RevenueTypeCode.Trim(),
+            FinancialNature = nature,
+            CostTypeCode = nature == "cost" && !string.IsNullOrWhiteSpace(request.CostTypeCode)
+                ? request.CostTypeCode.Trim()
+                : null,
+            RevenueTypeCode = nature == "revenue" && !string.IsNullOrWhiteSpace(request.RevenueTypeCode)
+                ? request.RevenueTypeCode.Trim()
+                : null,
             Amount = request.Amount,
-            CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
+            CurrencyCode = currency,
             SortOrder = request.SortOrder,
             CalcMethod = string.IsNullOrWhiteSpace(request.CalcMethod) ? null : request.CalcMethod.Trim().ToLowerInvariant(),
             DependsOnCode = string.IsNullOrWhiteSpace(request.DependsOnCode) ? null : request.DependsOnCode.Trim()
@@ -271,6 +298,32 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
         }
 
         return component.Id;
+    }
+
+    private async Task EnsureCatalogCodeAsync(
+        string kind,
+        string? code,
+        string label,
+        CancellationToken cancellationToken)
+    {
+        var codes = await _db.MasterCatalogItems.AsNoTracking()
+            .Where(i => i.Kind == kind && i.IsActive)
+            .Select(i => i.Code)
+            .ToListAsync(cancellationToken);
+        if (codes.Count == 0)
+        {
+            return;
+        }
+
+        var normalized = code?.Trim() ?? "";
+        if (normalized.Length == 0
+            || !codes.Any(c => string.Equals(c, normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["typeCode"] = [$"{label} phải chọn từ danh mục đang dùng."]
+            });
+        }
     }
 }
 

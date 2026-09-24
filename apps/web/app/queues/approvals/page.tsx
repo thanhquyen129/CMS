@@ -13,7 +13,7 @@ import {
   objectHrefFromApproval,
   objectTypeLabel,
 } from "@/lib/control-desk";
-import { formatDateTimeVi } from "@/lib/money";
+import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 export default async function ApprovalQueuePage() {
   const jar = await cookies();
@@ -58,6 +58,8 @@ export default async function ApprovalQueuePage() {
               <thead>
                 <tr>
                   <th scope="col">Đối tượng</th>
+                  <th scope="col">Số tiền</th>
+                  <th scope="col">Người yêu cầu</th>
                   <th scope="col">Trạng thái</th>
                   <th scope="col">{levelLabel}</th>
                   <th scope="col">Yêu cầu lúc</th>
@@ -68,14 +70,16 @@ export default async function ApprovalQueuePage() {
               </thead>
               <tbody>
                 {result.data.map((item) => {
-                  const href = objectHrefFromApproval(item);
+                  const href = item.detailPath || objectHrefFromApproval(item);
                   const t = item.objectType.toLowerCase();
                   const linkLabel =
                     t === "bill"
                       ? `Mở ${billLabel}`
                       : t === "financial_document" || t === "document"
                         ? `Mở ${docLabel}`
-                        : t === "payment"
+                        : t === "cost_allocation"
+                      ? "Mở phân bổ"
+                    : t === "payment"
                           ? "Mở thanh toán"
                           : t === "collection"
                             ? "Mở thu tiền"
@@ -85,11 +89,15 @@ export default async function ApprovalQueuePage() {
                       <td>
                         <div className="queue-title">
                           {objectTypeLabel(terms, item.objectType)}
+                          {item.businessCode ? ` · ${item.businessCode}` : ""}
                         </div>
-                        <span className="muted small block mono-id">
-                          {item.objectId}
-                        </span>
                       </td>
+                      <td>
+                        {item.amount != null && item.currencyCode
+                          ? formatMoney(item.amount, item.currencyCode)
+                          : "—"}
+                      </td>
+                      <td>{item.requestedByName || "—"}</td>
                       <td>{approvalStatusLabel(terms, item.status)}</td>
                       <td>
                         {item.currentLevel}/{item.requiredLevel}

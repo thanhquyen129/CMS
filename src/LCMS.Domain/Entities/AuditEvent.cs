@@ -50,6 +50,9 @@ public static class AuditActions
     public const string CostAllocationFinalizeBlocked = "cost_allocation.finalize_blocked";
     public const string AccountsPayableReverseRecognize = "accounts_payable.reverse_recognize";
     public const string AccountsReceivableReverseRecognize = "accounts_receivable.reverse_recognize";
+    public const string FinancialDocumentReceive = "financial_document.receive";
+    public const string FinancialDocumentCorrectHeader = "financial_document.correct_header";
+    public const string FinancialDocumentCancel = "financial_document.cancel";
     public const string FinancialDocumentAccept = "financial_document.accept";
     public const string FinancialDocumentLineAdd = "financial_document_line.add";
     public const string FinancialDocumentLineUpdate = "financial_document_line.update";

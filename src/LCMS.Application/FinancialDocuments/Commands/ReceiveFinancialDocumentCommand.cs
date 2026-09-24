@@ -73,6 +73,7 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
     private readonly IPartyDirectoryService _parties;
     private readonly ILateDocumentGate _lateDocuments;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IAuditWriter _audit;
 
     public ReceiveFinancialDocumentCommandHandler(
         ILcmsDbContext db,
@@ -81,7 +82,8 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         IOptions<DocumentOptions> options,
         IPartyDirectoryService parties,
         ILateDocumentGate lateDocuments,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -90,6 +92,7 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         _parties = parties;
         _lateDocuments = lateDocuments;
         _idempotency = idempotency;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(ReceiveFinancialDocumentCommand request, CancellationToken cancellationToken)
@@ -118,6 +121,24 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         var tenantId = _tenantContext.TenantId!.Value;
         var documentType = request.DocumentType.Trim().ToLowerInvariant();
         var documentNo = request.DocumentNo.Trim();
+        var currency = request.CurrencyCode.Trim().ToUpperInvariant();
+        var currencyRow = await _db.Currencies.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Code == currency, cancellationToken);
+        if (currencyRow is null)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["currencyCode"] = [$"Tiền tệ {currency} không có trong danh mục."]
+            });
+        }
+
+        if (!currencyRow.IsActive)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["currencyCode"] = [$"Tiền tệ {currency} đã ngừng dùng."]
+            });
+        }
 
         if (request.BillId.HasValue)
         {
@@ -184,7 +205,7 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
             DocumentNo = documentNo,
             Direction = request.Direction.Trim().ToLowerInvariant(),
             TotalAmount = decimal.Round(request.TotalAmount, 4, MidpointRounding.AwayFromZero),
-            CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
+            CurrencyCode = currency,
             DocumentDate = request.DocumentDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
             CounterpartyId = request.CounterpartyId,
             BillId = request.BillId,
@@ -201,6 +222,11 @@ public sealed class ReceiveFinancialDocumentCommandHandler : IRequestHandler<Rec
         };
 
         _db.FinancialDocuments.Add(document);
+        _audit.Append(
+            AuditActions.FinancialDocumentReceive,
+            AuditObjectTypes.FinancialDocument,
+            document.Id,
+            afterJson: $"{{\"billId\":\"{document.BillId}\",\"currency\":\"{document.CurrencyCode}\",\"documentNo\":\"{document.DocumentNo}\"}}");
         _idempotency.Remember(
             IdempotencyScopes.FinancialDocument,
             request.IdempotencyKey ?? string.Empty,

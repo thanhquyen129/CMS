@@ -13,7 +13,7 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`${getApiInternalUrl()}/api/currencies`, {
+    const res = await fetch(`${getApiInternalUrl()}/api/currencies?activeOnly=true`, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",

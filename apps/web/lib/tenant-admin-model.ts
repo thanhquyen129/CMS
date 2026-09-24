@@ -22,6 +22,19 @@ export type TenantProfile = {
   hasLogo: boolean;
 };
 
+export type TenantReadinessItem = {
+  code: string;
+  label: string;
+  done: boolean;
+  href: string;
+};
+
+export type TenantReadiness = {
+  readyForBill: boolean;
+  note: string;
+  items: TenantReadinessItem[];
+};
+
 export type LicenseModule = {
   code: string;
   name: string;

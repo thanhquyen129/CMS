@@ -440,6 +440,79 @@ public sealed class AdminSettingsFullTests : IAsyncLifetime
         Assert.True(Assert.Single(after.Events, e => e.Code == "approval.pending").Email);
     }
 
+    [Fact]
+    public async Task TenantReadiness_NeedsCustomerAndOperator_AndStaysInsideTheTenant()
+    {
+        var tenantA = await CreateTenantAsync("TN-RDY-A", "Ready A");
+        var tenantB = await CreateTenantAsync("TN-RDY-B", "Ready B");
+
+        var before = await ReadinessAsync(tenantA);
+        Assert.False(before.ReadyForBill);
+        Assert.True(Item(before, "roles").Done);
+        Assert.True(Item(before, "vnd").Done);
+        Assert.False(Item(before, "customer").Done);
+        Assert.False(Item(before, "operator").Done);
+        Assert.Contains("Không cần kết nối", before.Note);
+
+        using (var vendor = WithTenant(HttpMethod.Post, "/api/business-parties", tenantA))
+        {
+            vendor.Content = JsonContent.Create(new
+            {
+                code = "NCC-1",
+                name = "Nhà cung cấp",
+                roleCodes = new[] { "vendor" }
+            });
+            (await _client.SendAsync(vendor)).EnsureSuccessStatusCode();
+        }
+
+        Assert.False(Item(await ReadinessAsync(tenantA), "customer").Done);
+
+        using (var customer = WithTenant(HttpMethod.Post, "/api/business-parties", tenantA))
+        {
+            customer.Content = JsonContent.Create(new
+            {
+                code = "KH-1",
+                name = "Khách hàng",
+                roleCodes = new[] { "customer" }
+            });
+            (await _client.SendAsync(customer)).EnsureSuccessStatusCode();
+        }
+
+        Assert.True(Item(await ReadinessAsync(tenantA), "customer").Done);
+        Assert.False((await ReadinessAsync(tenantA)).ReadyForBill);
+
+        using (var user = WithTenant(HttpMethod.Post, "/api/users", tenantA))
+        {
+            user.Content = JsonContent.Create(new
+            {
+                email = "ready.a@example.com",
+                displayName = "Kế toán",
+                password = "Passw0rd12"
+            });
+            (await _client.SendAsync(user)).EnsureSuccessStatusCode();
+        }
+
+        var ready = await ReadinessAsync(tenantA);
+        Assert.True(ready.ReadyForBill);
+        Assert.True(ready.Items.All(i => i.Done));
+
+        var other = await ReadinessAsync(tenantB);
+        Assert.False(other.ReadyForBill);
+        Assert.False(Item(other, "customer").Done);
+        Assert.False(Item(other, "operator").Done);
+    }
+
+    private async Task<ReadinessBody> ReadinessAsync(Guid tenantId)
+    {
+        using var req = WithTenant(HttpMethod.Get, "/api/tenant-profile/readiness", tenantId);
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<ReadinessBody>(JsonOptions))!;
+    }
+
+    private static ReadinessItem Item(ReadinessBody body, string code) =>
+        Assert.Single(body.Items, i => i.Code == code);
+
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code, name });
@@ -467,4 +540,6 @@ public sealed class AdminSettingsFullTests : IAsyncLifetime
     private sealed record LicenseResponse(int SeatLimit, List<LicenseModule> Modules);
     private sealed record NotifyEvent(string Code, string Name, bool InApp, bool Email);
     private sealed record NotifyResponse(bool InAppEnabled, bool EmailEnabled, bool SmtpConfigured, List<NotifyEvent> Events);
+    private sealed record ReadinessItem(string Code, string Label, bool Done, string Href);
+    private sealed record ReadinessBody(bool ReadyForBill, string Note, List<ReadinessItem> Items);
 }

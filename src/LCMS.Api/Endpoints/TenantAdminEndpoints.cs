@@ -2,6 +2,7 @@ using LCMS.Application.Backups;
 using LCMS.Application.Licenses;
 using LCMS.Application.Notifications;
 using LCMS.Application.Tenants.Commands;
+using LCMS.Application.Tenants.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +15,8 @@ public static class TenantAdminEndpoints
         var profile = app.MapGroup("/api/tenant-profile").WithTags("TenantProfile");
         profile.MapGet("/", async (ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetTenantProfileQuery(), ct)));
+        profile.MapGet("/readiness", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetTenantReadinessQuery(), ct)));
         profile.MapPut("/", async (UpdateTenantProfileRequest body, ISender sender, CancellationToken ct) =>
         {
             var dto = await sender.Send(

@@ -10,6 +10,8 @@ import {
   operationalStatusLabel,
 } from "@/lib/bills";
 import { getDashboardSummary } from "@/lib/control-desk";
+import { getTenantReadiness } from "@/lib/tenant-admin";
+import { TenantReadinessPanel } from "@/components/TenantReadinessPanel";
 import { formatMoney } from "@/lib/money";
 import { listOrders } from "@/lib/operational-refs";
 
@@ -106,10 +108,11 @@ export default async function DashboardPage() {
   const maturityLabel = term(terms, "MATURITY_BREAKDOWN", "Phân tách độ chín");
   const varianceLabel = term(terms, "VARIANCE", "Chênh lệch");
 
-  const [result, billsRes, ordersRes] = await Promise.all([
+  const [result, billsRes, ordersRes, readiness] = await Promise.all([
     getDashboardSummary(),
     listBills(),
     listOrders(),
+    getTenantReadiness(),
   ]);
 
   const now = new Date();
@@ -118,11 +121,6 @@ export default async function DashboardPage() {
   const year = now.getFullYear();
   const monthSeries = result.ok ? result.data.monthlySeries ?? [] : [];
   const monthNote = result.ok ? result.data.monthlySeriesNote : null;
-  const hasMonthAmount = monthSeries.some(
-    (p) =>
-      (vis.canViewCost && p.costBestAvailable != null) ||
-      (vis.canViewRevenue && p.revenueBestAvailable != null)
-  );
 
   const vis = result.ok
     ? result.data.financialVisibility ?? {
@@ -131,6 +129,12 @@ export default async function DashboardPage() {
         canViewMargin: true,
       }
     : { canViewCost: false, canViewRevenue: false, canViewMargin: false };
+
+  const hasMonthAmount = monthSeries.some(
+    (p) =>
+      (vis.canViewCost && p.costBestAvailable != null) ||
+      (vis.canViewRevenue && p.revenueBestAvailable != null)
+  );
 
   const roll = result.ok ? result.data.baseCurrencyRollUp : null;
   const row0 = result.ok ? result.data.totalsByCurrency[0] : null;
@@ -216,6 +220,10 @@ export default async function DashboardPage() {
               “Kiểm soát chi phí hôm nay, tạo lợi nhuận ngày mai”
             </div>
           </div>
+
+          {readiness.ok && !readiness.data.readyForBill ? (
+            <TenantReadinessPanel data={readiness.data} />
+          ) : null}
 
           <div className="po-grid5">
             <Link className="po-card po-kpi" href="/orders">

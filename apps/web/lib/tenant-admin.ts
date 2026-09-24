@@ -12,6 +12,7 @@ import type {
   TenantBackupItem,
   TenantLicense,
   TenantProfile,
+  TenantReadiness,
 } from "./tenant-admin-model";
 
 export * from "./tenant-admin-model";
@@ -44,6 +45,10 @@ async function apiGet<T>(path: string): Promise<ApiResult<T>> {
 
 export function getTenantProfile() {
   return apiGet<TenantProfile>("/api/tenant-profile");
+}
+
+export function getTenantReadiness() {
+  return apiGet<TenantReadiness>("/api/tenant-profile/readiness");
 }
 
 export function getTenantLicense() {

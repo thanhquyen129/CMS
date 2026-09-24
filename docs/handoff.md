@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-24 — CRP-13 checklist sẵn sàng Bill
+
+### User
+ok tiếp
+
+### Answer
+`GET /api/tenant-profile/readiness` trả bốn mục: vai trò hệ thống, VND mặc định, đối tác khách đang hoạt động, người dùng đã đặt mật khẩu. Tạo thuê bao đã có vai trò và VND. Không seed đối tác mẫu. Nhà cung cấp không tính là khách. Thuê bao khác không thấy khách và người dùng của thuê bao kia. `readyForBill` chỉ đúng khi đủ bốn mục. Trang chủ hiện checklist khi chưa đủ; Cài đặt luôn hiện, một nút «Làm bước này» cho mục chưa đạt đầu tiên, đủ rồi thì «Lập Bill». Test: `TenantReadiness_NeedsCustomerAndOperator_AndStaysInsideTheTenant` (2 s, Passed). Chưa bấm checklist trên trình duyệt.
+
+### Files
+- `GetTenantReadinessQuery.cs`
+- `TenantAdminEndpoints.cs`
+- `TenantReadinessPanel.tsx`
+- `apps/web/app/settings/page.tsx`, `apps/web/app/dashboard/page.tsx`
+- `apps/web/lib/tenant-admin.ts`, `tenant-admin-model.ts`
+- `AdminSettingsFullTests.cs`
+
 ## 2026-09-24 — CRP-12 sao lưu sổ tiền
 
 ### User

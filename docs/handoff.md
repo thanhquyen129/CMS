@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-24 — CRP-14 cổng đóng UAT N1–N5
+
+### User
+ok, tiếp
+
+### Answer
+Không chụp được UI-01…15: production mở ra màn đăng nhập, không có phiên. Không bịa ảnh và không gọi Pixel-perfect xong. `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md` thêm cổng đóng N1–N5: ảnh chưa có; UX-06 Blocked (một thuê bao); UX-10 chưa chạy bàn phím; UX-09 chưa đo 1280/1440; xác nhận/thực tế chưa lưu Idempotency-Key phía server. UX-14 đổi từ Pass* sang Open. P0/P1 mở không bằng 0. Danh sách file ảnh dự kiến nằm ở `docs/uat/evidence/README.md`. Test `CloseGate_RefusesPixelPerfect_WhileScreenshotsAndOpenItemsRemain` Passed (9 ms): khi còn thiếu ảnh, tài liệu phải nói chưa có ảnh và không được đóng gói.
+
+### Files
+- `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md`
+- `docs/uat/evidence/README.md`
+- `docs/reports/CMS_PixelPerfect_Gap_Index_2026-09-22.md`
+- `tests/LCMS.Api.Tests/Wave2EvidenceGateTests.cs`
+
 ## 2026-09-24 — CRP-13 checklist sẵn sàng Bill
 
 ### User

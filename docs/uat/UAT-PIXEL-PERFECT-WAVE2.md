@@ -8,6 +8,22 @@
 
 > Hotfix trước UAT: web 500 do Next.js slug `billId`≠`id` — commit `0a2df35`, CI success, VPS rebuild. Không ghi password vào repo.
 
+## Cổng đóng N1–N5 (2026-09-24)
+
+Ghi chú 2026-09-22 là quan sát trình duyệt trên `http://194.233.89.26`, không phải file ảnh. Thư mục ảnh dự kiến: `docs/uat/evidence/ui-01.png` … `ui-15.png`. Các file đó chưa có. Lượt này mở được màn đăng nhập, không có phiên nên không chụp UI-01…15.
+
+P0/P1 mở không bằng 0. Không gọi Pixel-perfect xong.
+
+| ID | Cửa | Trạng thái |
+|---|---|---|
+| W-N1 | Ảnh UI-01…15 đối chiếu PNG | Mở — chưa có file ảnh |
+| W-N2 | UX-02…06 | Mở — UX-06 Blocked, host đang một thuê bao |
+| W-N3 | UX-07…10 | Mở — UX-10 chưa chạy bàn phím; UX-09 chưa đo 1280/1440 |
+| W-N4 | UX-11…13 | Mở một phần — KPI đã đối chiếu điểm; xác nhận/thực tế chưa lưu Idempotency-Key phía server |
+| W-N5 | P0/P1 mở = 0 | Không đạt |
+
+Đóng cổng khi có đủ 15 ảnh, UX-10 đã chạy, UX-06 có hai thuê bao, và bảng dưới không còn Blocked / Not run.
+
 ---
 
 ## Cột
@@ -74,7 +90,7 @@
 | UX-11 | Rating / báo cáo / KPI | So số UI với API (Network) | Frontend không tự bịa số tài chính ngoài API | **Pass** (spot) | Dashboard↔Reports KPI khớp (307.2M / 459.5M / 171 Bill) |
 | UX-12 | Create cost/revenue/payment/import/chốt | Double-click nút lưu / gửi 2 lần nhanh | Một bản ghi (Idempotency-Key / chặn double-submit) | **Pass** (code) | Bổ sung Idempotency-Key + chặn double-submit: CreateCost/SharedCost/Revenue + StartFinancialClose (đã có cash/alloc/import) |
 | UX-13 | Gây lỗi 5xx / integration | Mở panel lỗi hoặc toast | Có correlation ID / mã hỗ trợ khi cần | **Pass** (code) | `formatApiErrorMessage` + bills/cost-revenue server GET + form tiền (cost/revenue/shared/cash/close) append «Mã hỗ trợ» |
-| UX-14 | Toàn bộ checklist này | Thu thập evidence; đếm P0/P1 fail | Evidence theo màn; unresolved P0/P1 = 0 trước gọi Pixel-perfect xong | **Pass*** | P0 Fail = 0 trên phần đã chạy. *Blocked/Not run:* UX-04/06/07/10/12/13. Residual P1 copy đã vá trong cùng batch |
+| UX-14 | Toàn bộ checklist này | Thu thập evidence; đếm P0/P1 fail | Evidence theo màn; unresolved P0/P1 = 0 trước gọi Pixel-perfect xong | **Open** | P0/P1 mở không bằng 0. Xem cổng đóng N1–N5. Không gọi Pixel-perfect xong |
 
 ---
 

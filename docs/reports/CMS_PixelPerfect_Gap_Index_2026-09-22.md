@@ -303,7 +303,7 @@ O*  Chỉ khi PO mở scope
 | W-K2 | **DONE** | CreateWorkspace Chặng/Chuyến |
 | W-K3 | **DONE** | Soft-delete unlink + `linkId` graph + drawer CTA · ADR-0032 |
 | W-J3 | **DONE** | Breaks + container rates trên `/rate-cards/[id]` |
-| W-N1–N6 | TEMPLATE | `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md` — chờ runner + login |
+| W-N1–N5 | PARTIAL | Cổng đóng 2026-09-24: chưa có ảnh UI-01…15; UX-06 Blocked; UX-10 Not run; P0/P1 mở ≠ 0 |
 | W-L3 | **DONE** | ADR-0031 giữ `/ap-ar?tab=` |
 | W-K4 | **DONE** | Note VI điểm đi/đến (API ownership chưa expose) |
 | W-K5–K6 | K5 DONE; K6 PENDING | Drawer tab Tính giá; picker còn |
@@ -313,5 +313,5 @@ O*  Chỉ khi PO mở scope
 | W-M1 | **DONE** | Workflow strip + bước import + nav |
 | W-M2 | **DONE** | Link từ Cài đặt |
 | W-M5 | PARTIAL | `idempotency.ts` + finalize alloc / import |
-| W-N1–N6 | TEMPLATE | `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md` — chờ runner + login |
+| W-N1–N5 | PARTIAL | Cổng đóng 2026-09-24: chưa có ảnh UI-01…15; UX-06 Blocked; UX-10 Not run; P0/P1 mở ≠ 0 |
 | W-O* | OUT / INTENTIONAL | Không mở |

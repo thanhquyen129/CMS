@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Exposures;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
@@ -44,6 +45,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
     private readonly TenantFinancialOptionsResolver _financial;
     private readonly IPartyDirectoryService _parties;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IRecognitionApprovalGate _recognitionApproval;
 
     public RecognizeReceivableExposureCommandHandler(
         ILcmsDbContext db,
@@ -52,7 +54,8 @@ public sealed class RecognizeReceivableExposureCommandHandler
         IAuditWriter audit,
         TenantFinancialOptionsResolver financial,
         IPartyDirectoryService parties,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IRecognitionApprovalGate recognitionApproval)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -61,6 +64,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
         _financial = financial;
         _parties = parties;
         _idempotency = idempotency;
+        _recognitionApproval = recognitionApproval;
     }
 
     public async Task<Guid> Handle(RecognizeReceivableExposureCommand request, CancellationToken cancellationToken)
@@ -125,6 +129,8 @@ public sealed class RecognizeReceivableExposureCommandHandler
             throw new ConflictAppException(
                 $"Số tiền ghi nhận ({amount}) vượt phần còn lại của exposure ({open}).");
         }
+
+        await _recognitionApproval.EnsureReceivableRecognizeAllowedAsync(exposure, cancellationToken);
 
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);
         var revenueCountBefore = await _db.Revenues.CountAsync(cancellationToken);

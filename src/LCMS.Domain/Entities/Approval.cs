@@ -51,6 +51,9 @@ public static class ApprovalObjectTypes
     public const string Exception = "exception";
     public const string AccountsPayable = "accounts_payable";
     public const string AccountsReceivable = "accounts_receivable";
+    public const string PayableExposure = "payable_exposure";
+    public const string ReceivableExposure = "receivable_exposure";
+    public const string CostAllocation = "cost_allocation";
     public const string Other = "other";
 }
 

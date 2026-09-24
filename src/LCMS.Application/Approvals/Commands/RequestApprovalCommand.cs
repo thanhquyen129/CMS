@@ -29,6 +29,9 @@ public sealed class RequestApprovalCommandValidator : AbstractValidator<RequestA
         ApprovalObjectTypes.Exception,
         ApprovalObjectTypes.AccountsPayable,
         ApprovalObjectTypes.AccountsReceivable,
+        ApprovalObjectTypes.PayableExposure,
+        ApprovalObjectTypes.ReceivableExposure,
+        ApprovalObjectTypes.CostAllocation,
         ApprovalObjectTypes.Other
     };
 
@@ -167,6 +170,9 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
             ApprovalObjectTypes.Revenue => await _db.Revenues.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
             ApprovalObjectTypes.AccountsPayable => await _db.AccountsPayable.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.RecognizedAmount).FirstOrDefaultAsync(cancellationToken),
             ApprovalObjectTypes.AccountsReceivable => await _db.AccountsReceivable.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.RecognizedAmount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.PayableExposure => await _db.PayableExposures.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.ReceivableExposure => await _db.ReceivableExposures.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
+            ApprovalObjectTypes.CostAllocation => await _db.CostAllocations.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.AllocatableAmount).FirstOrDefaultAsync(cancellationToken),
             ApprovalObjectTypes.Payment => await _db.Payments.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
             ApprovalObjectTypes.Collection => await _db.Collections.AsNoTracking().Where(x => x.Id == objectId).Select(x => x.Amount).FirstOrDefaultAsync(cancellationToken),
             _ => 0m
@@ -181,6 +187,9 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
             or ApprovalObjectTypes.Revenue
             or ApprovalObjectTypes.AccountsPayable
             or ApprovalObjectTypes.AccountsReceivable
+            or ApprovalObjectTypes.PayableExposure
+            or ApprovalObjectTypes.ReceivableExposure
+            or ApprovalObjectTypes.CostAllocation
             or ApprovalObjectTypes.Payment
             or ApprovalObjectTypes.Collection))
         {
@@ -203,6 +212,9 @@ public sealed class RequestApprovalCommandHandler : IRequestHandler<RequestAppro
             ApprovalObjectTypes.Exception => await _db.Exceptions.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ApprovalObjectTypes.AccountsPayable => await _db.AccountsPayable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ApprovalObjectTypes.AccountsReceivable => await _db.AccountsReceivable.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.PayableExposure => await _db.PayableExposures.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.ReceivableExposure => await _db.ReceivableExposures.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
+            ApprovalObjectTypes.CostAllocation => await _db.CostAllocations.AsNoTracking().AnyAsync(x => x.Id == objectId, cancellationToken),
             ApprovalObjectTypes.Settlement or ApprovalObjectTypes.Other => true,
             _ => false
         };

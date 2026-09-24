@@ -1,7 +1,9 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -355,15 +357,21 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly ICostApprovalGate _approvalGate;
+    private readonly IAuditWriter _audit;
 
     public FinalizeCostAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        ICostApprovalGate approvalGate,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _approvalGate = approvalGate;
+        _audit = audit;
     }
 
     public async Task Handle(FinalizeCostAllocationCommand request, CancellationToken cancellationToken)
@@ -404,6 +412,36 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             || cost.BillId.HasValue)
         {
             throw new ConflictAppException("Chỉ chốt phân bổ cho chi phí chung (shared) không gắn Bill.");
+        }
+
+        try
+        {
+            await _approvalGate.EnsureConfirmAllowedAsync(cost, cancellationToken);
+        }
+        catch (ConflictAppException)
+        {
+            _audit.Append(
+                AuditActions.CostAllocationFinalizeBlocked,
+                AuditObjectTypes.CostAllocation,
+                allocation.Id,
+                reason: "Chi phí vượt ngưỡng phê duyệt; cần phê duyệt trước khi chốt phân bổ.");
+            await _db.SaveChangesAsync(cancellationToken);
+            throw new ConflictAppException(
+                "Chi phí vượt ngưỡng phê duyệt; cần phê duyệt trước khi chốt phân bổ.");
+        }
+
+        if (string.Equals(allocation.AllocationStatus, CostAllocationStatuses.PendingApproval, StringComparison.OrdinalIgnoreCase))
+        {
+            var approved = await _db.Approvals.AsNoTracking().AnyAsync(
+                a => a.ObjectType == ApprovalObjectTypes.CostAllocation
+                     && a.ObjectId == allocation.Id
+                     && a.Status == ApprovalStatuses.Approved,
+                cancellationToken);
+            if (!approved)
+            {
+                throw new ConflictAppException(
+                    "Phiên đã gửi duyệt; cần phê duyệt trước khi chốt phân bổ.");
+            }
         }
 
         // Refresh allocatable from current Cost amount (Single Economic Cost).
@@ -495,11 +533,13 @@ public sealed class SubmitCostAllocationCommandHandler : IRequestHandler<SubmitC
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly ICurrentUserContext _user;
 
-    public SubmitCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenant)
+    public SubmitCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenant, ICurrentUserContext user)
     {
         _db = db;
         _tenant = tenant;
+        _user = user;
     }
 
     public async Task Handle(SubmitCostAllocationCommand request, CancellationToken cancellationToken)
@@ -517,6 +557,29 @@ public sealed class SubmitCostAllocationCommandHandler : IRequestHandler<SubmitC
         }
 
         allocation.AllocationStatus = CostAllocationStatuses.PendingApproval;
+
+        var pending = await _db.Approvals.AnyAsync(
+            a => a.ObjectType == ApprovalObjectTypes.CostAllocation
+                 && a.ObjectId == allocation.Id
+                 && a.Status == ApprovalStatuses.Pending,
+            cancellationToken);
+        if (!pending)
+        {
+            _db.Approvals.Add(new Approval
+            {
+                TenantId = _tenant.TenantId!.Value,
+                ObjectType = ApprovalObjectTypes.CostAllocation,
+                ObjectId = allocation.Id,
+                Status = ApprovalStatuses.Pending,
+                RequiredLevel = 1,
+                CurrentLevel = 0,
+                RequestedBy = _user.UserId,
+                RequestedAt = DateTimeOffset.UtcNow,
+                RequestReason = "Chốt phân bổ chi phí chung.",
+                ObjectFingerprint = allocation.AllocatableAmount.ToString("0.####")
+            });
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

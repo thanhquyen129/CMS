@@ -73,6 +73,7 @@ public static class DependencyInjection
         services.AddScoped<IFxRateLookup, FxRateLookup>();
         services.AddScoped<ICostFxStub, CostFxStub>();
         services.AddScoped<ICostApprovalGate, CostApprovalGate>();
+        services.AddScoped<LCMS.Application.Exposures.IRecognitionApprovalGate, LCMS.Application.Exposures.RecognitionApprovalGate>();
         services.AddScoped<IRevenueFxStub, RevenueFxStub>();
         services.AddScoped<ProfitabilityBoard>();
         services.AddScoped<IRevenueApprovalGate, RevenueApprovalGate>();

@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — CRP-05 ngưỡng phê duyệt chặn ghi nhận và chốt phân bổ chi phí
+
+### User
+ok, tiếp đi chuyên gia
+
+### Answer
+Khi tenant đặt `confirmApprovalThresholdBase`, ghi nhận phải trả/phải thu vượt trần bị 409 và không tạo AP/AR cho đến khi có Approval `approved`. Exposure gắn chi phí/doanh thu dùng trạng thái duyệt của dòng nguồn; exposure không gắn nguồn xét trên số trần của exposure (`payable_exposure` / `receivable_exposure`). Lần bị chặn ghi `accounts_payable.recognize_blocked` (và bản phải thu) rồi mới trả 409. Chốt phân bổ chi phí chung cũng bị chặn cho đến khi chi phí được duyệt. Gửi duyệt phiên phân bổ tạo Approval `cost_allocation`; chốt từ `pending_approval` cần Approval đó đã duyệt. Ngưỡng null giữ hành vi cũ. ADR-0035. Test: `OverThreshold_BlocksRecognizeAndAllocationFinalizeUntilApproved`.
+
+### Files
+- `RecognitionApprovalGate.cs`, recognize payable/receivable handlers
+- `AllocationCommands.cs` finalize + submit
+- `Approval.cs` object types, `RequestApprovalCommand.cs`, `AuditEvent.cs`
+- `docs/adr/ADR-0035-recognition-approval-gate.md`
+- `CostRevenueSodWriteTests.cs`
+
 ## 2026-09-24 — CRP-04 phân bổ nháp không tạo phiên đôi
 
 ### User

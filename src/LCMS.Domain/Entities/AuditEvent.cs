@@ -45,6 +45,9 @@ public static class AuditActions
     public const string AccountsReceivableWriteOff = "accounts_receivable.write_off";
     public const string AccountsPayableRecognize = "accounts_payable.recognize";
     public const string AccountsReceivableRecognize = "accounts_receivable.recognize";
+    public const string AccountsPayableRecognizeBlocked = "accounts_payable.recognize_blocked";
+    public const string AccountsReceivableRecognizeBlocked = "accounts_receivable.recognize_blocked";
+    public const string CostAllocationFinalizeBlocked = "cost_allocation.finalize_blocked";
     public const string AccountsPayableReverseRecognize = "accounts_payable.reverse_recognize";
     public const string AccountsReceivableReverseRecognize = "accounts_receivable.reverse_recognize";
     public const string FinancialDocumentAccept = "financial_document.accept";
@@ -94,6 +97,9 @@ public static class AuditObjectTypes
     public const string PaymentAllocation = "payment_allocation";
     public const string CollectionAllocation = "collection_allocation";
     public const string AccountsPayable = "accounts_payable";
+    public const string PayableExposure = "payable_exposure";
+    public const string ReceivableExposure = "receivable_exposure";
+    public const string CostAllocation = "cost_allocation";
     public const string AccountsReceivable = "accounts_receivable";
     public const string FinancialDocument = "financial_document";
     public const string FinancialDocumentLine = "financial_document_line";

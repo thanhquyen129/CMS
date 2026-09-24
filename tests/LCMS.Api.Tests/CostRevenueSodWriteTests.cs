@@ -208,6 +208,172 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task OverThreshold_BlocksRecognizeAndAllocationFinalizeUntilApproved()
+    {
+        var tenantId = await CreateTenantAsync("TN-APPR-GATE", "Approval Gate");
+        using (var settings = new HttpRequestMessage(HttpMethod.Put, "/api/tenant-settings")
+        {
+            Content = JsonContent.Create(new
+            {
+                financialJson = """{"confirmApprovalThresholdBase":100}"""
+            })
+        })
+        {
+            settings.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.OK, (await _client.SendAsync(settings)).StatusCode);
+        }
+
+        var billA = await CreateBillAsync(tenantId, "BL-APPR-A");
+        var billB = await CreateBillAsync(tenantId, "BL-APPR-B");
+        Guid exposureId;
+        using (var exposure = new HttpRequestMessage(HttpMethod.Post, "/api/payable-exposures")
+        {
+            Content = JsonContent.Create(new { amount = 500m, currencyCode = "VND", billId = billA })
+        })
+        {
+            exposure.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(exposure);
+            created.EnsureSuccessStatusCode();
+            exposureId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var blocked = new HttpRequestMessage(HttpMethod.Post, $"/api/payable-exposures/{exposureId}/recognize")
+        {
+            Content = JsonContent.Create(new { amount = 500m })
+        })
+        {
+            blocked.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var res = await _client.SendAsync(blocked);
+            Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+            var body = await res.Content.ReadFromJsonAsync<MessageBody>(JsonOptions);
+            Assert.Contains("phê duyệt", body!.Message, StringComparison.OrdinalIgnoreCase);
+        }
+
+        using (var audit = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/audit-events?objectId={exposureId}&action=accounts_payable.recognize_blocked"))
+        {
+            audit.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var events = await (await _client.SendAsync(audit)).Content.ReadFromJsonAsync<AuditRow[]>(JsonOptions);
+            Assert.Contains(events!, e => e.Action == "accounts_payable.recognize_blocked");
+        }
+
+        Guid approvalId;
+        using (var request = new HttpRequestMessage(HttpMethod.Post, "/api/approvals")
+        {
+            Content = JsonContent.Create(new
+            {
+                objectType = "payable_exposure",
+                objectId = exposureId,
+                requestReason = "Ghi nhận vượt ngưỡng"
+            })
+        })
+        {
+            request.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(request);
+            created.EnsureSuccessStatusCode();
+            approvalId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var decide = new HttpRequestMessage(HttpMethod.Post, $"/api/approvals/{approvalId}/approve")
+        {
+            Content = JsonContent.Create(new { decisionReason = "Đồng ý" })
+        })
+        {
+            decide.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            decide.Headers.Add("X-User-Id", Guid.NewGuid().ToString());
+            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(decide)).StatusCode);
+        }
+
+        using (var again = new HttpRequestMessage(HttpMethod.Post, $"/api/payable-exposures/{exposureId}/recognize")
+        {
+            Content = JsonContent.Create(new { amount = 500m })
+        })
+        {
+            again.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.Created, (await _client.SendAsync(again)).StatusCode);
+        }
+
+        Guid costId;
+        using (var cost = new HttpRequestMessage(HttpMethod.Post, "/api/costs")
+        {
+            Content = JsonContent.Create(new
+            {
+                attributionType = "shared",
+                amount = 200m,
+                currencyCode = "VND",
+                costTypeCode = "SHARED"
+            })
+        })
+        {
+            cost.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(cost);
+            created.EnsureSuccessStatusCode();
+            costId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        Guid allocationId;
+        using (var alloc = new HttpRequestMessage(HttpMethod.Post, $"/api/costs/{costId}/allocations")
+        {
+            Content = JsonContent.Create(new
+            {
+                allocationBasis = "equal",
+                details = new[]
+                {
+                    new { billId = billA, basisValue = (decimal?)null },
+                    new { billId = billB, basisValue = (decimal?)null }
+                }
+            })
+        })
+        {
+            alloc.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(alloc);
+            created.EnsureSuccessStatusCode();
+            allocationId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var fin = new HttpRequestMessage(HttpMethod.Post, $"/api/cost-allocations/{allocationId}/finalize"))
+        {
+            fin.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var res = await _client.SendAsync(fin);
+            Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        }
+
+        Guid costApprovalId;
+        using (var request = new HttpRequestMessage(HttpMethod.Post, "/api/approvals")
+        {
+            Content = JsonContent.Create(new
+            {
+                objectType = "cost",
+                objectId = costId,
+                requestReason = "Chốt phân bổ"
+            })
+        })
+        {
+            request.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(request);
+            created.EnsureSuccessStatusCode();
+            costApprovalId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        using (var decide = new HttpRequestMessage(HttpMethod.Post, $"/api/approvals/{costApprovalId}/approve")
+        {
+            Content = JsonContent.Create(new { decisionReason = "Đồng ý" })
+        })
+        {
+            decide.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            decide.Headers.Add("X-User-Id", Guid.NewGuid().ToString());
+            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(decide)).StatusCode);
+        }
+
+        using (var fin = new HttpRequestMessage(HttpMethod.Post, $"/api/cost-allocations/{allocationId}/finalize"))
+        {
+            fin.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(fin)).StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task ProductionFxFlag_RejectsCrossCurrencyWithoutDatedRate()
     {
         await using var factory = new NoStubFxFactory();
@@ -301,6 +467,8 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     private sealed record IdResponse(Guid Id);
+    private sealed record MessageBody(string Message);
+    private sealed record AuditRow(string Action, Guid ObjectId);
     private sealed record CostBody(decimal Amount);
     private sealed record RoleDto(Guid Id, string Code);
     private sealed record ValidationBody(Dictionary<string, string[]> Errors);

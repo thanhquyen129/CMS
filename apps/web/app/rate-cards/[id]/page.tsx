@@ -7,6 +7,7 @@ import { AddPricingRuleComponentForm } from "@/components/AddPricingRuleComponen
 import { PricingRuleComponentActions } from "@/components/PricingRuleComponentActions";
 import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
+import { RetireRateCardButton } from "@/components/RetireRateCardButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { ComposeTariffForm } from "@/components/ComposeTariffForm";
@@ -122,6 +123,14 @@ export default async function RateCardDetailPage({
             Tính giá trên {billLabel}
           </Link>
         </p>
+        {versionsRes.ok && !versions.some((v) => isPublishedVersion(v.status)) ? (
+          <RetireRateCardButton rateCardId={card.id} code={card.code} />
+        ) : null}
+        {versions.some((v) => isPublishedVersion(v.status)) ? (
+          <p className="note">
+            Đã có phiên bản phát hành — không ngừng bảng giá. Lập phiên bản mới.
+          </p>
+        ) : null}
 
         <h2 className="section-title">Phiên bản</h2>
         {!versionsRes.ok ? (

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AllocateCashForm } from "@/components/AllocateCashForm";
 import { FinalizeAllocationButton } from "@/components/FinalizeAllocationButton";
+import { CancelCashButton } from "@/components/CancelCashButton";
 import { ReverseAllocationButton } from "@/components/ReverseAllocationButton";
 import { SettlementAllocationTimeline } from "@/components/SettlementAllocationTimeline";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -16,6 +17,7 @@ import {
   canReverseAllocation,
   getCollection,
   isDraftAllocation,
+  isFinalizedAllocation,
   settlementBillLinkLabel,
 } from "@/lib/settlements";
 import { formatMoney } from "@/lib/money";
@@ -86,6 +88,10 @@ export default async function CollectionDetailPage({
   const draftAllocs = collection.allocations.filter((a) =>
     isDraftAllocation(a.allocationStatus)
   );
+  const openCollection = collection.status.toLowerCase() === "open";
+  const hasFinalized = collection.allocations.some((a) =>
+    isFinalizedAllocation(a.allocationStatus)
+  );
 
   return (
     <AppShell terms={terms} active="settlements">
@@ -103,6 +109,17 @@ export default async function CollectionDetailPage({
           {collectionLabel} ≠ {revenueLabel}. Chốt phân bổ nháp; đảo khi cần trả
           outstanding.
         </p>
+        {openCollection && !hasFinalized ? (
+          <CancelCashButton kind="collection" cashId={collection.id} />
+        ) : null}
+        {!openCollection ? (
+          <p className="note">Phiếu thu đã hủy. Số tiền giữ trong audit.</p>
+        ) : null}
+        {openCollection && hasFinalized ? (
+          <p className="note">
+            Còn phân bổ đã chốt — đảo phân bổ trước khi hủy phiếu thu.
+          </p>
+        ) : null}
 
         <dl className="metric-grid">
           <div>
@@ -209,7 +226,7 @@ export default async function CollectionDetailPage({
           </p>
         ) : null}
 
-        {!arRes.ok ? (
+        {!openCollection ? null : !arRes.ok ? (
           <div className="alert alert-error" role="alert">
             {arRes.message}
           </div>

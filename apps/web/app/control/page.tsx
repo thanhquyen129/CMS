@@ -62,6 +62,12 @@ export default async function ControlHubPage() {
       desc: "Dòng sao kê chưa khớp — chưa đồng nghĩa đã tất toán.",
       count: summary.ok ? summary.data.unmatchedBankFeedCount : null,
     },
+    {
+      href: "/control/lifecycle",
+      title: "Ma trận thao tác",
+      desc: "Trạng thái × sửa / hủy / đảo. Số tài chính không xóa cứng.",
+      count: null,
+    },
   ];
 
   const roll = summary.ok ? summary.data.baseCurrencyRollUp : null;

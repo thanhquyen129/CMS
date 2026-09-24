@@ -179,11 +179,13 @@ public sealed class SoftDeleteRateCardCommandHandler : IRequestHandler<SoftDelet
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public SoftDeleteRateCardCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public SoftDeleteRateCardCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task Handle(SoftDeleteRateCardCommand request, CancellationToken cancellationToken)
@@ -199,7 +201,16 @@ public sealed class SoftDeleteRateCardCommandHandler : IRequestHandler<SoftDelet
             throw new NotFoundAppException("Không tìm thấy bảng giá.");
         }
 
+        var published = await _db.RateVersions.AnyAsync(
+            v => v.RateCardId == card.Id && v.Status == RateVersionStatuses.Published,
+            cancellationToken);
+        if (published)
+        {
+            throw new ConflictAppException("Bảng giá đã có phiên bản phát hành — không ngừng. Lập phiên bản mới.");
+        }
+
         card.SoftDelete(null);
+        _audit.Append(AuditActions.RateCardDelete, AuditObjectTypes.RateCard, card.Id, "active", "deleted", null);
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

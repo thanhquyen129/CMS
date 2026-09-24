@@ -53,6 +53,9 @@ public static class AuditActions
     public const string FinancialDocumentReceive = "financial_document.receive";
     public const string FinancialDocumentCorrectHeader = "financial_document.correct_header";
     public const string FinancialDocumentCancel = "financial_document.cancel";
+    public const string PaymentCancel = "payment.cancel";
+    public const string CollectionCancel = "collection.cancel";
+    public const string RateCardDelete = "rate_card.delete";
     public const string FinancialDocumentAccept = "financial_document.accept";
     public const string FinancialDocumentLineAdd = "financial_document_line.add";
     public const string FinancialDocumentLineUpdate = "financial_document_line.update";
@@ -97,7 +100,10 @@ public static class AuditObjectTypes
 {
     public const string Cost = "cost";
     public const string Revenue = "revenue";
+    public const string Payment = "payment";
+    public const string Collection = "collection";
     public const string PaymentAllocation = "payment_allocation";
+    public const string RateCard = "rate_card";
     public const string CollectionAllocation = "collection_allocation";
     public const string AccountsPayable = "accounts_payable";
     public const string PayableExposure = "payable_exposure";

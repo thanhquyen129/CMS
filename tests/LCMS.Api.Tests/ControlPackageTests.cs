@@ -246,6 +246,74 @@ public sealed class ControlPackageTests : IAsyncLifetime
         Assert.Contains("NO-SUCH-BILL", (await missing.Content.ReadFromJsonAsync<Err>(Json))!.Message);
     }
 
+    [Fact]
+    public async Task CancelOpenPayment_ReversesDraft_AndBlocksWhenAllocationIsFinalized()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "BL-F-CANCEL");
+        await CreateCostAsync(tenantId, billId, 100m);
+        var exposureId = await PostId(tenantId, "/api/payable-exposures", new { amount = 100m, currencyCode = "VND", billId });
+        var apId = await PostId(tenantId, $"/api/payable-exposures/{exposureId}/recognize", new { amount = 100m });
+
+        var draftPaymentId = await PostId(tenantId, "/api/payments", new { amount = 100m, currencyCode = "VND", billId });
+        await PostId(tenantId, $"/api/payments/{draftPaymentId}/allocations", new { accountsPayableId = apId, amount = 40m });
+        await PostNoContent(tenantId, $"/api/payments/{draftPaymentId}/cancel", new { reason = "Nhầm phiếu" });
+        var cancelled = await GetAsync<CashBody>(tenantId, $"/api/payments/{draftPaymentId}");
+        Assert.Equal("cancelled", cancelled.Status);
+        Assert.Equal("reversed", Assert.Single(cancelled.Allocations).AllocationStatus);
+
+        var lockedPaymentId = await PostId(tenantId, "/api/payments", new { amount = 60m, currencyCode = "VND", billId });
+        var allocationId = await PostId(
+            tenantId,
+            $"/api/payments/{lockedPaymentId}/allocations",
+            new { accountsPayableId = apId, amount = 60m });
+        await PostNoContent(tenantId, $"/api/payment-allocations/{allocationId}/finalize", null);
+        using var blocked = Tenant(HttpMethod.Post, $"/api/payments/{lockedPaymentId}/cancel", tenantId);
+        blocked.Content = JsonContent.Create(new { reason = "Muốn hủy sau chốt" });
+        var denied = await _client.SendAsync(blocked);
+        Assert.Equal(HttpStatusCode.Conflict, denied.StatusCode);
+        Assert.Contains("đã chốt", (await denied.Content.ReadFromJsonAsync<Err>(Json))!.Message);
+    }
+
+    [Fact]
+    public async Task SoftDeleteRateCard_AllowsDraftOnly_AndBlocksPublishedVersion()
+    {
+        var tenantId = await CreateTenantAsync();
+        var draftCardId = await PostId(tenantId, "/api/rate-cards", new
+        {
+            code = "RC-DRAFT-" + Guid.NewGuid().ToString("N")[..8],
+            name = "Nháp",
+            partyType = "vendor",
+            currencyCode = "USD"
+        });
+        await DeleteNoContent(tenantId, $"/api/rate-cards/{draftCardId}");
+        using var gone = Tenant(HttpMethod.Get, $"/api/rate-cards/{draftCardId}", tenantId);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.SendAsync(gone)).StatusCode);
+
+        var publishedCardId = await PostId(tenantId, "/api/rate-cards", new
+        {
+            code = "RC-PUB-" + Guid.NewGuid().ToString("N")[..8],
+            name = "Đã phát hành",
+            partyType = "vendor",
+            currencyCode = "USD"
+        });
+        var versionId = await PostId(tenantId, $"/api/rate-cards/{publishedCardId}/versions", new { note = "v1" });
+        await PostId(tenantId, $"/api/rate-versions/{versionId}/rules", new
+        {
+            code = "FREIGHT",
+            name = "Cước",
+            calcMethod = "fixed",
+            unitAmount = 10m,
+            currencyCode = "USD",
+            sortOrder = 1
+        });
+        await PostNoContent(tenantId, $"/api/rate-versions/{versionId}/publish", null);
+        using var blocked = Tenant(HttpMethod.Delete, $"/api/rate-cards/{publishedCardId}", tenantId);
+        var denied = await _client.SendAsync(blocked);
+        Assert.Equal(HttpStatusCode.Conflict, denied.StatusCode);
+        Assert.Contains("phát hành", (await denied.Content.ReadFromJsonAsync<Err>(Json))!.Message);
+    }
+
     private async Task<Guid> ReceiveAsync(Guid tenantId, Guid billId, string documentNo, string key)
     {
         using var req = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
@@ -328,6 +396,12 @@ public sealed class ControlPackageTests : IAsyncLifetime
         (await _client.SendAsync(req)).EnsureSuccessStatusCode();
     }
 
+    private async Task DeleteNoContent(Guid tenantId, string url)
+    {
+        using var req = Tenant(HttpMethod.Delete, url, tenantId);
+        (await _client.SendAsync(req)).EnsureSuccessStatusCode();
+    }
+
     private async Task<T> GetAsync<T>(Guid tenantId, string url)
     {
         using var req = Tenant(HttpMethod.Get, url, tenantId);
@@ -370,6 +444,8 @@ public sealed class ControlPackageTests : IAsyncLifetime
     private sealed record MatchBody(List<DetailBody> Details);
     private sealed record DetailBody(string OutcomeCode, decimal AppliedTolerance);
     private sealed record PaymentBody(List<AllocBody> Allocations);
+    private sealed record CashBody(string Status, List<CashAlloc> Allocations);
+    private sealed record CashAlloc(string AllocationStatus);
     private sealed record AllocBody(decimal Amount, decimal? SettledAmount, decimal? FxRate);
     private sealed record CostBody(decimal Amount);
     private sealed record ExceptionBody(string Status);

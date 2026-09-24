@@ -39,6 +39,12 @@ public static class SettlementEndpoints
             return Results.Ok(item);
         });
 
+        payments.MapPost("/{id:guid}/cancel", async (Guid id, CancelCashRequest body, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new CancelPaymentCommand(id, body.Reason), ct);
+            return Results.NoContent();
+        });
+
         payments.MapPost("/{id:guid}/allocations", async (
             Guid id,
             AllocatePaymentRequest body,
@@ -112,6 +118,12 @@ public static class SettlementEndpoints
             return Results.Ok(item);
         });
 
+        collections.MapPost("/{id:guid}/cancel", async (Guid id, CancelCashRequest body, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new CancelCollectionCommand(id, body.Reason), ct);
+            return Results.NoContent();
+        });
+
         collections.MapPost("/{id:guid}/allocations", async (
             Guid id,
             AllocateCollectionRequest body,
@@ -181,3 +193,5 @@ public sealed record AllocatePaymentRequest(Guid AccountsPayableId, decimal Amou
 public sealed record AllocateCollectionRequest(Guid AccountsReceivableId, decimal Amount, string? Notes);
 
 public sealed record ReverseAllocationRequest(string Reason);
+
+public sealed record CancelCashRequest(string Reason);

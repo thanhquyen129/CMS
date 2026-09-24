@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — UAT-UI-004 ma trận thao tác và hủy phiếu mở
+
+### User
+Làm tiếp cho hết (phần còn lại sau checkpoint chứng từ: ma trận trạng thái × thao tác).
+
+### Answer
+Màn `/control/lifecycle` liệt kê Bill, đơn/lô, bảng giá, chi phí/doanh thu, phân bổ, chứng từ, AP/AR, thanh toán/thu: sửa, xóa, hủy/đảo, quyền. Thanh toán và phiếu thu đang mở, chưa có phân bổ đã chốt: nút Hủy + lý do; phân bổ nháp bị đảo trong cùng giao dịch, không đụng outstanding. Có phân bổ đã chốt thì 409, nút hủy ẩn, màn báo đảo trước. Bảng giá chưa phát hành: Ngừng (xóa mềm + audit). Đã có phiên bản phát hành: API 409, nút ẩn. Không xóa cứng số tài chính.
+
+### Files / API
+- `POST /api/payments/{id}/cancel` và `POST /api/collections/{id}/cancel` `{ reason }`
+- `DELETE /api/rate-cards/{id}` từ chối khi có phiên bản `published`
+- UI: `/control/lifecycle`, `CancelCashButton`, `RetireRateCardButton`
+- Audit: `payment.cancel`, `collection.cancel`, `rate_card.delete`
+- Test `CancelOpenPayment_ReversesDraft_AndBlocksWhenAllocationIsFinalized` Passed (1 s). `SoftDeleteRateCard_AllowsDraftOnly_AndBlocksPublishedVersion` Passed (1 s). Chưa bấm nút trên trình duyệt.
+
 ## 2026-09-24 — UAT checkpoint chứng từ: neo Bill, tiền tệ, sửa header
 
 ### User

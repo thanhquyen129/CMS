@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AllocateCashForm } from "@/components/AllocateCashForm";
 import { FinalizeAllocationButton } from "@/components/FinalizeAllocationButton";
+import { CancelCashButton } from "@/components/CancelCashButton";
 import { ReverseAllocationButton } from "@/components/ReverseAllocationButton";
 import { SettlementAllocationTimeline } from "@/components/SettlementAllocationTimeline";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -16,6 +17,7 @@ import {
   canReverseAllocation,
   getPayment,
   isDraftAllocation,
+  isFinalizedAllocation,
   settlementBillLinkLabel,
 } from "@/lib/settlements";
 import { formatMoney } from "@/lib/money";
@@ -85,6 +87,10 @@ export default async function PaymentDetailPage({
   const draftAllocs = payment.allocations.filter((a) =>
     isDraftAllocation(a.allocationStatus)
   );
+  const openPayment = payment.status.toLowerCase() === "open";
+  const hasFinalized = payment.allocations.some((a) =>
+    isFinalizedAllocation(a.allocationStatus)
+  );
 
   return (
     <AppShell terms={terms} active="settlements">
@@ -101,6 +107,17 @@ export default async function PaymentDetailPage({
           {paymentLabel} ≠ {costLabel}. Chốt phân bổ nháp; đảo khi cần trả
           outstanding.
         </p>
+        {openPayment && !hasFinalized ? (
+          <CancelCashButton kind="payment" cashId={payment.id} />
+        ) : null}
+        {!openPayment ? (
+          <p className="note">Thanh toán đã hủy. Số tiền giữ trong audit.</p>
+        ) : null}
+        {openPayment && hasFinalized ? (
+          <p className="note">
+            Còn phân bổ đã chốt — đảo phân bổ trước khi hủy thanh toán.
+          </p>
+        ) : null}
 
         <dl className="metric-grid">
           <div>
@@ -198,7 +215,7 @@ export default async function PaymentDetailPage({
           </p>
         ) : null}
 
-        {!apRes.ok ? (
+        {!openPayment ? null : !apRes.ok ? (
           <div className="alert alert-error" role="alert">
             {apRes.message}
           </div>

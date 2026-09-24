@@ -30,6 +30,9 @@ export type BillListItem = {
   documentCount?: number | null;
   etdAt?: string | null;
   etaAt?: string | null;
+  externalId?: string | null;
+  masterBillNo?: string | null;
+  customerReference?: string | null;
 };
 
 export type BillDto = BillListItem & {

@@ -21,6 +21,7 @@ export type AccountsPayableItem = {
   daysPastDue: number | null;
   agingBucket: string;
   rowVersion?: string | null;
+  billNo?: string | null;
 };
 
 export type AccountsReceivableItem = {
@@ -41,6 +42,7 @@ export type AccountsReceivableItem = {
   daysPastDue: number | null;
   agingBucket: string;
   rowVersion?: string | null;
+  billNo?: string | null;
 };
 
 export type PayableExposureItem = {
@@ -59,6 +61,7 @@ export type PayableExposureItem = {
   notes: string | null;
   recordStatus: string;
   rowVersion?: string | null;
+  billNo?: string | null;
 };
 
 export type ReceivableExposureItem = {
@@ -77,6 +80,7 @@ export type ReceivableExposureItem = {
   notes: string | null;
   recordStatus: string;
   rowVersion?: string | null;
+  billNo?: string | null;
 };
 
 export type AgingBucketSummary = {

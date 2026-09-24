@@ -115,6 +115,33 @@ public sealed class StandalonePoUiGapTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BillSearch_FindsExternalId_WhenBillNoDiffers()
+    {
+        var tenantId = await CreateTenantAsync("TN-UI-HAWB", "HAWB search");
+        using var create = WithTenant(HttpMethod.Post, "/api/bills", tenantId);
+        create.Content = JsonContent.Create(new
+        {
+            billNo = "VOL-HIDE-1",
+            billType = "house",
+            externalId = "HAWB-UAT-001"
+        });
+        var created = await _client.SendAsync(create);
+        created.EnsureSuccessStatusCode();
+        var billId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+
+        using var list = WithTenant(HttpMethod.Get, "/api/bills?q=HAWB-UAT-001", tenantId);
+        var rows = await (await _client.SendAsync(list)).Content.ReadFromJsonAsync<List<BillListRow>>(JsonOptions);
+        var row = Assert.Single(rows!);
+        Assert.Equal(billId, row.Id);
+        Assert.Equal("VOL-HIDE-1", row.BillNo);
+        Assert.Equal("HAWB-UAT-001", row.ExternalId);
+
+        using var search = WithTenant(HttpMethod.Get, "/api/search?q=HAWB-UAT-001", tenantId);
+        var hits = await (await _client.SendAsync(search)).Content.ReadFromJsonAsync<List<GlobalHit>>(JsonOptions);
+        Assert.Contains(hits!, h => h.EntityType == "bill" && h.Id == billId && h.Code == "HAWB-UAT-001");
+    }
+
+    [Fact]
     public async Task SeedExpectedRevenues_FromRatingComponent_IsIdempotent()
     {
         var tenantId = await CreateTenantAsync("TN-UI-REV", "Seed Rev");
@@ -232,6 +259,7 @@ public sealed class StandalonePoUiGapTests : IAsyncLifetime
     private sealed record ShipmentDetail(Guid Id, string ShipmentNo, List<RelatedBill> RelatedBills);
     private sealed record CatalogItem(string Code, string Name);
     private sealed record GlobalHit(string EntityType, Guid Id, string Code);
+    private sealed record BillListRow(Guid Id, string BillNo, string? ExternalId);
     private sealed record SeedResult(int CreatedCount, int ExistingCount);
     private sealed record RevenueListItem(decimal Amount, string FinancialMaturity);
 }

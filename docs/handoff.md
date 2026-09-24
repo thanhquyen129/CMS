@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-24 — HAWB không thấy trong danh sách Bill; cột Bill AP/AR chỉ hiện «Mở Bill»
+
+### User
+HAWB-UAT-001 tìm trong danh sách không thấy, Ctrl+K thì có. Cột Bill của AP chỉ hiện chữ «Mở Bill». AR cũng vậy.
+
+### Answer
+Danh sách Bill trước đây chỉ lọc số Bill, khách, tuyến trên trang đang xem, và xếp theo số Bill giảm dần nên HAWB nằm sau các VOL-BILL. Giờ ô tìm còn khớp mã ngoài, MAWB, reference khách và số đơn/vận đơn gắn Bill; danh sách xếp theo ngày tạo mới nhất. Nếu mã ngoài khác số Bill, dòng hiện thêm mã đó. Ctrl+K trả về đúng mã vừa khớp. AP/AR (kể cả exposure) cột Bill hiện số Bill, link sang hồ sơ.
+
+### Files
+- `apps/web/app/bills/page.tsx`, `apps/web/components/BillListWorkspace.tsx`
+- `apps/web/components/ApArListWorkspace.tsx`, `apps/web/app/ap-ar/page.tsx`
+- `GetBillByIdQuery.cs` (list), `SearchGlobalQuery.cs`, `ApArQueries.cs`, `ExposureQueries.cs`
+- `DataScopeFilter.LoadBillNosAsync`
+
 ## 2026-09-24 — Hủy phiên chia doanh thu và điều chỉnh AP/AR
 
 ### User

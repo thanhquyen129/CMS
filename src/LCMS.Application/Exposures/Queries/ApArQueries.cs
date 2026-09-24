@@ -30,7 +30,8 @@ public sealed record AccountsPayableDto(
     string RecordStatus,
     int? DaysPastDue,
     string AgingBucket,
-    byte[]? RowVersion = null);
+    byte[]? RowVersion = null,
+    string? BillNo = null);
 
 public sealed record AccountsReceivableDto(
     Guid Id,
@@ -49,7 +50,8 @@ public sealed record AccountsReceivableDto(
     string RecordStatus,
     int? DaysPastDue,
     string AgingBucket,
-    byte[]? RowVersion = null);
+    byte[]? RowVersion = null,
+    string? BillNo = null);
 
 public sealed record AgingBucketSummaryDto(
     string Bucket,
@@ -149,7 +151,11 @@ public sealed class ListAccountsPayableQueryHandler
         }
 
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
-        return rows.Select(a => MapAp(a, asOf)).ToList();
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, rows.Select(a => a.BillId), cancellationToken);
+        return rows.Select(a => MapAp(a, asOf) with
+        {
+            BillNo = a.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null
+        }).ToList();
     }
 
     internal static AccountsPayableDto MapAp(Domain.Entities.AccountsPayable a, DateOnly asOf)
@@ -224,7 +230,9 @@ public sealed class GetAccountsPayableByIdQueryHandler
         }
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        return ListAccountsPayableQueryHandler.MapAp(a, asOf);
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, [a.BillId], cancellationToken);
+        var billNo = a.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null;
+        return ListAccountsPayableQueryHandler.MapAp(a, asOf) with { BillNo = billNo };
     }
 }
 
@@ -293,7 +301,11 @@ public sealed class ListAccountsReceivableQueryHandler
         }
 
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
-        return rows.Select(a => MapAr(a, asOf)).ToList();
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, rows.Select(a => a.BillId), cancellationToken);
+        return rows.Select(a => MapAr(a, asOf) with
+        {
+            BillNo = a.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null
+        }).ToList();
     }
 
     internal static AccountsReceivableDto MapAr(Domain.Entities.AccountsReceivable a, DateOnly asOf)
@@ -368,7 +380,9 @@ public sealed class GetAccountsReceivableByIdQueryHandler
         }
 
         var asOf = request.AsOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        return ListAccountsReceivableQueryHandler.MapAr(a, asOf);
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, [a.BillId], cancellationToken);
+        var billNo = a.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null;
+        return ListAccountsReceivableQueryHandler.MapAr(a, asOf) with { BillNo = billNo };
     }
 }
 
@@ -421,6 +435,7 @@ public sealed class GetAccountsPayableAgingQueryHandler
         }
 
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, rows.Select(a => a.BillId), cancellationToken);
         var settled = await AsOfOutstanding.SettledByPayableAsync(
             _db, rows.Select(r => r.Id).ToList(), asOf, cancellationToken);
         var items = rows
@@ -445,7 +460,8 @@ public sealed class GetAccountsPayableAgingQueryHandler
                     a.Notes,
                     a.RecordStatus,
                     days,
-                    bucket);
+                    bucket,
+                    BillNo: a.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null);
             })
             .Where(a => request.IncludeSettled || a.Outstanding > 0m)
             .ToList();
@@ -514,6 +530,7 @@ public sealed class GetAccountsReceivableAgingQueryHandler
         }
 
         var rows = await query.OrderByDescending(a => a.Id).ToListAsync(cancellationToken);
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, rows.Select(a => a.BillId), cancellationToken);
         var settled = await AsOfOutstanding.SettledByReceivableAsync(
             _db, rows.Select(r => r.Id).ToList(), asOf, cancellationToken);
         var items = rows
@@ -538,7 +555,8 @@ public sealed class GetAccountsReceivableAgingQueryHandler
                     a.Notes,
                     a.RecordStatus,
                     days,
-                    bucket);
+                    bucket,
+                    BillNo: a.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null);
             })
             .Where(a => request.IncludeSettled || a.Outstanding > 0m)
             .ToList();

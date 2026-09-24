@@ -43,6 +43,7 @@ public sealed class Sprint7ExposureApArTests : IAsyncLifetime
 
         var exposureId = await CreatePayableExposureAsync(tenantId, billId, 1000m);
         var exposure = await GetPayableExposureAsync(tenantId, exposureId);
+        Assert.Equal("BL-E09-1", exposure.BillNo);
         Assert.Equal("open", exposure.Status);
         Assert.Equal(0m, exposure.RecognizedAmount);
         Assert.Equal(1000m, exposure.OpenAmount);
@@ -57,6 +58,7 @@ public sealed class Sprint7ExposureApArTests : IAsyncLifetime
         Assert.Equal(600m, afterPartial.OpenAmount);
 
         var ap = await GetAccountsPayableAsync(tenantId, apId);
+        Assert.Equal("BL-E09-1", ap.BillNo);
         Assert.Equal(exposureId, ap.PayableExposureId);
         Assert.Equal(400m, ap.RecognizedAmount);
         Assert.Equal(0m, ap.AdjustmentAmount);
@@ -364,7 +366,8 @@ public sealed class Sprint7ExposureApArTests : IAsyncLifetime
         Guid? CostId,
         Guid? FinancialDocumentId,
         string? Notes,
-        string RecordStatus);
+        string RecordStatus,
+        string? BillNo = null);
 
     private sealed record ReceivableExposureDto(
         Guid Id,
@@ -396,7 +399,8 @@ public sealed class Sprint7ExposureApArTests : IAsyncLifetime
         Guid? CounterpartyId,
         DateTimeOffset RecognizedAt,
         string? Notes,
-        string RecordStatus);
+        string RecordStatus,
+        string? BillNo = null);
 
     private sealed record AccountsReceivableDto(
         Guid Id,

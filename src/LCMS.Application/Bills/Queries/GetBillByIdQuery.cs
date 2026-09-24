@@ -71,7 +71,10 @@ public sealed record BillListItemDto(
     int? DocumentCount = null,
     string? TransportMode = null,
     DateTimeOffset? EtdAt = null,
-    DateTimeOffset? EtaAt = null);
+    DateTimeOffset? EtaAt = null,
+    string? ExternalId = null,
+    string? MasterBillNo = null,
+    string? CustomerReference = null);
 
 public sealed record GetBillByIdQuery(Guid Id) : IRequest<BillDto>;
 
@@ -299,6 +302,8 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
             query = query.Where(b =>
                 b.BillNo.ToLower().Contains(pattern)
                 || (b.ExternalId != null && b.ExternalId.ToLower().Contains(pattern))
+                || (b.MasterBillNo != null && b.MasterBillNo.ToLower().Contains(pattern))
+                || (b.CustomerReference != null && b.CustomerReference.ToLower().Contains(pattern))
                 || orderBillIds.Contains(b.Id)
                 || waybillBillIds.Contains(b.Id));
         }
@@ -341,7 +346,10 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 null,
                 b.TransportMode,
                 b.EtdAt,
-                b.EtaAt))
+                b.EtaAt,
+                b.ExternalId,
+                b.MasterBillNo,
+                b.CustomerReference))
             .ToListAsync(cancellationToken);
 
         var enriched = await AttachFinancialSummariesAsync(bills, cancellationToken);

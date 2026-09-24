@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +31,8 @@ public sealed record PayableExposureDto(
     string? Notes,
     string RecordStatus,
     IReadOnlyList<ExposureRecognitionDto> Recognitions,
-    byte[]? RowVersion = null);
+    byte[]? RowVersion = null,
+    string? BillNo = null);
 
 public sealed record ReceivableExposureDto(
     Guid Id,
@@ -48,7 +50,8 @@ public sealed record ReceivableExposureDto(
     string? Notes,
     string RecordStatus,
     IReadOnlyList<ExposureRecognitionDto> Recognitions,
-    byte[]? RowVersion = null);
+    byte[]? RowVersion = null,
+    string? BillNo = null);
 
 public sealed record ListPayableExposuresQuery(string? Status) : IRequest<IReadOnlyList<PayableExposureDto>>;
 public sealed record GetPayableExposureByIdQuery(Guid Id) : IRequest<PayableExposureDto>;
@@ -106,7 +109,11 @@ public sealed class ListPayableExposuresQueryHandler
                     a.RecognizedAt))
                 .ToList());
 
-        return exposures.Select(e => MapPayable(e, byExposure.GetValueOrDefault(e.Id, []))).ToList();
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, exposures.Select(e => e.BillId), cancellationToken);
+        return exposures.Select(e => MapPayable(e, byExposure.GetValueOrDefault(e.Id, [])) with
+        {
+            BillNo = e.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null
+        }).ToList();
     }
 
     internal static PayableExposureDto MapPayable(
@@ -169,7 +176,9 @@ public sealed class GetPayableExposureByIdQueryHandler
                 a.RecognizedAt))
             .ToListAsync(cancellationToken);
 
-        return ListPayableExposuresQueryHandler.MapPayable(e, recognitions);
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, [e.BillId], cancellationToken);
+        var billNo = e.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null;
+        return ListPayableExposuresQueryHandler.MapPayable(e, recognitions) with { BillNo = billNo };
     }
 }
 
@@ -224,7 +233,11 @@ public sealed class ListReceivableExposuresQueryHandler
                     a.RecognizedAt))
                 .ToList());
 
-        return exposures.Select(e => MapReceivable(e, byExposure.GetValueOrDefault(e.Id, []))).ToList();
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, exposures.Select(e => e.BillId), cancellationToken);
+        return exposures.Select(e => MapReceivable(e, byExposure.GetValueOrDefault(e.Id, [])) with
+        {
+            BillNo = e.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null
+        }).ToList();
     }
 
     internal static ReceivableExposureDto MapReceivable(
@@ -287,6 +300,8 @@ public sealed class GetReceivableExposureByIdQueryHandler
                 a.RecognizedAt))
             .ToListAsync(cancellationToken);
 
-        return ListReceivableExposuresQueryHandler.MapReceivable(e, recognitions);
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, [e.BillId], cancellationToken);
+        var billNo = e.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null;
+        return ListReceivableExposuresQueryHandler.MapReceivable(e, recognitions) with { BillNo = billNo };
     }
 }

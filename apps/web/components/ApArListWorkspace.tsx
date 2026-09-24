@@ -107,7 +107,7 @@ export function ApArListWorkspace({
                         href={`/bills/${row.billId}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        Mở {billLabel}
+                        {row.billNo?.trim() || billLabel}
                       </Link>
                     ) : (
                       <span className="muted">—</span>
@@ -156,7 +156,7 @@ export function ApArListWorkspace({
         onClose={close}
         title={
           selected
-            ? `${billLabel} ${selected.billId ? selected.billId.slice(0, 8) + "…" : selected.id.slice(0, 8)}`
+            ? `${billLabel} ${selected.billNo?.trim() || (selected.billId ? selected.billId.slice(0, 8) + "…" : selected.id.slice(0, 8))}`
             : null
         }
         subtitle={

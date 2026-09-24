@@ -49,13 +49,18 @@ type SearchParams = Promise<{
 
 function filterBills(
   items: BillListItem[],
-  f: { q?: string; status?: string; from?: string; to?: string; route?: string; customer?: string }
+  f: { q?: string; status?: string; from?: string; to?: string; route?: string; customer?: string },
+  serverMatchIds?: Set<string>
 ): BillListItem[] {
   const status = f.status?.trim().toLowerCase();
   const route = f.route?.trim();
   const customer = f.customer?.trim();
   return items.filter((b) => {
-    if (!textMatches([b.billNo, b.customerName, b.routeCode], f.q)) return false;
+    const textOk = textMatches(
+      [b.billNo, b.externalId, b.masterBillNo, b.customerReference, b.customerName, b.routeCode],
+      f.q
+    );
+    if (!textOk && !serverMatchIds?.has(b.id)) return false;
     if (status && b.operationalStatus?.toLowerCase() !== status) return false;
     if (!isoInRange(b.createdAt, f.from, f.to)) return false;
     if (route && b.routeCode !== route) return false;
@@ -95,9 +100,18 @@ export default async function BillsPage({
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
 
   const pageSize = parsePageSize(pageSizeRaw);
-  const result = await listBills();
-  const all = result.ok ? result.data.items : [];
-  const filtered = filterBills(all, { q, status, from, to, route, customer });
+  const needle = q?.trim();
+  const [result, matched] = await Promise.all([
+    listBills(),
+    needle ? listBills(needle) : Promise.resolve(null),
+  ]);
+  const all = (result.ok ? result.data.items : [])
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.billNo.localeCompare(b.billNo));
+  const serverMatchIds = matched?.ok
+    ? new Set(matched.data.items.map((b) => b.id))
+    : undefined;
+  const filtered = filterBills(all, { q, status, from, to, route, customer }, serverMatchIds);
   const pages = calcTotalPages(filtered.length, pageSize);
   const page = parsePage(pageRaw, pages);
   const pageRows = slicePage(filtered, page, pageSize);

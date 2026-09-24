@@ -208,6 +208,20 @@ export function BillListWorkspace({
                         >
                           {b.billNo}
                         </button>
+                        {b.masterBillNo && b.masterBillNo !== b.billNo ? (
+                          <div className="muted small">{b.masterBillNo}</div>
+                        ) : null}
+                        {b.externalId &&
+                        b.externalId !== b.billNo &&
+                        b.externalId !== b.masterBillNo ? (
+                          <div className="muted small">{b.externalId}</div>
+                        ) : null}
+                        {b.customerReference &&
+                        b.customerReference !== b.billNo &&
+                        b.customerReference !== b.masterBillNo &&
+                        b.customerReference !== b.externalId ? (
+                          <div className="muted small">{b.customerReference}</div>
+                        ) : null}
                       </td>
                       <td>{b.customerName || "—"}</td>
                       <td>{b.routeCode || "—"}</td>

@@ -64,20 +64,29 @@ public sealed class SearchGlobalQueryHandler
 
         if (await _permissions.HasPermissionAsync(PermissionCodes.BillRead, cancellationToken))
         {
-            var bills = await _db.Bills.AsNoTracking()
+            var billRows = await _db.Bills.AsNoTracking()
                 .Where(b =>
                     b.BillNo.ToLower().Contains(pattern)
-                    || (b.ExternalId != null && b.ExternalId.ToLower().Contains(pattern)))
+                    || (b.ExternalId != null && b.ExternalId.ToLower().Contains(pattern))
+                    || (b.MasterBillNo != null && b.MasterBillNo.ToLower().Contains(pattern))
+                    || (b.CustomerReference != null && b.CustomerReference.ToLower().Contains(pattern)))
                 .OrderBy(b => b.BillNo)
                 .Take(PerTypeLimit)
-                .Select(b => new GlobalSearchHitDto(
-                    "bill",
+                .Select(b => new
+                {
                     b.Id,
                     b.BillNo,
                     b.BillType,
-                    b.BillNo.ToLower().Contains(pattern) ? "bill_no" : "bill_external_id"))
+                    b.ExternalId,
+                    b.MasterBillNo,
+                    b.CustomerReference
+                })
                 .ToListAsync(cancellationToken);
-            hits.AddRange(bills);
+            hits.AddRange(billRows.Select(b =>
+            {
+                var (code, kind) = MatchBillCode(b.BillNo, b.ExternalId, b.MasterBillNo, b.CustomerReference, pattern);
+                return new GlobalSearchHitDto("bill", b.Id, code, b.BillType, kind);
+            }));
 
             var orders = await _db.Orders.AsNoTracking()
                 .Where(o => o.OrderNo.ToLower().Contains(pattern) || o.ExternalId.ToLower().Contains(pattern))
@@ -223,5 +232,30 @@ public sealed class SearchGlobalQueryHandler
         }
 
         return hits;
+    }
+
+    private static (string Code, string Kind) MatchBillCode(
+        string billNo,
+        string? externalId,
+        string? masterBillNo,
+        string? customerReference,
+        string pattern)
+    {
+        if (billNo.ToLowerInvariant().Contains(pattern))
+        {
+            return (billNo, "bill_no");
+        }
+
+        if (externalId != null && externalId.ToLowerInvariant().Contains(pattern))
+        {
+            return (externalId, "bill_external_id");
+        }
+
+        if (masterBillNo != null && masterBillNo.ToLowerInvariant().Contains(pattern))
+        {
+            return (masterBillNo, "master_bill_no");
+        }
+
+        return (customerReference ?? billNo, "customer_reference");
     }
 }

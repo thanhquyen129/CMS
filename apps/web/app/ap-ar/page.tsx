@@ -562,7 +562,7 @@ export default async function ApArPage({
                         <td>
                           {row.billId ? (
                             <Link className="row-link" href={`/bills/${row.billId}`}>
-                              Mở {billLabel}
+                              {row.billNo?.trim() || billLabel}
                             </Link>
                           ) : (
                             "—"
@@ -632,7 +632,7 @@ export default async function ApArPage({
                         <td>
                           {row.billId ? (
                             <Link className="row-link" href={`/bills/${row.billId}`}>
-                              Mở {billLabel}
+                              {row.billNo?.trim() || billLabel}
                             </Link>
                           ) : (
                             "—"

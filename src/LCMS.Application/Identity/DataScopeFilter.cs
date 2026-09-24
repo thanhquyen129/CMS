@@ -48,6 +48,22 @@ public static class DataScopeFilter
         return ids.ToHashSet();
     }
 
+    public static async Task<Dictionary<Guid, string>> LoadBillNosAsync(
+        ILcmsDbContext db,
+        IEnumerable<Guid?> billIds,
+        CancellationToken cancellationToken)
+    {
+        var ids = billIds.Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList();
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        return await db.Bills.AsNoTracking()
+            .Where(b => ids.Contains(b.Id))
+            .ToDictionaryAsync(b => b.Id, b => b.BillNo, cancellationToken);
+    }
+
     public static async Task<Guid?> BillOrganizationIdAsync(
         ILcmsDbContext db,
         Guid? billId,

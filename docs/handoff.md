@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-24 — CRP-04 điều chỉnh và bản chốt không ghi đôi
+
+### User
+tiếp
+
+### Answer
+Cùng `Idempotency-Key` trên điều chỉnh chi phí/doanh thu trả lại dòng cũ, không cộng delta lần hai. Bản chốt cũng nhớ key (`financial_close_snapshot`) trước khi thấy lần chốt đã khóa. Nút điều chỉnh, chuyển maturity và tạo bản chốt giữ một key đến khi thành công. Test: `SameIdempotencyKey_DoesNotApplyCostAdjustmentTwice` (1000 + 100 hai lần → 1100).
+
+### Files
+- `AdjustCostCommand.cs`, `AdjustRevenueCommand.cs`, `IdempotencyGate.cs` scopes
+- `CreateFinancialCloseSnapshotCommand.cs`, Cost/Revenue/FinancialClose endpoints
+- `AdjustCostRevenueButton.tsx`, `MaturityTransitionButton.tsx`, `CloseSnapshotButton.tsx`
+- `CostRevenueSodWriteTests.cs`
+
 ## 2026-09-24 — CRP-04 Idempotency client trên lệnh tạo tiền
 
 ### User

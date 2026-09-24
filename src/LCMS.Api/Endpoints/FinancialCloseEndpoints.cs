@@ -40,9 +40,12 @@ public static class FinancialCloseEndpoints
             return Results.Ok(item);
         });
 
-        closes.MapPost("/{id:guid}/snapshot", async (Guid id, ISender sender, CancellationToken ct) =>
+        closes.MapPost("/{id:guid}/snapshot", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            var snapshotId = await sender.Send(new CreateFinancialCloseSnapshotCommand(id), ct);
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            var snapshotId = await sender.Send(
+                new CreateFinancialCloseSnapshotCommand(id, idempotencyKey.ToString()),
+                ct);
             return Results.Created($"/api/financial-close-snapshots/{snapshotId}", new { id = snapshotId });
         });
 

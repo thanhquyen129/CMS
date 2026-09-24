@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
@@ -14,7 +15,8 @@ public sealed record AdjustRevenueCommand(
     string AdjustmentType,
     decimal DeltaAmount,
     string Reason,
-    DateOnly? EffectiveDate) : IRequest<Guid>;
+    DateOnly? EffectiveDate,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class AdjustRevenueCommandValidator : AbstractValidator<AdjustRevenueCommand>
 {
@@ -43,19 +45,22 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
     private readonly IRevenueFxStub _fx;
     private readonly IRevenueApprovalGate _approvalGate;
     private readonly IPermissionService _permissions;
+    private readonly IIdempotencyGate _idempotency;
 
     public AdjustRevenueCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IRevenueFxStub fx,
         IRevenueApprovalGate approvalGate,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
         _approvalGate = approvalGate;
         _permissions = permissions;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(AdjustRevenueCommand request, CancellationToken cancellationToken)
@@ -83,6 +88,15 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
             _ => throw new ConflictAppException("Mức độ tài chính của doanh thu không hợp lệ.")
         };
         await _permissions.EnsureAsync(action, denied, cancellationToken);
+
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.RevenueAdjustment,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
 
         var delta = decimal.Round(request.DeltaAmount, 4, MidpointRounding.AwayFromZero);
         var type = request.AdjustmentType.Trim().ToLowerInvariant();
@@ -132,6 +146,11 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
         };
 
         _db.RevenueAdjustments.Add(adj);
+        _idempotency.Remember(
+            IdempotencyScopes.RevenueAdjustment,
+            request.IdempotencyKey ?? string.Empty,
+            adj.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
         return adj.Id;
     }

@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "cost" | "revenue";
@@ -33,6 +34,7 @@ export function MaturityTransitionButton({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency(`maturity-${kind}-${action}`);
   const [amount, setAmount] = useState(String(currentAmount));
   const [overrideReason, setOverrideReason] = useState("");
 
@@ -68,12 +70,16 @@ export function MaturityTransitionButton({
   }, [submitting]);
 
   const run = useCallback(async () => {
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setSubmitting(true);
     setError(null);
+    let succeeded = false;
     const parsed = Number(String(amount).replace(",", "."));
     if (!Number.isFinite(parsed) || parsed < 0) {
       setError("Số tiền không hợp lệ.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -93,7 +99,7 @@ export function MaturityTransitionButton({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey(`maturity-${action}`)
+          idemKey
         ),
         body: JSON.stringify(body),
       });
@@ -114,14 +120,16 @@ export function MaturityTransitionButton({
         return;
       }
 
+      succeeded = true;
       setOpen(false);
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [action, amount, kind, lineId, overrideReason, router]);
+  }, [action, amount, kind, lineId, overrideReason, router, idem]);
 
   return (
     <>

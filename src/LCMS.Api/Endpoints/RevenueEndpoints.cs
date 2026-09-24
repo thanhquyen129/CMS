@@ -79,16 +79,19 @@ public static class RevenueEndpoints
         revenues.MapPost("/{id:guid}/adjustments", async (
             Guid id,
             AdjustRevenueRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var adjId = await sender.Send(
                 new AdjustRevenueCommand(
                     id,
                     body.AdjustmentType,
                     body.DeltaAmount,
                     body.Reason,
-                    body.EffectiveDate),
+                    body.EffectiveDate,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/revenues/{id}/adjustments/{adjId}", new { id = adjId });
         });

@@ -100,6 +100,61 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SameIdempotencyKey_DoesNotApplyCostAdjustmentTwice()
+    {
+        var tenantId = await CreateTenantAsync("TN-ADJ-IDEM", "Adj Idem");
+        var billId = await CreateBillAsync(tenantId, "BL-ADJ-1");
+        Guid costId;
+        using (var create = new HttpRequestMessage(HttpMethod.Post, "/api/costs")
+        {
+            Content = JsonContent.Create(new
+            {
+                billId,
+                attributionType = "direct",
+                amount = 1000m,
+                currencyCode = "VND",
+                costTypeCode = "FREIGHT"
+            })
+        })
+        {
+            create.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(create);
+            created.EnsureSuccessStatusCode();
+            costId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        var key = $"adj-{Guid.NewGuid():N}";
+        Guid firstId = Guid.Empty;
+        Guid secondId = Guid.Empty;
+        for (var i = 0; i < 2; i++)
+        {
+            using var adj = new HttpRequestMessage(HttpMethod.Post, $"/api/costs/{costId}/adjustments")
+            {
+                Content = JsonContent.Create(new
+                {
+                    adjustmentType = "adjustment",
+                    deltaAmount = 100m,
+                    reason = "Bấm đôi"
+                })
+            };
+            adj.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            adj.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            var res = await _client.SendAsync(adj);
+            Assert.Equal(HttpStatusCode.Created, res.StatusCode);
+            var id = (await res.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+            if (i == 0) firstId = id;
+            else secondId = id;
+        }
+
+        Assert.Equal(firstId, secondId);
+
+        using var get = new HttpRequestMessage(HttpMethod.Get, $"/api/costs/{costId}");
+        get.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var cost = await (await _client.SendAsync(get)).Content.ReadFromJsonAsync<CostBody>(JsonOptions);
+        Assert.Equal(1100m, cost!.Amount);
+    }
+
+    [Fact]
     public async Task ProductionFxFlag_RejectsCrossCurrencyWithoutDatedRate()
     {
         await using var factory = new NoStubFxFactory();
@@ -193,6 +248,7 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     private sealed record IdResponse(Guid Id);
+    private sealed record CostBody(decimal Amount);
     private sealed record RoleDto(Guid Id, string Code);
     private sealed record ValidationBody(Dictionary<string, string[]> Errors);
 

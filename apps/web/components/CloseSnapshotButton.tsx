@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 
 type Props = {
@@ -30,6 +31,7 @@ export function CloseSnapshotButton({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("close-snap");
 
   const snapshotLabel = term(
     terms,
@@ -46,12 +48,15 @@ export function CloseSnapshotButton({
 
   const runSnapshot = useCallback(async () => {
     if (!eligible) return;
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setSubmitting(true);
     setError(null);
+    let succeeded = false;
     try {
       const res = await fetch(`/bff/financial-closes/${closeId}/snapshot`, {
         method: "POST",
-        headers: withIdempotency({}, newIdempotencyKey("close-snap")),
+        headers: withIdempotency({}, idemKey),
       });
 
       if (res.status === 401) {
@@ -72,14 +77,16 @@ export function CloseSnapshotButton({
         return;
       }
 
+      succeeded = true;
       setOpen(false);
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [closeId, eligible, router]);
+  }, [closeId, eligible, router, idem]);
 
   if (!canRun) return null;
 

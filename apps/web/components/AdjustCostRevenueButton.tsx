@@ -5,7 +5,8 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { maturityLabelKey } from "@/lib/costs-revenues";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "cost" | "revenue";
@@ -36,6 +37,7 @@ export function AdjustCostRevenueButton({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency(kind === "cost" ? "cost-adj" : "rev-adj");
   const [adjustmentType, setAdjustmentType] = useState<"adjustment" | "reversal">(
     "adjustment"
   );
@@ -63,19 +65,24 @@ export function AdjustCostRevenueButton({
   }, [submitting]);
 
   const runAdjust = useCallback(async () => {
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setSubmitting(true);
     setError(null);
+    let succeeded = false;
 
     const delta = Number(String(deltaAmount).replace(",", "."));
     if (!Number.isFinite(delta) || delta === 0) {
       setError("Số điều chỉnh phải khác 0.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
     const reasonTrim = reason.trim();
     if (!reasonTrim) {
       setError("Phải nêu lý do điều chỉnh.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -89,7 +96,7 @@ export function AdjustCostRevenueButton({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey("line-adj")
+          idemKey
         ),
         body: JSON.stringify({
           adjustmentType,
@@ -116,6 +123,7 @@ export function AdjustCostRevenueButton({
         return;
       }
 
+      succeeded = true;
       setOpen(false);
       setDeltaAmount("");
       setReason("");
@@ -125,6 +133,7 @@ export function AdjustCostRevenueButton({
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }, [
@@ -136,6 +145,7 @@ export function AdjustCostRevenueButton({
     lineLabel,
     reason,
     router,
+    idem,
   ]);
 
   const previewAfter = (() => {

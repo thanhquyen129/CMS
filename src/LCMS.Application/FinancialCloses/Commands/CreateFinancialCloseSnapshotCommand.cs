@@ -3,6 +3,7 @@ using System.Text;
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -10,7 +11,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.FinancialCloses.Commands;
 
-public sealed record CreateFinancialCloseSnapshotCommand(Guid FinancialCloseId) : IRequest<Guid>;
+public sealed record CreateFinancialCloseSnapshotCommand(
+    Guid FinancialCloseId,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class CreateFinancialCloseSnapshotCommandValidator : AbstractValidator<CreateFinancialCloseSnapshotCommand>
 {
@@ -33,19 +36,22 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
     private readonly ICloseEligibilityChecker _eligibility;
+    private readonly IIdempotencyGate _idempotency;
 
     public CreateFinancialCloseSnapshotCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IAuditWriter audit,
-        ICloseEligibilityChecker eligibility)
+        ICloseEligibilityChecker eligibility,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
         _eligibility = eligibility;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(CreateFinancialCloseSnapshotCommand request, CancellationToken cancellationToken)
@@ -56,6 +62,15 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.FinancialCloseSnapshot,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
+
         var close = await _db.FinancialCloses
             .FirstOrDefaultAsync(c => c.Id == request.FinancialCloseId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy lần chốt tài chính.");
@@ -138,6 +153,11 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
                 closedAt
             }));
 
+        _idempotency.Remember(
+            IdempotencyScopes.FinancialCloseSnapshot,
+            request.IdempotencyKey ?? string.Empty,
+            snapshot.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
         return snapshot.Id;
     }

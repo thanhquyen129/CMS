@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
@@ -14,7 +15,8 @@ public sealed record AdjustCostCommand(
     string AdjustmentType,
     decimal DeltaAmount,
     string Reason,
-    DateOnly? EffectiveDate) : IRequest<Guid>;
+    DateOnly? EffectiveDate,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class AdjustCostCommandValidator : AbstractValidator<AdjustCostCommand>
 {
@@ -43,19 +45,22 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
     private readonly ICostFxStub _fx;
     private readonly ICostApprovalGate _approvalGate;
     private readonly IPermissionService _permissions;
+    private readonly IIdempotencyGate _idempotency;
 
     public AdjustCostCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICostFxStub fx,
         ICostApprovalGate approvalGate,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
         _approvalGate = approvalGate;
         _permissions = permissions;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(AdjustCostCommand request, CancellationToken cancellationToken)
@@ -83,6 +88,15 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
             _ => throw new ConflictAppException("Mức độ tài chính của chi phí không hợp lệ.")
         };
         await _permissions.EnsureAsync(action, denied, cancellationToken);
+
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.CostAdjustment,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
 
         var delta = decimal.Round(request.DeltaAmount, 4, MidpointRounding.AwayFromZero);
         var type = request.AdjustmentType.Trim().ToLowerInvariant();
@@ -132,6 +146,11 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
         };
 
         _db.CostAdjustments.Add(adj);
+        _idempotency.Remember(
+            IdempotencyScopes.CostAdjustment,
+            request.IdempotencyKey ?? string.Empty,
+            adj.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
         return adj.Id;
     }

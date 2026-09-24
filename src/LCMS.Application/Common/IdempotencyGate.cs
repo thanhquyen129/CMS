@@ -60,4 +60,6 @@ public static class IdempotencyScopes
     public const string RecognizeReceivable = "recognize_receivable";
     public const string FinancialClose = "financial_close";
     public const string FinancialCloseSnapshot = "financial_close_snapshot";
+    public const string CostAdjustment = "cost_adjustment";
+    public const string RevenueAdjustment = "revenue_adjustment";
 }

@@ -91,16 +91,19 @@ public static class CostEndpoints
         costs.MapPost("/{id:guid}/adjustments", async (
             Guid id,
             AdjustCostRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var adjId = await sender.Send(
                 new AdjustCostCommand(
                     id,
                     body.AdjustmentType,
                     body.DeltaAmount,
                     body.Reason,
-                    body.EffectiveDate),
+                    body.EffectiveDate,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/costs/{id}/adjustments/{adjId}", new { id = adjId });
         });

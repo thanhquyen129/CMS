@@ -27,8 +27,9 @@ public sealed class SearchGlobalQueryValidator : AbstractValidator<SearchGlobalQ
 }
 
 /// <summary>
-/// Multi-entity search for the top-bar (Bill, operational refs, cost/revenue, document, party).
-/// Each type is gated independently so Cost ≠ Revenue stays intact.
+/// Multi-entity search for the top-bar (Bill, operational refs, cost/revenue, document, party,
+/// payment/collection, rate card). Each type is gated independently so Cost ≠ Revenue
+/// and buy-rate ≠ sell-rate stay intact.
 /// </summary>
 public sealed class SearchGlobalQueryHandler
     : IRequestHandler<SearchGlobalQuery, IReadOnlyList<GlobalSearchHitDto>>
@@ -147,6 +148,19 @@ public sealed class SearchGlobalQueryHandler
                     "cost_type"))
                 .ToList();
             hits.AddRange(costs);
+
+            var payments = await _db.Payments.AsNoTracking()
+                .Where(p => p.ReferenceNo != null && p.ReferenceNo.ToLower().Contains(pattern))
+                .OrderBy(p => p.ReferenceNo)
+                .Take(PerTypeLimit)
+                .Select(p => new GlobalSearchHitDto(
+                    "payment",
+                    p.Id,
+                    p.ReferenceNo!,
+                    p.Status,
+                    "payment_reference"))
+                .ToListAsync(cancellationToken);
+            hits.AddRange(payments);
         }
 
         if (await _permissions.HasPermissionAsync(PermissionCodes.RevenueRead, cancellationToken))
@@ -166,6 +180,46 @@ public sealed class SearchGlobalQueryHandler
                     "revenue_type"))
                 .ToList();
             hits.AddRange(revenues);
+
+            var collections = await _db.Collections.AsNoTracking()
+                .Where(c => c.ReferenceNo != null && c.ReferenceNo.ToLower().Contains(pattern))
+                .OrderBy(c => c.ReferenceNo)
+                .Take(PerTypeLimit)
+                .Select(c => new GlobalSearchHitDto(
+                    "collection",
+                    c.Id,
+                    c.ReferenceNo!,
+                    c.Status,
+                    "collection_reference"))
+                .ToListAsync(cancellationToken);
+            hits.AddRange(collections);
+        }
+
+        var canBuyRate = await _permissions.HasPermissionAsync(PermissionCodes.RateBuyRead, cancellationToken);
+        var canSellRate = await _permissions.HasPermissionAsync(PermissionCodes.RateSellRead, cancellationToken);
+        if (canBuyRate || canSellRate)
+        {
+            var cardsQuery = _db.RateCards.AsNoTracking()
+                .Where(r =>
+                    r.Code.ToLower().Contains(pattern)
+                    || r.Name.ToLower().Contains(pattern)
+                    || (r.CarrierName != null && r.CarrierName.ToLower().Contains(pattern))
+                    || (r.RouteCode != null && r.RouteCode.ToLower().Contains(pattern)));
+            if (canBuyRate && !canSellRate)
+            {
+                cardsQuery = cardsQuery.Where(r => r.PartyType == "vendor");
+            }
+            else if (canSellRate && !canBuyRate)
+            {
+                cardsQuery = cardsQuery.Where(r => r.PartyType == "customer");
+            }
+
+            var cards = await cardsQuery
+                .OrderBy(r => r.Code)
+                .Take(PerTypeLimit)
+                .Select(r => new GlobalSearchHitDto("rate_card", r.Id, r.Code, r.Name, "rate_card"))
+                .ToListAsync(cancellationToken);
+            hits.AddRange(cards);
         }
 
         return hits;

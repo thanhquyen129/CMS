@@ -549,6 +549,80 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GlobalSearch_SeparatesPaymentCollectionAndBuySellRates()
+    {
+        var tenantA = await CreateTenantAsync("TN-SRCH-A", "Search A");
+        var tenantB = await CreateTenantAsync("TN-SRCH-B", "Search B");
+        var costUser = await UserInRoleAsync(tenantA, "cost-search@lcms.local", "CostAccountant");
+        var revenueUser = await UserInRoleAsync(tenantA, "rev-search@lcms.local", "RevenueAccountant");
+
+        var paymentA = await PostIdAsync(tenantA, "/api/payments", new
+        {
+            amount = 100m,
+            currencyCode = "VND",
+            referenceNo = "PAY-NEEDLE-7"
+        });
+        var paymentB = await PostIdAsync(tenantB, "/api/payments", new
+        {
+            amount = 100m,
+            currencyCode = "VND",
+            referenceNo = "PAY-NEEDLE-7"
+        });
+        var collectionA = await PostIdAsync(tenantA, "/api/collections", new
+        {
+            amount = 80m,
+            currencyCode = "VND",
+            referenceNo = "COL-NEEDLE-7"
+        });
+        var buyCard = await PostIdAsync(tenantA, "/api/rate-cards", new
+        {
+            code = "BUY-NEEDLE-7",
+            name = "Bảng mua",
+            partyType = "vendor",
+            currencyCode = "VND"
+        });
+        var sellCard = await PostIdAsync(tenantA, "/api/rate-cards", new
+        {
+            code = "SELL-NEEDLE-7",
+            name = "Bảng bán",
+            partyType = "customer",
+            currencyCode = "VND"
+        });
+
+        var costHits = await SearchAsync(tenantA, "NEEDLE-7", costUser);
+        Assert.Contains(costHits, h => h.EntityType == "payment" && h.Id == paymentA);
+        Assert.DoesNotContain(costHits, h => h.Id == paymentB || h.Id == collectionA || h.Id == sellCard);
+        Assert.Contains(costHits, h => h.EntityType == "rate_card" && h.Id == buyCard);
+
+        var revenueHits = await SearchAsync(tenantA, "NEEDLE-7", revenueUser);
+        Assert.Contains(revenueHits, h => h.EntityType == "collection" && h.Id == collectionA);
+        Assert.DoesNotContain(revenueHits, h => h.Id == paymentA || h.Id == buyCard);
+        Assert.Contains(revenueHits, h => h.EntityType == "rate_card" && h.Id == sellCard);
+    }
+
+    private async Task<Guid> PostIdAsync(Guid tenantId, string url, object body)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(body)
+        };
+        req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+    }
+
+    private async Task<List<SearchHit>> SearchAsync(Guid tenantId, string q, Guid userId)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"/api/search?q={Uri.EscapeDataString(q)}");
+        req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        req.Headers.Add("X-User-Id", userId.ToString());
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<List<SearchHit>>(JsonOptions)) ?? [];
+    }
+
+    [Fact]
     public async Task ProductionFxFlag_RejectsCrossCurrencyWithoutDatedRate()
     {
         await using var factory = new NoStubFxFactory();
@@ -645,6 +719,7 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     private sealed record MessageBody(string Code, string Message);
     private sealed record CostVersionBody(decimal Amount, string RowVersion);
     private sealed record CloseVersionBody(string Status, string RowVersion);
+    private sealed record SearchHit(string EntityType, Guid Id, string Code);
     private sealed record AuditRow(string Action, Guid ObjectId);
     private sealed record CostBody(decimal Amount);
     private sealed record RoleDto(Guid Id, string Code);

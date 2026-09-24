@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-24 — CRP-07 tìm kiếm đa thực thể
+
+### User
+ok, tiếp
+
+### Answer
+Ô tìm trên thanh trên đã ra thanh toán, thu tiền và bảng giá, cùng Bill / chứng từ / đối tác sẵn có. Thanh toán chỉ với `cost.read`; thu tiền chỉ với `revenue.read`. Bảng giá mua (`vendor`) theo `rate.buy.read`, bảng giá bán (`customer`) theo `rate.sell.read`. Khớp theo số tham chiếu (thanh toán/thu) hoặc mã/tên/hãng/tuyến (bảng giá). Kết quả dẫn tới `/settlements/payments/{id}`, `/settlements/collections/{id}`, `/rate-cards/{id}`. Tenant khác không lộ. Test: `GlobalSearch_SeparatesPaymentCollectionAndBuySellRates` và `GlobalSearch_FindsOrderAndIgnoresOtherTenant`. Chưa bấm ô tìm trên trình duyệt (máy local không chạy web).
+
+### Files
+- `src/LCMS.Application/Search/Queries/SearchGlobalQuery.cs`
+- `apps/web/components/GlobalSearch.tsx`
+- `tests/LCMS.Api.Tests/CostRevenueSodWriteTests.cs`
+
 ## 2026-09-24 — CRP-06 If-Match đảo phân bổ và mở lại chốt
 
 ### User

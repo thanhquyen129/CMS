@@ -21,6 +21,9 @@ const TYPE_LABEL: Record<string, string> = {
   revenue: "Doanh thu",
   document: "Chứng từ",
   party: "Đối tác",
+  payment: "Thanh toán",
+  collection: "Thu tiền",
+  rate_card: "Bảng giá",
 };
 
 function hrefFor(hit: Hit): string {
@@ -43,6 +46,12 @@ function hrefFor(hit: Hit): string {
       return `/documents/${hit.id}`;
     case "party":
       return `/admin/parties/${hit.id}`;
+    case "payment":
+      return `/settlements/payments/${hit.id}`;
+    case "collection":
+      return `/settlements/collections/${hit.id}`;
+    case "rate_card":
+      return `/rate-cards/${hit.id}`;
     default:
       return `/bills?q=${encodeURIComponent(hit.code)}`;
   }
@@ -139,7 +148,7 @@ export function GlobalSearch() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => hits.length > 0 && setOpen(true)}
-          placeholder="⌕  Tìm kiếm (đơn hàng, bill, shipment, khách hàng, nhà cung cấp, chứng từ...)"
+          placeholder="⌕  Tìm Bill, chứng từ, đối tác, thanh toán, thu tiền, bảng giá"
           autoComplete="off"
           aria-autocomplete="list"
           aria-expanded={open}

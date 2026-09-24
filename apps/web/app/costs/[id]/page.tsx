@@ -38,6 +38,20 @@ export default async function CostDetailPage({ params }: { params: Params }) {
   const adjLabel = term(terms, "ADJUSTMENT", "Điều chỉnh");
 
   const costRes = await getCost(id);
+  if (!costRes.ok && costRes.status === 404) {
+    return (
+      <AppShell terms={terms} active="costs">
+        <section className="panel">
+          <h1>Không tìm thấy {costLabel}</h1>
+          <p className="lede">{costRes.message}</p>
+          <Link className="btn" href="/costs">
+            Quay lại danh sách
+          </Link>
+        </section>
+      </AppShell>
+    );
+  }
+
   if (!costRes.ok) {
     return (
       <AppShell terms={terms} active="costs">

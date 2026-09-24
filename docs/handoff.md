@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-24 — CRP-17 cô lập hai thuê bao
+
+### User
+ok, tiếp
+
+### Answer
+Thuê bao A không đọc Bill `BL-UX06-B` và chi phí 8800 của thuê bao B. Danh sách và GET đều 404 `not_found`, message không chứa số Bill hay id chi phí. JWT của A kèm header `X-Tenant-Id` của B vẫn ở ngữ cảnh A. BFF chỉ gửi `Authorization: Bearer`, không gửi `X-Tenant-Id`. Màn chi phí 404 hiện «Không tìm thấy», cùng kiểu hồ sơ Bill. Test: `TenantA_CannotReadBillOrCostOfTenantB_EvenWithSpoofedHeader` (2 s), `UiSession_DoesNotForwardTenantHeader_AndCost404IsANotFoundPage` (180 ms). Chưa đăng nhập hai phiên trên host.
+
+### Files
+- `tests/LCMS.Api.Tests/Ux06TenantIsolationTests.cs`
+- `apps/web/app/costs/[id]/page.tsx`
+- `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md`
+- `docs/uat/09B-reviewer-hold.md`
+
 ## 2026-09-24 — CRP-15 không ký 09B, CRP-16 vòng focus
 
 ### User

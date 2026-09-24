@@ -17,12 +17,12 @@ P0/P1 mở không bằng 0. Không gọi Pixel-perfect xong.
 | ID | Cửa | Trạng thái |
 |---|---|---|
 | W-N1 | Ảnh UI-01…15 đối chiếu PNG | Mở — chưa có file ảnh |
-| W-N2 | UX-02…06 | Mở — UX-06 Blocked, host đang một thuê bao |
+| W-N2 | UX-02…06 | Mở — UX-06 API đã cô lập Bill/Chi phí; hai phiên đăng nhập trên host chưa chạy |
 | W-N3 | UX-07…10 | Mở — UX-10 chưa chạy bàn phím; UX-09 chưa đo 1280/1440 |
 | W-N4 | UX-11…13 | Mở một phần — KPI đã đối chiếu điểm; xác nhận/thực tế chưa lưu Idempotency-Key phía server |
 | W-N5 | P0/P1 mở = 0 | Không đạt |
 
-Đóng cổng khi có đủ 15 ảnh, UX-10 đã chạy, UX-06 có hai thuê bao, và bảng dưới không còn Blocked / Not run.
+Đóng cổng khi có đủ 15 ảnh, UX-10 đã Tab trên host, UX-06 đã mở hai phiên trên host, và bảng dưới không còn Blocked / Not run.
 
 ---
 
@@ -82,7 +82,7 @@ P0/P1 mở không bằng 0. Không gọi Pixel-perfect xong.
 | UX-03 | Drill-down Bill → CP/DT/CT/AP-AR/TT | Đi từ list/KPI tới nguồn | Route đúng Screen Traceability; giữ ngữ cảnh | **Pass** | Dashboard KPI → bills/queues; reports drill links; AP/AR Mở Bill |
 | UX-04 | 2 user: Cost-only vs Revenue-only | Đăng nhập lần lượt; mở dashboard, aging, menu | Menu/action theo permission + data scope; backend 403 khi vượt quyền | **Pass** | Nav costs/revenues = license ∧ `financialVisibility` (H-009). Live `cost@`: ẩn nhóm Doanh thu + CTA tạo; API 403 nếu deep-link |
 | UX-05 | Bill / chứng từ / AP-AR / chốt | Kiểm tra badge maturity, document, recognition, settlement, close | Không gộp sai các chiều trạng thái độc lập | **Pass** | Documents 3 chiều; costs/revenues maturity tách; close gates tách |
-| UX-06 | Tenant A vs Tenant B (nếu có) | Đăng nhập tenant A; thử ID/resource tenant B | Không hiện / chuyển ngữ cảnh trái phép | **Blocked** | Single-tenant demo |
+| UX-06 | Tenant A vs Tenant B (nếu có) | Đăng nhập tenant A; thử ID/resource tenant B | Không hiện / chuyển ngữ cảnh trái phép | **Pass** (API) | `TenantA_CannotReadBillOrCostOfTenantB_EvenWithSpoofedHeader`. BFF không gửi `X-Tenant-Id`. Chi phí 404 hiện «Không tìm thấy». Chưa đăng nhập hai phiên trên host |
 | UX-07 | Form tiền + version stale / kỳ khóa | Gửi validation sai; concurrent update; thao tác kỳ đã khóa | Thông báo rõ; không silent overwrite | **Pass** (code) | API `period_locked` tách concurrency; form tiền dùng `formatHttpError` (maturity/allocate/adjust/finalize/cash) |
 | UX-08 | List/detail/form trống & lỗi API | Ngắt API / lọc không kết quả / 403 | Loading, empty, error rõ; không blank void | **Pass** (partial) | Loading states thấy (settlements/closes); empty import disabled. Chưa force 403/5xx |
 | UX-09 | Desktop mục tiêu (vd 1280 / 1440) | Mở UI-01…15 + Wave 2 | Không cắt nút/bảng/panel chính | **Pass** (narrow) | Browser viewport hẹp (mobile-ish) vẫn đọc được; chưa đo đúng 1280/1440 |

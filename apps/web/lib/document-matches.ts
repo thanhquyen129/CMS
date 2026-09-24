@@ -26,6 +26,7 @@ export type DocumentMatch = {
   cancelledAt: string | null;
   cancelReason: string | null;
   details: DocumentMatchDetail[];
+  rowVersion?: string | null;
 };
 
 export const MATCH_METHODS = [

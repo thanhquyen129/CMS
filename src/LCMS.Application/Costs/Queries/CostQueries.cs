@@ -42,7 +42,8 @@ public sealed record CostAllocationDto(
     DateTimeOffset? FinalizedAt,
     Guid? SupersedesAllocationId,
     Guid? CreatedBy,
-    IReadOnlyList<CostAllocationDetailDto> Details);
+    IReadOnlyList<CostAllocationDetailDto> Details,
+    byte[]? RowVersion = null);
 
 public sealed record CostDto(
     Guid Id,
@@ -201,7 +202,8 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                     d.RoundingAdjustment,
                     d.ManualOverrideAmount,
                     d.OverrideReason,
-                    d.OverrideBeforeAmount)).ToList());
+                    d.OverrideBeforeAmount)).ToList(),
+                a.RowVersion);
         }).ToList();
 
         return new CostDto(

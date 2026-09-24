@@ -338,7 +338,7 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
     };
 }
 
-public sealed record FinalizeCostAllocationCommand(Guid AllocationId) : IRequest;
+public sealed record FinalizeCostAllocationCommand(Guid AllocationId, string? IfMatch = null) : IRequest;
 
 public sealed class FinalizeCostAllocationCommandValidator : AbstractValidator<FinalizeCostAllocationCommand>
 {
@@ -359,19 +359,22 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
     private readonly ICurrentUserContext _user;
     private readonly ICostApprovalGate _approvalGate;
     private readonly IAuditWriter _audit;
+    private readonly IRowVersionGuard _versions;
 
     public FinalizeCostAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         ICostApprovalGate approvalGate,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _approvalGate = approvalGate;
         _audit = audit;
+        _versions = versions;
     }
 
     public async Task Handle(FinalizeCostAllocationCommand request, CancellationToken cancellationToken)
@@ -384,6 +387,7 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
         var allocation = await _db.CostAllocations
             .FirstOrDefaultAsync(a => a.Id == request.AllocationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên phân bổ.");
+        _versions.EnsureCurrent(allocation, request.IfMatch);
 
         if (string.Equals(allocation.AllocationStatus, CostAllocationStatuses.Finalized, StringComparison.OrdinalIgnoreCase)
             || string.Equals(allocation.AllocationStatus, CostAllocationStatuses.Superseded, StringComparison.OrdinalIgnoreCase)

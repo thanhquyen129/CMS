@@ -263,6 +263,7 @@ export function ApArListWorkspace({
                 currencyCode={selected.currencyCode}
                 settledAmount={selected.finalizedSettledAmount}
                 recordStatus={selected.recordStatus}
+                rowVersion={selected.rowVersion}
               />
             </div>
           </>

@@ -172,10 +172,12 @@ public static class ExposureApArEndpoints
         ap.MapPost("/{id:guid}/reverse-recognize", async (
             Guid id,
             ReverseRecognizeRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ReverseRecognizeAccountsPayableCommand(id, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ReverseRecognizeAccountsPayableCommand(id, body.Reason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 
@@ -252,10 +254,12 @@ public static class ExposureApArEndpoints
         ar.MapPost("/{id:guid}/reverse-recognize", async (
             Guid id,
             ReverseRecognizeRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ReverseRecognizeAccountsReceivableCommand(id, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ReverseRecognizeAccountsReceivableCommand(id, body.Reason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

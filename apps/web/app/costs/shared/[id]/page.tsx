@@ -219,6 +219,7 @@ export default async function SharedCostDetailPage({
               amount={open.allocatableAmount || cost.amount}
               currencyCode={cost.currencyCode}
               billCount={open.details?.length ?? 0}
+              rowVersion={open.rowVersion}
               blockedAsCreator={Boolean(
                 currentUserId &&
                   open.createdBy &&

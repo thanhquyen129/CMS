@@ -8,8 +8,8 @@
 `row_version` is an EF concurrency token and is stamped on save. A second HTTP request loads the row after the first commit, so the token does not stop a stale screen from applying another cost adjustment, confirm, allocation, or close snapshot.
 
 ## Decision
-1. GET of cost, revenue, payment, collection, allocation, and financial close returns `rowVersion` (base64).
-2. Adjust, confirm, and actualize of cost/revenue, payment/collection allocate, finalize, and reverse, close snapshot, and reopen close read `If-Match`. The check runs after load and before the business status guard, so a stale token returns 409 `concurrency_conflict` and does not write. A matching retry of the same idempotency key still returns the first id.
+1. GET of cost, revenue, payment, collection, allocation, financial close, document match, and AP/AR returns `rowVersion` (base64).
+2. Adjust, confirm, and actualize of cost/revenue, payment/collection allocate, finalize, and reverse, cost-allocation finalize, document-match confirm, AP/AR reverse-recognize, close snapshot, and reopen close read `If-Match`. The check runs after load and before the business status guard, so a stale token returns 409 `concurrency_conflict` and does not write. A matching retry of the same idempotency key still returns the first id. Adjust and write-off of AP/AR, and revenue-mapping finalize, still omit the header.
 3. Creating a payment or collection allocation touches the cash row version, so the next allocate must send the new token.
 4. `Concurrency:RequireIfMatch` is false in Development (existing clients and tests omit the header) and true in Production. A missing token in Production is 409.
 

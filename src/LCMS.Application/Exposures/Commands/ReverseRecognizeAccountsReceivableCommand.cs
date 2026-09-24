@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -8,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Exposures.Commands;
 
-public sealed record ReverseRecognizeAccountsReceivableCommand(Guid AccountsReceivableId, string Reason) : IRequest;
+public sealed record ReverseRecognizeAccountsReceivableCommand(
+    Guid AccountsReceivableId,
+    string Reason,
+    string? IfMatch = null) : IRequest;
 
 public sealed class ReverseRecognizeAccountsReceivableCommandValidator
     : AbstractValidator<ReverseRecognizeAccountsReceivableCommand>
@@ -29,17 +33,20 @@ public sealed class ReverseRecognizeAccountsReceivableCommandHandler
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly IRowVersionGuard _versions;
 
     public ReverseRecognizeAccountsReceivableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _versions = versions;
     }
 
     public async Task Handle(ReverseRecognizeAccountsReceivableCommand request, CancellationToken cancellationToken)
@@ -52,6 +59,7 @@ public sealed class ReverseRecognizeAccountsReceivableCommandHandler
         var ar = await _db.AccountsReceivable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsReceivableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải thu.");
+        _versions.EnsureCurrent(ar, request.IfMatch);
 
         if (string.Equals(ar.RecordStatus, ApArRecordStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
+import { withRowVersion } from "@/lib/idempotency";
 import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -15,6 +16,7 @@ type Props = {
   currencyCode: string;
   settledAmount: number;
   recordStatus: string;
+  rowVersion?: string | null;
 };
 
 export function ReverseRecognizeButton({
@@ -25,6 +27,7 @@ export function ReverseRecognizeButton({
   currencyCode,
   settledAmount,
   recordStatus,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -60,10 +63,13 @@ export function ReverseRecognizeButton({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withRowVersion(
+          {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          rowVersion
+        ),
         body: JSON.stringify({ reason: trimmed }),
       });
       if (res.status === 401) {
@@ -84,7 +90,7 @@ export function ReverseRecognizeButton({
     } finally {
       setSubmitting(false);
     }
-  }, [accountsId, kind, reason, router]);
+  }, [accountsId, kind, reason, router, rowVersion]);
 
   if (!canReverse) return null;
 

@@ -30,7 +30,8 @@ public sealed record DocumentMatchDto(
     DateTimeOffset? ConfirmedAt,
     DateTimeOffset? CancelledAt,
     string? CancelReason,
-    IReadOnlyList<DocumentMatchDetailDto> Details);
+    IReadOnlyList<DocumentMatchDetailDto> Details,
+    byte[]? RowVersion = null);
 
 public sealed record GetDocumentMatchByIdQuery(Guid Id) : IRequest<DocumentMatchDto>;
 
@@ -85,6 +86,7 @@ public sealed class GetDocumentMatchByIdQueryHandler : IRequestHandler<GetDocume
             match.ConfirmedAt,
             match.CancelledAt,
             match.CancelReason,
-            details);
+            details,
+            match.RowVersion);
     }
 }

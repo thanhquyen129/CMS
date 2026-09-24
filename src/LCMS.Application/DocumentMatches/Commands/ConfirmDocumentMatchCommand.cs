@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -11,7 +12,7 @@ namespace LCMS.Application.DocumentMatches.Commands;
 /// <summary>
 /// Confirms a draft match session (locks adding details). Does not invent Cost/Revenue.
 /// </summary>
-public sealed record ConfirmDocumentMatchCommand(Guid MatchId) : IRequest;
+public sealed record ConfirmDocumentMatchCommand(Guid MatchId, string? IfMatch = null) : IRequest;
 
 public sealed class ConfirmDocumentMatchCommandValidator : AbstractValidator<ConfirmDocumentMatchCommand>
 {
@@ -27,17 +28,20 @@ public sealed class ConfirmDocumentMatchCommandHandler : IRequestHandler<Confirm
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly IRowVersionGuard _versions;
 
     public ConfirmDocumentMatchCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _versions = versions;
     }
 
     public async Task Handle(ConfirmDocumentMatchCommand request, CancellationToken cancellationToken)
@@ -50,6 +54,7 @@ public sealed class ConfirmDocumentMatchCommandHandler : IRequestHandler<Confirm
         var match = await _db.DocumentMatches
             .FirstOrDefaultAsync(m => m.Id == request.MatchId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên khớp chứng từ.");
+        _versions.EnsureCurrent(match, request.IfMatch);
 
         if (string.Equals(match.MatchStatus, DocumentMatchStatuses.Confirmed, StringComparison.OrdinalIgnoreCase))
         {

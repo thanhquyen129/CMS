@@ -20,6 +20,7 @@ export type AccountsPayableItem = {
   recordStatus: string;
   daysPastDue: number | null;
   agingBucket: string;
+  rowVersion?: string | null;
 };
 
 export type AccountsReceivableItem = {
@@ -39,6 +40,7 @@ export type AccountsReceivableItem = {
   recordStatus: string;
   daysPastDue: number | null;
   agingBucket: string;
+  rowVersion?: string | null;
 };
 
 export type PayableExposureItem = {

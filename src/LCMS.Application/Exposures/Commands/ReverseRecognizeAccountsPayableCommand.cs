@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -11,7 +12,10 @@ namespace LCMS.Application.Exposures.Commands;
 /// <summary>
 /// Soft-reverse an AP recognition slice. Requires no finalized settlement. Restores exposure open (C-013/C-015).
 /// </summary>
-public sealed record ReverseRecognizeAccountsPayableCommand(Guid AccountsPayableId, string Reason) : IRequest;
+public sealed record ReverseRecognizeAccountsPayableCommand(
+    Guid AccountsPayableId,
+    string Reason,
+    string? IfMatch = null) : IRequest;
 
 public sealed class ReverseRecognizeAccountsPayableCommandValidator
     : AbstractValidator<ReverseRecognizeAccountsPayableCommand>
@@ -32,17 +36,20 @@ public sealed class ReverseRecognizeAccountsPayableCommandHandler
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
+    private readonly IRowVersionGuard _versions;
 
     public ReverseRecognizeAccountsPayableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
+        _versions = versions;
     }
 
     public async Task Handle(ReverseRecognizeAccountsPayableCommand request, CancellationToken cancellationToken)
@@ -55,6 +62,7 @@ public sealed class ReverseRecognizeAccountsPayableCommandHandler
         var ap = await _db.AccountsPayable
             .FirstOrDefaultAsync(a => a.Id == request.AccountsPayableId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy khoản phải trả.");
+        _versions.EnsureCurrent(ap, request.IfMatch);
 
         if (string.Equals(ap.RecordStatus, ApArRecordStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {

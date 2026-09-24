@@ -1,5 +1,24 @@
 # Handoff
 
+## 2026-09-24 — CRP-06 If-Match chốt phân bổ, đảo ghi nhận, khớp chứng từ
+
+### User
+ok, tiếp
+
+### Answer
+Chốt phân bổ chi phí, xác nhận khớp chứng từ, và đảo ghi nhận AP/AR đọc `If-Match` sau khi tải dòng, trước kiểm tra trạng thái. Token sai → 409 `concurrency_conflict`, phiên phân bổ không thành `finalized`. Nút trên UI gửi `rowVersion`. Development vẫn cho phép thiếu header. Còn thiếu If-Match: điều chỉnh và xóa nợ AP/AR, chốt phân bổ doanh thu — CRP-06 vẫn Partial. Test `Finalize_StaleIfMatch_Conflicts_AndLeavesTheSessionOpen` (3 s, Passed). Chưa bấm nút trên trình duyệt.
+
+### Files
+- `Costs/Commands/AllocationCommands.cs` (`FinalizeCostAllocationCommand`)
+- `DocumentMatches/Commands/ConfirmDocumentMatchCommand.cs`
+- `Exposures/Commands/ReverseRecognizeAccountsPayableCommand.cs`
+- `Exposures/Commands/ReverseRecognizeAccountsReceivableCommand.cs`
+- `CostEndpoints.cs`, `FinancialDocumentEndpoints.cs`, `ExposureApArEndpoints.cs`
+- DTO `rowVersion`: `CostQueries.cs`, `DocumentMatchQueries.cs`, `ApArQueries.cs`
+- `FinalizeCostAllocationButton.tsx`, `ConfirmDocumentMatchButton.tsx`, `ReverseRecognizeButton.tsx`
+- `tests/LCMS.Api.Tests/AllocationSodTests.cs`
+- `docs/adr/ADR-0036-money-if-match.md`
+
 ## 2026-09-24 — CRP-04 key xác nhận / thực tế
 
 ### User

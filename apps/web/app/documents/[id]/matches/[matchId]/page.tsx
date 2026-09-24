@@ -399,6 +399,7 @@ export default async function DocumentMatchSessionPage({
             terms={terms}
             matchId={match.id}
             canConfirm={canConfirm}
+            rowVersion={match.rowVersion}
           />
           <CancelDocumentMatchButton
             terms={terms}

@@ -29,7 +29,8 @@ public sealed record AccountsPayableDto(
     string? Notes,
     string RecordStatus,
     int? DaysPastDue,
-    string AgingBucket);
+    string AgingBucket,
+    byte[]? RowVersion = null);
 
 public sealed record AccountsReceivableDto(
     Guid Id,
@@ -47,7 +48,8 @@ public sealed record AccountsReceivableDto(
     string? Notes,
     string RecordStatus,
     int? DaysPastDue,
-    string AgingBucket);
+    string AgingBucket,
+    byte[]? RowVersion = null);
 
 public sealed record AgingBucketSummaryDto(
     string Bucket,
@@ -169,7 +171,8 @@ public sealed class ListAccountsPayableQueryHandler
             a.Notes,
             a.RecordStatus,
             days,
-            bucket);
+            bucket,
+            a.RowVersion);
     }
 }
 
@@ -312,7 +315,8 @@ public sealed class ListAccountsReceivableQueryHandler
             a.Notes,
             a.RecordStatus,
             days,
-            bucket);
+            bucket,
+            a.RowVersion);
     }
 }
 

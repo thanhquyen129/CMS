@@ -145,9 +145,10 @@ public static class CostEndpoints
         });
 
         var allocations = app.MapGroup("/api/cost-allocations").WithTags("CostAllocations");
-        allocations.MapPost("/{id:guid}/finalize", async (Guid id, ISender sender, CancellationToken ct) =>
+        allocations.MapPost("/{id:guid}/finalize", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new FinalizeCostAllocationCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new FinalizeCostAllocationCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
         allocations.MapPost("/{id:guid}/calculate", async (Guid id, ISender sender, CancellationToken ct) =>

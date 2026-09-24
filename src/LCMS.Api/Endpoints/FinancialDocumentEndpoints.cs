@@ -168,9 +168,10 @@ public static class FinancialDocumentEndpoints
             return Results.Ok(match);
         });
 
-        matches.MapPost("/{id:guid}/confirm", async (Guid id, ISender sender, CancellationToken ct) =>
+        matches.MapPost("/{id:guid}/confirm", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new ConfirmDocumentMatchCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ConfirmDocumentMatchCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

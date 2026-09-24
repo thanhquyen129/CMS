@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { withIdempotency } from "@/lib/idempotency";
+import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
@@ -14,6 +14,7 @@ type Props = {
   amount: number;
   currencyCode: string;
   billCount: number;
+  rowVersion?: string | null;
   /** When true, hide CTA — creator cannot self-finalize (PC-21 / W-L1). */
   blockedAsCreator?: boolean;
 };
@@ -24,6 +25,7 @@ export function FinalizeCostAllocationButton({
   amount,
   currencyCode,
   billCount,
+  rowVersion,
   blockedAsCreator = false,
 }: Props) {
   const router = useRouter();
@@ -53,7 +55,7 @@ export function FinalizeCostAllocationButton({
     try {
       const res = await fetch(`/bff/cost-allocations/${allocationId}/finalize`, {
         method: "POST",
-        headers: withIdempotency({}, idemKey),
+        headers: withRowVersion(withIdempotency({}, idemKey), rowVersion),
       });
 
       if (res.status === 401) {
@@ -82,7 +84,7 @@ export function FinalizeCostAllocationButton({
       idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [allocationId, idem, router]);
+  }, [allocationId, idem, router, rowVersion]);
 
   if (blockedAsCreator) {
     return (

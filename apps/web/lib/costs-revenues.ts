@@ -39,6 +39,7 @@ export type CostAllocation = {
   supersedesAllocationId: string | null;
   createdBy?: string | null;
   details: CostAllocationDetail[];
+  rowVersion?: string | null;
 };
 
 export type CostAdjustmentItem = {

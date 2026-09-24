@@ -56,6 +56,26 @@ public sealed class AllocationSodTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Finalize_StaleIfMatch_Conflicts_AndLeavesTheSessionOpen()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billA = await CreateBillAsync(tenantId, "BL-SOD-VER-A");
+        var billB = await CreateBillAsync(tenantId, "BL-SOD-VER-B");
+        var sharedId = await CreateSharedAsync(tenantId, 80m);
+        var allocationId = await Allocate(tenantId, null, sharedId, "equal", new[] { billA, billB });
+
+        using var fin = Tenant(HttpMethod.Post, $"/api/cost-allocations/{allocationId}/finalize", tenantId);
+        fin.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+        var blocked = await _client.SendAsync(fin);
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        var err = await blocked.Content.ReadFromJsonAsync<ErrorBody>(Json);
+        Assert.Equal("concurrency_conflict", err!.Code);
+
+        var cost = await GetCost(tenantId, sharedId);
+        Assert.NotEqual("finalized", Assert.Single(cost.Allocations).AllocationStatus);
+    }
+
+    [Fact]
     public async Task Finalize_WithoutUserHeader_StillAllowed_ForBootstrapTests()
     {
         var tenantId = await CreateTenantAsync();
@@ -157,6 +177,7 @@ public sealed class AllocationSodTests : IAsyncLifetime
     }
 
     private sealed record IdBody(Guid Id);
+    private sealed record ErrorBody(string Code);
     private sealed record CostBody(List<AllocBody> Allocations);
     private sealed record AllocBody(Guid Id, string AllocationStatus);
 }

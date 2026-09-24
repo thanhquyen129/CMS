@@ -3,18 +3,20 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { newIdempotencyKey, withIdempotency, withRowVersion } from "@/lib/idempotency";
 
 type Props = {
   terms: TerminologyMap;
   matchId: string;
   canConfirm: boolean;
+  rowVersion?: string | null;
 };
 
 export function ConfirmDocumentMatchButton({
   terms,
   matchId,
   canConfirm,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -36,7 +38,7 @@ export function ConfirmDocumentMatchButton({
     try {
       const res = await fetch(`/bff/document-matches/${matchId}/confirm`, {
         method: "POST",
-        headers: withIdempotency({}, newIdempotencyKey("doc-match")),
+        headers: withRowVersion(withIdempotency({}, newIdempotencyKey("doc-match")), rowVersion),
       });
 
       if (res.status === 401) {
@@ -64,7 +66,7 @@ export function ConfirmDocumentMatchButton({
     } finally {
       setSubmitting(false);
     }
-  }, [matchId, router]);
+  }, [matchId, router, rowVersion]);
 
   if (!canConfirm) return null;
 

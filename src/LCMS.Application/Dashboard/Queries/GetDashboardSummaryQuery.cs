@@ -258,6 +258,7 @@ public sealed class GetDashboardSummaryQueryHandler
 
         var totals = new List<DashboardCurrencyTotalsDto>();
         decimal costBase = 0m;
+        var fxGapNote = "";
         decimal revenueBase = 0m;
         foreach (var code in currencyCodes)
         {
@@ -295,14 +296,23 @@ public sealed class GetDashboardSummaryQueryHandler
 
             if (request.IncludeBaseCurrencyRollUp)
             {
-                if (canViewCost && costTotal is decimal ct)
+                try
                 {
-                    costBase += await _costFx.ToBaseAmountAsync(code, ct, asOfDate, cancellationToken);
-                }
+                    if (canViewCost && costTotal is decimal ct)
+                    {
+                        costBase += await _costFx.ToBaseAmountAsync(code, ct, asOfDate, cancellationToken);
+                    }
 
-                if (canViewRevenue && revenueTotal is decimal rt)
+                    if (canViewRevenue && revenueTotal is decimal rt)
+                    {
+                        revenueBase += await _revenueFx.ToBaseAmountAsync(code, rt, asOfDate, cancellationToken);
+                    }
+                }
+                catch (ValidationAppException)
                 {
-                    revenueBase += await _revenueFx.ToBaseAmountAsync(code, rt, asOfDate, cancellationToken);
+                    fxGapNote = string.IsNullOrEmpty(fxGapNote)
+                        ? $" Không quy đổi {code}: chưa có tỷ giá ngày hiệu lực."
+                        : fxGapNote + $" Không quy đổi {code}: chưa có tỷ giá ngày hiệu lực.";
                 }
             }
         }
@@ -318,7 +328,7 @@ public sealed class GetDashboardSummaryQueryHandler
                 canViewMargin
                     ? decimal.Round(revenueBase - costBase, 4, MidpointRounding.AwayFromZero)
                     : null,
-                $"{VietnameseUiTerms.Get("FX_STUB_RATE")}: roll-up theo fx_rates (ngày asOf) hoặc StubFxRatesToBase fallback (ADR-0004/0011).");
+                $"Quy đổi theo sổ tỷ giá ngày {asOfDate:yyyy-MM-dd}.{fxGapNote}");
         }
 
         var mixed = totals.Count > 1;

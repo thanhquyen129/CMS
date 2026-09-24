@@ -106,6 +106,11 @@ public sealed class RevenueFxStub : IRevenueFxStub
             return rounded;
         }
 
+        if (!_options.AllowStubFxFallback)
+        {
+            throw MissingDatedRate(currency);
+        }
+
         var rates = _options.StubFxRatesToBase ?? new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         if (!rates.TryGetValue(currency, out var rate) || rate <= 0)
         {
@@ -120,4 +125,13 @@ public sealed class RevenueFxStub : IRevenueFxStub
 
         return decimal.Round(rounded * rate, 4, MidpointRounding.AwayFromZero);
     }
+
+    private ValidationAppException MissingDatedRate(string currency) =>
+        new(new Dictionary<string, string[]>
+        {
+            ["CurrencyCode"] =
+            [
+                $"Chưa có tỷ giá ngày hiệu lực từ {currency} sang {BaseCurrency}. Khai báo trên sổ tỷ giá trước khi ghi số tiền."
+            ]
+        });
 }

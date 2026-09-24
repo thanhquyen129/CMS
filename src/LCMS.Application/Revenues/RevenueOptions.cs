@@ -22,6 +22,11 @@ public sealed class RevenueOptions
     };
 
     /// <summary>
+    /// When false, missing dated fx_rates rejects the conversion. Production sets false (ADR-0034).
+    /// </summary>
+    public bool AllowStubFxFallback { get; set; } = true;
+
+    /// <summary>
     /// When set, confirm requires ApprovalStatus=approved if BaseAmount exceeds this (in base currency).
     /// Null = threshold disabled.
     /// </summary>

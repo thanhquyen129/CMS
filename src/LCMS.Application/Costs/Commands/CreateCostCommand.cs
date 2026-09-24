@@ -6,6 +6,7 @@ using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,6 +60,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
     private readonly ICostApprovalGate _approvalGate;
     private readonly IPartyDirectoryService _parties;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IPermissionService _permissions;
 
     public CreateCostCommandHandler(
         ILcmsDbContext db,
@@ -68,7 +70,8 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         ICostFxStub fx,
         ICostApprovalGate approvalGate,
         IPartyDirectoryService parties,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -78,6 +81,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         _approvalGate = approvalGate;
         _parties = parties;
         _idempotency = idempotency;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(CreateCostCommand request, CancellationToken cancellationToken)
@@ -86,6 +90,11 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.CostCreate,
+            "Bạn không có quyền tạo chi phí.",
+            cancellationToken);
 
         var tenantId = _tenantContext.TenantId!.Value;
         var priorId = await _idempotency.FindAsync(

@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,17 +42,20 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
     private readonly ITenantContext _tenantContext;
     private readonly ICostFxStub _fx;
     private readonly ICostApprovalGate _approvalGate;
+    private readonly IPermissionService _permissions;
 
     public AdjustCostCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICostFxStub fx,
-        ICostApprovalGate approvalGate)
+        ICostApprovalGate approvalGate,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
         _approvalGate = approvalGate;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(AdjustCostCommand request, CancellationToken cancellationToken)
@@ -70,6 +74,16 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
             throw new ConflictAppException("Chỉ được điều chỉnh chi phí đang hiệu lực.");
         }
 
+        var maturity = cost.FinancialMaturity.ToLowerInvariant();
+        var (action, denied) = maturity switch
+        {
+            CostMaturities.Expected => (PermissionCodes.CostCreate, "Bạn không có quyền điều chỉnh chi phí dự kiến."),
+            CostMaturities.Confirmed => (PermissionCodes.CostConfirm, "Bạn không có quyền điều chỉnh chi phí đã xác nhận."),
+            CostMaturities.Actual => (PermissionCodes.CostActualize, "Bạn không có quyền điều chỉnh chi phí thực tế."),
+            _ => throw new ConflictAppException("Mức độ tài chính của chi phí không hợp lệ.")
+        };
+        await _permissions.EnsureAsync(action, denied, cancellationToken);
+
         var delta = decimal.Round(request.DeltaAmount, 4, MidpointRounding.AwayFromZero);
         var type = request.AdjustmentType.Trim().ToLowerInvariant();
         if (type == CostAdjustmentTypes.Reversal && delta > 0)
@@ -84,7 +98,6 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
             throw new ConflictAppException("Số tiền chi phí sau điều chỉnh không được âm.");
         }
 
-        var maturity = cost.FinancialMaturity.ToLowerInvariant();
         switch (maturity)
         {
             case CostMaturities.Expected:

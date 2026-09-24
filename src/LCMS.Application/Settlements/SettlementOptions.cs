@@ -21,6 +21,11 @@ public sealed class SettlementOptions
     };
 
     /// <summary>
+    /// When false, missing dated fx_rates rejects the conversion. Production sets false (ADR-0034).
+    /// </summary>
+    public bool AllowStubFxFallback { get; set; } = true;
+
+    /// <summary>
     /// Max write-off amount applied immediately without Approval (txn currency).
     /// Above this → create pending Approval; apply when approved (P03 / ADR-0008).
     /// </summary>

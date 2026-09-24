@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,17 +42,20 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
     private readonly ITenantContext _tenantContext;
     private readonly IRevenueFxStub _fx;
     private readonly IRevenueApprovalGate _approvalGate;
+    private readonly IPermissionService _permissions;
 
     public AdjustRevenueCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IRevenueFxStub fx,
-        IRevenueApprovalGate approvalGate)
+        IRevenueApprovalGate approvalGate,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
         _approvalGate = approvalGate;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(AdjustRevenueCommand request, CancellationToken cancellationToken)
@@ -70,6 +74,16 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
             throw new ConflictAppException("Chỉ được điều chỉnh doanh thu đang hiệu lực.");
         }
 
+        var maturity = revenue.FinancialMaturity.ToLowerInvariant();
+        var (action, denied) = maturity switch
+        {
+            RevenueMaturities.Expected => (PermissionCodes.RevenueCreate, "Bạn không có quyền điều chỉnh doanh thu dự kiến."),
+            RevenueMaturities.Confirmed => (PermissionCodes.RevenueConfirm, "Bạn không có quyền điều chỉnh doanh thu đã xác nhận."),
+            RevenueMaturities.Actual => (PermissionCodes.RevenueActualize, "Bạn không có quyền điều chỉnh doanh thu thực tế."),
+            _ => throw new ConflictAppException("Mức độ tài chính của doanh thu không hợp lệ.")
+        };
+        await _permissions.EnsureAsync(action, denied, cancellationToken);
+
         var delta = decimal.Round(request.DeltaAmount, 4, MidpointRounding.AwayFromZero);
         var type = request.AdjustmentType.Trim().ToLowerInvariant();
         if (type == RevenueAdjustmentTypes.Reversal && delta > 0)
@@ -84,7 +98,6 @@ public sealed class AdjustRevenueCommandHandler : IRequestHandler<AdjustRevenueC
             throw new ConflictAppException("Số tiền doanh thu sau điều chỉnh không được âm.");
         }
 
-        var maturity = revenue.FinancialMaturity.ToLowerInvariant();
         switch (maturity)
         {
             case RevenueMaturities.Expected:

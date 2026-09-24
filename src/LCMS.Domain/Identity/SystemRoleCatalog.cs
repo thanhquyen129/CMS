@@ -46,6 +46,7 @@ public static class SystemRoleCatalog
                 (PermissionCodes.CostConfirm, DataScopes.All),
                 (PermissionCodes.CostActualize, DataScopes.All),
                 (PermissionCodes.CostAllocationOverride, DataScopes.All),
+                (PermissionCodes.RevenueCreate, DataScopes.All),
                 (PermissionCodes.RevenueRead, DataScopes.All),
                 (PermissionCodes.RevenueConfirm, DataScopes.All),
                 (PermissionCodes.RevenueActualize, DataScopes.All),
@@ -89,11 +90,12 @@ public static class SystemRoleCatalog
         new(
             RevenueAccountant,
             "Kế toán doanh thu",
-            "Bill + doanh thu (xem/xác nhận/thực tế) + xóa nợ AR. Không xem chi phí/AP.",
+            "Bill + doanh thu (tạo/xem/xác nhận/thực tế) + xóa nợ AR. Không xem chi phí/AP.",
             [
                 (PermissionCodes.BillCreate, DataScopes.Organization),
                 (PermissionCodes.BillRead, DataScopes.Organization),
                 (PermissionCodes.BillUpdate, DataScopes.Organization),
+                (PermissionCodes.RevenueCreate, DataScopes.Organization),
                 (PermissionCodes.RevenueRead, DataScopes.Organization),
                 (PermissionCodes.RevenueConfirm, DataScopes.Organization),
                 (PermissionCodes.RevenueActualize, DataScopes.Organization),

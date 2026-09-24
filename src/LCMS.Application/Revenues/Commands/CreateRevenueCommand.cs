@@ -6,6 +6,7 @@ using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -71,6 +72,7 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
     private readonly IRevenueApprovalGate _approvalGate;
     private readonly IPartyDirectoryService _parties;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IPermissionService _permissions;
 
     public CreateRevenueCommandHandler(
         ILcmsDbContext db,
@@ -79,7 +81,8 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         IRevenueFxStub fx,
         IRevenueApprovalGate approvalGate,
         IPartyDirectoryService parties,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -88,6 +91,7 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         _approvalGate = approvalGate;
         _parties = parties;
         _idempotency = idempotency;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(CreateRevenueCommand request, CancellationToken cancellationToken)
@@ -96,6 +100,11 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.RevenueCreate,
+            "Bạn không có quyền tạo doanh thu.",
+            cancellationToken);
 
         var tenantId = _tenantContext.TenantId!.Value;
         var priorId = await _idempotency.FindAsync(

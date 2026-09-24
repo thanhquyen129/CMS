@@ -1,5 +1,23 @@
 # Handoff
 
+## 2026-09-24 — CRP thứ tự khóa + SoD ghi tiền + FX production
+
+### User
+hãy chốt thứ tự rồi bắt đầu làm tiếp theo ưu tiên từ cao đến thấp, làm ở mức commercial ready product nhé
+
+### Answer
+Thứ tự khóa: **P0** TLS (chờ hostname + chứng chỉ, không cắt HTTP) → SoD Cost≠Revenue → FX không stub trên Production → idempotency client còn sót → approval enforce → AC-010. Rồi P1 (search, ownership, SMTP, components, series, backup, bootstrap) → P2 UAT/09B → P3 OIDC/soak/OTLP/bank chỉ khi PO mở.
+
+Đã ship lát P0 code: quyền `revenue.create` (Admin, Kiểm soát tài chính, Kế toán doanh thu). Tạo chi phí cần `cost.create`, tạo doanh thu cần `revenue.create`. Điều chỉnh theo maturity (dự kiến/xác nhận/thực tế). Production `AllowStubFxFallback=false` — thiếu `fx_rates` thì từ chối, không lấy tỷ giá config. Dev/test vẫn dùng stub. Dashboard bỏ qua tiền tệ thiếu tỷ giá thay vì 500.
+
+### Files
+- `PermissionCodes.cs`, `SystemRoleCatalog.cs`
+- `CreateCostCommand.cs`, `CreateRevenueCommand.cs`, `AdjustCostCommand.cs`, `AdjustRevenueCommand.cs`
+- `CostFxStub.cs`, `RevenueFxStub.cs`, `SettlementFxStub.cs`, options, `GetDashboardSummaryQuery.cs`
+- `src/LCMS.Api/appsettings.Production.json`
+- ADR-0033, ADR-0034
+- Test: `CostRevenueSodWriteTests`
+
 ## 2026-09-23 — Bậc kg bảng giá bán seed thành doanh thu dự kiến
 
 ### User

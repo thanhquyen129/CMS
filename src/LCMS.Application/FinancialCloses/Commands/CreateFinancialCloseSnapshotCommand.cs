@@ -13,7 +13,8 @@ namespace LCMS.Application.FinancialCloses.Commands;
 
 public sealed record CreateFinancialCloseSnapshotCommand(
     Guid FinancialCloseId,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class CreateFinancialCloseSnapshotCommandValidator : AbstractValidator<CreateFinancialCloseSnapshotCommand>
 {
@@ -37,6 +38,7 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
     private readonly IAuditWriter _audit;
     private readonly ICloseEligibilityChecker _eligibility;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IRowVersionGuard _versions;
 
     public CreateFinancialCloseSnapshotCommandHandler(
         ILcmsDbContext db,
@@ -44,7 +46,8 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         ICurrentUserContext user,
         IAuditWriter audit,
         ICloseEligibilityChecker eligibility,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -52,6 +55,7 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         _audit = audit;
         _eligibility = eligibility;
         _idempotency = idempotency;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(CreateFinancialCloseSnapshotCommand request, CancellationToken cancellationToken)
@@ -74,6 +78,7 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         var close = await _db.FinancialCloses
             .FirstOrDefaultAsync(c => c.Id == request.FinancialCloseId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy lần chốt tài chính.");
+        _versions.EnsureCurrent(close, request.IfMatch);
 
         if (close.Status == FinancialCloseStatuses.Locked)
         {

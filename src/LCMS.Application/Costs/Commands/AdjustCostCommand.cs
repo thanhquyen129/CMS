@@ -16,7 +16,8 @@ public sealed record AdjustCostCommand(
     decimal DeltaAmount,
     string Reason,
     DateOnly? EffectiveDate,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class AdjustCostCommandValidator : AbstractValidator<AdjustCostCommand>
 {
@@ -46,6 +47,7 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
     private readonly ICostApprovalGate _approvalGate;
     private readonly IPermissionService _permissions;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IRowVersionGuard _versions;
 
     public AdjustCostCommandHandler(
         ILcmsDbContext db,
@@ -53,7 +55,8 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
         ICostFxStub fx,
         ICostApprovalGate approvalGate,
         IPermissionService permissions,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -61,6 +64,7 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
         _approvalGate = approvalGate;
         _permissions = permissions;
         _idempotency = idempotency;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(AdjustCostCommand request, CancellationToken cancellationToken)
@@ -97,6 +101,8 @@ public sealed class AdjustCostCommandHandler : IRequestHandler<AdjustCostCommand
         {
             return priorId.Value;
         }
+
+        _versions.EnsureCurrent(cost, request.IfMatch);
 
         var delta = decimal.Round(request.DeltaAmount, 4, MidpointRounding.AwayFromZero);
         var type = request.AdjustmentType.Trim().ToLowerInvariant();

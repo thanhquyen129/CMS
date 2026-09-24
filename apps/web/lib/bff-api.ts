@@ -56,6 +56,7 @@ export async function forwardApiMutation(
 
   const incoming = await headers();
   const idempotencyKey = incoming.get("Idempotency-Key")?.trim();
+  const ifMatch = incoming.get("If-Match")?.trim();
 
   try {
     const res = await fetch(`${getApiInternalUrl()}${apiPath}`, {
@@ -65,6 +66,7 @@ export async function forwardApiMutation(
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+        ...(ifMatch ? { "If-Match": ifMatch } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       cache: "no-store",

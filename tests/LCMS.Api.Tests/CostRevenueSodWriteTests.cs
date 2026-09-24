@@ -374,6 +374,79 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task StaleIfMatch_DoesNotApplySecondCostAdjustment()
+    {
+        var tenantId = await CreateTenantAsync("TN-ROW-VER", "Row Version");
+        var billId = await CreateBillAsync(tenantId, "BL-ROW-1");
+        Guid costId;
+        using (var create = new HttpRequestMessage(HttpMethod.Post, "/api/costs")
+        {
+            Content = JsonContent.Create(new
+            {
+                billId,
+                attributionType = "direct",
+                amount = 1000m,
+                currencyCode = "VND",
+                costTypeCode = "FREIGHT"
+            })
+        })
+        {
+            create.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(create);
+            created.EnsureSuccessStatusCode();
+            costId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        string version;
+        using (var get = new HttpRequestMessage(HttpMethod.Get, $"/api/costs/{costId}"))
+        {
+            get.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var cost = await (await _client.SendAsync(get)).Content.ReadFromJsonAsync<CostVersionBody>(JsonOptions);
+            version = cost!.RowVersion;
+            Assert.False(string.IsNullOrWhiteSpace(version));
+        }
+
+        using (var adj = new HttpRequestMessage(HttpMethod.Post, $"/api/costs/{costId}/adjustments")
+        {
+            Content = JsonContent.Create(new
+            {
+                adjustmentType = "adjustment",
+                deltaAmount = 100m,
+                reason = "Lần một"
+            })
+        })
+        {
+            adj.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            adj.Headers.TryAddWithoutValidation("If-Match", version);
+            Assert.Equal(HttpStatusCode.Created, (await _client.SendAsync(adj)).StatusCode);
+        }
+
+        using (var stale = new HttpRequestMessage(HttpMethod.Post, $"/api/costs/{costId}/adjustments")
+        {
+            Content = JsonContent.Create(new
+            {
+                adjustmentType = "adjustment",
+                deltaAmount = 50m,
+                reason = "Màn hình cũ"
+            })
+        })
+        {
+            stale.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            stale.Headers.TryAddWithoutValidation("If-Match", version);
+            var res = await _client.SendAsync(stale);
+            Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+            var err = await res.Content.ReadFromJsonAsync<MessageBody>(JsonOptions);
+            Assert.Equal("concurrency_conflict", err!.Code);
+        }
+
+        using var after = new HttpRequestMessage(HttpMethod.Get, $"/api/costs/{costId}");
+        after.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var body = await (await _client.SendAsync(after)).Content.ReadFromJsonAsync<CostVersionBody>(JsonOptions);
+        Assert.Equal(1100m, body!.Amount);
+        Assert.NotEqual(version, body.RowVersion);
+    }
+
+    [Fact]
     public async Task ProductionFxFlag_RejectsCrossCurrencyWithoutDatedRate()
     {
         await using var factory = new NoStubFxFactory();
@@ -467,7 +540,8 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     private sealed record IdResponse(Guid Id);
-    private sealed record MessageBody(string Message);
+    private sealed record MessageBody(string Code, string Message);
+    private sealed record CostVersionBody(decimal Amount, string RowVersion);
     private sealed record AuditRow(string Action, Guid ObjectId);
     private sealed record CostBody(decimal Amount);
     private sealed record RoleDto(Guid Id, string Code);

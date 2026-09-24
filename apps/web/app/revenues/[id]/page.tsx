@@ -126,6 +126,7 @@ export default async function RevenueDetailPage({
                 lineId={revenue.id}
                 currentAmount={revenue.amount}
                 currencyCode={revenue.currencyCode}
+                rowVersion={revenue.rowVersion}
               />
             ) : null}
             {canActualize(revenue.financialMaturity, revenue.recordStatus) ? (
@@ -136,6 +137,7 @@ export default async function RevenueDetailPage({
                 lineId={revenue.id}
                 currentAmount={revenue.amount}
                 currencyCode={revenue.currencyCode}
+                rowVersion={revenue.rowVersion}
               />
             ) : null}
             <AdjustCostRevenueButton
@@ -145,6 +147,7 @@ export default async function RevenueDetailPage({
               currentAmount={revenue.amount}
               currencyCode={revenue.currencyCode}
               financialMaturity={revenue.financialMaturity}
+              rowVersion={revenue.rowVersion}
               buttonClassName="btn btn-sm"
             />
             <Link className="btn btn-ghost btn-sm" href={backHref}>

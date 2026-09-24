@@ -71,20 +71,24 @@ public static class CostEndpoints
         costs.MapPost("/{id:guid}/confirm", async (
             Guid id,
             ConfirmCostRequest? body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ConfirmCostCommand(id, body?.ConfirmedAmount), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ConfirmCostCommand(id, body?.ConfirmedAmount, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 
         costs.MapPost("/{id:guid}/actualize", async (
             Guid id,
             ActualizeCostRequest? body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ActualizeCostCommand(id, body?.ActualAmount), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ActualizeCostCommand(id, body?.ActualAmount, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 
@@ -96,6 +100,7 @@ public static class CostEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var adjId = await sender.Send(
                 new AdjustCostCommand(
                     id,
@@ -103,7 +108,8 @@ public static class CostEndpoints
                     body.DeltaAmount,
                     body.Reason,
                     body.EffectiveDate,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/costs/{id}/adjustments/{adjId}", new { id = adjId });
         });

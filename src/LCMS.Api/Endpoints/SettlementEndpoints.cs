@@ -47,22 +47,25 @@ public static class SettlementEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var allocationId = await sender.Send(
                 new AllocatePaymentCommand(
                     id,
                     body.AccountsPayableId,
                     body.Amount,
                     body.Notes,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/payment-allocations/{allocationId}", new { id = allocationId });
         });
 
         var paymentAllocations = app.MapGroup("/api/payment-allocations").WithTags("PaymentAllocations");
 
-        paymentAllocations.MapPost("/{id:guid}/finalize", async (Guid id, ISender sender, CancellationToken ct) =>
+        paymentAllocations.MapPost("/{id:guid}/finalize", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new FinalizePaymentAllocationCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new FinalizePaymentAllocationCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 
@@ -115,22 +118,25 @@ public static class SettlementEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var allocationId = await sender.Send(
                 new AllocateCollectionCommand(
                     id,
                     body.AccountsReceivableId,
                     body.Amount,
                     body.Notes,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/collection-allocations/{allocationId}", new { id = allocationId });
         });
 
         var collectionAllocations = app.MapGroup("/api/collection-allocations").WithTags("CollectionAllocations");
 
-        collectionAllocations.MapPost("/{id:guid}/finalize", async (Guid id, ISender sender, CancellationToken ct) =>
+        collectionAllocations.MapPost("/{id:guid}/finalize", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new FinalizeCollectionAllocationCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new FinalizeCollectionAllocationCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

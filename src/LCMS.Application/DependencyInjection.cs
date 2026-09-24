@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Approvals;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.BusinessParties.Commands;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Behaviors;
 using LCMS.Application.Costs;
 using LCMS.Application.Demo;
@@ -54,6 +55,7 @@ public static class DependencyInjection
             services.Configure<FinancialControlOptions>(configuration.GetSection(FinancialControlOptions.SectionName));
             services.Configure<FinancialCloseOptions>(configuration.GetSection(FinancialCloseOptions.SectionName));
             services.Configure<DemoOptions>(configuration.GetSection(DemoOptions.SectionName));
+            services.Configure<ConcurrencyOptions>(configuration.GetSection(ConcurrencyOptions.SectionName));
         }
         else
         {
@@ -65,6 +67,7 @@ public static class DependencyInjection
             services.AddOptions<FinancialControlOptions>();
             services.AddOptions<FinancialCloseOptions>();
             services.AddOptions<DemoOptions>();
+            services.AddOptions<ConcurrencyOptions>();
         }
 
         services.AddScoped<DemoVolumeCatalogSeeder>();
@@ -85,6 +88,7 @@ public static class DependencyInjection
         services.AddScoped<ILateDocumentGate, LateDocumentGate>();
         services.AddScoped<IReconciliationDetailWriter, ReconciliationDetailWriter>();
         services.AddScoped<LCMS.Application.Common.IIdempotencyGate, LCMS.Application.Common.IdempotencyGate>();
+        services.AddScoped<IRowVersionGuard, RowVersionGuard>();
         services.AddScoped<LCMS.Application.Bills.Waybills.WaybillEconomicSeeder>();
         return services;
     }

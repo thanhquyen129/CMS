@@ -43,8 +43,9 @@ public static class FinancialCloseEndpoints
         closes.MapPost("/{id:guid}/snapshot", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var snapshotId = await sender.Send(
-                new CreateFinancialCloseSnapshotCommand(id, idempotencyKey.ToString()),
+                new CreateFinancialCloseSnapshotCommand(id, idempotencyKey.ToString(), ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/financial-close-snapshots/{snapshotId}", new { id = snapshotId });
         });

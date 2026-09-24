@@ -5,7 +5,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import { maturityLabelKey } from "@/lib/costs-revenues";
-import { withIdempotency } from "@/lib/idempotency";
+import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
@@ -18,6 +18,7 @@ type Props = {
   currentAmount: number;
   currencyCode: string;
   financialMaturity: string;
+  rowVersion?: string | null;
   /** Compact trigger on list rows */
   buttonClassName?: string;
 };
@@ -29,6 +30,7 @@ export function AdjustCostRevenueButton({
   currentAmount,
   currencyCode,
   financialMaturity,
+  rowVersion,
   buttonClassName = "btn btn-ghost btn-sm",
 }: Props) {
   const router = useRouter();
@@ -94,9 +96,9 @@ export function AdjustCostRevenueButton({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: withIdempotency(
-          { "Content-Type": "application/json" },
-          idemKey
+        headers: withRowVersion(
+          withIdempotency({ "Content-Type": "application/json" }, idemKey),
+          rowVersion
         ),
         body: JSON.stringify({
           adjustmentType,

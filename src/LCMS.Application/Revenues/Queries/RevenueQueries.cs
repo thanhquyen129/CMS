@@ -42,7 +42,8 @@ public sealed record RevenueDto(
     DateOnly EffectiveDate,
     DateTimeOffset? ConfirmedAt,
     DateTimeOffset? ActualizedAt,
-    IReadOnlyList<RevenueAdjustmentDto> Adjustments);
+    IReadOnlyList<RevenueAdjustmentDto> Adjustments,
+    byte[] RowVersion);
 
 public sealed record RevenueListItemDto(
     Guid Id,
@@ -52,7 +53,8 @@ public sealed record RevenueListItemDto(
     string CurrencyCode,
     string? RevenueTypeCode,
     string RecordStatus,
-    DateOnly EffectiveDate);
+    DateOnly EffectiveDate,
+    byte[]? RowVersion = null);
 
 public sealed record GetRevenueByIdQuery(Guid Id) : IRequest<RevenueDto>;
 
@@ -137,7 +139,8 @@ public sealed class GetRevenueByIdQueryHandler : IRequestHandler<GetRevenueByIdQ
             revenue.EffectiveDate,
             revenue.ConfirmedAt,
             revenue.ActualizedAt,
-            adjustments);
+            adjustments,
+            revenue.RowVersion);
     }
 }
 
@@ -236,7 +239,8 @@ public sealed class ListRevenuesQueryHandler : IRequestHandler<ListRevenuesQuery
                 r.CurrencyCode,
                 r.RevenueTypeCode,
                 r.RecordStatus,
-                r.EffectiveDate))
+                r.EffectiveDate,
+                r.RowVersion))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<RevenueListItemDto>(

@@ -51,6 +51,7 @@ export type FinancialCloseItem = {
   reopenReason: string | null;
   supersedesCloseId: string | null;
   snapshots: FinancialCloseSnapshot[];
+  rowVersion?: string | null;
 };
 
 export type FinancialClosePnl = {

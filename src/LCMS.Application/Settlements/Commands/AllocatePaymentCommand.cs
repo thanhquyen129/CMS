@@ -15,7 +15,8 @@ public sealed record AllocatePaymentCommand(
     Guid AccountsPayableId,
     decimal Amount,
     string? Notes,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class AllocatePaymentCommandValidator : AbstractValidator<AllocatePaymentCommand>
 {
@@ -43,6 +44,7 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
     private readonly IFxRateLookup _rates;
     private readonly IPeriodLockGate _periodLockGate;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IRowVersionGuard _versions;
 
     public AllocatePaymentCommandHandler(
         ILcmsDbContext db,
@@ -50,7 +52,8 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
         ISettlementFxStub fx,
         IFxRateLookup rates,
         IPeriodLockGate periodLockGate,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -58,6 +61,7 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
         _rates = rates;
         _periodLockGate = periodLockGate;
         _idempotency = idempotency;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(AllocatePaymentCommand request, CancellationToken cancellationToken)
@@ -82,6 +86,8 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
         var payment = await _db.Payments
             .FirstOrDefaultAsync(p => p.Id == request.PaymentId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy thanh toán.");
+        _versions.EnsureCurrent(payment, request.IfMatch);
+        payment.TouchRowVersion();
 
         if (payment.Status == PaymentStatuses.Cancelled)
         {

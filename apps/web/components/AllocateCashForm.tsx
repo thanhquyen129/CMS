@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { withIdempotency } from "@/lib/idempotency";
+import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
@@ -25,6 +25,7 @@ type Props = {
   availableToAllocate: number;
   currencyCode: string;
   targets: AllocateTargetOption[];
+  rowVersion?: string | null;
 };
 
 export function AllocateCashForm({
@@ -34,6 +35,7 @@ export function AllocateCashForm({
   availableToAllocate,
   currencyCode,
   targets,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -124,9 +126,9 @@ export function AllocateCashForm({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: withIdempotency(
-          { "Content-Type": "application/json" },
-          idemKey
+        headers: withRowVersion(
+          withIdempotency({ "Content-Type": "application/json" }, idemKey),
+          rowVersion
         ),
         body: JSON.stringify(body),
       });

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
@@ -11,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Revenues.Commands;
 
-public sealed record ConfirmRevenueCommand(Guid RevenueId, decimal? ConfirmedAmount) : IRequest;
+public sealed record ConfirmRevenueCommand(Guid RevenueId, decimal? ConfirmedAmount, string? IfMatch = null) : IRequest;
 
 public sealed class ConfirmRevenueCommandValidator : AbstractValidator<ConfirmRevenueCommand>
 {
@@ -40,6 +41,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
     private readonly ICriticalExceptionConfirmGate _criticalExceptionGate;
     private readonly IPeriodLockGate _periodLockGate;
     private readonly IPermissionService _permissions;
+    private readonly IRowVersionGuard _versions;
 
     public ConfirmRevenueCommandHandler(
         ILcmsDbContext db,
@@ -49,7 +51,8 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         IRevenueApprovalGate approvalGate,
         ICriticalExceptionConfirmGate criticalExceptionGate,
         IPeriodLockGate periodLockGate,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -59,6 +62,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         _criticalExceptionGate = criticalExceptionGate;
         _periodLockGate = periodLockGate;
         _permissions = permissions;
+        _versions = versions;
     }
 
     public async Task Handle(ConfirmRevenueCommand request, CancellationToken cancellationToken)
@@ -75,6 +79,7 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
 
         var revenue = await _db.Revenues.FirstOrDefaultAsync(r => r.Id == request.RevenueId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");
+        _versions.EnsureCurrent(revenue, request.IfMatch);
 
         if (revenue.RecordStatus != "active")
         {
@@ -127,7 +132,8 @@ public sealed record ActualizeRevenueCommand(
     Guid RevenueId,
     decimal? ActualAmount,
     string? SourceSystem = null,
-    string? OverrideReason = null) : IRequest;
+    string? OverrideReason = null,
+    string? IfMatch = null) : IRequest;
 
 public sealed class ActualizeRevenueCommandValidator : AbstractValidator<ActualizeRevenueCommand>
 {
@@ -151,6 +157,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
     private readonly IRevenueFxStub _fx;
     private readonly IPermissionService _permissions;
     private readonly IAuditWriter _audit;
+    private readonly IRowVersionGuard _versions;
 
     public ActualizeRevenueCommandHandler(
         ILcmsDbContext db,
@@ -158,7 +165,8 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         ICurrentUserContext user,
         IRevenueFxStub fx,
         IPermissionService permissions,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -166,6 +174,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         _fx = fx;
         _permissions = permissions;
         _audit = audit;
+        _versions = versions;
     }
 
     public async Task Handle(ActualizeRevenueCommand request, CancellationToken cancellationToken)
@@ -182,6 +191,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
 
         var revenue = await _db.Revenues.FirstOrDefaultAsync(r => r.Id == request.RevenueId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");
+        _versions.EnsureCurrent(revenue, request.IfMatch);
 
         if (revenue.RecordStatus != "active")
         {

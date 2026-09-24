@@ -17,6 +17,7 @@ export type PaymentAllocationItem = {
   reversedAt: string | null;
   reverseReason: string | null;
   notes: string | null;
+  rowVersion?: string | null;
 };
 
 export type PaymentItem = {
@@ -38,6 +39,7 @@ export type PaymentItem = {
   status: string;
   recordStatus: string;
   allocations: PaymentAllocationItem[];
+  rowVersion?: string | null;
 };
 
 export type CollectionAllocationItem = {
@@ -54,6 +56,7 @@ export type CollectionAllocationItem = {
   reversedAt: string | null;
   reverseReason: string | null;
   notes: string | null;
+  rowVersion?: string | null;
 };
 
 export type CollectionItem = {
@@ -75,6 +78,7 @@ export type CollectionItem = {
   status: string;
   recordStatus: string;
   allocations: CollectionAllocationItem[];
+  rowVersion?: string | null;
 };
 
 export function allocationStatusLabel(

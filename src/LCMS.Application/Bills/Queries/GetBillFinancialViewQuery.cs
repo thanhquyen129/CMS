@@ -87,7 +87,8 @@ public sealed class GetBillFinancialViewQueryHandler
                     c.VendorPartyId,
                     c.ExpectedAmount,
                     c.ConfirmedAmount,
-                    c.ActualAmount))
+                    c.ActualAmount,
+                    c.RowVersion))
                 .ToListAsync(cancellationToken);
         }
 
@@ -105,7 +106,8 @@ public sealed class GetBillFinancialViewQueryHandler
                     r.CurrencyCode,
                     r.RevenueTypeCode,
                     r.RecordStatus,
-                    r.EffectiveDate))
+                    r.EffectiveDate,
+                    r.RowVersion))
                 .ToListAsync(cancellationToken);
         }
 

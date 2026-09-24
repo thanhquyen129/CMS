@@ -183,6 +183,7 @@ export default async function FinancialCloseDetailPage({
           <CloseSnapshotButton
             terms={terms}
             closeId={close.id}
+            rowVersion={close.rowVersion}
             canRun={canSnapshot(close.status)}
             eligible={
               eligibilityRes?.ok === true && eligibilityRes.data.eligible

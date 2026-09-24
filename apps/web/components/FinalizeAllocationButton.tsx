@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { withIdempotency } from "@/lib/idempotency";
+import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
@@ -16,6 +16,7 @@ type Props = {
   allocationId: string;
   amount: number;
   currencyCode: string;
+  rowVersion?: string | null;
 };
 
 export function FinalizeAllocationButton({
@@ -24,6 +25,7 @@ export function FinalizeAllocationButton({
   allocationId,
   amount,
   currencyCode,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -57,7 +59,7 @@ export function FinalizeAllocationButton({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: withIdempotency({}, idemKey),
+        headers: withRowVersion(withIdempotency({}, idemKey), rowVersion),
       });
 
       if (res.status === 401) {
@@ -85,7 +87,7 @@ export function FinalizeAllocationButton({
       idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [allocationId, idem, kind, router]);
+  }, [allocationId, idem, kind, router, rowVersion]);
 
   return (
     <>

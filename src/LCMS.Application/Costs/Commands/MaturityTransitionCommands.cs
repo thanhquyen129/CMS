@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Application.FinancialCloses;
@@ -12,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Costs.Commands;
 
-public sealed record ConfirmCostCommand(Guid CostId, decimal? ConfirmedAmount) : IRequest;
+public sealed record ConfirmCostCommand(Guid CostId, decimal? ConfirmedAmount, string? IfMatch = null) : IRequest;
 
 public sealed class ConfirmCostCommandValidator : AbstractValidator<ConfirmCostCommand>
 {
@@ -42,6 +43,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     private readonly ICriticalExceptionConfirmGate _criticalExceptionGate;
     private readonly IPeriodLockGate _periodLockGate;
     private readonly IPermissionService _permissions;
+    private readonly IRowVersionGuard _versions;
 
     public ConfirmCostCommandHandler(
         ILcmsDbContext db,
@@ -52,7 +54,8 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         ICostApprovalGate approvalGate,
         ICriticalExceptionConfirmGate criticalExceptionGate,
         IPeriodLockGate periodLockGate,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -63,6 +66,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
         _criticalExceptionGate = criticalExceptionGate;
         _periodLockGate = periodLockGate;
         _permissions = permissions;
+        _versions = versions;
     }
 
     public async Task Handle(ConfirmCostCommand request, CancellationToken cancellationToken)
@@ -79,6 +83,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
 
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == request.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
+        _versions.EnsureCurrent(cost, request.IfMatch);
 
         if (cost.RecordStatus != "active")
         {
@@ -175,7 +180,7 @@ public sealed class ConfirmCostCommandHandler : IRequestHandler<ConfirmCostComma
     }
 }
 
-public sealed record ActualizeCostCommand(Guid CostId, decimal? ActualAmount) : IRequest;
+public sealed record ActualizeCostCommand(Guid CostId, decimal? ActualAmount, string? IfMatch = null) : IRequest;
 
 public sealed class ActualizeCostCommandValidator : AbstractValidator<ActualizeCostCommand>
 {
@@ -198,19 +203,22 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
     private readonly ICurrentUserContext _user;
     private readonly ICostFxStub _fx;
     private readonly IPermissionService _permissions;
+    private readonly IRowVersionGuard _versions;
 
     public ActualizeCostCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         ICostFxStub fx,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _fx = fx;
         _permissions = permissions;
+        _versions = versions;
     }
 
     public async Task Handle(ActualizeCostCommand request, CancellationToken cancellationToken)
@@ -227,6 +235,7 @@ public sealed class ActualizeCostCommandHandler : IRequestHandler<ActualizeCostC
 
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == request.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
+        _versions.EnsureCurrent(cost, request.IfMatch);
 
         if (cost.RecordStatus != "active")
         {

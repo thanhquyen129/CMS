@@ -173,6 +173,7 @@ export default async function PaymentDetailPage({
                   allocationId={a.id}
                   amount={a.amount}
                   currencyCode={a.currencyCode}
+                  rowVersion={payment.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
               ) : null}
               {canReverseAllocation(a.allocationStatus) ? (
@@ -210,6 +211,7 @@ export default async function PaymentDetailPage({
               availableToAllocate={payment.availableToAllocate}
               currencyCode={payment.currencyCode}
               targets={targets}
+              rowVersion={payment.rowVersion}
             />
           </>
         )}

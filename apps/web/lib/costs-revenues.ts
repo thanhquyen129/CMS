@@ -14,6 +14,7 @@ export type CostListItem = {
   expectedAmount?: number;
   confirmedAmount?: number | null;
   actualAmount?: number | null;
+  rowVersion?: string | null;
 };
 
 export type CostAllocationDetail = {
@@ -62,6 +63,7 @@ export type RevenueListItem = {
   revenueTypeCode: string | null;
   recordStatus: string;
   effectiveDate: string;
+  rowVersion?: string | null;
 };
 
 export type CostDto = CostListItem & {

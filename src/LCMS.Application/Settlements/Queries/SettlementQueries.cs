@@ -24,7 +24,8 @@ public sealed record PaymentAllocationDto(
     decimal? SettledAmount,
     decimal? FxRate,
     string? FxSource,
-    DateOnly? FxRateDate);
+    DateOnly? FxRateDate,
+    byte[]? RowVersion = null);
 
 public sealed record PaymentDto(
     Guid Id,
@@ -44,7 +45,8 @@ public sealed record PaymentDto(
     string? Notes,
     string Status,
     string RecordStatus,
-    IReadOnlyList<PaymentAllocationDto> Allocations);
+    IReadOnlyList<PaymentAllocationDto> Allocations,
+    byte[]? RowVersion = null);
 
 public sealed record CollectionAllocationDto(
     Guid Id,
@@ -64,7 +66,8 @@ public sealed record CollectionAllocationDto(
     decimal? SettledAmount,
     decimal? FxRate,
     string? FxSource,
-    DateOnly? FxRateDate);
+    DateOnly? FxRateDate,
+    byte[]? RowVersion = null);
 
 public sealed record CollectionDto(
     Guid Id,
@@ -84,7 +87,8 @@ public sealed record CollectionDto(
     string? Notes,
     string Status,
     string RecordStatus,
-    IReadOnlyList<CollectionAllocationDto> Allocations);
+    IReadOnlyList<CollectionAllocationDto> Allocations,
+    byte[]? RowVersion = null);
 
 public sealed record ListPaymentsQuery : IRequest<IReadOnlyList<PaymentDto>>;
 public sealed record GetPaymentByIdQuery(Guid Id) : IRequest<PaymentDto>;
@@ -180,7 +184,9 @@ public sealed class ListPaymentsQueryHandler : IRequestHandler<ListPaymentsQuery
                 a.Id, a.PaymentId, a.AccountsPayableId, a.Amount,
                 a.CurrencyCode, a.BaseAmount, a.FxRateId, a.AllocationStatus,
                 a.CreatedAt, a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes,
-                a.OriginalAmount, a.SettledAmount, a.FxRate, a.FxSource, a.FxRateDate)).ToList());
+                a.OriginalAmount, a.SettledAmount, a.FxRate, a.FxSource, a.FxRateDate,
+                a.RowVersion)).ToList(),
+            p.RowVersion);
     }
 }
 
@@ -277,7 +283,9 @@ public sealed class ListCollectionsQueryHandler : IRequestHandler<ListCollection
                 a.Id, a.CollectionId, a.AccountsReceivableId, a.Amount,
                 a.CurrencyCode, a.BaseAmount, a.FxRateId, a.AllocationStatus,
                 a.CreatedAt, a.FinalizedAt, a.ReversedAt, a.ReverseReason, a.Notes,
-                a.OriginalAmount, a.SettledAmount, a.FxRate, a.FxSource, a.FxRateDate)).ToList());
+                a.OriginalAmount, a.SettledAmount, a.FxRate, a.FxSource, a.FxRateDate,
+                a.RowVersion)).ToList(),
+            c.RowVersion);
     }
 }
 

@@ -12,6 +12,7 @@ import {
   type RevenueListItem,
 } from "@/lib/costs-revenues";
 import { formatMoney } from "@/lib/money";
+import { withRowVersion } from "@/lib/idempotency";
 import { AdjustCostRevenueButton } from "@/components/AdjustCostRevenueButton";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
@@ -25,6 +26,7 @@ type PendingAction = {
   amount: number;
   currencyCode: string;
   label: string;
+  rowVersion?: string | null;
 };
 
 type Props = {
@@ -129,7 +131,10 @@ export function BillCostRevenuePanel({
     try {
       const res = await fetch(path, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: withRowVersion(
+          { "Content-Type": "application/json", Accept: "application/json" },
+          pending.rowVersion
+        ),
         body: JSON.stringify(body),
       });
 
@@ -307,6 +312,7 @@ export function BillCostRevenuePanel({
                                 amount: c.amount,
                                 currencyCode: c.currencyCode,
                                 label: costLabel,
+                                rowVersion: c.rowVersion,
                               })
                             }
                           >
@@ -325,6 +331,7 @@ export function BillCostRevenuePanel({
                                 amount: c.amount,
                                 currencyCode: c.currencyCode,
                                 label: costLabel,
+                                rowVersion: c.rowVersion,
                               })
                             }
                           >
@@ -348,6 +355,7 @@ export function BillCostRevenuePanel({
                             currentAmount={c.amount}
                             currencyCode={c.currencyCode}
                             financialMaturity={c.financialMaturity}
+                            rowVersion={c.rowVersion}
                           />
                         ) : null}
                         <Link
@@ -438,6 +446,7 @@ export function BillCostRevenuePanel({
                                 amount: r.amount,
                                 currencyCode: r.currencyCode,
                                 label: revenueLabel,
+                                rowVersion: r.rowVersion,
                               })
                             }
                           >
@@ -456,6 +465,7 @@ export function BillCostRevenuePanel({
                                 amount: r.amount,
                                 currencyCode: r.currencyCode,
                                 label: revenueLabel,
+                                rowVersion: r.rowVersion,
                               })
                             }
                           >
@@ -479,6 +489,7 @@ export function BillCostRevenuePanel({
                             currentAmount={r.amount}
                             currencyCode={r.currencyCode}
                             financialMaturity={r.financialMaturity}
+                            rowVersion={r.rowVersion}
                           />
                         ) : null}
                         <Link

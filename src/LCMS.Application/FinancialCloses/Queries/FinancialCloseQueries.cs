@@ -49,7 +49,8 @@ public sealed record FinancialCloseDto(
     Guid? ReopenedBy,
     string? ReopenReason,
     Guid? SupersedesCloseId,
-    IReadOnlyList<FinancialCloseSnapshotDto> Snapshots);
+    IReadOnlyList<FinancialCloseSnapshotDto> Snapshots,
+    byte[]? RowVersion = null);
 
 public sealed record ListFinancialClosesQuery(string? Status, string? ScopeType)
     : IRequest<IReadOnlyList<FinancialCloseDto>>;
@@ -158,7 +159,8 @@ public sealed class ListFinancialClosesQueryHandler
             c.SupersedesCloseId,
             snapshots.Select(s => MapSnapshot(
                 s,
-                detailsBySnapshot.TryGetValue(s.Id, out var d) ? d : [])).ToList());
+                detailsBySnapshot.TryGetValue(s.Id, out var d) ? d : [])).ToList(),
+            c.RowVersion);
 
     internal static FinancialCloseSnapshotDto MapSnapshot(
         FinancialCloseSnapshot s,

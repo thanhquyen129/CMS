@@ -122,6 +122,7 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                 lineId={cost.id}
                 currentAmount={cost.amount}
                 currencyCode={cost.currencyCode}
+                rowVersion={cost.rowVersion}
               />
             ) : null}
             {canActualize(cost.financialMaturity, cost.recordStatus) ? (
@@ -132,6 +133,7 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                 lineId={cost.id}
                 currentAmount={cost.amount}
                 currencyCode={cost.currencyCode}
+                rowVersion={cost.rowVersion}
               />
             ) : null}
             <AdjustCostRevenueButton
@@ -141,6 +143,7 @@ export default async function CostDetailPage({ params }: { params: Params }) {
               currentAmount={cost.amount}
               currencyCode={cost.currencyCode}
               financialMaturity={cost.financialMaturity}
+              rowVersion={cost.rowVersion}
               buttonClassName="btn btn-sm"
             />
             {cost.billId ? (

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { withIdempotency } from "@/lib/idempotency";
+import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
@@ -18,6 +18,7 @@ type Props = {
   lineId: string;
   currentAmount: number;
   currencyCode: string;
+  rowVersion?: string | null;
 };
 
 export function MaturityTransitionButton({
@@ -27,6 +28,7 @@ export function MaturityTransitionButton({
   lineId,
   currentAmount,
   currencyCode,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -97,9 +99,9 @@ export function MaturityTransitionButton({
     try {
       const res = await fetch(path, {
         method: "POST",
-        headers: withIdempotency(
-          { "Content-Type": "application/json" },
-          idemKey
+        headers: withRowVersion(
+          withIdempotency({ "Content-Type": "application/json" }, idemKey),
+          rowVersion
         ),
         body: JSON.stringify(body),
       });
@@ -129,7 +131,7 @@ export function MaturityTransitionButton({
       idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [action, amount, kind, lineId, overrideReason, router, idem]);
+  }, [action, amount, kind, lineId, overrideReason, router, idem, rowVersion]);
 
   return (
     <>

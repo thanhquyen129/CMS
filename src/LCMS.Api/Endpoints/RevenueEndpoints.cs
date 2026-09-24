@@ -59,20 +59,25 @@ public static class RevenueEndpoints
         revenues.MapPost("/{id:guid}/confirm", async (
             Guid id,
             ConfirmRevenueRequest? body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ConfirmRevenueCommand(id, body?.ConfirmedAmount), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ConfirmRevenueCommand(id, body?.ConfirmedAmount, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 
         revenues.MapPost("/{id:guid}/actualize", async (
             Guid id,
             ActualizeRevenueRequest? body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ActualizeRevenueCommand(id, body?.ActualAmount, body?.SourceSystem, body?.OverrideReason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ActualizeRevenueCommand(
+                id, body?.ActualAmount, body?.SourceSystem, body?.OverrideReason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 
@@ -84,6 +89,7 @@ public static class RevenueEndpoints
             CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
             var adjId = await sender.Send(
                 new AdjustRevenueCommand(
                     id,
@@ -91,7 +97,8 @@ public static class RevenueEndpoints
                     body.DeltaAmount,
                     body.Reason,
                     body.EffectiveDate,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    ifMatch.ToString()),
                 ct);
             return Results.Created($"/api/revenues/{id}/adjustments/{adjId}", new { id = adjId });
         });

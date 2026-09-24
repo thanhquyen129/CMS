@@ -13,3 +13,11 @@ export function withIdempotency(
 ): HeadersInit {
   return { ...(headers ?? {}), "Idempotency-Key": key, Accept: "application/json" };
 }
+
+export function withRowVersion(
+  headers: HeadersInit | undefined,
+  rowVersion?: string | null
+): HeadersInit {
+  if (!rowVersion) return headers ?? {};
+  return { ...(headers ?? {}), "If-Match": rowVersion };
+}

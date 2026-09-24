@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
 using LCMS.Domain.Entities;
@@ -9,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Settlements.Commands;
 
-public sealed record FinalizeCollectionAllocationCommand(Guid AllocationId) : IRequest;
+public sealed record FinalizeCollectionAllocationCommand(Guid AllocationId, string? IfMatch = null) : IRequest;
 
 public sealed class FinalizeCollectionAllocationCommandValidator
     : AbstractValidator<FinalizeCollectionAllocationCommand>
@@ -34,19 +35,22 @@ public sealed class FinalizeCollectionAllocationCommandHandler
     private readonly ICurrentUserContext _user;
     private readonly IAuditWriter _audit;
     private readonly IPeriodLockGate _periodLockGate;
+    private readonly IRowVersionGuard _versions;
 
     public FinalizeCollectionAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IAuditWriter audit,
-        IPeriodLockGate periodLockGate)
+        IPeriodLockGate periodLockGate,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _audit = audit;
         _periodLockGate = periodLockGate;
+        _versions = versions;
     }
 
     public async Task Handle(FinalizeCollectionAllocationCommand request, CancellationToken cancellationToken)
@@ -65,6 +69,8 @@ public sealed class FinalizeCollectionAllocationCommandHandler
         {
             return;
         }
+
+        _versions.EnsureCurrent(allocation, request.IfMatch);
 
         if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {

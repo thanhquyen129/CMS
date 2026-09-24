@@ -68,7 +68,8 @@ public sealed record CostDto(
     DateTimeOffset? ConfirmedAt,
     DateTimeOffset? ActualizedAt,
     IReadOnlyList<CostAdjustmentDto> Adjustments,
-    IReadOnlyList<CostAllocationDto> Allocations);
+    IReadOnlyList<CostAllocationDto> Allocations,
+    byte[] RowVersion);
 
 public sealed record CostListItemDto(
     Guid Id,
@@ -85,7 +86,8 @@ public sealed record CostListItemDto(
     Guid? VendorPartyId = null,
     decimal ExpectedAmount = 0,
     decimal? ConfirmedAmount = null,
-    decimal? ActualAmount = null);
+    decimal? ActualAmount = null,
+    byte[]? RowVersion = null);
 
 public sealed record GetCostByIdQuery(Guid Id) : IRequest<CostDto>;
 
@@ -226,7 +228,8 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             cost.ConfirmedAt,
             cost.ActualizedAt,
             adjustments,
-            allocationDtos);
+            allocationDtos,
+            cost.RowVersion);
     }
 }
 
@@ -363,7 +366,8 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, Page
                 c.VendorPartyId,
                 c.ExpectedAmount,
                 c.ConfirmedAmount,
-                c.ActualAmount))
+                c.ActualAmount,
+                c.RowVersion))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CostListItemDto>(

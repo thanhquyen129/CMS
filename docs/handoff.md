@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — CRP-06 If-Match trên lệnh tiền
+
+### User
+ok, tiếp đi chuyên gia
+
+### Answer
+Màn hình cũ không còn cộng điều chỉnh chi phí lần hai. `If-Match` (base64 `rowVersion`) lệch bản đang lưu thì 409 `concurrency_conflict`, không ghi. Áp cho điều chỉnh / xác nhận / thực tế hóa chi phí và doanh thu, phân bổ và chốt thanh toán-thu, tạo bản chốt. Tạo phân bổ đụng `row_version` của phiếu tiền để lần phân bổ sau phải tải lại. Cùng idempotency key vẫn trả id cũ trước khi xét phiên bản. Chốt phân bổ đã chốt vẫn no-op. `Concurrency:RequireIfMatch=true` trên Production; Development bỏ qua header thiếu. ADR-0036. Test: `StaleIfMatch_DoesNotApplySecondCostAdjustment` (1000+100, lần hai +50 với token cũ → vẫn 1100).
+
+### Files
+- `RowVersionGuard.cs`, `appsettings.Production.json`
+- Adjust/confirm/actualize cost+revenue, allocate/finalize payment+collection, close snapshot
+- GET DTOs `rowVersion`; web gửi `If-Match` qua BFF
+- `docs/adr/ADR-0036-money-if-match.md`
+- `CostRevenueSodWriteTests.cs`
+
 ## 2026-09-24 — CRP-05 ngưỡng phê duyệt chặn ghi nhận và chốt phân bổ chi phí
 
 ### User

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
-import { withIdempotency } from "@/lib/idempotency";
+import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 
@@ -16,6 +16,7 @@ type Props = {
   eligible: boolean;
   /** Optional short reason when blocked (VI). */
   blockedHint?: string | null;
+  rowVersion?: string | null;
 };
 
 export function CloseSnapshotButton({
@@ -24,6 +25,7 @@ export function CloseSnapshotButton({
   canRun,
   eligible,
   blockedHint,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -56,7 +58,7 @@ export function CloseSnapshotButton({
     try {
       const res = await fetch(`/bff/financial-closes/${closeId}/snapshot`, {
         method: "POST",
-        headers: withIdempotency({}, idemKey),
+        headers: withRowVersion(withIdempotency({}, idemKey), rowVersion),
       });
 
       if (res.status === 401) {
@@ -86,7 +88,7 @@ export function CloseSnapshotButton({
       idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [closeId, eligible, router, idem]);
+  }, [closeId, eligible, router, idem, rowVersion]);
 
   if (!canRun) return null;
 

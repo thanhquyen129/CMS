@@ -184,6 +184,7 @@ export default async function CollectionDetailPage({
                   allocationId={a.id}
                   amount={a.amount}
                   currencyCode={a.currencyCode}
+                  rowVersion={collection.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
               ) : null}
               {canReverseAllocation(a.allocationStatus) ? (
@@ -221,6 +222,7 @@ export default async function CollectionDetailPage({
               availableToAllocate={collection.availableToAllocate}
               currencyCode={collection.currencyCode}
               targets={targets}
+              rowVersion={collection.rowVersion}
             />
           </>
         )}

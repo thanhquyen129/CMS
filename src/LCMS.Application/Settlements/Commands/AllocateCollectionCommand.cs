@@ -15,7 +15,8 @@ public sealed record AllocateCollectionCommand(
     Guid AccountsReceivableId,
     decimal Amount,
     string? Notes,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    string? IfMatch = null) : IRequest<Guid>;
 
 public sealed class AllocateCollectionCommandValidator : AbstractValidator<AllocateCollectionCommand>
 {
@@ -43,6 +44,7 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
     private readonly IFxRateLookup _rates;
     private readonly IPeriodLockGate _periodLockGate;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IRowVersionGuard _versions;
 
     public AllocateCollectionCommandHandler(
         ILcmsDbContext db,
@@ -50,7 +52,8 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
         ISettlementFxStub fx,
         IFxRateLookup rates,
         IPeriodLockGate periodLockGate,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -58,6 +61,7 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
         _rates = rates;
         _periodLockGate = periodLockGate;
         _idempotency = idempotency;
+        _versions = versions;
     }
 
     public async Task<Guid> Handle(AllocateCollectionCommand request, CancellationToken cancellationToken)
@@ -82,6 +86,8 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
         var collection = await _db.Collections
             .FirstOrDefaultAsync(c => c.Id == request.CollectionId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy thu tiền.");
+        _versions.EnsureCurrent(collection, request.IfMatch);
+        collection.TouchRowVersion();
 
         if (collection.Status == CollectionStatuses.Cancelled)
         {

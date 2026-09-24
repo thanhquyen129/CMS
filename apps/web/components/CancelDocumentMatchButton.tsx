@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
+import { withRowVersion } from "@/lib/idempotency";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
   matchId: string;
   documentId: string;
   canCancel: boolean;
+  rowVersion?: string | null;
 };
 
 export function CancelDocumentMatchButton({
@@ -16,6 +18,7 @@ export function CancelDocumentMatchButton({
   matchId,
   documentId,
   canCancel,
+  rowVersion,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -43,10 +46,13 @@ export function CancelDocumentMatchButton({
     try {
       const res = await fetch(`/bff/document-matches/${matchId}/cancel`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withRowVersion(
+          {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          rowVersion
+        ),
         body: JSON.stringify({ reason: trimmed }),
       });
 
@@ -78,7 +84,7 @@ export function CancelDocumentMatchButton({
     } finally {
       setSubmitting(false);
     }
-  }, [documentId, matchId, reason, router]);
+  }, [documentId, matchId, reason, router, rowVersion]);
 
   if (!canCancel) return null;
 

@@ -178,10 +178,12 @@ public static class FinancialDocumentEndpoints
         matches.MapPost("/{id:guid}/cancel", async (
             Guid id,
             CancelDocumentMatchRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new CancelDocumentMatchCommand(id, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new CancelDocumentMatchCommand(id, body.Reason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

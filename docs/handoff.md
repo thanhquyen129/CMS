@@ -1,5 +1,26 @@
 # Handoff
 
+## 2026-09-24 — CRP-06 If-Match tính, gửi, hủy phân bổ và hủy phiên
+
+### User
+batch tiếp theo
+
+### Answer
+Năm lệnh còn lại của lát CRP-06 đọc `If-Match` sau khi tải dòng, trước kiểm tra trạng thái: tính phân bổ, gửi duyệt phân bổ, hủy phân bổ chi phí, hủy chia doanh thu, hủy khớp chứng từ. Token sai → 409 `concurrency_conflict`. Phiên phân bổ giữ `draft` rồi `calculated`; phiên chia vẫn chốt được (40 chia đôi, Bill kia nhận 20); phiên khớp giữ `draft`. Nút Tính / Gửi duyệt / Hủy phiên trên chi phí chung và nút Hủy phiên khớp gửi `rowVersion`. Hủy chia doanh thu chưa có nút trên UI — API vẫn chặn token sai. Development vẫn cho phép thiếu header. CRP-06 vẫn Partial: còn ghi nhận exposure và thêm/đảo chi tiết khớp. Test `StaleIfMatch_DoesNotCalculateSubmitOrCancelAllocation` (2 s), `CancelMapping_StaleIfMatch_StillAllowsFinalize` (790 ms), `CancelMatch_StaleIfMatch_LeavesTheSessionDraft` (2 s), cả ba Passed. Chưa bấm nút trên trình duyệt.
+
+### Files
+- `Costs/Commands/AllocationCommands.cs` (calculate, submit, cancel)
+- `Revenues/Commands/RevenueMappingCommands.cs` (`CancelRevenueMappingCommand`)
+- `DocumentMatches/Commands/CancelDocumentMatchCommand.cs`
+- `CostEndpoints.cs`, `RevenueEndpoints.cs`, `FinancialDocumentEndpoints.cs`
+- `AllocationSessionActions.tsx`, `CancelDocumentMatchButton.tsx`
+- `apps/web/app/costs/shared/[id]/page.tsx`
+- `apps/web/app/documents/[id]/matches/[matchId]/page.tsx`
+- `tests/LCMS.Api.Tests/AllocationSodTests.cs`
+- `tests/LCMS.Api.Tests/RevenuePackageTests.cs`
+- `tests/LCMS.Api.Tests/SprintP09ConfirmMatchSuggestTests.cs`
+- `docs/adr/ADR-0036-money-if-match.md`
+
 ## 2026-09-24 — CRP-06 If-Match điều chỉnh, xóa nợ, chốt chia doanh thu
 
 ### User

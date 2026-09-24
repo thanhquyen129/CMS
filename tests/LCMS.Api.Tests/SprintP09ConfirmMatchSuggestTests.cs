@@ -153,6 +153,33 @@ public sealed class SprintP09ConfirmMatchSuggestTests : IAsyncLifetime
         return (await res.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
     }
 
+    [Fact]
+    public async Task CancelMatch_StaleIfMatch_LeavesTheSessionDraft()
+    {
+        var tenantId = await CreateTenantAsync("TN-P09-VER", "P09 Version");
+        var billId = await CreateBillAsync(tenantId, "BL-P09-VER", "freight");
+        var docId = await ReceiveDocumentAsync(tenantId, billId, "INV-P09-VER", 100m, "payable");
+        await AddLineAsync(tenantId, docId, 100m, "Freight");
+        await AcceptDocumentAsync(tenantId, docId);
+        var matchId = await StartMatchAsync(tenantId, docId, "line_to_cost");
+
+        using var cancel = new HttpRequestMessage(HttpMethod.Post, $"/api/document-matches/{matchId}/cancel")
+        {
+            Content = JsonContent.Create(new { reason = "phiên cũ" })
+        };
+        cancel.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        cancel.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+        var blocked = await _client.SendAsync(cancel);
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        var err = await blocked.Content.ReadFromJsonAsync<CodeBody>(JsonOptions);
+        Assert.Equal("concurrency_conflict", err!.Code);
+
+        using var get = new HttpRequestMessage(HttpMethod.Get, $"/api/document-matches/{matchId}");
+        get.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var match = await (await _client.SendAsync(get)).Content.ReadFromJsonAsync<MatchDto>(JsonOptions);
+        Assert.Equal("draft", match!.MatchStatus);
+    }
+
     private async Task<Guid> CreateCostAsync(Guid tenantId, Guid billId, decimal amount)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/costs")
@@ -250,6 +277,7 @@ public sealed class SprintP09ConfirmMatchSuggestTests : IAsyncLifetime
     }
 
     private sealed record IdResponse(Guid Id);
+    private sealed record CodeBody(string Code);
 
     private sealed record MatchDto(string MatchStatus, DateTimeOffset? ConfirmedAt);
 

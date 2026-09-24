@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.DocumentMatches.Commands;
 
-public sealed record CancelDocumentMatchCommand(Guid MatchId, string Reason) : IRequest;
+public sealed record CancelDocumentMatchCommand(Guid MatchId, string Reason, string? IfMatch = null) : IRequest;
 
 public sealed class CancelDocumentMatchCommandValidator : AbstractValidator<CancelDocumentMatchCommand>
 {
@@ -28,15 +29,18 @@ public sealed class CancelDocumentMatchCommandHandler : IRequestHandler<CancelDo
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRowVersionGuard _versions;
 
     public CancelDocumentMatchCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _versions = versions;
     }
 
     public async Task Handle(CancelDocumentMatchCommand request, CancellationToken cancellationToken)
@@ -49,6 +53,7 @@ public sealed class CancelDocumentMatchCommandHandler : IRequestHandler<CancelDo
         var match = await _db.DocumentMatches
             .FirstOrDefaultAsync(m => m.Id == request.MatchId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên khớp chứng từ.");
+        _versions.EnsureCurrent(match, request.IfMatch);
 
         if (string.Equals(match.MatchStatus, DocumentMatchStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {

@@ -93,6 +93,26 @@ public sealed class RevenuePackageTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CancelMapping_StaleIfMatch_StillAllowsFinalize()
+    {
+        var tenantId = await CreateTenantAsync();
+        var a = await CreateBillAsync(tenantId, "BL-E-CAN-A");
+        var b = await CreateBillAsync(tenantId, "BL-E-CAN-B");
+        var revenueId = await CreateRevenueAsync(tenantId, a, 40m, null);
+        var mappingId = await MapEqual(tenantId, revenueId, new[] { a, b });
+
+        using var cancel = Tenant(HttpMethod.Post, $"/api/revenue-mappings/{mappingId}/cancel", tenantId);
+        cancel.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+        var blocked = await _client.SendAsync(cancel);
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        Assert.Equal("concurrency_conflict", (await blocked.Content.ReadFromJsonAsync<Err>(Json))!.Code);
+
+        await PostNoContent(tenantId, $"/api/revenue-mappings/{mappingId}/finalize");
+        var split = await GetProfit(tenantId, b, "expected");
+        Assert.Equal(20m, Assert.Single(split.ByCurrency).RevenueAmount);
+    }
+
+    [Fact]
     public async Task MarginIsNullWhenRevenueIsZero_AndFxDoesNotAddRawCurrencies()
     {
         var tenantId = await CreateTenantAsync();

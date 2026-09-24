@@ -212,7 +212,11 @@ export default async function SharedCostDetailPage({
 
         {open ? (
           <div className="cta-row" style={{ marginBottom: "1rem" }}>
-            <AllocationSessionActions allocationId={open.id} status={open.allocationStatus} />
+            <AllocationSessionActions
+              allocationId={open.id}
+              status={open.allocationStatus}
+              rowVersion={open.rowVersion}
+            />
             <FinalizeCostAllocationButton
               terms={terms}
               allocationId={open.id}

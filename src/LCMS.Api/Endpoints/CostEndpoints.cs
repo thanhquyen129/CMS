@@ -151,19 +151,22 @@ public static class CostEndpoints
             await sender.Send(new FinalizeCostAllocationCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
-        allocations.MapPost("/{id:guid}/calculate", async (Guid id, ISender sender, CancellationToken ct) =>
+        allocations.MapPost("/{id:guid}/calculate", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new CalculateCostAllocationCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new CalculateCostAllocationCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
-        allocations.MapPost("/{id:guid}/submit", async (Guid id, ISender sender, CancellationToken ct) =>
+        allocations.MapPost("/{id:guid}/submit", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new SubmitCostAllocationCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new SubmitCostAllocationCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
-        allocations.MapPost("/{id:guid}/cancel", async (Guid id, ISender sender, CancellationToken ct) =>
+        allocations.MapPost("/{id:guid}/cancel", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new CancelCostAllocationCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new CancelCostAllocationCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

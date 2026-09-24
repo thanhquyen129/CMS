@@ -494,17 +494,19 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
     }
 }
 
-public sealed record CalculateCostAllocationCommand(Guid AllocationId) : IRequest;
+public sealed record CalculateCostAllocationCommand(Guid AllocationId, string? IfMatch = null) : IRequest;
 
 public sealed class CalculateCostAllocationCommandHandler : IRequestHandler<CalculateCostAllocationCommand>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly IRowVersionGuard _versions;
 
-    public CalculateCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenant)
+    public CalculateCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenant, IRowVersionGuard versions)
     {
         _db = db;
         _tenant = tenant;
+        _versions = versions;
     }
 
     public async Task Handle(CalculateCostAllocationCommand request, CancellationToken cancellationToken)
@@ -516,6 +518,7 @@ public sealed class CalculateCostAllocationCommandHandler : IRequestHandler<Calc
 
         var allocation = await _db.CostAllocations.FirstOrDefaultAsync(a => a.Id == request.AllocationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên phân bổ.");
+        _versions.EnsureCurrent(allocation, request.IfMatch);
         if (!string.Equals(allocation.AllocationStatus, CostAllocationStatuses.Draft, StringComparison.OrdinalIgnoreCase))
         {
             throw new ConflictAppException("Chỉ tính phiên phân bổ đang nháp.");
@@ -531,19 +534,25 @@ public sealed class CalculateCostAllocationCommandHandler : IRequestHandler<Calc
     }
 }
 
-public sealed record SubmitCostAllocationCommand(Guid AllocationId) : IRequest;
+public sealed record SubmitCostAllocationCommand(Guid AllocationId, string? IfMatch = null) : IRequest;
 
 public sealed class SubmitCostAllocationCommandHandler : IRequestHandler<SubmitCostAllocationCommand>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly ICurrentUserContext _user;
+    private readonly IRowVersionGuard _versions;
 
-    public SubmitCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenant, ICurrentUserContext user)
+    public SubmitCostAllocationCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenant,
+        ICurrentUserContext user,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenant = tenant;
         _user = user;
+        _versions = versions;
     }
 
     public async Task Handle(SubmitCostAllocationCommand request, CancellationToken cancellationToken)
@@ -555,6 +564,7 @@ public sealed class SubmitCostAllocationCommandHandler : IRequestHandler<SubmitC
 
         var allocation = await _db.CostAllocations.FirstOrDefaultAsync(a => a.Id == request.AllocationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên phân bổ.");
+        _versions.EnsureCurrent(allocation, request.IfMatch);
         if (!string.Equals(allocation.AllocationStatus, CostAllocationStatuses.Calculated, StringComparison.OrdinalIgnoreCase))
         {
             throw new ConflictAppException("Chỉ gửi duyệt phiên đã tính.");
@@ -588,17 +598,19 @@ public sealed class SubmitCostAllocationCommandHandler : IRequestHandler<SubmitC
     }
 }
 
-public sealed record CancelCostAllocationCommand(Guid AllocationId) : IRequest;
+public sealed record CancelCostAllocationCommand(Guid AllocationId, string? IfMatch = null) : IRequest;
 
 public sealed class CancelCostAllocationCommandHandler : IRequestHandler<CancelCostAllocationCommand>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly IRowVersionGuard _versions;
 
-    public CancelCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenant)
+    public CancelCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenant, IRowVersionGuard versions)
     {
         _db = db;
         _tenant = tenant;
+        _versions = versions;
     }
 
     public async Task Handle(CancelCostAllocationCommand request, CancellationToken cancellationToken)
@@ -610,6 +622,7 @@ public sealed class CancelCostAllocationCommandHandler : IRequestHandler<CancelC
 
         var allocation = await _db.CostAllocations.FirstOrDefaultAsync(a => a.Id == request.AllocationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên phân bổ.");
+        _versions.EnsureCurrent(allocation, request.IfMatch);
         if (!CostAllocationStatuses.IsOpen(allocation.AllocationStatus))
         {
             throw new ConflictAppException("Không hủy phiên đã chốt.");

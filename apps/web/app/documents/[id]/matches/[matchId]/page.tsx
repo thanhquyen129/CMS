@@ -406,6 +406,7 @@ export default async function DocumentMatchSessionPage({
             matchId={match.id}
             documentId={doc.id}
             canCancel={canCancel}
+            rowVersion={match.rowVersion}
           />
           <Link className="btn btn-ghost" href={`/documents/${id}`}>
             Xem chứng từ (trạng thái khớp)

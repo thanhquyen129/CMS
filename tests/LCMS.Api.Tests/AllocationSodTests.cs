@@ -76,6 +76,46 @@ public sealed class AllocationSodTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task StaleIfMatch_DoesNotCalculateSubmitOrCancelAllocation()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billA = await CreateBillAsync(tenantId, "BL-SOD-STEP-A");
+        var billB = await CreateBillAsync(tenantId, "BL-SOD-STEP-B");
+        var sharedId = await CreateSharedAsync(tenantId, 60m);
+        var allocationId = await Allocate(tenantId, null, sharedId, "equal", new[] { billA, billB });
+
+        using (var calc = Tenant(HttpMethod.Post, $"/api/cost-allocations/{allocationId}/calculate", tenantId))
+        {
+            calc.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+            var blocked = await _client.SendAsync(calc);
+            Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+            var err = await blocked.Content.ReadFromJsonAsync<ErrorBody>(Json);
+            Assert.Equal("concurrency_conflict", err!.Code);
+        }
+
+        Assert.Equal("draft", (await GetCost(tenantId, sharedId)).Allocations.Single().AllocationStatus);
+
+        using (var calc = Tenant(HttpMethod.Post, $"/api/cost-allocations/{allocationId}/calculate", tenantId))
+        {
+            (await _client.SendAsync(calc)).EnsureSuccessStatusCode();
+        }
+
+        using (var submit = Tenant(HttpMethod.Post, $"/api/cost-allocations/{allocationId}/submit", tenantId))
+        {
+            submit.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+            Assert.Equal(HttpStatusCode.Conflict, (await _client.SendAsync(submit)).StatusCode);
+        }
+
+        using (var cancel = Tenant(HttpMethod.Post, $"/api/cost-allocations/{allocationId}/cancel", tenantId))
+        {
+            cancel.Headers.TryAddWithoutValidation("If-Match", "not-a-version");
+            Assert.Equal(HttpStatusCode.Conflict, (await _client.SendAsync(cancel)).StatusCode);
+        }
+
+        Assert.Equal("calculated", (await GetCost(tenantId, sharedId)).Allocations.Single().AllocationStatus);
+    }
+
+    [Fact]
     public async Task Finalize_WithoutUserHeader_StillAllowed_ForBootstrapTests()
     {
         var tenantId = await CreateTenantAsync();

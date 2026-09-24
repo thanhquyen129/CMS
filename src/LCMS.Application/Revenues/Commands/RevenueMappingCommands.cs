@@ -350,17 +350,22 @@ public sealed class FinalizeRevenueMappingCommandHandler : IRequestHandler<Final
     }
 }
 
-public sealed record CancelRevenueMappingCommand(Guid MappingId) : IRequest;
+public sealed record CancelRevenueMappingCommand(Guid MappingId, string? IfMatch = null) : IRequest;
 
 public sealed class CancelRevenueMappingCommandHandler : IRequestHandler<CancelRevenueMappingCommand>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IRowVersionGuard _versions;
 
-    public CancelRevenueMappingCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CancelRevenueMappingCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _versions = versions;
     }
 
     public async Task Handle(CancelRevenueMappingCommand request, CancellationToken cancellationToken)
@@ -373,6 +378,7 @@ public sealed class CancelRevenueMappingCommandHandler : IRequestHandler<CancelR
         var mapping = await _db.RevenueMappings
             .FirstOrDefaultAsync(m => m.Id == request.MappingId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phiên chia doanh thu.");
+        _versions.EnsureCurrent(mapping, request.IfMatch);
         if (mapping.MappingStatus != CostAllocationStatuses.Draft)
         {
             throw new ConflictAppException("Chỉ hủy phiên chia đang nháp.");

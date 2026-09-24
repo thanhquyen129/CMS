@@ -157,9 +157,10 @@ public static class RevenueEndpoints
             await sender.Send(new FinalizeRevenueMappingCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
-        mappings.MapPost("/{id:guid}/cancel", async (Guid id, ISender sender, CancellationToken ct) =>
+        mappings.MapPost("/{id:guid}/cancel", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
-            await sender.Send(new CancelRevenueMappingCommand(id), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new CancelRevenueMappingCommand(id, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

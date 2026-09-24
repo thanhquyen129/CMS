@@ -7,6 +7,7 @@ import {
   AdjustmentHistoryTable,
   LineDetailBackLink,
 } from "@/components/AdjustmentHistoryTable";
+import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { MapRevenueForm } from "@/components/MapRevenueForm";
 import { MaturityTransitionButton } from "@/components/MaturityTransitionButton";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -115,6 +116,8 @@ export default async function RevenueDetailPage({
             <dd>{revenue.effectiveDate}</dd>
           </div>
         </dl>
+
+        <FieldOwnershipPanel objectType="revenue" objectId={revenue.id} />
 
         {revenue.recordStatus === "active" ? (
           <p className="cta-row">

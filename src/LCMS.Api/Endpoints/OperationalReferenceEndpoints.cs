@@ -1,4 +1,5 @@
 using LCMS.Application.Bills.Queries;
+using LCMS.Application.Ownership.Queries;
 using LCMS.Application.OperationalLinks.Commands;
 using LCMS.Application.OperationalReferences;
 using LCMS.Application.Orders.Commands;
@@ -304,6 +305,16 @@ public static class OperationalReferenceEndpoints
             var hits = await sender.Send(new SearchGlobalQuery(q ?? string.Empty), ct);
             return Results.Ok(hits);
         }).WithTags("Search");
+
+        app.MapGet("/api/field-ownerships", async (
+            string objectType,
+            Guid objectId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var rows = await sender.Send(new GetFieldOwnershipQuery(objectType, objectId), ct);
+            return Results.Ok(rows);
+        }).WithTags("FieldOwnership");
 
         var imports = app.MapGroup("/api/operational-import").WithTags("OperationalImport");
         imports.MapPost("/preview", async (OperationalImportRequest body, ISender sender, CancellationToken ct) =>

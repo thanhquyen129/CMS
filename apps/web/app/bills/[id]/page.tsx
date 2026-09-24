@@ -6,6 +6,7 @@ import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
+import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { PartySnapshotPanel } from "@/components/PartySnapshotPanel";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -353,6 +354,7 @@ export default async function BillDetailPage({
 
             <h2 className="section-title">Ngữ cảnh vận hành</h2>
             <OperationalContextGrid row={bill} />
+            <FieldOwnershipPanel objectType="bill" objectId={bill.id} />
             <h2 className="section-title">Snapshot đối tác</h2>
             <PartySnapshotPanel billId={bill.id} />
 

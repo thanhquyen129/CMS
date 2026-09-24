@@ -623,6 +623,54 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task FieldOwnership_HidesRevenueOwnerFromCostAccountant()
+    {
+        var tenantId = await CreateTenantAsync("TN-OWN-SOD", "Own SoD");
+        var billId = await CreateBillAsync(tenantId, "BL-OWN-SOD");
+        var costUser = await UserInRoleAsync(tenantId, "cost-own@lcms.local", "CostAccountant");
+        var revenueUser = await UserInRoleAsync(tenantId, "rev-own@lcms.local", "RevenueAccountant");
+
+        Guid revenueId;
+        using (var create = new HttpRequestMessage(HttpMethod.Post, "/api/revenues")
+        {
+            Content = JsonContent.Create(new
+            {
+                billId,
+                amount = 500m,
+                currencyCode = "VND",
+                revenueTypeCode = "FREIGHT",
+                actualRevenueOwner = "erp-ar"
+            })
+        })
+        {
+            create.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(create);
+            created.EnsureSuccessStatusCode();
+            revenueId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        var costRows = await OwnershipAsync(tenantId, "revenue", revenueId, costUser);
+        Assert.DoesNotContain(costRows, r => r.FieldName == "actual_revenue");
+
+        var revenueRows = await OwnershipAsync(tenantId, "revenue", revenueId, revenueUser);
+        var owned = Assert.Single(revenueRows, r => r.FieldName == "actual_revenue");
+        Assert.Equal("erp-ar", owned.OwnerSystem);
+        Assert.Null(owned.OverrideReason);
+    }
+
+    private async Task<List<OwnershipBody>> OwnershipAsync(Guid tenantId, string objectType, Guid objectId, Guid userId)
+    {
+        using var req = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/field-ownerships?objectType={objectType}&objectId={objectId}");
+        req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        req.Headers.Add("X-User-Id", userId.ToString());
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<List<OwnershipBody>>(JsonOptions)) ?? [];
+    }
+
+    [Fact]
     public async Task ProductionFxFlag_RejectsCrossCurrencyWithoutDatedRate()
     {
         await using var factory = new NoStubFxFactory();
@@ -720,6 +768,7 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     private sealed record CostVersionBody(decimal Amount, string RowVersion);
     private sealed record CloseVersionBody(string Status, string RowVersion);
     private sealed record SearchHit(string EntityType, Guid Id, string Code);
+    private sealed record OwnershipBody(string FieldName, string OwnerSystem, string? OverrideReason);
     private sealed record AuditRow(string Action, Guid ObjectId);
     private sealed record CostBody(decimal Amount);
     private sealed record RoleDto(Guid Id, string Code);

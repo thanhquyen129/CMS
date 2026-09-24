@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { LinkBillToRefForm } from "@/components/LinkBillToRefForm";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -131,6 +132,18 @@ export default async function OperationalDetailPage({
           <>
             <h2 className="section-title">Ngữ cảnh vận hành</h2>
             <OperationalContextGrid row={row} />
+            <FieldOwnershipPanel
+              objectType={
+                kind === "orders"
+                  ? "order"
+                  : kind === "shipments"
+                    ? "shipment"
+                    : kind === "legs"
+                      ? "leg"
+                      : "movement"
+              }
+              objectId={id}
+            />
           </>
         ) : null}
 

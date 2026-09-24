@@ -112,6 +112,42 @@ public sealed class OperationalCargoTests : IAsyncLifetime
         Assert.Contains(events!, e => e.Action == "link.create" && e.ObjectId == linkId);
     }
 
+    [Fact]
+    public async Task FieldOwnership_ReturnsOwnerAndOverrideReason_AndHidesOtherTenant()
+    {
+        var tenantA = await CreateTenantAsync();
+        var tenantB = await CreateTenantAsync();
+        using var commit = WithTenant(HttpMethod.Post, "/api/operational-import/commit", tenantA);
+        commit.Content = JsonContent.Create(new
+        {
+            sourceSystem = "tms-b",
+            rows = new[]
+            {
+                new { objectType = "bill", businessNo = "BL-OWN-GET", externalId = "ext-own-get", originCode = "SGN", destinationCode = "LAX" }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, (await _client.SendAsync(commit)).StatusCode);
+
+        var billId = (await ListBills(tenantA, "BL-OWN-GET")).Single(b => b.BillNo == "BL-OWN-GET").Id;
+        Assert.Equal(HttpStatusCode.NoContent, await PatchContext(tenantA, billId, new
+        {
+            originCode = "HAN",
+            context = new { chargeableOverrideReason = "Nguồn TMS ghi sai điểm đi" }
+        }));
+
+        using var get = WithTenant(HttpMethod.Get, $"/api/field-ownerships?objectType=bill&objectId={billId}", tenantA);
+        var getRes = await _client.SendAsync(get);
+        getRes.EnsureSuccessStatusCode();
+        var rows = await getRes.Content.ReadFromJsonAsync<List<OwnershipBody>>(Json);
+        var origin = Assert.Single(rows!, r => r.FieldName == "origin_code");
+        Assert.Equal("tms-b", origin.OwnerSystem);
+        Assert.Equal("Nguồn TMS ghi sai điểm đi", origin.OverrideReason);
+
+        using var other = WithTenant(HttpMethod.Get, $"/api/field-ownerships?objectType=bill&objectId={billId}", tenantB);
+        var hidden = await (await _client.SendAsync(other)).Content.ReadFromJsonAsync<List<OwnershipBody>>(Json);
+        Assert.Empty(hidden!);
+    }
+
     private async Task<HttpStatusCode> PatchContext(Guid tenantId, Guid billId, object body)
     {
         using var req = WithTenant(HttpMethod.Patch, $"/api/bills/{billId}/context", tenantId);
@@ -170,4 +206,5 @@ public sealed class OperationalCargoTests : IAsyncLifetime
     private sealed record PreviewBody(bool CanCommit, List<IssueBody> Issues);
     private sealed record IssueBody(int Row, string Field, string Message);
     private sealed record AuditBody(string Action, Guid ObjectId);
+    private sealed record OwnershipBody(string FieldName, string OwnerSystem, string? OverrideReason);
 }

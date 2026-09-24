@@ -1,5 +1,21 @@
 # Handoff
 
+## 2026-09-24 — CRP-15 không ký 09B, CRP-16 vòng focus
+
+### User
+ok tiếp
+
+### Answer
+Sheet `Final Traceability` của 09B: 30/30 DEV Status = DONE, Reviewer Status = «Chờ review». Không sửa cột Reviewer. Bản giữ chỗ: `docs/uat/09B-reviewer-hold.md` (TLS, ảnh UI, UX-06, Tab trên host, idempotency xác nhận/thực tế). CRP-15 vẫn Open. Vòng focus bàn phím: nút/liên kết viền trắng 3px + bóng `#0b3a75`; ô nhập viền `#0b3a75` 2px. Đăng nhập sai thì focus vào `#login-error`. Đường Tab Đăng nhập → Bill → Chi phí → Chốt ghi ở `docs/uat/ux-10-keyboard.md`. UX-10 vẫn Not run vì chưa bấm Tab trên host. Test `PrimaryControls_KeepASolidFocusRing` Passed (13 ms). Chưa xem vòng focus trên trình duyệt.
+
+### Files
+- `docs/uat/09B-reviewer-hold.md`
+- `docs/uat/ux-10-keyboard.md`
+- `docs/uat/UAT-PIXEL-PERFECT-WAVE2.md`
+- `apps/web/app/globals.css`
+- `apps/web/app/login/page.tsx`
+- `tests/LCMS.Api.Tests/Ux10FocusRingTests.cs`
+
 ## 2026-09-24 — CRP-14 cổng đóng UAT N1–N5
 
 ### User

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type LoginState = "idle" | "loading" | "error";
@@ -11,6 +11,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [state, setState] = useState<LoginState>("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (state === "error") {
+      errorRef.current?.focus();
+    }
+  }, [state, message]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -61,7 +68,13 @@ export default function LoginPage() {
         <p className="lede">Đăng nhập để mở shell kiểm soát tài chính.</p>
 
         {state === "error" && message ? (
-          <div className="alert alert-error" role="alert">
+          <div
+            ref={errorRef}
+            id="login-error"
+            className="alert alert-error"
+            role="alert"
+            tabIndex={-1}
+          >
             {message}
           </div>
         ) : null}
@@ -85,6 +98,8 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={state === "loading"}
                 required
+                aria-invalid={state === "error"}
+                aria-describedby={state === "error" ? "login-error" : undefined}
               />
             </div>
             <div className="field">
@@ -98,6 +113,8 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={state === "loading"}
                 required
+                aria-invalid={state === "error"}
+                aria-describedby={state === "error" ? "login-error" : undefined}
               />
             </div>
           </div>

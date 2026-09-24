@@ -2705,9 +2705,10 @@ form.filter-bar {
 .search-bar input[type="search"]:focus,
 .filter-bar input[type="search"]:focus,
 .filter-bar input[type="text"]:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-ring);
+  outline: 2px solid #0b3a75;
+  outline-offset: 1px;
+  border-color: #0b3a75;
+  box-shadow: none;
 }
 
 form.filter-bar-labeled {
@@ -3012,6 +3013,15 @@ form.filter-bar-labeled input[type="search"] {
 
 .btn:disabled { opacity: 0.65; cursor: wait; box-shadow: none; }
 
+.btn:focus-visible,
+a:focus-visible,
+button:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 1px;
+  box-shadow: 0 0 0 5px #0b3a75;
+}
+
 .btn-sm {
   padding: 0.4rem 0.85rem;
   font-size: 0.85rem;
@@ -3162,9 +3172,10 @@ form.filter-bar-labeled input[type="search"] {
 .field input:not([type="checkbox"]):not([type="radio"]):focus,
 .field select:focus,
 .field textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-ring);
+  outline: 2px solid #0b3a75;
+  outline-offset: 1px;
+  border-color: #0b3a75;
+  box-shadow: none;
 }
 
 .field input:not([type="checkbox"]):not([type="radio"]):disabled,
@@ -3446,7 +3457,8 @@ fieldset.group-box .form-grid {
 .vn-bank-ac-option:hover,
 .vn-bank-ac-option:focus-visible {
   background: var(--accent-soft);
-  outline: none;
+  outline: 2px solid #0b3a75;
+  outline-offset: 1px;
 }
 
 .vn-bank-ac-text {

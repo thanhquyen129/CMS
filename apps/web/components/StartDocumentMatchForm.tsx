@@ -8,6 +8,8 @@ import {
   matchMethodLabel,
   type MatchMethod,
 } from "@/lib/document-matches";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -27,6 +29,7 @@ export function StartDocumentMatchForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("doc-match-start");
 
   const matchLabel = term(terms, "MATCHED", "Khớp");
   const costLabel = term(terms, "COST", "Chi phí");
@@ -34,8 +37,11 @@ export function StartDocumentMatchForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const matchMethod = String(fd.get("matchMethod") ?? "").trim();
@@ -44,16 +50,17 @@ export function StartDocumentMatchForm({
     if (!MATCH_METHODS.includes(matchMethod as MatchMethod)) {
       setError("Chọn phương thức khớp hợp lệ.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
     try {
       const res = await fetch("/bff/document-matches", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          idemKey
+        ),
         body: JSON.stringify({
           primaryDocumentId: documentId,
           matchMethod,
@@ -86,6 +93,7 @@ export function StartDocumentMatchForm({
         return;
       }
 
+      succeeded = true;
       startTransition(() => {
         router.push(`/documents/${documentId}/matches/${body.id}`);
         router.refresh();
@@ -93,6 +101,7 @@ export function StartDocumentMatchForm({
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

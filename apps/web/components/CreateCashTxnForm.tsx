@@ -4,7 +4,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "payment" | "collection";
@@ -26,8 +27,8 @@ export function CreateCashTxnForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
-
   const isPayment = kind === "payment";
+  const idem = useIdempotency(isPayment ? "payment" : "collection");
   const label = isPayment
     ? term(terms, "PAYMENT", "Thanh toán")
     : term(terms, "COLLECTION", "Thu tiền");
@@ -39,8 +40,11 @@ export function CreateCashTxnForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const amountRaw = String(fd.get("amount") ?? "").trim();
@@ -48,6 +52,7 @@ export function CreateCashTxnForm({
     if (!Number.isFinite(amount) || amount <= 0) {
       setError("Số tiền phải lớn hơn 0.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -75,7 +80,7 @@ export function CreateCashTxnForm({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey(isPayment ? "payment" : "collection")
+          idemKey
         ),
         body: JSON.stringify(body),
       });
@@ -99,6 +104,7 @@ export function CreateCashTxnForm({
       }
 
       const created = (await res.json().catch(() => ({}))) as { id?: string };
+      succeeded = true;
       if (created.id) {
         startTransition(() => router.push(`${detailBase}/${created.id}`));
       } else {
@@ -112,6 +118,7 @@ export function CreateCashTxnForm({
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

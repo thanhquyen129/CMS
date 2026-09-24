@@ -4,7 +4,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -21,6 +22,7 @@ export function CreateSharedCostForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("shared-cost");
 
   const costLabel = term(terms, "COST", "Chi phí");
   const sharedLabel = term(terms, "ATTRIBUTION_SHARED", "Chung");
@@ -31,9 +33,11 @@ export function CreateSharedCostForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (submitting || isPending) return;
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const amountRaw = String(fd.get("amount") ?? "").trim();
@@ -41,6 +45,7 @@ export function CreateSharedCostForm({
     if (!Number.isFinite(amount) || amount < 0) {
       setError("Số tiền không hợp lệ.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -64,7 +69,7 @@ export function CreateSharedCostForm({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey("shared-cost")
+          idemKey
         ),
         body: JSON.stringify(body),
       });
@@ -91,11 +96,13 @@ export function CreateSharedCostForm({
 
       const created = (await res.json().catch(() => ({}))) as { id?: string };
       const next = created.id ? `/costs/shared/${created.id}` : "/costs/shared";
+      succeeded = true;
       startTransition(() => router.push(next));
       router.refresh();
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

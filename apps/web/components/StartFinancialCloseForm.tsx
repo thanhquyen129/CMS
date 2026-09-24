@@ -3,7 +3,8 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -22,6 +23,7 @@ export function StartFinancialCloseForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("close-start");
   const [scopeType, setScopeType] = useState(
     defaultScopeType === "bill" ? "bill" : "period"
   );
@@ -32,9 +34,11 @@ export function StartFinancialCloseForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (submitting || isPending) return;
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const scope = String(fd.get("scopeType") ?? "period").trim();
@@ -42,6 +46,7 @@ export function StartFinancialCloseForm({
     if (scope === "bill" && !scopeIdRaw) {
       setError(`Chốt theo ${billLabel} cần UUID ${billLabel}.`);
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -63,7 +68,7 @@ export function StartFinancialCloseForm({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey("close-start")
+          idemKey
         ),
         body: JSON.stringify(body),
       });
@@ -87,6 +92,7 @@ export function StartFinancialCloseForm({
       }
 
       const created = (await res.json().catch(() => ({}))) as { id?: string };
+      succeeded = true;
       if (created.id) {
         startTransition(() =>
           router.push(`/financial-closes/${created.id}`)
@@ -98,6 +104,7 @@ export function StartFinancialCloseForm({
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

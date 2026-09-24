@@ -1,5 +1,18 @@
 # Handoff
 
+## 2026-09-24 — CRP-04 Idempotency client trên lệnh tạo tiền
+
+### User
+ok, tiếp
+
+### Answer
+Form tạo chi phí / chi phí chung / doanh thu / thanh toán / thu / mở chốt giữ một `Idempotency-Key` đến khi thành công và khóa cú bấm đôi trong cùng nhịp. Ghi nhận AP/AR, nhận chứng từ, mở phiên khớp trước đó không gửi key — giờ có. BFF `forwardApiMutation` đã chuyển header. Nút xác nhận/phân bổ/chốt vẫn sinh key mới mỗi lần; server chưa dedupe các lệnh đó.
+
+### Files
+- `apps/web/lib/use-idempotency.ts`
+- CreateCost/Revenue/SharedCost, CreateCashTxn, StartFinancialClose
+- RecognizeExposureForm, ReceiveDocumentForm, StartDocumentMatchForm
+
 ## 2026-09-24 — CRP thứ tự khóa + SoD ghi tiền + FX production
 
 ### User

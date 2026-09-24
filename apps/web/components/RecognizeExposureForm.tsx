@@ -3,6 +3,8 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 
@@ -31,8 +33,8 @@ export function RecognizeExposureForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
-
   const isPayable = kind === "payable";
+  const idem = useIdempotency(isPayable ? "recognize-ap" : "recognize-ar");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const costLabel = term(terms, "COST", "Chi phí");
@@ -42,8 +44,11 @@ export function RecognizeExposureForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const amountRaw = String(fd.get("amount") ?? "").trim();
@@ -51,6 +56,7 @@ export function RecognizeExposureForm({
     if (!Number.isFinite(amount) || amount <= 0) {
       setError("Số tiền ghi nhận phải lớn hơn 0.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
     if (amount > openAmount + 0.0000001) {
@@ -58,6 +64,7 @@ export function RecognizeExposureForm({
         `Số ghi nhận không được vượt số còn mở (${formatMoney(openAmount, currencyCode)}).`
       );
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -75,10 +82,10 @@ export function RecognizeExposureForm({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          idemKey
+        ),
         body: JSON.stringify(body),
       });
 
@@ -102,6 +109,7 @@ export function RecognizeExposureForm({
         return;
       }
 
+      succeeded = true;
       if (billId) {
         startTransition(() => router.push(`/bills/${billId}`));
       } else {
@@ -113,6 +121,7 @@ export function RecognizeExposureForm({
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

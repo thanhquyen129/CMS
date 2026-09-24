@@ -4,6 +4,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Props = {
@@ -19,6 +21,7 @@ export function ReceiveDocumentForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("doc-receive");
 
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
   const receivedLabel = term(terms, "RECEIVED", "Đã nhận");
@@ -28,8 +31,11 @@ export function ReceiveDocumentForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const totalRaw = String(fd.get("totalAmount") ?? "").trim();
@@ -37,6 +43,7 @@ export function ReceiveDocumentForm({
     if (!Number.isFinite(totalAmount) || totalAmount < 0) {
       setError("Tổng tiền không hợp lệ.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -62,10 +69,10 @@ export function ReceiveDocumentForm({
     try {
       const res = await fetch("/bff/financial-documents", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: withIdempotency(
+          { "Content-Type": "application/json" },
+          idemKey
+        ),
         body: JSON.stringify(body),
       });
 
@@ -90,6 +97,7 @@ export function ReceiveDocumentForm({
       }
 
       const created = (await res.json().catch(() => ({}))) as { id?: string };
+      succeeded = true;
       if (created.id) {
         startTransition(() => router.push(`/documents/${created.id}`));
       } else {
@@ -99,6 +107,7 @@ export function ReceiveDocumentForm({
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

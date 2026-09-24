@@ -4,7 +4,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatApiErrorMessage, readApiErrorBody } from "@/lib/api-error";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -23,6 +24,7 @@ export function CreateRevenueForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("rev-create");
 
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
   const billLabel = term(terms, "BILL", "Bill");
@@ -32,9 +34,11 @@ export function CreateRevenueForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (submitting || isPending) return;
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const amountRaw = String(fd.get("amount") ?? "").trim();
@@ -42,6 +46,7 @@ export function CreateRevenueForm({
     if (!Number.isFinite(amount) || amount < 0) {
       setError("Số tiền không hợp lệ.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -67,7 +72,7 @@ export function CreateRevenueForm({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey("rev-create")
+          idemKey
         ),
         body: JSON.stringify(body),
       });
@@ -92,11 +97,13 @@ export function CreateRevenueForm({
         return;
       }
 
+      succeeded = true;
       startTransition(() => router.push(`/bills/${billId}`));
       router.refresh();
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

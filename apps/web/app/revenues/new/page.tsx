@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { BillPickTable } from "@/components/BillPickTable";
 import { CreateRevenueForm } from "@/components/CreateRevenueForm";
-import { ListPageHeader } from "@/components/list/ListPageHeader";
+import { FilterBar, ListPageHeader } from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { getBill, listBills } from "@/lib/bills";
@@ -109,25 +109,20 @@ export default async function NewRevenuePage({
           <CreateRevenueForm terms={terms} billId={billId} />
         ) : (
           <>
-            <form className="filter-bar" method="get" action="/revenues/new">
-              <label className="field grow">
-                <span className="sr-only">Tìm {billLabel}</span>
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={q ?? ""}
-                  placeholder={`Tìm theo số ${billLabel}, khách hàng, tuyến…`}
-                />
-              </label>
-              <button type="submit" className="btn">
-                Tìm
-              </button>
-              {q ? (
-                <Link className="btn btn-ghost" href="/revenues/new">
-                  Xóa lọc
-                </Link>
-              ) : null}
-            </form>
+            <FilterBar
+              action="/revenues/new"
+              submitLabel="Tìm"
+              resetHref={q ? "/revenues/new" : undefined}
+              fields={[
+                {
+                  kind: "search",
+                  name: "q",
+                  label: `Tìm ${billLabel}`,
+                  placeholder: `Tìm theo số ${billLabel}, khách hàng, tuyến…`,
+                  defaultValue: q ?? "",
+                },
+              ]}
+            />
             {bills.ok ? (
               <BillPickTable
                 bills={bills.data.items}

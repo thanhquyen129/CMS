@@ -2688,9 +2688,13 @@ form.filter-bar {
 .search-bar input[type="search"],
 .filter-bar input[type="search"],
 .filter-bar input[type="text"] {
-  flex: 1 1 220px;
+  flex: 1 1 12rem;
+  align-self: center;
   min-width: 180px;
+  height: 2.5rem;
   min-height: 2.5rem;
+  max-height: 2.75rem;
+  appearance: none;
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   padding: 0.55rem 1rem;

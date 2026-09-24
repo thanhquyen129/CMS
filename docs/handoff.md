@@ -1,5 +1,17 @@
 # Handoff
 
+## 2026-09-24 — Ô tìm Bill trên Tạo doanh thu bị kéo cao
+
+### User
+Form tạo doanh thu, ô tìm kiếm đang hiển thị lỗi.
+
+### Answer
+Ô tìm bọc trong `label.field` (flex cột). `flex: 1 1 220px` trên `input[type=search]` thành chiều cao, hộp viền trống nằm trên ô gõ. Đổi sang `FilterBar` (hàng ngang, nút Tìm cạnh ô). CSS search/filter khóa `max-height: 2.75rem` và `appearance: none`.
+
+### Files
+- `apps/web/app/revenues/new/page.tsx`
+- `apps/web/app/globals.css`
+
 ## 2026-09-24 — CRP-07 tìm kiếm đa thực thể
 
 ### User

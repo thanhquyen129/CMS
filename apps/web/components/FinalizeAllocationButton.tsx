@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Kind = "payment" | "collection";
@@ -30,6 +31,7 @@ export function FinalizeAllocationButton({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("cash-alloc-fin");
 
   const finalizeLabel = term(terms, "ALLOCATION_FINALIZED", "Đã chốt phân bổ");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
@@ -42,8 +44,11 @@ export function FinalizeAllocationButton({
   }, [submitting]);
 
   const runFinalize = useCallback(async () => {
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setSubmitting(true);
     setError(null);
+    let succeeded = false;
     const endpoint =
       kind === "payment"
         ? `/bff/payment-allocations/${allocationId}/finalize`
@@ -52,7 +57,7 @@ export function FinalizeAllocationButton({
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: withIdempotency({}, newIdempotencyKey("cash-alloc-fin")),
+        headers: withIdempotency({}, idemKey),
       });
 
       if (res.status === 401) {
@@ -71,14 +76,16 @@ export function FinalizeAllocationButton({
         return;
       }
 
+      succeeded = true;
       setOpen(false);
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [allocationId, kind, router]);
+  }, [allocationId, idem, kind, router]);
 
   return (
     <>

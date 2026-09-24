@@ -42,11 +42,18 @@ public static class SettlementEndpoints
         payments.MapPost("/{id:guid}/allocations", async (
             Guid id,
             AllocatePaymentRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var allocationId = await sender.Send(
-                new AllocatePaymentCommand(id, body.AccountsPayableId, body.Amount, body.Notes),
+                new AllocatePaymentCommand(
+                    id,
+                    body.AccountsPayableId,
+                    body.Amount,
+                    body.Notes,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/payment-allocations/{allocationId}", new { id = allocationId });
         });
@@ -103,11 +110,18 @@ public static class SettlementEndpoints
         collections.MapPost("/{id:guid}/allocations", async (
             Guid id,
             AllocateCollectionRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var allocationId = await sender.Send(
-                new AllocateCollectionCommand(id, body.AccountsReceivableId, body.Amount, body.Notes),
+                new AllocateCollectionCommand(
+                    id,
+                    body.AccountsReceivableId,
+                    body.Amount,
+                    body.Notes,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/collection-allocations/{allocationId}", new { id = allocationId });
         });

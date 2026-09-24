@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 export type AllocateTargetOption = {
@@ -40,6 +41,7 @@ export function AllocateCashForm({
   const [isPending, startTransition] = useTransition();
 
   const isPayment = kind === "payment";
+  const idem = useIdempotency(isPayment ? "pay-alloc" : "coll-alloc");
   const allocLabel = isPayment
     ? term(terms, "PAYMENT_ALLOCATION", "Phân bổ thanh toán")
     : term(terms, "COLLECTION_ALLOCATION", "Phân bổ thu tiền");
@@ -72,8 +74,11 @@ export function AllocateCashForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const fd = new FormData(e.currentTarget);
     const targetId = String(fd.get("targetId") ?? "").trim();
@@ -82,11 +87,13 @@ export function AllocateCashForm({
     if (!targetId) {
       setError(`Chọn ${isPayment ? apLabel : arLabel}.`);
       setSubmitting(false);
+      idem.release(false);
       return;
     }
     if (!Number.isFinite(amount) || amount <= 0) {
       setError("Số phân bổ phải lớn hơn 0.");
       setSubmitting(false);
+      idem.release(false);
       return;
     }
     if (amount > availableToAllocate + 1e-9) {
@@ -94,6 +101,7 @@ export function AllocateCashForm({
         `Số phân bổ vượt ${availableLabel.toLowerCase()} (${formatMoney(availableToAllocate, currencyCode)}).`
       );
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -118,7 +126,7 @@ export function AllocateCashForm({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey(isPayment ? "pay-alloc" : "coll-alloc")
+          idemKey
         ),
         body: JSON.stringify(body),
       });
@@ -139,10 +147,12 @@ export function AllocateCashForm({
         return;
       }
 
+      succeeded = true;
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — CRP-04 phân bổ nháp không tạo phiên đôi
+
+### User
+tiếp đi chuyên gia
+
+### Answer
+Cùng `Idempotency-Key` trên tạo phân bổ chi phí chung, phân bổ thanh toán và phân bổ thu trả lại id phiên đầu, không mở phiên thứ hai. Find chạy trước guard “đã có phiên chưa chốt” và trước kiểm trần số dư. Form phân bổ và nút chốt giữ một key đến khi thành công. Chốt phân bổ thanh toán/thu vốn đã no-op khi đã chốt; chốt phân bổ chi phí lần hai vẫn 409 (trạng thái). Test: `SameIdempotencyKey_DoesNotCreateSecondCostAllocation`.
+
+### Files
+- `IdempotencyGate.cs` scopes `cost_allocation`, `payment_allocation`, `collection_allocation`
+- `AllocationCommands.cs` CreateCostAllocation, `AllocatePaymentCommand.cs`, `AllocateCollectionCommand.cs`
+- Cost/Settlement allocation endpoints đọc `Idempotency-Key`
+- `AllocateSharedCostForm.tsx`, `AllocateCashForm.tsx`, `FinalizeCostAllocationButton.tsx`, `FinalizeAllocationButton.tsx`
+- `CostRevenueSodWriteTests.cs`
+
 ## 2026-09-24 — CRP-04 điều chỉnh và bản chốt không ghi đôi
 
 ### User

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
 using LCMS.Application.Fx;
@@ -13,7 +14,8 @@ public sealed record AllocateCollectionCommand(
     Guid CollectionId,
     Guid AccountsReceivableId,
     decimal Amount,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class AllocateCollectionCommandValidator : AbstractValidator<AllocateCollectionCommand>
 {
@@ -40,19 +42,22 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
     private readonly ISettlementFxStub _fx;
     private readonly IFxRateLookup _rates;
     private readonly IPeriodLockGate _periodLockGate;
+    private readonly IIdempotencyGate _idempotency;
 
     public AllocateCollectionCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ISettlementFxStub fx,
         IFxRateLookup rates,
-        IPeriodLockGate periodLockGate)
+        IPeriodLockGate periodLockGate,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
         _rates = rates;
         _periodLockGate = periodLockGate;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(AllocateCollectionCommand request, CancellationToken cancellationToken)
@@ -63,6 +68,15 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.CollectionAllocation,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
+
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
 
         var collection = await _db.Collections
@@ -160,6 +174,11 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
             cancellationToken);
 
         _db.CollectionAllocations.Add(allocation);
+        _idempotency.Remember(
+            IdempotencyScopes.CollectionAllocation,
+            request.IdempotencyKey ?? string.Empty,
+            allocation.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
 
         var revenueCountAfter = await _db.Revenues.CountAsync(cancellationToken);

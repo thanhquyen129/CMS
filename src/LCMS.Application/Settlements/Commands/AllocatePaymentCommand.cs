@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
 using LCMS.Application.Fx;
@@ -13,7 +14,8 @@ public sealed record AllocatePaymentCommand(
     Guid PaymentId,
     Guid AccountsPayableId,
     decimal Amount,
-    string? Notes) : IRequest<Guid>;
+    string? Notes,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class AllocatePaymentCommandValidator : AbstractValidator<AllocatePaymentCommand>
 {
@@ -40,19 +42,22 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
     private readonly ISettlementFxStub _fx;
     private readonly IFxRateLookup _rates;
     private readonly IPeriodLockGate _periodLockGate;
+    private readonly IIdempotencyGate _idempotency;
 
     public AllocatePaymentCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ISettlementFxStub fx,
         IFxRateLookup rates,
-        IPeriodLockGate periodLockGate)
+        IPeriodLockGate periodLockGate,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _fx = fx;
         _rates = rates;
         _periodLockGate = periodLockGate;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(AllocatePaymentCommand request, CancellationToken cancellationToken)
@@ -63,6 +68,15 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.PaymentAllocation,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
+
         var amount = decimal.Round(request.Amount, 4, MidpointRounding.AwayFromZero);
 
         var payment = await _db.Payments
@@ -163,6 +177,11 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             cancellationToken);
 
         _db.PaymentAllocations.Add(allocation);
+        _idempotency.Remember(
+            IdempotencyScopes.PaymentAllocation,
+            request.IdempotencyKey ?? string.Empty,
+            allocation.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
 
         var costCountAfter = await _db.Costs.CountAsync(cancellationToken);

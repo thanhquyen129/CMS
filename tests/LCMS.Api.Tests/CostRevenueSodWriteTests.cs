@@ -155,6 +155,59 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SameIdempotencyKey_DoesNotCreateSecondCostAllocation()
+    {
+        var tenantId = await CreateTenantAsync("TN-ALLOC-IDEM", "Alloc Idem");
+        var billA = await CreateBillAsync(tenantId, "BL-ALLOC-A");
+        var billB = await CreateBillAsync(tenantId, "BL-ALLOC-B");
+        Guid costId;
+        using (var create = new HttpRequestMessage(HttpMethod.Post, "/api/costs")
+        {
+            Content = JsonContent.Create(new
+            {
+                attributionType = "shared",
+                amount = 200m,
+                currencyCode = "VND",
+                costTypeCode = "SHARED"
+            })
+        })
+        {
+            create.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var created = await _client.SendAsync(create);
+            created.EnsureSuccessStatusCode();
+            costId = (await created.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        var key = $"alloc-{Guid.NewGuid():N}";
+        Guid firstId = Guid.Empty;
+        Guid secondId = Guid.Empty;
+        for (var i = 0; i < 2; i++)
+        {
+            using var alloc = new HttpRequestMessage(HttpMethod.Post, $"/api/costs/{costId}/allocations")
+            {
+                Content = JsonContent.Create(new
+                {
+                    allocationBasis = "equal",
+                    details = new[]
+                    {
+                        new { billId = billA, basisValue = (decimal?)null },
+                        new { billId = billB, basisValue = (decimal?)null }
+                    }
+                })
+            };
+            alloc.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            alloc.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            var res = await _client.SendAsync(alloc);
+            Assert.Equal(HttpStatusCode.Created, res.StatusCode);
+            var id = (await res.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+            if (i == 0) firstId = id;
+            else secondId = id;
+        }
+
+        Assert.Equal(firstId, secondId);
+    }
+
+    [Fact]
     public async Task ProductionFxFlag_RejectsCrossCurrencyWithoutDatedRate()
     {
         await using var factory = new NoStubFxFactory();

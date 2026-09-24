@@ -111,9 +111,11 @@ public static class CostEndpoints
         costs.MapPost("/{id:guid}/allocations", async (
             Guid id,
             CreateAllocationRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
+            http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var details = (body.Details ?? [])
                 .Select(d => new AllocationDetailInput(d.BillId, d.BasisValue, d.ManualOverrideAmount, d.OverrideReason))
                 .ToList();
@@ -124,7 +126,8 @@ public static class CostEndpoints
                     details,
                     body.ApplicabilityMode,
                     body.ScopeId,
-                    body.ConditionCode),
+                    body.ConditionCode,
+                    idempotencyKey.ToString()),
                 ct);
             return Results.Created($"/api/cost-allocations/{allocationId}", new { id = allocationId });
         });

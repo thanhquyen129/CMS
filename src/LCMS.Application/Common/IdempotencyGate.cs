@@ -62,4 +62,7 @@ public static class IdempotencyScopes
     public const string FinancialCloseSnapshot = "financial_close_snapshot";
     public const string CostAdjustment = "cost_adjustment";
     public const string RevenueAdjustment = "revenue_adjustment";
+    public const string CostAllocation = "cost_allocation";
+    public const string PaymentAllocation = "payment_allocation";
+    public const string CollectionAllocation = "collection_allocation";
 }

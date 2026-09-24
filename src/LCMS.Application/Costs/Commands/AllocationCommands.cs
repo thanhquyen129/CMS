@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -16,7 +17,8 @@ public sealed record CreateCostAllocationCommand(
     IReadOnlyList<AllocationDetailInput> Details,
     string? ApplicabilityMode = null,
     Guid? ScopeId = null,
-    string? ConditionCode = null) : IRequest<Guid>;
+    string? ConditionCode = null,
+    string? IdempotencyKey = null) : IRequest<Guid>;
 
 public sealed class CreateCostAllocationCommandValidator : AbstractValidator<CreateCostAllocationCommand>
 {
@@ -76,12 +78,18 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly IIdempotencyGate _idempotency;
 
-    public CreateCostAllocationCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
+    public CreateCostAllocationCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions,
+        IIdempotencyGate idempotency)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _idempotency = idempotency;
     }
 
     public async Task<Guid> Handle(CreateCostAllocationCommand request, CancellationToken cancellationToken)
@@ -92,6 +100,15 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var priorId = await _idempotency.FindAsync(
+            IdempotencyScopes.CostAllocation,
+            request.IdempotencyKey,
+            cancellationToken);
+        if (priorId.HasValue)
+        {
+            return priorId.Value;
+        }
+
         var cost = await _db.Costs.FirstOrDefaultAsync(c => c.Id == request.CostId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy chi phí.");
 
@@ -213,6 +230,11 @@ public sealed class CreateCostAllocationCommandHandler : IRequestHandler<CreateC
 
         _db.CostAllocations.Add(allocation);
         _db.CostAllocationDetails.AddRange(details);
+        _idempotency.Remember(
+            IdempotencyScopes.CostAllocation,
+            request.IdempotencyKey ?? string.Empty,
+            allocation.Id,
+            tenantId);
         await _db.SaveChangesAsync(cancellationToken);
         return allocation.Id;
     }

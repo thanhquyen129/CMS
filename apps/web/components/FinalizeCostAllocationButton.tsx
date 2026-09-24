@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
 
 type Props = {
@@ -31,6 +32,7 @@ export function FinalizeCostAllocationButton({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("alloc-fin");
 
   const finalizeLabel = term(terms, "ALLOCATION_FINALIZED", "Đã chốt phân bổ");
   const billLabel = term(terms, "BILL", "Bill");
@@ -42,13 +44,16 @@ export function FinalizeCostAllocationButton({
   }, [submitting]);
 
   const runFinalize = useCallback(async () => {
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setSubmitting(true);
     setError(null);
+    let succeeded = false;
 
     try {
       const res = await fetch(`/bff/cost-allocations/${allocationId}/finalize`, {
         method: "POST",
-        headers: withIdempotency({}, newIdempotencyKey("alloc-fin")),
+        headers: withIdempotency({}, idemKey),
       });
 
       if (res.status === 401) {
@@ -68,14 +73,16 @@ export function FinalizeCostAllocationButton({
         return;
       }
 
+      succeeded = true;
       setOpen(false);
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
-  }, [allocationId, router]);
+  }, [allocationId, idem, router]);
 
   if (blockedAsCreator) {
     return (

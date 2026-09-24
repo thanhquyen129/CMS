@@ -6,7 +6,8 @@ import { useMemo, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
 import type { AllocationBasis } from "@/lib/costs-revenues";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { withIdempotency } from "@/lib/idempotency";
+import { useIdempotency } from "@/lib/use-idempotency";
 
 export type BillOption = {
   id: string;
@@ -39,6 +40,7 @@ export function AllocateSharedCostForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const idem = useIdempotency("alloc-create");
   const [basis, setBasis] = useState<AllocationBasis>("equal");
   const [rows, setRows] = useState<Record<string, RowState>>(() =>
     Object.fromEntries(
@@ -105,13 +107,17 @@ export function AllocateSharedCostForm({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const idemKey = idem.acquire();
+    if (!idemKey) return;
     setError(null);
     setSubmitting(true);
+    let succeeded = false;
 
     const selected = bills.filter((b) => rows[b.id]?.selected);
     if (selected.length < 2) {
       setError(`Chọn ít nhất 2 ${billLabel}.`);
       setSubmitting(false);
+      idem.release(false);
       return;
     }
 
@@ -132,6 +138,7 @@ export function AllocateSharedCostForm({
             `Giá trị cơ sở cho ${b.billNo} phải lớn hơn 0 (${basis === "quantity" ? "số lượng" : "tỷ lệ"}).`
           );
           setSubmitting(false);
+          idem.release(false);
           return;
         }
         basisValue = n;
@@ -149,7 +156,7 @@ export function AllocateSharedCostForm({
         method: "POST",
         headers: withIdempotency(
           { "Content-Type": "application/json" },
-          newIdempotencyKey("alloc-create")
+          idemKey
         ),
         body: JSON.stringify({
           allocationBasis: basis,
@@ -177,10 +184,12 @@ export function AllocateSharedCostForm({
         return;
       }
 
+      succeeded = true;
       startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
+      idem.release(succeeded);
       setSubmitting(false);
     }
   }

@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — CRP-08 quyền sở hữu trường
+
+### User
+ok tiếp
+
+### Answer
+`GET /api/field-ownerships?objectType=&objectId=` trả từng trường: tên, hệ thống sở hữu, lý do ghi đè mới nhất (`field.override`). Bill/đơn/lô/chặng/chuyến cần `bill.read`; doanh thu cần `revenue.read`. Không đủ quyền hoặc thuê bao khác thì danh sách rỗng. Badge trên Bill, chi tiết vận hành và doanh thu: «Điểm đi · nguồn tms-b · ghi đè: …». Không có dòng sở hữu thì không hiện ô. Test: `FieldOwnership_ReturnsOwnerAndOverrideReason_AndHidesOtherTenant`, `FieldOwnership_HidesRevenueOwnerFromCostAccountant`. Chưa bấm badge trên trình duyệt.
+
+### Files
+- `src/LCMS.Application/FieldOwnership/Queries/GetFieldOwnershipQuery.cs`
+- `src/LCMS.Api/Endpoints/OperationalReferenceEndpoints.cs`
+- `apps/web/lib/field-ownership.ts`, `apps/web/components/FieldOwnershipPanel.tsx`
+- `apps/web/app/bills/[id]/page.tsx`, `operations/[kind]/[id]/page.tsx`, `revenues/[id]/page.tsx`
+- `OperationalCargoTests.cs`, `CostRevenueSodWriteTests.cs`
+
 ## 2026-09-24 — Ô tìm Bill trên Tạo doanh thu bị kéo cao
 
 ### User

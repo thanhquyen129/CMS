@@ -1,5 +1,20 @@
 # Handoff
 
+## 2026-09-24 — CRP-06 If-Match đảo phân bổ và mở lại chốt
+
+### User
+TLS, hostname và chứng chỉ chưa có. Tạm thời chạy test vậy đã. Tiếp theo làm gì triển khai luôn nhé
+
+### Answer
+TLS để đó (chưa có hostname/chứng chỉ; không cắt HTTP). Lát còn lại của AC-010: đảo phân bổ thanh toán/thu và mở lại lần chốt đọc `If-Match` ngay sau khi tải dòng, trước kiểm tra trạng thái. Token cũ → 409 `concurrency_conflict`, không đảo và không mở. Token đúng vẫn đảo / mở. Nút Đảo phân bổ và Mở lại chốt gửi `rowVersion` qua BFF. Development vẫn cho phép thiếu header. ADR-0036 cập nhật. Test: `StaleIfMatch_DoesNotReopenCloseAfterSnapshot` (chốt xong, mở bằng token lúc còn open → vẫn `locked`; mở bằng token mới → `reopened`).
+
+### Files
+- `ReversePaymentAllocationCommand.cs`, `ReverseCollectionAllocationCommand.cs`, `ReopenFinancialCloseCommand.cs`
+- `SettlementEndpoints.cs`, `FinancialCloseEndpoints.cs`
+- `ReverseAllocationButton.tsx`, `ReopenCloseButton.tsx`
+- `settlements/payments/[id]/page.tsx`, `settlements/collections/[id]/page.tsx`, `financial-closes/[id]/page.tsx`
+- `docs/adr/ADR-0036-money-if-match.md`, `CostRevenueSodWriteTests.cs`
+
 ## 2026-09-24 — CRP-06 If-Match trên lệnh tiền
 
 ### User

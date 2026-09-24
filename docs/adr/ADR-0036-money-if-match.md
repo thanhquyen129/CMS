@@ -9,7 +9,7 @@
 
 ## Decision
 1. GET of cost, revenue, payment, collection, allocation, and financial close returns `rowVersion` (base64).
-2. Adjust, confirm, and actualize of cost/revenue, payment/collection allocate and finalize, and close snapshot read `If-Match`. A present token that does not match the loaded row returns 409 `concurrency_conflict` and does not write. A matching retry of the same idempotency key still returns the first id.
+2. Adjust, confirm, and actualize of cost/revenue, payment/collection allocate, finalize, and reverse, close snapshot, and reopen close read `If-Match`. The check runs after load and before the business status guard, so a stale token returns 409 `concurrency_conflict` and does not write. A matching retry of the same idempotency key still returns the first id.
 3. Creating a payment or collection allocation touches the cash row version, so the next allocate must send the new token.
 4. `Concurrency:RequireIfMatch` is false in Development (existing clients and tests omit the header) and true in Production. A missing token in Production is 409.
 

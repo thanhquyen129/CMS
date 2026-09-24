@@ -4,15 +4,16 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { term, type TerminologyMap } from "@/lib/terminology";
-import { newIdempotencyKey, withIdempotency } from "@/lib/idempotency";
+import { newIdempotencyKey, withIdempotency, withRowVersion } from "@/lib/idempotency";
 
 type Props = {
   terms: TerminologyMap;
   closeId: string;
   canRun: boolean;
+  rowVersion?: string | null;
 };
 
-export function ReopenCloseButton({ terms, closeId, canRun }: Props) {
+export function ReopenCloseButton({ terms, closeId, canRun, rowVersion }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
   const [open, setOpen] = useState(false);
@@ -48,9 +49,12 @@ export function ReopenCloseButton({ terms, closeId, canRun }: Props) {
     try {
       const res = await fetch(`/bff/financial-closes/${closeId}/reopen`, {
         method: "POST",
-        headers: withIdempotency(
-          { "Content-Type": "application/json" },
-          newIdempotencyKey("close-reopen")
+        headers: withRowVersion(
+          withIdempotency(
+            { "Content-Type": "application/json" },
+            newIdempotencyKey("close-reopen")
+          ),
+          rowVersion
         ),
         body: JSON.stringify({ reason }),
       });

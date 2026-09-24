@@ -184,6 +184,7 @@ export default async function PaymentDetailPage({
                   amount={a.amount}
                   currencyCode={a.currencyCode}
                   allocationStatus={a.allocationStatus}
+                  rowVersion={payment.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
               ) : null}
             </>

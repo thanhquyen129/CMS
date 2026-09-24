@@ -200,6 +200,7 @@ export default async function FinancialCloseDetailPage({
             terms={terms}
             closeId={close.id}
             canRun={canReopen(close.status)}
+            rowVersion={close.rowVersion}
           />
         </div>
 

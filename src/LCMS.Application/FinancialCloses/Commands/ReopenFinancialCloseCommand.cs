@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.FinancialCloses.Commands;
 
-public sealed record ReopenFinancialCloseCommand(Guid FinancialCloseId, string? Reason) : IRequest;
+public sealed record ReopenFinancialCloseCommand(Guid FinancialCloseId, string? Reason, string? IfMatch = null) : IRequest;
 
 public sealed class ReopenFinancialCloseCommandValidator : AbstractValidator<ReopenFinancialCloseCommand>
 {
@@ -27,15 +28,18 @@ public sealed class ReopenFinancialCloseCommandHandler : IRequestHandler<ReopenF
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRowVersionGuard _versions;
 
     public ReopenFinancialCloseCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _versions = versions;
     }
 
     public async Task Handle(ReopenFinancialCloseCommand request, CancellationToken cancellationToken)
@@ -48,6 +52,7 @@ public sealed class ReopenFinancialCloseCommandHandler : IRequestHandler<ReopenF
         var close = await _db.FinancialCloses
             .FirstOrDefaultAsync(c => c.Id == request.FinancialCloseId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy lần chốt tài chính.");
+        _versions.EnsureCurrent(close, request.IfMatch);
 
         if (close.Status != FinancialCloseStatuses.Locked)
         {

@@ -195,6 +195,7 @@ export default async function CollectionDetailPage({
                   amount={a.amount}
                   currencyCode={a.currencyCode}
                   allocationStatus={a.allocationStatus}
+                  rowVersion={collection.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
               ) : null}
             </>

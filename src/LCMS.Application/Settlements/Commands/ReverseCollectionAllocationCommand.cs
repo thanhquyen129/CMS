@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Settlements.Commands;
 
-public sealed record ReverseCollectionAllocationCommand(Guid AllocationId, string Reason) : IRequest;
+public sealed record ReverseCollectionAllocationCommand(Guid AllocationId, string Reason, string? IfMatch = null) : IRequest;
 
 public sealed class ReverseCollectionAllocationCommandValidator
     : AbstractValidator<ReverseCollectionAllocationCommand>
@@ -31,15 +32,18 @@ public sealed class ReverseCollectionAllocationCommandHandler
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
+    private readonly IRowVersionGuard _versions;
 
     public ReverseCollectionAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICurrentUserContext user)
+        ICurrentUserContext user,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
+        _versions = versions;
     }
 
     public async Task Handle(ReverseCollectionAllocationCommand request, CancellationToken cancellationToken)
@@ -52,6 +56,7 @@ public sealed class ReverseCollectionAllocationCommandHandler
         var allocation = await _db.CollectionAllocations
             .FirstOrDefaultAsync(a => a.Id == request.AllocationId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phân bổ thu tiền.");
+        _versions.EnsureCurrent(allocation, request.IfMatch);
 
         if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {

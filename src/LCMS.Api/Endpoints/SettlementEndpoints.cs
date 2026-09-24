@@ -72,10 +72,12 @@ public static class SettlementEndpoints
         paymentAllocations.MapPost("/{id:guid}/reverse", async (
             Guid id,
             ReverseAllocationRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ReversePaymentAllocationCommand(id, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ReversePaymentAllocationCommand(id, body.Reason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 
@@ -143,10 +145,12 @@ public static class SettlementEndpoints
         collectionAllocations.MapPost("/{id:guid}/reverse", async (
             Guid id,
             ReverseAllocationRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ReverseCollectionAllocationCommand(id, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ReverseCollectionAllocationCommand(id, body.Reason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

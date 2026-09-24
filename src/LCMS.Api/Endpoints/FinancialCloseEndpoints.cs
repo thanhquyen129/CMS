@@ -53,10 +53,12 @@ public static class FinancialCloseEndpoints
         closes.MapPost("/{id:guid}/reopen", async (
             Guid id,
             ReopenFinancialCloseRequest body,
+            HttpRequest http,
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(new ReopenFinancialCloseCommand(id, body.Reason), ct);
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            await sender.Send(new ReopenFinancialCloseCommand(id, body.Reason, ifMatch.ToString()), ct);
             return Results.NoContent();
         });
 

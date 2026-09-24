@@ -447,6 +447,108 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task StaleIfMatch_DoesNotReopenCloseAfterSnapshot()
+    {
+        var tenantId = await CreateTenantAsync("TN-REOPEN-VER", "Reopen Version");
+        var billId = await CreateBillAsync(tenantId, "BL-REOPEN-1");
+        using (var cost = new HttpRequestMessage(HttpMethod.Post, "/api/costs")
+        {
+            Content = JsonContent.Create(new
+            {
+                billId,
+                attributionType = "direct",
+                amount = 1000m,
+                currencyCode = "VND",
+                costTypeCode = "FREIGHT"
+            })
+        })
+        {
+            cost.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            (await _client.SendAsync(cost)).EnsureSuccessStatusCode();
+        }
+
+        using (var revenue = new HttpRequestMessage(HttpMethod.Post, "/api/revenues")
+        {
+            Content = JsonContent.Create(new
+            {
+                billId,
+                amount = 1500m,
+                currencyCode = "VND",
+                revenueTypeCode = "FREIGHT"
+            })
+        })
+        {
+            revenue.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            (await _client.SendAsync(revenue)).EnsureSuccessStatusCode();
+        }
+
+        Guid closeId;
+        using (var start = new HttpRequestMessage(HttpMethod.Post, "/api/financial-closes")
+        {
+            Content = JsonContent.Create(new
+            {
+                scopeType = "bill",
+                scopeId = billId,
+                periodFrom = new DateOnly(2026, 9, 1),
+                periodTo = new DateOnly(2026, 9, 30),
+                policyVersion = "controlled",
+                baseCurrency = "VND"
+            })
+        })
+        {
+            start.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            var started = await _client.SendAsync(start);
+            started.EnsureSuccessStatusCode();
+            closeId = (await started.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
+
+        var before = await GetCloseVersionAsync(tenantId, closeId);
+        Assert.Equal("open", before.Status);
+
+        using (var snap = new HttpRequestMessage(HttpMethod.Post, $"/api/financial-closes/{closeId}/snapshot"))
+        {
+            snap.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            snap.Headers.TryAddWithoutValidation("If-Match", before.RowVersion);
+            Assert.Equal(HttpStatusCode.Created, (await _client.SendAsync(snap)).StatusCode);
+        }
+
+        using (var stale = new HttpRequestMessage(HttpMethod.Post, $"/api/financial-closes/{closeId}/reopen")
+        {
+            Content = JsonContent.Create(new { reason = "Màn hình cũ" })
+        })
+        {
+            stale.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            stale.Headers.TryAddWithoutValidation("If-Match", before.RowVersion);
+            var res = await _client.SendAsync(stale);
+            Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+            var err = await res.Content.ReadFromJsonAsync<MessageBody>(JsonOptions);
+            Assert.Equal("concurrency_conflict", err!.Code);
+        }
+
+        var locked = await GetCloseVersionAsync(tenantId, closeId);
+        Assert.Equal("locked", locked.Status);
+        Assert.NotEqual(before.RowVersion, locked.RowVersion);
+
+        using var reopen = new HttpRequestMessage(HttpMethod.Post, $"/api/financial-closes/{closeId}/reopen")
+        {
+            Content = JsonContent.Create(new { reason = "Mở đúng phiên bản" })
+        };
+        reopen.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        reopen.Headers.TryAddWithoutValidation("If-Match", locked.RowVersion);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(reopen)).StatusCode);
+        Assert.Equal("reopened", (await GetCloseVersionAsync(tenantId, closeId)).Status);
+    }
+
+    private async Task<CloseVersionBody> GetCloseVersionAsync(Guid tenantId, Guid closeId)
+    {
+        using var get = new HttpRequestMessage(HttpMethod.Get, $"/api/financial-closes/{closeId}");
+        get.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        var res = await _client.SendAsync(get);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<CloseVersionBody>(JsonOptions))!;
+    }
+
+    [Fact]
     public async Task ProductionFxFlag_RejectsCrossCurrencyWithoutDatedRate()
     {
         await using var factory = new NoStubFxFactory();
@@ -542,6 +644,7 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
     private sealed record IdResponse(Guid Id);
     private sealed record MessageBody(string Code, string Message);
     private sealed record CostVersionBody(decimal Amount, string RowVersion);
+    private sealed record CloseVersionBody(string Status, string RowVersion);
     private sealed record AuditRow(string Action, Guid ObjectId);
     private sealed record CostBody(decimal Amount);
     private sealed record RoleDto(Guid Id, string Code);

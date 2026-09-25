@@ -218,6 +218,19 @@ public sealed class ControlPackageTests : IAsyncLifetime
         Assert.Equal("HAWB-UAT-001", doc.BillNo);
         Assert.Equal("USD", doc.CurrencyCode);
 
+        await PostId(tenantId, $"/api/financial-documents/{documentId}/lines", new
+        {
+            amount = 235m,
+            description = "FREIGHT"
+        });
+        var detailed = await GetAsync<DocWithLines>(tenantId, $"/api/financial-documents/{documentId}");
+        var line = Assert.Single(detailed.Lines);
+        Assert.Equal(billId, line.BillId);
+        Assert.Equal("HAWB-UAT-001", line.BillNo);
+
+        var listed = await GetAsync<List<DocListItem>>(tenantId, $"/api/financial-documents?billId={billId}");
+        Assert.Contains(listed, d => d.Id == documentId && d.BillNo == "HAWB-UAT-001");
+
         using var badCurrency = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
         badCurrency.Content = JsonContent.Create(new
         {
@@ -453,4 +466,7 @@ public sealed class ControlPackageTests : IAsyncLifetime
     private sealed record ReconBody(string Status, int VersionNo);
     private sealed record DocBody(Guid Id, string DocumentNo);
     private sealed record DocDetail(Guid BillId, string? BillNo, string CurrencyCode);
+    private sealed record DocLine(Guid? BillId, string? BillNo);
+    private sealed record DocWithLines(Guid BillId, string? BillNo, List<DocLine> Lines);
+    private sealed record DocListItem(Guid Id, string? BillNo);
 }

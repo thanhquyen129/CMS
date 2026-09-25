@@ -109,7 +109,7 @@ export function DocumentListWorkspace({
                         href={`/bills/${d.billId}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {d.billId.slice(0, 8)}…
+                        {d.billNo?.trim() || "—"}
                       </Link>
                     ) : (
                       "—"
@@ -219,7 +219,7 @@ export function DocumentListWorkspace({
                           className="row-link"
                           href={`/bills/${selected.billId}`}
                         >
-                          {selected.billId.slice(0, 8)}…
+                          {selected.billNo?.trim() || "—"}
                         </Link>
                       ) : (
                         "—"
@@ -271,7 +271,7 @@ export function DocumentListWorkspace({
                 {selected.billId ? (
                   <li>
                     <Link className="row-link" href={`/bills/${selected.billId}`}>
-                      {billLabel} {selected.billId.slice(0, 8)}…
+                      {billLabel} {selected.billNo?.trim() || "—"}
                     </Link>
                   </li>
                 ) : (

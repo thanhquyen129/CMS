@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-25 — Cột Bill chứng từ hiện số Bill
+
+### User
+Danh sách chứng từ tài chính cột Bill đang lấy ID. Trong hồ sơ chứng từ, dòng Bill vẫn để «Mở». Đổi thành số Bill.
+
+### Answer
+Danh sách và dòng chứng từ trả `billNo` cạnh `billId`. Cột Bill hiện số Bill (vd HAWB-UAT-001), link vẫn mở hồ sơ Bill. Không còn ID cắt ngắn hay chữ «Mở».
+
+### Files
+- `FinancialDocumentQueries.cs`, `GetBillFinancialViewQuery.cs`
+- `apps/web/components/DocumentListWorkspace.tsx`, `apps/web/app/documents/[id]/page.tsx`
+- `apps/web/lib/documents-shared.ts`
+- Test: `ReceiveDocument_ByBillBusinessCode`
+
 ## 2026-09-25 — Báo cáo không gọi giá trị tốt nhất là lớp độ chín khác
 
 ### User

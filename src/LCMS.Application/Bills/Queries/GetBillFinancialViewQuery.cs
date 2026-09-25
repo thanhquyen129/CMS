@@ -126,7 +126,8 @@ public sealed class GetBillFinancialViewQueryHandler
                 d.ReceiptStatus,
                 d.AcceptanceStatus,
                 d.MatchingStatus,
-                d.DocumentDate))
+                d.DocumentDate,
+                null))
             .ToListAsync(cancellationToken);
 
         // Enrich display names when stored context empty but derived available.

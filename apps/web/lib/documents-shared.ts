@@ -11,6 +11,7 @@ export type FinancialDocumentListItem = {
   totalAmount: number;
   currencyCode: string;
   billId: string | null;
+  billNo?: string | null;
   receiptStatus: string;
   acceptanceStatus: string;
   matchingStatus: string;
@@ -26,6 +27,7 @@ export type FinancialDocumentLine = {
   openAmount: number;
   currencyCode: string;
   billId: string | null;
+  billNo?: string | null;
   costTypeCode: string | null;
   revenueTypeCode: string | null;
 };

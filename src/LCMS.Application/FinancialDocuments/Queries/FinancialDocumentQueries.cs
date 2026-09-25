@@ -19,7 +19,8 @@ public sealed record FinancialDocumentLineDto(
     string CurrencyCode,
     Guid? BillId,
     string? CostTypeCode,
-    string? RevenueTypeCode);
+    string? RevenueTypeCode,
+    string? BillNo = null);
 
 public sealed record FinancialDocumentDto(
     Guid Id,
@@ -52,7 +53,8 @@ public sealed record FinancialDocumentListItemDto(
     string ReceiptStatus,
     string AcceptanceStatus,
     string MatchingStatus,
-    DateOnly DocumentDate);
+    DateOnly DocumentDate,
+    string? BillNo = null);
 
 public sealed record GetFinancialDocumentByIdQuery(Guid Id) : IRequest<FinancialDocumentDto>;
 
@@ -116,17 +118,23 @@ public sealed class GetFinancialDocumentByIdQueryHandler
                 l.CurrencyCode,
                 l.BillId,
                 l.CostTypeCode,
-                l.RevenueTypeCode))
+                l.RevenueTypeCode,
+                null))
             .ToListAsync(cancellationToken);
 
-        string? billNo = null;
-        if (document.BillId.HasValue)
-        {
-            billNo = await _db.Bills.AsNoTracking()
-                .Where(b => b.Id == document.BillId.Value)
-                .Select(b => b.BillNo)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
+        var billIds = lines.Select(l => l.BillId).Append(document.BillId);
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, billIds, cancellationToken);
+        string? billNo = document.BillId is Guid headerBillId && billNos.TryGetValue(headerBillId, out var headerNo)
+            ? headerNo
+            : null;
+        lines = lines
+            .Select(l => l with
+            {
+                BillNo = l.BillId is Guid lineBillId && billNos.TryGetValue(lineBillId, out var lineNo)
+                    ? lineNo
+                    : null
+            })
+            .ToList();
 
         return new FinancialDocumentDto(
             document.Id,
@@ -278,8 +286,17 @@ public sealed class ListFinancialDocumentsQueryHandler
                 d.ReceiptStatus,
                 d.AcceptanceStatus,
                 d.MatchingStatus,
-                d.DocumentDate))
+                d.DocumentDate,
+                null))
             .ToListAsync(cancellationToken);
+
+        var billNos = await DataScopeFilter.LoadBillNosAsync(_db, items.Select(d => d.BillId), cancellationToken);
+        items = items
+            .Select(d => d with
+            {
+                BillNo = d.BillId is Guid billId && billNos.TryGetValue(billId, out var no) ? no : null
+            })
+            .ToList();
 
         return new PagedResult<FinancialDocumentListItemDto>(
             items,

@@ -307,7 +307,9 @@ export default async function DocumentDetailPage({
                             className="row-link"
                             href={`/bills/${line.billId}`}
                           >
-                            Mở
+                            {line.billNo?.trim() ||
+                              (line.billId === doc.billId ? doc.billNo : null) ||
+                              billLabel}
                           </Link>
                         ) : (
                           "—"

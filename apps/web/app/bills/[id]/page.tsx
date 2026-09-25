@@ -27,7 +27,12 @@ import { listFinancialDocuments } from "@/lib/documents";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
 type Params = Promise<{ id: string }>;
-type SearchParams = Promise<{ tab?: string; view?: string; reportingCurrency?: string }>;
+type SearchParams = Promise<{
+  tab?: string;
+  view?: string;
+  reportingCurrency?: string;
+  asOf?: string;
+}>;
 
 type BillTab =
   | "overview"
@@ -190,6 +195,7 @@ export default async function BillDetailPage({
     ? sp.view!
     : "best";
   const reportingCurrency = (sp.reportingCurrency ?? "").trim().toUpperCase();
+  const asOf = /^\d{4}-\d{2}-\d{2}$/.test(sp.asOf ?? "") ? sp.asOf! : "";
 
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
@@ -206,7 +212,7 @@ export default async function BillDetailPage({
   const [billRes, profileRes, profitRes, costsRes, revenuesRes, apRes, arRes, docsRes] =
     await Promise.all([
       getBill(id),
-      getFinancialProfile(id),
+      getFinancialProfile(id, asOf || null),
       getProfitability(id, profitView, reportingCurrency || null),
       listCostsByBill(id),
       listRevenuesByBill(id),
@@ -372,6 +378,7 @@ export default async function BillDetailPage({
             ) : (
               <>
                 <p className="muted small">
+                  {asOf ? `Hồ sơ cắt tại ngày ${asOf}. ` : ""}
                   Cập nhật: {formatDateTimeVi(profileRes.data.asOfTimestamp)}
                   {profileRes.data.hasMixedCurrencies
                     ? " · Nhiều loại tiền — không cộng gộp chéo."

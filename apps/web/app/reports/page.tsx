@@ -137,16 +137,16 @@ export default async function ReportsPage({
           title="Báo cáo & Phân tích"
           lede={
             <>
-              Số liệu lấy từ API dashboard và aging — không minh họa giả. Chọn maturity
-              và as-of tường minh; không trộn lớp độ chín. Drill về {billLabel} và chứng
-              từ nguồn.
+              Số liệu lấy từ API dashboard và aging — không minh họa giả. Thẻ trên
+              trang này là giá trị tốt nhất. Maturity và as-of áp cho báo cáo chi tiết
+              và hồ sơ {billLabel}.
             </>
           }
         />
 
         <form className="filter-bar" method="get">
           <label>
-            Maturity
+            Maturity cho báo cáo chi tiết
             <select name="view" defaultValue={view}>
               {VIEW_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -166,9 +166,9 @@ export default async function ReportsPage({
 
         {summary.ok ? (
           <p className="meta-line muted">
-            Tổng quan dashboard tại {formatDateTimeVi(summary.data.asOfTimestamp)}{" "}
-            — KPI dưới đây vẫn là {viewLabel} trên projection; báo cáo chi tiết
-            dùng bộ lọc phía trên.
+            Tổng quan dashboard tại {formatDateTimeVi(summary.data.asOfTimestamp)}.
+            Thẻ và biểu đồ luôn là giá trị tốt nhất. Bộ lọc maturity phía trên chỉ
+            áp cho lãi gộp và lợi nhuận theo {billLabel}.
           </p>
         ) : null}
 
@@ -182,21 +182,21 @@ export default async function ReportsPage({
               cards={[
                 {
                   key: "cost",
-                  label: `${costLabel} (${viewLabel})`,
+                  label: `${costLabel} (Giá trị tốt nhất)`,
                   value: formatMoney(cost, currency),
                   tone: "warning",
                   href: "/costs",
                 },
                 {
                   key: "revenue",
-                  label: `${revenueLabel} (${viewLabel})`,
+                  label: `${revenueLabel} (Giá trị tốt nhất)`,
                   value: formatMoney(revenue, currency),
                   tone: "success",
                   href: `/revenues/report?view=${view}`,
                 },
                 {
                   key: "profit",
-                  label: profitLabel,
+                  label: `${profitLabel} (Giá trị tốt nhất)`,
                   value: formatMoney(profit, currency),
                   tone: profit < 0 ? "danger" : "primary",
                   href: "/bills",
@@ -213,7 +213,7 @@ export default async function ReportsPage({
             <div className="dash-layout" style={{ marginTop: "1.25rem" }}>
               <div className="panel">
                 <GroupedBarChart
-                  caption={`${costLabel} / ${revenueLabel} / ${profitLabel}`}
+                  caption={`${costLabel} / ${revenueLabel} / ${profitLabel} · Giá trị tốt nhất`}
                   series={plBars}
                 />
                 {summary.data.monthlySeriesNote ? (

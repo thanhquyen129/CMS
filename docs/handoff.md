@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-25 — Báo cáo không gọi giá trị tốt nhất là lớp độ chín khác
+
+### User
+còn gì nữa không, làm tiếp luôn nhé
+
+### Answer
+Các đầu còn mở vẫn kẹt hostname/chứng chỉ, SMTP, chữ ký reviewer, ảnh UAT, hoặc khóa PO. Lát làm được: thẻ và biểu đồ trên `/reports` luôn ghi «Giá trị tốt nhất» vì API dashboard chỉ trả lớp đó. Bộ lọc maturity chỉ đi vào lãi gộp và lợi nhuận theo Bill. Hồ sơ Bill nhận `asOf` từ query và gọi `GET /api/bills/{id}/financial-profile?asOf=`. Bảng lợi nhuận theo Bill nói rõ số hiện tại, không cắt theo as-of; mốc chỉ áp khi mở hồ sơ. API as-of đã có test `FinancialProfile_MaturityAllocatedSettlement_AndAsOfFilter`. Chưa bấm trên trình duyệt.
+
+### Files
+- `apps/web/app/reports/page.tsx`
+- `apps/web/app/reports/bills/page.tsx`
+- `apps/web/app/bills/[id]/page.tsx`
+- `apps/web/lib/bills.ts`
+
 ## 2026-09-24 — HAWB không thấy trong danh sách Bill; cột Bill AP/AR chỉ hiện «Mở Bill»
 
 ### User

@@ -60,7 +60,8 @@ export default async function BillProfitReportPage({
         <p className="lede">
           Maturity {views.find((v) => v[0] === view)?.[1]}. Tiền tệ báo cáo{" "}
           {reportingCurrency}. Mỗi dòng giữ tiền gốc; mở hồ sơ {billLabel} để quy đổi và đối chiếu.
-          {asOf ? ` Mốc as-of ${asOf} được giữ khi mở hồ sơ.` : ""}
+          Bảng này là số hiện tại, không cắt theo as-of.
+          {asOf ? ` Mốc ${asOf} chỉ áp khi mở hồ sơ ${billLabel}.` : ""}
         </p>
         <p className="cta-row">
           {views.map(([id, label]) => (

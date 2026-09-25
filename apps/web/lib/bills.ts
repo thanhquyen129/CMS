@@ -156,9 +156,11 @@ export function getBill(id: string): Promise<ApiResult<BillDto>> {
 }
 
 export function getFinancialProfile(
-  id: string
+  id: string,
+  asOf?: string | null
 ): Promise<ApiResult<BillFinancialProfile>> {
-  return apiGet<BillFinancialProfile>(`/api/bills/${id}/financial-profile`);
+  const qs = asOf ? `?asOf=${encodeURIComponent(asOf)}` : "";
+  return apiGet<BillFinancialProfile>(`/api/bills/${id}/financial-profile${qs}`);
 }
 
 export function getProfitability(

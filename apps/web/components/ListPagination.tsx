@@ -11,6 +11,8 @@ type Props = {
   pageSize: number;
   totalCount: number;
   totalPages: number;
+  pageKey?: string;
+  pageSizeKey?: string;
 };
 
 export function ListPagination({
@@ -20,6 +22,8 @@ export function ListPagination({
   pageSize,
   totalCount,
   totalPages: pages,
+  pageKey = "page",
+  pageSizeKey = "pageSize",
 }: Props) {
   const router = useRouter();
   if (totalCount === 0) return null;
@@ -31,6 +35,9 @@ export function ListPagination({
   const windowEnd = Math.min(pages, page + 2);
   const pageNumbers: number[] = [];
   for (let i = windowStart; i <= windowEnd; i++) pageNumbers.push(i);
+
+  const href = (n: number, size = pageSize) =>
+    hrefWithPage(basePath, params, n, size, pageKey, pageSizeKey);
 
   return (
     <nav className="list-pagination" aria-label="Phân trang">
@@ -44,7 +51,7 @@ export function ListPagination({
             value={pageSize}
             onChange={(e) => {
               const next = Number(e.target.value);
-              router.push(hrefWithPage(basePath, params, 1, next), { scroll: false });
+              router.push(href(1, next), { scroll: false });
             }}
             aria-label="Số dòng mỗi trang"
           >
@@ -56,11 +63,7 @@ export function ListPagination({
           </select>
         </label>
         {page > 1 ? (
-          <Link
-            className="btn btn-ghost btn-sm"
-            href={hrefWithPage(basePath, params, page - 1, pageSize)}
-            scroll={false}
-          >
+          <Link className="btn btn-ghost btn-sm" href={href(page - 1)} scroll={false}>
             Trước
           </Link>
         ) : (
@@ -72,7 +75,7 @@ export function ListPagination({
           <Link
             key={n}
             className={n === page ? "btn btn-sm" : "btn btn-ghost btn-sm"}
-            href={hrefWithPage(basePath, params, n, pageSize)}
+            href={href(n)}
             scroll={false}
             aria-current={n === page ? "page" : undefined}
           >
@@ -80,11 +83,7 @@ export function ListPagination({
           </Link>
         ))}
         {page < pages ? (
-          <Link
-            className="btn btn-ghost btn-sm"
-            href={hrefWithPage(basePath, params, page + 1, pageSize)}
-            scroll={false}
-          >
+          <Link className="btn btn-ghost btn-sm" href={href(page + 1)} scroll={false}>
             Sau
           </Link>
         ) : (

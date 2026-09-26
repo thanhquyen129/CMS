@@ -2,12 +2,19 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPagination } from "@/components/ListPagination";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listProfitGroups } from "@/lib/costs-revenues-server";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 import { formatMoney } from "@/lib/money";
 
-type SearchParams = Promise<{ groupBy?: string; view?: string }>;
+type SearchParams = Promise<{ groupBy?: string; view?: string; page?: string; pageSize?: string }>;
 
 const groups = [
   ["customer", "Khách hàng"],
@@ -36,8 +43,13 @@ export default async function RevenueReportPage({
   const query = await searchParams;
   const groupBy = groups.some((g) => g[0] === query.groupBy) ? query.groupBy! : "customer";
   const view = views.some((v) => v[0] === query.view) ? query.view! : "actual";
+  const pageSize = parsePageSize(query.pageSize);
   const terms = await fetchTerminology();
   const rows = await listProfitGroups(groupBy, view);
+  const all = rows.ok ? rows.data : [];
+  const pages = calcTotalPages(all.length, pageSize);
+  const page = parsePage(query.page, pages);
+  const pageRows = slicePage(all, page, pageSize);
 
   return (
     <AppShell terms={terms} active="revenues">
@@ -67,38 +79,48 @@ export default async function RevenueReportPage({
         </p>
         {!rows.ok ? (
           <div className="alert alert-error" role="alert">{rows.message}</div>
-        ) : rows.data.length === 0 ? (
+        ) : all.length === 0 ? (
           <div className="empty-state" role="status">Chưa có số để tổng hợp.</div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Nhóm</th>
-                  <th className="num">Doanh thu</th>
-                  <th className="num">Chi phí</th>
-                  <th className="num">Lợi nhuận</th>
-                  <th className="num">Tỷ suất</th>
-                  <th className="num">Số bill</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.data.map((row) => (
-                  <tr key={row.key}>
-                    <td>
-                      {row.label}
-                      {row.note ? <div className="note">{row.note}</div> : null}
-                    </td>
-                    <td className="num">{formatMoney(row.revenueAmount, row.currencyCode)}</td>
-                    <td className="num">{formatMoney(row.costAmount, row.currencyCode)}</td>
-                    <td className="num">{formatMoney(row.profitAmount, row.currencyCode)}</td>
-                    <td className="num">{row.marginRate == null ? "N/A" : `${row.marginRate.toFixed(2)}%`}</td>
-                    <td className="num">{row.billCount}</td>
+          <>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Nhóm</th>
+                    <th className="num">Doanh thu</th>
+                    <th className="num">Chi phí</th>
+                    <th className="num">Lợi nhuận</th>
+                    <th className="num">Tỷ suất</th>
+                    <th className="num">Số bill</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pageRows.map((row) => (
+                    <tr key={row.key}>
+                      <td>
+                        {row.label}
+                        {row.note ? <div className="note">{row.note}</div> : null}
+                      </td>
+                      <td className="num">{formatMoney(row.revenueAmount, row.currencyCode)}</td>
+                      <td className="num">{formatMoney(row.costAmount, row.currencyCode)}</td>
+                      <td className="num">{formatMoney(row.profitAmount, row.currencyCode)}</td>
+                      <td className="num">{row.marginRate == null ? "N/A" : `${row.marginRate.toFixed(2)}%`}</td>
+                      <td className="num">{row.billCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ListPagination
+              basePath="/revenues/report"
+              params={{ groupBy, view }}
+              page={page}
+              pageSize={pageSize}
+              totalCount={all.length}
+              totalPages={pages}
+            />
+          </>
         )}
       </section>
     </AppShell>

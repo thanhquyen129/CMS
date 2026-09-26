@@ -127,7 +127,7 @@ export async function AppShell({
           <NavLink href="/bills/new">Tạo {billLabel}</NavLink>
           <NavLink href="/shipments">Danh sách Shipment</NavLink>
           <NavLink href="/shipments/new">Tạo Shipment</NavLink>
-          <NavLink href="/operations">Chặng &amp; Chuyến</NavLink>
+          <NavLink href="/operations">Chặng & Chuyến</NavLink>
           <NavLink href="/operations/legs/new">Tạo chặng</NavLink>
           <NavLink href="/operations/movements/new">Tạo chuyến</NavLink>
           <NavLink href="/operations/import">Nhập nghiệp vụ</NavLink>
@@ -135,7 +135,7 @@ export async function AppShell({
       ) : null}
 
       {show("rates") ? (
-        <NavGroup label="Bảng giá &amp; Tính giá" icon="rates" match={["/rate-cards"]}>
+        <NavGroup label="Bảng giá & Tính giá" icon="rates" match={["/rate-cards"]}>
           <NavLink href="/rate-cards">Danh sách bảng giá</NavLink>
           <NavLink href="/rate-cards/import">Nhập bảng giá</NavLink>
           <NavLink href="/rate-cards/rate">Tính giá</NavLink>
@@ -156,7 +156,7 @@ export async function AppShell({
       ) : null}
 
       {showRevenues ? (
-        <NavGroup label={`${revenueLabel} &amp; Lợi nhuận`} icon="revenues" match={["/revenues"]}>
+        <NavGroup label={`${revenueLabel} & Lợi nhuận`} icon="revenues" match={["/revenues"]}>
           <NavLink href="/revenues">Danh sách {revenueLabel.toLowerCase()}</NavLink>
           <NavLink href="/revenues/new">Tạo {revenueLabel.toLowerCase()}</NavLink>
           {showProfitReport ? (
@@ -185,7 +185,7 @@ export async function AppShell({
 
       {show("settlements") ? (
         <NavLink href="/settlements" icon="settlements">
-          {paymentLabel} &amp; {collectionLabel}
+          {paymentLabel} & {collectionLabel}
         </NavLink>
       ) : null}
 
@@ -205,10 +205,10 @@ export async function AppShell({
           <NavLink href="/queues/variances">
             Hàng đợi {varianceLabel.toLowerCase()}
           </NavLink>
-          <NavLink href="/queues/exceptions">Chênh lệch &amp; Ngoại lệ</NavLink>
+          <NavLink href="/queues/exceptions">Chênh lệch & Ngoại lệ</NavLink>
           <NavLink href="/queues/approvals">Phê duyệt chứng từ</NavLink>
           <NavLink href="/bank-feed">{bankFeedLabel}</NavLink>
-          <NavLink href="/reconciliations">Đối soát &amp; Matching</NavLink>
+          <NavLink href="/reconciliations">Đối soát & Matching</NavLink>
         </NavGroup>
       ) : null}
 
@@ -220,7 +220,7 @@ export async function AppShell({
 
       {show("reports") ? (
         <NavLink href="/reports" icon="reports">
-          Báo cáo &amp; Phân tích
+          Báo cáo & Phân tích
         </NavLink>
       ) : null}
 
@@ -248,20 +248,20 @@ export async function AppShell({
           <NavLink href="/admin/catalog?kind=transport_mode">Phương thức vận chuyển</NavLink>
           <NavLink href="/admin/locations">Địa điểm</NavLink>
           <NavLink href="/admin/commodities">Loại hàng</NavLink>
-          <NavLink href="/admin/currencies">Tiền tệ &amp; Tỷ giá</NavLink>
+          <NavLink href="/admin/currencies">Tiền tệ & Tỷ giá</NavLink>
           <NavLink href="/admin/catalog?kind=other">Danh mục khác</NavLink>
         </NavGroup>
       ) : null}
 
       {show("admin") ? (
         <NavGroup
-          label="Hệ thống &amp; Cài đặt"
+          label="Hệ thống & Cài đặt"
           icon="settings"
           match={["/settings", "/admin/access", "/workflow"]}
         >
           <NavLink href="/settings/company">Thông tin doanh nghiệp</NavLink>
           <NavLink href="/settings/users">Người dùng</NavLink>
-          <NavLink href="/admin/access">Vai trò &amp; Phân quyền</NavLink>
+          <NavLink href="/admin/access">Vai trò & Phân quyền</NavLink>
           <NavLink href="/settings/business">Cấu hình nghiệp vụ</NavLink>
           <NavLink href="/settings/policies">Sổ chính sách</NavLink>
           <NavLink href="/settings">{settingsLabel}</NavLink>
@@ -269,7 +269,7 @@ export async function AppShell({
           <NavLink href="/settings/audit">Nhật ký hệ thống</NavLink>
           <NavLink href="/settings/license">Quản lý license</NavLink>
           <NavLink href="/settings/notifications">Cài đặt thông báo</NavLink>
-          <NavLink href="/settings/backup">Sao lưu &amp; Khôi phục</NavLink>
+          <NavLink href="/settings/backup">Sao lưu & Khôi phục</NavLink>
           <NavLink href="/workflow">Bản đồ luồng nghiệp vụ</NavLink>
         </NavGroup>
       ) : null}

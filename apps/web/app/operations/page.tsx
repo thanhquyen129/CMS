@@ -3,11 +3,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ListPagination } from "@/components/ListPagination";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { ManualReferenceForm } from "@/components/ManualReferenceForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { operationalStatusLabel } from "@/lib/bills-shared";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 import { formatDateTimeVi } from "@/lib/money";
 import {
   listLegs,
@@ -17,7 +24,7 @@ import {
   sourceSystemLabel,
 } from "@/lib/operational-refs";
 
-type SearchParams = Promise<{ tab?: string; q?: string }>;
+type SearchParams = Promise<{ tab?: string; q?: string; page?: string; pageSize?: string }>;
 
 const TABS = [
   { id: "orders", label: "Đơn hàng" },
@@ -36,10 +43,11 @@ export default async function OperationsPage({
     redirect("/login");
   }
 
-  const { tab: tabRaw, q } = await searchParams;
+  const { tab: tabRaw, q, page: pageRaw, pageSize: pageSizeRaw } = await searchParams;
   const tab = TABS.some((t) => t.id === tabRaw) ? tabRaw! : "orders";
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
+  const pageSize = parsePageSize(pageSizeRaw);
 
   const [ordersRes, shipmentsRes, legsRes, movementsRes] = await Promise.all([
     listOrders(q),
@@ -47,6 +55,66 @@ export default async function OperationsPage({
     listLegs(q),
     listMovements(q),
   ]);
+
+  const activeRes =
+    tab === "shipments"
+      ? shipmentsRes
+      : tab === "legs"
+        ? legsRes
+        : tab === "movements"
+          ? movementsRes
+          : ordersRes;
+
+  const allRows =
+    activeRes.ok
+      ? (tab === "shipments"
+          ? shipmentsRes.ok
+            ? shipmentsRes.data.map((s) => ({
+                id: s.id,
+                href: `/operations/shipments/${s.id}`,
+                code: s.shipmentNo,
+                source: s.sourceSystem,
+                status: s.operationalStatus,
+                createdAt: s.createdAt,
+              }))
+            : []
+          : tab === "legs"
+            ? legsRes.ok
+              ? legsRes.data.map((l) => ({
+                  id: l.id,
+                  href: `/operations/legs/${l.id}`,
+                  code: l.legNo,
+                  source: l.sourceSystem,
+                  status: l.operationalStatus,
+                  createdAt: l.createdAt,
+                }))
+              : []
+            : tab === "movements"
+              ? movementsRes.ok
+                ? movementsRes.data.map((m) => ({
+                    id: m.id,
+                    href: `/operations/movements/${m.id}`,
+                    code: m.movementNo,
+                    source: m.sourceSystem,
+                    status: m.operationalStatus,
+                    createdAt: m.createdAt,
+                  }))
+                : []
+              : ordersRes.ok
+                ? ordersRes.data.map((o) => ({
+                    id: o.id,
+                    href: `/operations/orders/${o.id}`,
+                    code: o.orderNo,
+                    source: o.sourceSystem,
+                    status: o.operationalStatus,
+                    createdAt: o.createdAt,
+                  }))
+                : [])
+      : [];
+
+  const pages = calcTotalPages(allRows.length, pageSize);
+  const page = parsePage(pageRaw, pages);
+  const pageRows = slicePage(allRows, page, pageSize);
 
   return (
     <AppShell terms={terms} active="bills" navChild="operations">
@@ -109,90 +177,40 @@ export default async function OperationsPage({
           </button>
         </form>
 
-        {tab === "orders" ? (
-          <OpsTable
-            error={ordersRes.ok ? null : ordersRes.message}
-            empty="Chưa có đơn hàng tham chiếu."
-            rows={
-              ordersRes.ok
-                ? ordersRes.data.map((o) => ({
-                    id: o.id,
-                    href: `/operations/orders/${o.id}`,
-                    code: o.orderNo,
-                    source: o.sourceSystem,
-                    status: o.operationalStatus,
-                    createdAt: o.createdAt,
-                  }))
-                : []
-            }
-          />
-        ) : null}
-        {tab === "shipments" ? (
-          <OpsTable
-            error={shipmentsRes.ok ? null : shipmentsRes.message}
-            empty="Chưa có lô hàng tham chiếu."
-            rows={
-              shipmentsRes.ok
-                ? shipmentsRes.data.map((s) => ({
-                    id: s.id,
-                    href: `/operations/shipments/${s.id}`,
-                    code: s.shipmentNo,
-                    source: s.sourceSystem,
-                    status: s.operationalStatus,
-                    createdAt: s.createdAt,
-                  }))
-                : []
-            }
-          />
-        ) : null}
-        {tab === "legs" ? (
-          <OpsTable
-            error={legsRes.ok ? null : legsRes.message}
-            empty={
+        <OpsTable
+          error={activeRes.ok ? null : activeRes.message}
+          empty={
+            tab === "legs" ? (
               <>
                 Chưa có chặng tham chiếu.{" "}
                 <Link className="row-link" href="/operations/legs/new">
                   Tạo chặng
                 </Link>
               </>
-            }
-            rows={
-              legsRes.ok
-                ? legsRes.data.map((l) => ({
-                    id: l.id,
-                    href: `/operations/legs/${l.id}`,
-                    code: l.legNo,
-                    source: l.sourceSystem,
-                    status: l.operationalStatus,
-                    createdAt: l.createdAt,
-                  }))
-                : []
-            }
-          />
-        ) : null}
-        {tab === "movements" ? (
-          <OpsTable
-            error={movementsRes.ok ? null : movementsRes.message}
-            empty={
+            ) : tab === "movements" ? (
               <>
                 Chưa có chuyến tham chiếu.{" "}
                 <Link className="row-link" href="/operations/movements/new">
                   Tạo chuyến
                 </Link>
               </>
-            }
-            rows={
-              movementsRes.ok
-                ? movementsRes.data.map((m) => ({
-                    id: m.id,
-                    href: `/operations/movements/${m.id}`,
-                    code: m.movementNo,
-                    source: m.sourceSystem,
-                    status: m.operationalStatus,
-                    createdAt: m.createdAt,
-                  }))
-                : []
-            }
+            ) : tab === "shipments" ? (
+              "Chưa có lô hàng tham chiếu."
+            ) : (
+              "Chưa có đơn hàng tham chiếu."
+            )
+          }
+          rows={pageRows}
+        />
+
+        {activeRes.ok && allRows.length > 0 ? (
+          <ListPagination
+            basePath="/operations"
+            params={{ tab, q }}
+            page={page}
+            pageSize={pageSize}
+            totalCount={allRows.length}
+            totalPages={pages}
           />
         ) : null}
 

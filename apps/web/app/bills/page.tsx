@@ -101,27 +101,69 @@ export default async function BillsPage({
 
   const pageSize = parsePageSize(pageSizeRaw);
   const needle = q?.trim();
-  const [result, matched] = await Promise.all([
-    listBills(),
-    needle ? listBills(needle) : Promise.resolve(null),
-  ]);
-  const all = (result.ok ? result.data.items : [])
-    .slice()
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.billNo.localeCompare(b.billNo));
-  const serverMatchIds = matched?.ok
-    ? new Set(matched.data.items.map((b) => b.id))
-    : undefined;
-  const filtered = filterBills(all, { q, status, from, to, route, customer }, serverMatchIds);
-  const pages = calcTotalPages(filtered.length, pageSize);
-  const page = parsePage(pageRaw, pages);
-  const pageRows = slicePage(filtered, page, pageSize);
+  // Extra filters need the full list; plain paging uses server page so each click
+  // only enriches the current page (fast, same feel as Shipment).
+  const needsFullScan = Boolean(status || from || to || route || customer);
+
+  let all: BillListItem[] = [];
+  let filtered: BillListItem[] = [];
+  let pageRows: BillListItem[] = [];
+  let totalCount = 0;
+  let pages = 1;
+  let page = 1;
+  let listOk = true;
+  let listMessage = "";
+
+  if (needsFullScan) {
+    const [result, matched] = await Promise.all([
+      listBills(),
+      needle ? listBills(needle) : Promise.resolve(null),
+    ]);
+    listOk = result.ok;
+    listMessage = result.ok ? "" : result.message;
+    all = (result.ok ? result.data.items : [])
+      .slice()
+      .sort(
+        (a, b) =>
+          Date.parse(b.createdAt) - Date.parse(a.createdAt) ||
+          a.billNo.localeCompare(b.billNo)
+      );
+    const serverMatchIds = matched?.ok
+      ? new Set(matched.data.items.map((b) => b.id))
+      : undefined;
+    filtered = filterBills(all, { q, status, from, to, route, customer }, serverMatchIds);
+    totalCount = filtered.length;
+    pages = calcTotalPages(totalCount, pageSize);
+    page = parsePage(pageRaw, pages);
+    pageRows = slicePage(filtered, page, pageSize);
+  } else {
+    const pageHint = Math.max(1, Number.parseInt(String(pageRaw ?? "1"), 10) || 1);
+    const result = await listBills(needle, { page: pageHint, pageSize });
+    listOk = result.ok;
+    listMessage = result.ok ? "" : result.message;
+    if (result.ok) {
+      totalCount = result.data.totalCount;
+      pages = calcTotalPages(totalCount, pageSize);
+      page = parsePage(pageRaw, pages);
+      if (page !== pageHint && pageHint > pages) {
+        const retry = await listBills(needle, { page, pageSize });
+        pageRows = retry.ok ? retry.data.items : [];
+      } else {
+        pageRows = result.data.items;
+      }
+      filtered = pageRows;
+      all = pageRows;
+    }
+  }
+
   const hasFilters = Boolean(q || status || from || to || route || customer);
 
   let sumRevExpected = 0;
   let sumRevConfirmed = 0;
   let sumRevActual = 0;
   let rollCurrency = "VND";
-  for (const b of filtered) {
+  const kpiSource = needsFullScan ? filtered : pageRows;
+  for (const b of kpiSource) {
     if (b.summaryCurrencyCode) rollCurrency = b.summaryCurrencyCode;
     sumRevExpected += b.revenueExpectedTotal ?? 0;
     sumRevConfirmed += b.revenueConfirmedTotal ?? 0;
@@ -232,16 +274,20 @@ export default async function BillsPage({
           ]}
         />
 
-        {result.ok ? (
+        {listOk ? (
           <StatCardGrid
             cards={[
               {
                 key: "count",
                 label: `Tổng số ${billLabel}`,
-                value: filtered.length,
+                value: totalCount,
                 tone: "primary",
                 icon: <KpiGlyph name="doc" />,
-                hint: hasFilters ? `Trong ${all.length} bản ghi` : "Trong phạm vi của bạn",
+                hint: needsFullScan
+                  ? hasFilters
+                    ? "Theo bộ lọc"
+                    : "Trong phạm vi của bạn"
+                  : "Trong phạm vi của bạn",
               },
               {
                 key: "rev-e",
@@ -249,7 +295,9 @@ export default async function BillsPage({
                 value: formatMoney(sumRevExpected, rollCurrency),
                 tone: "success",
                 icon: <KpiGlyph name="revenue" />,
-                hint: "Không cộng gộp đa tiền tệ trên cùng một ô.",
+                hint: needsFullScan
+                  ? "Không cộng gộp đa tiền tệ trên cùng một ô."
+                  : "Trên trang hiện tại — lọc trạng thái/ngày để xem tổng bộ lọc.",
               },
               {
                 key: "rev-c",
@@ -269,11 +317,11 @@ export default async function BillsPage({
           />
         ) : null}
 
-        {!result.ok ? (
+        {!listOk ? (
           <div className="alert alert-error" role="alert">
-            {result.message}
+            {listMessage}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : totalCount === 0 ? (
           <div className="empty-state" role="status">
             {hasFilters ? (
               `Không có ${billLabel} khớp bộ lọc. Thử điều kiện khác.`
@@ -290,7 +338,7 @@ export default async function BillsPage({
         ) : (
           <BillListWorkspace
             bills={pageRows}
-            filteredCount={filtered.length}
+            filteredCount={totalCount}
             initialSelectedId={selected ?? null}
             terms={terms}
             listParams={listParams}
@@ -309,7 +357,7 @@ export default async function BillsPage({
                 params={{ q, status, from, to, route, customer, selected }}
                 page={page}
                 pageSize={pageSize}
-                totalCount={filtered.length}
+                totalCount={totalCount}
                 totalPages={pages}
               />
             }

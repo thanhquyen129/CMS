@@ -479,6 +479,11 @@ public static class MasterDataEndpoints
                 ct);
             return Results.Created($"/api/fx-rates/{id}", new { id });
         });
+        fxRates.MapPost("/sync-vcb", async (ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SyncVcbFxRatesCommand(), ct);
+            return Results.Ok(result);
+        });
         fxRates.MapDelete("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             await sender.Send(new SoftDeleteFxRateCommand(id), ct);

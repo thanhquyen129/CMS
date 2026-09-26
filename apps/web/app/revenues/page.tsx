@@ -23,6 +23,8 @@ type SearchParams = Promise<{
   maturity?: string;
   page?: string;
   pageSize?: string;
+  billPage?: string;
+  billPageSize?: string;
 }>;
 
 function revenuesHref(maturity?: string): string {
@@ -40,7 +42,8 @@ export default async function RevenuesPage({
     redirect("/login");
   }
 
-  const { maturity, page: pageRaw, pageSize: pageSizeRaw } = await searchParams;
+  const { maturity, page: pageRaw, pageSize: pageSizeRaw, billPage: billPageRaw, billPageSize: billPageSizeRaw } =
+    await searchParams;
   const maturityFilter =
     maturity === "expected" || maturity === "confirmed" || maturity === "actual"
       ? maturity
@@ -55,9 +58,14 @@ export default async function RevenuesPage({
   const actualLabel = term(terms, "ACTUAL", "Thực tế");
 
   const pageSize = parsePageSize(pageSizeRaw);
+  const billPageSize = parsePageSize(billPageSizeRaw);
   const pageHint = Math.max(
     1,
     Number.parseInt(String(pageRaw ?? "1"), 10) || 1
+  );
+  const billPageHint = Math.max(
+    1,
+    Number.parseInt(String(billPageRaw ?? "1"), 10) || 1
   );
 
   const [result, kpiRes, board, summary] = await Promise.all([
@@ -67,7 +75,7 @@ export default async function RevenuesPage({
       pageSize,
     }),
     listRevenues(),
-    listBillProfit({ view: "actual", page: 1, pageSize: 50 }),
+    listBillProfit({ view: "actual", page: billPageHint, pageSize: billPageSize }),
     getDashboardSummary(),
   ]);
   const canCreateRevenue = summary.ok
@@ -143,40 +151,56 @@ export default async function RevenuesPage({
         ) : board.data.items.length === 0 ? (
           <div className="empty-state" role="status">Chưa có doanh thu hoặc chi phí trên Bill.</div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Số bill</th>
-                  <th>Khách hàng</th>
-                  <th>Tuyến</th>
-                  <th>Loại DV</th>
-                  <th className="num">Dự kiến</th>
-                  <th className="num">Đã xác nhận</th>
-                  <th className="num">Thực tế</th>
-                  <th className="num">Lợi nhuận</th>
-                  <th className="num">Tỷ suất</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {board.data.items.map((row) => (
-                  <tr key={row.billId}>
-                    <td><Link className="row-link" href={`/bills/${row.billId}`}>{row.billNo}</Link></td>
-                    <td>{row.customerName ?? "—"}</td>
-                    <td>{row.routeCode ?? "—"}</td>
-                    <td>{row.serviceTypeCode ?? row.transportMode ?? "—"}</td>
-                    <td className="num">{formatMoney(row.expectedRevenue, row.currencyCode)}</td>
-                    <td className="num">{formatMoney(row.confirmedRevenue, row.currencyCode)}</td>
-                    <td className="num">{formatMoney(row.actualRevenue, row.currencyCode)}</td>
-                    <td className="num">{row.hasMixedCurrencies ? "Nhiều tiền tệ" : formatMoney(row.profitAmount, row.currencyCode)}</td>
-                    <td className="num">{row.marginRate == null ? "N/A" : `${row.marginRate.toFixed(2)}%`}</td>
-                    <td>{row.operationalStatus}</td>
+          <>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Số bill</th>
+                    <th>Khách hàng</th>
+                    <th>Tuyến</th>
+                    <th>Loại DV</th>
+                    <th className="num">Dự kiến</th>
+                    <th className="num">Đã xác nhận</th>
+                    <th className="num">Thực tế</th>
+                    <th className="num">Lợi nhuận</th>
+                    <th className="num">Tỷ suất</th>
+                    <th>Trạng thái</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {board.data.items.map((row) => (
+                    <tr key={row.billId}>
+                      <td><Link className="row-link" href={`/bills/${row.billId}`}>{row.billNo}</Link></td>
+                      <td>{row.customerName ?? "—"}</td>
+                      <td>{row.routeCode ?? "—"}</td>
+                      <td>{row.serviceTypeCode ?? row.transportMode ?? "—"}</td>
+                      <td className="num">{formatMoney(row.expectedRevenue, row.currencyCode)}</td>
+                      <td className="num">{formatMoney(row.confirmedRevenue, row.currencyCode)}</td>
+                      <td className="num">{formatMoney(row.actualRevenue, row.currencyCode)}</td>
+                      <td className="num">{row.hasMixedCurrencies ? "Nhiều tiền tệ" : formatMoney(row.profitAmount, row.currencyCode)}</td>
+                      <td className="num">{row.marginRate == null ? "N/A" : `${row.marginRate.toFixed(2)}%`}</td>
+                      <td>{row.operationalStatus}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ListPagination
+              basePath="/revenues"
+              params={{
+                maturity,
+                page: pageRaw,
+                pageSize: pageSizeRaw,
+              }}
+              page={parsePage(billPageRaw, calcTotalPages(board.data.totalCount, billPageSize))}
+              pageSize={billPageSize}
+              totalCount={board.data.totalCount}
+              totalPages={calcTotalPages(board.data.totalCount, billPageSize)}
+              pageKey="billPage"
+              pageSizeKey="billPageSize"
+            />
+          </>
         )}
         <p className="note">Doanh thu 0 thì tỷ suất là N/A, lãi gộp vẫn hiện. Không cộng USD với VND. Không cộng Dự kiến với Thực tế trên cùng một ô.</p>
 
@@ -212,7 +236,7 @@ export default async function RevenuesPage({
 
         <p className="cta-row" style={{ marginTop: "0.75rem" }}>
           <Link className="btn btn-ghost" href="/reports">
-            Báo cáo &amp; Phân tích
+            Báo cáo & Phân tích
           </Link>
         </p>
 

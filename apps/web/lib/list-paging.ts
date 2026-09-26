@@ -31,7 +31,9 @@ export function hrefWithPage(
   basePath: string,
   current: URLSearchParams | Record<string, string | undefined | null>,
   page: number,
-  pageSize: number
+  pageSize: number,
+  pageKey = "page",
+  pageSizeKey = "pageSize"
 ): string {
   const p =
     current instanceof URLSearchParams
@@ -42,10 +44,10 @@ export function hrefWithPage(
       if (v != null && v !== "") p.set(k, v);
     }
   }
-  if (page <= 1) p.delete("page");
-  else p.set("page", String(page));
-  if (pageSize === DEFAULT_PAGE_SIZE) p.delete("pageSize");
-  else p.set("pageSize", String(pageSize));
+  if (page <= 1) p.delete(pageKey);
+  else p.set(pageKey, String(page));
+  if (pageSize === DEFAULT_PAGE_SIZE) p.delete(pageSizeKey);
+  else p.set(pageSizeKey, String(pageSize));
   const qs = p.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }

@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { CreateBankFeedLineForm } from "@/components/CreateBankFeedLineForm";
 import { ImportBankFeedCsvForm } from "@/components/ImportBankFeedCsvForm";
 import { IgnoreBankFeedLineButton } from "@/components/IgnoreBankFeedLineButton";
+import { ListPagination } from "@/components/ListPagination";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { StatCardGrid } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -14,9 +15,15 @@ import {
   bankFeedStatusLabel,
   listBankFeedLines,
 } from "@/lib/bank-feed";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 import { formatMoney } from "@/lib/money";
 
-type SearchParams = Promise<{ status?: string }>;
+type SearchParams = Promise<{ status?: string; page?: string; pageSize?: string }>;
 
 export default async function BankFeedPage({
   searchParams,
@@ -28,7 +35,8 @@ export default async function BankFeedPage({
     redirect("/login");
   }
 
-  const { status } = await searchParams;
+  const { status, page: pageRaw, pageSize: pageSizeRaw } = await searchParams;
+  const pageSize = parsePageSize(pageSizeRaw);
   const terms = await fetchTerminology();
   const feedLabel = term(terms, "BANK_FEED", "Sao kê ngân hàng");
   const lineLabel = term(terms, "BANK_FEED_LINE", "Dòng sao kê");
@@ -41,6 +49,10 @@ export default async function BankFeedPage({
     ? await listBankFeedLines()
     : result;
   const allLines = allRes.ok ? allRes.data : [];
+  const filtered = result.ok ? result.data : [];
+  const pages = calcTotalPages(filtered.length, pageSize);
+  const page = parsePage(pageRaw, pages);
+  const pageRows = slicePage(filtered, page, pageSize);
   const unmatchedCount = allLines.filter(
     (l) => l.status?.toLowerCase() === "unmatched"
   ).length;
@@ -142,50 +154,60 @@ export default async function BankFeedPage({
             Chưa có {lineLabel.toLowerCase()}. Nhập bên dưới.
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Ngày</th>
-                  <th scope="col">Chiều</th>
-                  <th scope="col">Số tiền</th>
-                  <th scope="col">Tham chiếu</th>
-                  <th scope="col">Đối tác</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.data.map((line) => (
-                  <tr key={line.id}>
-                    <td>{line.valueDate}</td>
-                    <td>{bankDirectionLabel(terms, line.direction)}</td>
-                    <td>{formatMoney(line.amount, line.currencyCode)}</td>
-                    <td>
-                      <span className="mono-id">
-                        {line.bankReference?.trim() || "—"}
-                      </span>
-                      <span className="muted small block mono-id">
-                        {line.id}
-                      </span>
-                    </td>
-                    <td>{line.counterpartyName?.trim() || "—"}</td>
-                    <td>{bankFeedStatusLabel(terms, line.status)}</td>
-                    <td>
-                      {line.status.toLowerCase() === "unmatched" ? (
-                        <IgnoreBankFeedLineButton
-                          terms={terms}
-                          lineId={line.id}
-                        />
-                      ) : (
-                        "—"
-                      )}
-                    </td>
+          <>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Ngày</th>
+                    <th scope="col">Chiều</th>
+                    <th scope="col">Số tiền</th>
+                    <th scope="col">Tham chiếu</th>
+                    <th scope="col">Đối tác</th>
+                    <th scope="col">Trạng thái</th>
+                    <th scope="col">Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pageRows.map((line) => (
+                    <tr key={line.id}>
+                      <td>{line.valueDate}</td>
+                      <td>{bankDirectionLabel(terms, line.direction)}</td>
+                      <td>{formatMoney(line.amount, line.currencyCode)}</td>
+                      <td>
+                        <span className="mono-id">
+                          {line.bankReference?.trim() || "—"}
+                        </span>
+                        <span className="muted small block mono-id">
+                          {line.id}
+                        </span>
+                      </td>
+                      <td>{line.counterpartyName?.trim() || "—"}</td>
+                      <td>{bankFeedStatusLabel(terms, line.status)}</td>
+                      <td>
+                        {line.status.toLowerCase() === "unmatched" ? (
+                          <IgnoreBankFeedLineButton
+                            terms={terms}
+                            lineId={line.id}
+                          />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ListPagination
+              basePath="/bank-feed"
+              params={{ status }}
+              page={page}
+              pageSize={pageSize}
+              totalCount={filtered.length}
+              totalPages={pages}
+            />
+          </>
         )}
 
         <h2 className="section-title">Nhập CSV</h2>

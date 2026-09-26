@@ -3,14 +3,21 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { SettlementListWorkspace } from "@/components/SettlementListWorkspace";
+import { ListPagination } from "@/components/ListPagination";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { StatCardGrid, type StatCardModel } from "@/components/list/StatCardGrid";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listCollections, listPayments } from "@/lib/settlements";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 import { formatMoney } from "@/lib/money";
 
-type SearchParams = Promise<{ tab?: string }>;
+type SearchParams = Promise<{ tab?: string; page?: string; pageSize?: string }>;
 
 export default async function SettlementsPage({
   searchParams,
@@ -22,8 +29,9 @@ export default async function SettlementsPage({
     redirect("/login");
   }
 
-  const { tab } = await searchParams;
+  const { tab, page: pageRaw, pageSize: pageSizeRaw } = await searchParams;
   const activeTab = tab === "collections" ? "collections" : "payments";
+  const pageSize = parsePageSize(pageSizeRaw);
 
   const terms = await fetchTerminology();
   const paymentLabel = term(terms, "PAYMENT", "Thanh toán");
@@ -48,6 +56,9 @@ export default async function SettlementsPage({
   const activeRows = activeTab === "collections" ? collections : payments;
   const activeRes = activeTab === "collections" ? colRes : payRes;
   const activeLabel = activeTab === "collections" ? collectionLabel : paymentLabel;
+  const pages = calcTotalPages(activeRows.length, pageSize);
+  const page = parsePage(pageRaw, pages);
+  const pageRows = slicePage(activeRows, page, pageSize);
   const activeCurrency = activeRows[0]?.currencyCode ?? "VND";
   const totalAmount = activeRows.reduce((s, r) => s + r.amount, 0);
   const totalAllocated = activeRows.reduce((s, r) => s + r.allocatedAmount, 0);
@@ -136,11 +147,19 @@ export default async function SettlementsPage({
         ) : (
           <SettlementListWorkspace
             terms={terms}
-            items={activeRows}
+            items={pageRows}
             kind={activeTab === "collections" ? "collection" : "payment"}
             billLabel={billLabel}
             unappliedLabel={unappliedLabel}
             availableLabel={availableLabel}
+          />
+          <ListPagination
+            basePath="/settlements"
+            params={{ tab: activeTab === "collections" ? "collections" : undefined }}
+            page={page}
+            pageSize={pageSize}
+            totalCount={activeRows.length}
+            totalPages={pages}
           />
         )}
       </section>

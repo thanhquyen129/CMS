@@ -31,4 +31,5 @@ public static class FxRateSources
     public const string Manual = "manual";
     public const string Import = "import";
     public const string StubSeed = "stub_seed";
+    public const string Vcb = "vcb";
 }

@@ -308,6 +308,7 @@ public sealed class ListBillsQueryHandler : IRequestHandler<ListBillsQuery, Page
                 || waybillBillIds.Contains(b.Id));
         }
 
+        // Prefer business number for stable paging; Id break-tie (CreatedAt ORDER BY breaks on SQLite).
         var ordered = query.OrderByDescending(b => b.BillNo).ThenBy(b => b.Id);
         var totalCount = await ordered.CountAsync(cancellationToken);
         if (totalCount == 0)

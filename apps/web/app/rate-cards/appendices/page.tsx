@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { ListPagination } from "@/components/ListPagination";
 import {
   FilterBar,
   ListPageHeader,
@@ -10,10 +11,16 @@ import {
 } from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
+import {
+  parsePage,
+  parsePageSize,
+  slicePage,
+  totalPages as calcTotalPages,
+} from "@/lib/list-paging";
 import { formatDateVi } from "@/lib/money";
 import { listAppendices } from "@/lib/rate-cards-server";
 
-type SearchParams = Promise<{ q?: string; status?: string }>;
+type SearchParams = Promise<{ q?: string; status?: string; page?: string; pageSize?: string }>;
 
 function statusLabel(status: string): string {
   if (status === "published") return "Đã Published";
@@ -32,6 +39,7 @@ export default async function AppendicesPage({
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().toLowerCase();
   const status = (sp.status ?? "").trim().toLowerCase();
+  const pageSize = parsePageSize(sp.pageSize);
 
   const rows = await listAppendices();
   const all = rows.ok ? rows.data : [];
@@ -43,6 +51,9 @@ export default async function AppendicesPage({
     if (status && row.status.toLowerCase() !== status) return false;
     return true;
   });
+  const pages = calcTotalPages(filtered.length, pageSize);
+  const page = parsePage(sp.page, pages);
+  const pageRows = slicePage(filtered, page, pageSize);
 
   const published = all.filter((r) => r.status === "published").length;
   const draft = all.filter((r) => r.status === "draft").length;
@@ -121,36 +132,46 @@ export default async function AppendicesPage({
               : "Không khớp bộ lọc hiện tại."}
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Mã phụ lục</th>
-                  <th>Rate Card</th>
-                  <th>Nội dung</th>
-                  <th>Hiệu lực từ</th>
-                  <th>Phiên bản</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <Link href={`/rate-cards/${row.rateCardId}`}>
-                        {row.cardCode}-v{row.versionNo}
-                      </Link>
-                    </td>
-                    <td>{row.cardCode}</td>
-                    <td>{row.note || row.cardName}</td>
-                    <td>{formatDateVi(row.effectiveFrom)}</td>
-                    <td>v{row.versionNo}</td>
-                    <td>{statusLabel(row.status)}</td>
+          <>
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã phụ lục</th>
+                    <th>Rate Card</th>
+                    <th>Nội dung</th>
+                    <th>Hiệu lực từ</th>
+                    <th>Phiên bản</th>
+                    <th>Trạng thái</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pageRows.map((row) => (
+                    <tr key={row.id}>
+                      <td>
+                        <Link href={`/rate-cards/${row.rateCardId}`}>
+                          {row.cardCode}-v{row.versionNo}
+                        </Link>
+                      </td>
+                      <td>{row.cardCode}</td>
+                      <td>{row.note || row.cardName}</td>
+                      <td>{formatDateVi(row.effectiveFrom)}</td>
+                      <td>v{row.versionNo}</td>
+                      <td>{statusLabel(row.status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <ListPagination
+              basePath="/rate-cards/appendices"
+              params={{ q: sp.q, status: sp.status }}
+              page={page}
+              pageSize={pageSize}
+              totalCount={filtered.length}
+              totalPages={pages}
+            />
+          </>
         )}
       </section>
     </AppShell>

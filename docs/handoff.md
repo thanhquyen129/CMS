@@ -1,5 +1,16 @@
 # Handoff
 
+## 2026-09-26 — CI #261: sửa build settlements
+
+### User
+CI run #261 fail (test job), deploy skipped — ảnh Actions.
+
+### Answer
+`settlements/page.tsx`: (1) fragment bọc hai nhánh JSX trong ternary phân trang; (2) `slicePage` gọi riêng `payments` / `collections` để hết lỗi union type. `npm run build` web OK.
+
+### Files
+- `apps/web/app/settlements/page.tsx`
+
 ## 2026-09-26 — Phân trang danh sách + nhãn menu + tỷ giá VCB
 
 ### User

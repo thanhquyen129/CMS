@@ -58,7 +58,10 @@ export default async function SettlementsPage({
   const activeLabel = activeTab === "collections" ? collectionLabel : paymentLabel;
   const pages = calcTotalPages(activeRows.length, pageSize);
   const page = parsePage(pageRaw, pages);
-  const pageRows = slicePage(activeRows, page, pageSize);
+  const pageRows =
+    activeTab === "collections"
+      ? slicePage(collections, page, pageSize)
+      : slicePage(payments, page, pageSize);
   const activeCurrency = activeRows[0]?.currencyCode ?? "VND";
   const totalAmount = activeRows.reduce((s, r) => s + r.amount, 0);
   const totalAllocated = activeRows.reduce((s, r) => s + r.allocatedAmount, 0);
@@ -145,22 +148,24 @@ export default async function SettlementsPage({
             {activeTab === "collections" ? "AR" : "AP"}.
           </div>
         ) : (
-          <SettlementListWorkspace
-            terms={terms}
-            items={pageRows}
-            kind={activeTab === "collections" ? "collection" : "payment"}
-            billLabel={billLabel}
-            unappliedLabel={unappliedLabel}
-            availableLabel={availableLabel}
-          />
-          <ListPagination
-            basePath="/settlements"
-            params={{ tab: activeTab === "collections" ? "collections" : undefined }}
-            page={page}
-            pageSize={pageSize}
-            totalCount={activeRows.length}
-            totalPages={pages}
-          />
+          <>
+            <SettlementListWorkspace
+              terms={terms}
+              items={pageRows}
+              kind={activeTab === "collections" ? "collection" : "payment"}
+              billLabel={billLabel}
+              unappliedLabel={unappliedLabel}
+              availableLabel={availableLabel}
+            />
+            <ListPagination
+              basePath="/settlements"
+              params={{ tab: activeTab === "collections" ? "collections" : undefined }}
+              page={page}
+              pageSize={pageSize}
+              totalCount={activeRows.length}
+              totalPages={pages}
+            />
+          </>
         )}
       </section>
     </AppShell>

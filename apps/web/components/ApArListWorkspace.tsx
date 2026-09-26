@@ -28,6 +28,7 @@ type Props = {
   showSettledAmount: boolean;
   cashLabel: string;
   cashCreateHref: string;
+  initialSelectedId?: string | null;
 };
 
 export function ApArListWorkspace({
@@ -40,8 +41,11 @@ export function ApArListWorkspace({
   showSettledAmount,
   cashLabel,
   cashCreateHref,
+  initialSelectedId = null,
 }: Props) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialSelectedId
+  );
   const [tab, setTab] = useState("overview");
   const selected = useMemo(
     () => items.find((r) => r.id === selectedId) ?? null,
@@ -107,7 +111,7 @@ export function ApArListWorkspace({
                         href={`/bills/${row.billId}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {row.billNo?.trim() || billLabel}
+                        {row.billNo?.trim() || "—"}
                       </Link>
                     ) : (
                       <span className="muted">—</span>
@@ -156,7 +160,9 @@ export function ApArListWorkspace({
         onClose={close}
         title={
           selected
-            ? `${billLabel} ${selected.billNo?.trim() || (selected.billId ? selected.billId.slice(0, 8) + "…" : selected.id.slice(0, 8))}`
+            ? selected.billNo?.trim()
+              ? `${billLabel} ${selected.billNo.trim()}`
+              : `${kind === "payable" ? "AP" : "AR"} · ${formatMoney(selected.outstanding, selected.currencyCode)}`
             : null
         }
         subtitle={
@@ -233,7 +239,7 @@ export function ApArListWorkspace({
                 {selected.billId ? (
                   <li>
                     <Link className="row-link" href={`/bills/${selected.billId}`}>
-                      {billLabel} {selected.billId.slice(0, 8)}…
+                      {selected.billNo?.trim() || billLabel}
                     </Link>
                   </li>
                 ) : (

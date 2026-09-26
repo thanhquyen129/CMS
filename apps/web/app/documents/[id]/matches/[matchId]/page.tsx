@@ -149,54 +149,90 @@ export default async function DocumentMatchSessionPage({
   const anchorBillId =
     doc.billId || doc.lines.find((l) => l.billId)?.billId || null;
 
+  const costById = new Map<
+    string,
+    {
+      costTypeCode: string | null;
+      amount: number;
+      currencyCode: string;
+      financialMaturity: string;
+      recordStatus: string;
+      vendorPartyId?: string | null;
+    }
+  >();
+  const revenueById = new Map<
+    string,
+    {
+      revenueTypeCode: string | null;
+      amount: number;
+      currencyCode: string;
+      financialMaturity: string;
+      recordStatus: string;
+    }
+  >();
+
+  let costsLoadError: string | null = null;
+  let revsLoadError: string | null = null;
+  if (anchorBillId) {
+    const [costsRes, revsRes] = await Promise.all([
+      listCostsByBill(anchorBillId),
+      listRevenuesByBill(anchorBillId),
+    ]);
+    if (costsRes.ok) {
+      for (const c of costsRes.data) costById.set(c.id, c);
+    } else {
+      costsLoadError = costsRes.message;
+    }
+    if (revsRes.ok) {
+      for (const r of revsRes.data) revenueById.set(r.id, r);
+    } else {
+      revsLoadError = revsRes.message;
+    }
+  }
+
   if (method === "line_to_cost") {
     if (!anchorBillId) {
       targetDocHint = `Chứng từ chưa neo ${billLabel}. Nhận chứng từ mới và chọn ${billLabel} — không tạo ${costLabel.toLowerCase()} để vòng lỗi.`;
+    } else if (costsLoadError) {
+      targetDocHint = costsLoadError;
     } else {
-      const costs = await listCostsByBill(anchorBillId);
-      if (costs.ok) {
-        const active = costs.data.filter(
-          (c) => c.recordStatus?.toLowerCase() === "active"
-        );
-        const sameCurrency = active.filter(
-          (c) => c.currencyCode?.toUpperCase() === currency.toUpperCase()
-        );
-        const eligible = sameCurrency.filter(
-          (c) =>
-            !c.vendorPartyId ||
-            !doc.counterpartyId ||
-            c.vendorPartyId === doc.counterpartyId
-        );
-        targets = eligible.map((c) => ({
-          id: c.id,
-          label: `${c.costTypeCode || costLabel} · ${formatMoney(c.amount, c.currencyCode)} · ${term(terms, maturityLabelKey(c.financialMaturity), c.financialMaturity)}`,
-        }));
-        if (targets.length === 0 && active.length > 0) {
-          targetDocHint = `Có ${costLabel.toLowerCase()} trên ${billLabel} nhưng khác tiền tệ hoặc đối tác của chứng từ ${doc.documentNo}.`;
-        }
-      } else {
-        targetDocHint = costs.message;
+      const active = [...costById.entries()]
+        .map(([id, c]) => ({ id, ...c }))
+        .filter((c) => c.recordStatus?.toLowerCase() === "active");
+      const sameCurrency = active.filter(
+        (c) => c.currencyCode?.toUpperCase() === currency.toUpperCase()
+      );
+      const eligible = sameCurrency.filter(
+        (c) =>
+          !c.vendorPartyId ||
+          !doc.counterpartyId ||
+          c.vendorPartyId === doc.counterpartyId
+      );
+      targets = eligible.map((c) => ({
+        id: c.id,
+        label: `${c.costTypeCode || costLabel} · ${formatMoney(c.amount, c.currencyCode)} · ${term(terms, maturityLabelKey(c.financialMaturity), c.financialMaturity)}`,
+      }));
+      if (targets.length === 0 && active.length > 0) {
+        targetDocHint = `Có ${costLabel.toLowerCase()} trên ${billLabel} nhưng khác tiền tệ hoặc đối tác của chứng từ ${doc.documentNo}.`;
       }
     }
   } else if (method === "line_to_revenue") {
     if (!anchorBillId) {
       targetDocHint = `Chứng từ chưa neo ${billLabel} — không tải được ${revenueLabel.toLowerCase()}.`;
+    } else if (revsLoadError) {
+      targetDocHint = revsLoadError;
     } else {
-      const revs = await listRevenuesByBill(anchorBillId);
-      if (revs.ok) {
-        targets = revs.data
-          .filter(
-            (r) =>
-              r.recordStatus?.toLowerCase() === "active" &&
-              r.currencyCode?.toUpperCase() === currency.toUpperCase()
-          )
-          .map((r) => ({
-            id: r.id,
-            label: `${r.revenueTypeCode || revenueLabel} · ${formatMoney(r.amount, r.currencyCode)} · ${term(terms, maturityLabelKey(r.financialMaturity), r.financialMaturity)}`,
-          }));
-      } else {
-        targetDocHint = revs.message;
-      }
+      targets = [...revenueById.entries()]
+        .map(([id, r]) => ({ id, ...r }))
+        .filter(
+          (r) =>
+            r.recordStatus?.toLowerCase() === "active" &&
+            r.currencyCode?.toUpperCase() === currency.toUpperCase()
+        )
+        .map((r) => ({
+          id: r.id,
+          label: `${r.revenueTypeCode || revenueLabel} · ${formatMoney(r.amount, r.currencyCode)} · ${term(terms, maturityLabelKey(r.financialMaturity), r.financialMaturity)}`,
+        }));
     }
   } else if (method === "line_to_line") {
     const others = await listFinancialDocuments({
@@ -296,20 +332,34 @@ export default async function DocumentMatchSessionPage({
               <tbody>
                 {match.details.map((d) => {
                   const src = lineById.get(d.sourceLineId);
-                  const target = d.targetCostId
-                    ? `${costLabel} ${d.targetCostId.slice(0, 8)}…`
-                    : d.targetRevenueId
-                      ? `${revenueLabel} ${d.targetRevenueId.slice(0, 8)}…`
-                      : d.targetLineId
-                        ? `Dòng ${d.targetLineId.slice(0, 8)}…`
-                        : "—";
+                  const cost = d.targetCostId
+                    ? costById.get(d.targetCostId)
+                    : undefined;
+                  const rev = d.targetRevenueId
+                    ? revenueById.get(d.targetRevenueId)
+                    : undefined;
+                  const targetLine = d.targetLineId
+                    ? lineById.get(d.targetLineId)
+                    : undefined;
+                  const target = cost
+                    ? `${cost.costTypeCode || costLabel} · ${formatMoney(cost.amount, cost.currencyCode)} · ${term(terms, maturityLabelKey(cost.financialMaturity), cost.financialMaturity)}`
+                    : rev
+                      ? `${rev.revenueTypeCode || revenueLabel} · ${formatMoney(rev.amount, rev.currencyCode)} · ${term(terms, maturityLabelKey(rev.financialMaturity), rev.financialMaturity)}`
+                      : targetLine
+                        ? `#${targetLine.lineNo} · ${targetLine.description || "—"} · mở ${formatMoney(targetLine.openAmount, targetLine.currencyCode)}`
+                        : d.targetCostId
+                          ? costLabel
+                          : d.targetRevenueId
+                            ? revenueLabel
+                            : d.targetLineId
+                              ? "Dòng chứng từ"
+                              : "—";
+                  const sourceLabel = src
+                    ? `#${src.lineNo} · ${src.description || "—"} · mở ${formatMoney(src.openAmount, src.currencyCode)}`
+                    : "Dòng nguồn";
                   return (
                     <tr key={d.id}>
-                      <td>
-                        {src
-                          ? `#${src.lineNo} ${src.description || ""}`
-                          : `${d.sourceLineId.slice(0, 8)}…`}
-                      </td>
+                      <td>{sourceLabel}</td>
                       <td>{target}</td>
                       <td className="num">
                         {formatMoney(d.matchedAmount, currency)}
@@ -414,7 +464,7 @@ export default async function DocumentMatchSessionPage({
           <p className="note">
             Phiên không còn nháp — không thêm chi tiết từ UI này.
             {confirmed
-              ? " Có thể đảo chi tiết rồi hủy phiên nếu cần."
+              ? " Có thể hủy chi tiết rồi hủy phiên nếu cần."
               : null}
             {match.cancelReason ? ` Lý do hủy: ${match.cancelReason}.` : null}
           </p>

@@ -130,8 +130,8 @@ export function FinalizeAllocationButton({
             <h2 id={dialogTitleId}>Chốt phân bổ?</h2>
             <p>
               {formatMoney(amount, currencyCode)} sẽ giảm outstanding {target}.
-              Trạng thái → <strong>{finalizeLabel}</strong>. Đảo phân bổ là
-              bước riêng (nút Đảo phân bổ).
+              Trạng thái → <strong>{finalizeLabel}</strong>. Hủy phân bổ là
+              bước riêng (nút Hủy phân bổ).
             </p>
             {error ? (
               <div className="alert alert-error" role="alert">

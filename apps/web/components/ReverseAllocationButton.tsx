@@ -36,7 +36,7 @@ export function ReverseAllocationButton({
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const reverseLabel = term(terms, "ALLOCATION_REVERSED", "Đã đảo phân bổ");
+  const reverseLabel = term(terms, "ALLOCATION_REVERSED", "Đã hủy phân bổ");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const target = kind === "payment" ? apLabel : arLabel;
@@ -50,7 +50,7 @@ export function ReverseAllocationButton({
   const runReverse = useCallback(async () => {
     const trimmed = reason.trim();
     if (!trimmed) {
-      setError("Nhập lý do đảo phân bổ.");
+      setError("Nhập lý do hủy phân bổ.");
       return;
     }
     setSubmitting(true);
@@ -82,8 +82,8 @@ export function ReverseAllocationButton({
         setError(
           body.message ||
             (res.status === 409
-              ? "Không đảo được (đã đảo / trạng thái lệch). Tải lại trang."
-              : "Đảo phân bổ thất bại.")
+              ? "Không hủy được (đã hủy / trạng thái lệch). Tải lại trang."
+              : "Hủy phân bổ thất bại.")
         );
         return;
       }
@@ -109,7 +109,7 @@ export function ReverseAllocationButton({
         }}
         disabled={isPending}
       >
-        Đảo phân bổ
+        Hủy phân bổ
       </button>
 
       {error && !open ? (
@@ -136,7 +136,7 @@ export function ReverseAllocationButton({
             aria-modal="true"
             aria-labelledby={dialogTitleId}
           >
-            <h2 id={dialogTitleId}>Đảo phân bổ?</h2>
+            <h2 id={dialogTitleId}>Hủy phân bổ?</h2>
             <p>
               {isDraft ? (
                 <>
@@ -153,7 +153,7 @@ export function ReverseAllocationButton({
               )}
             </p>
             <div className="field">
-              <label htmlFor={`rev-alloc-${allocationId}`}>Lý do đảo</label>
+              <label htmlFor={`rev-alloc-${allocationId}`}>Lý do hủy</label>
               <input
                 id={`rev-alloc-${allocationId}`}
                 type="text"
@@ -185,7 +185,7 @@ export function ReverseAllocationButton({
                 onClick={runReverse}
                 disabled={submitting}
               >
-                {submitting ? "Đang đảo…" : "Xác nhận đảo"}
+                {submitting ? "Đang hủy…" : "Xác nhận hủy phân bổ"}
               </button>
             </div>
           </div>

@@ -31,7 +31,7 @@ export function ReverseMatchDetailButton({
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const reverseLabel = term(terms, "MATCH_DETAIL_REVERSED", "Đảo khớp");
+  const reverseLabel = term(terms, "REVERSE_MATCH", "Hủy khớp");
 
   const close = useCallback(() => {
     if (submitting) return;
@@ -41,7 +41,7 @@ export function ReverseMatchDetailButton({
   const runReverse = useCallback(async () => {
     const trimmed = reason.trim();
     if (!trimmed) {
-      setError("Nhập lý do đảo khớp.");
+      setError("Nhập lý do hủy khớp.");
       return;
     }
     setSubmitting(true);
@@ -74,8 +74,8 @@ export function ReverseMatchDetailButton({
         setError(
           body.message ||
             (res.status === 409
-              ? "Không đảo được (đã đảo / phiên hủy). Tải lại trang."
-              : "Đảo chi tiết khớp thất bại.")
+              ? "Không hủy được (đã hủy / phiên hủy). Tải lại trang."
+              : "Hủy chi tiết khớp thất bại.")
         );
         return;
       }
@@ -128,13 +128,13 @@ export function ReverseMatchDetailButton({
             aria-modal="true"
             aria-labelledby={dialogTitleId}
           >
-            <h2 id={dialogTitleId}>Đảo chi tiết khớp?</h2>
+            <h2 id={dialogTitleId}>Hủy chi tiết khớp?</h2>
             <p>
               Số tiền {formatMoney(matchedAmount, currencyCode)} sẽ trả lại số
-              mở của dòng. Không xóa cứng; trạng thái → đã đảo.
+              mở của dòng. Không xóa cứng; trạng thái → đã hủy khớp.
             </p>
             <div className="field">
-              <label htmlFor={`rev-reason-${detailId}`}>Lý do đảo</label>
+              <label htmlFor={`rev-reason-${detailId}`}>Lý do hủy</label>
               <input
                 id={`rev-reason-${detailId}`}
                 type="text"
@@ -166,7 +166,7 @@ export function ReverseMatchDetailButton({
                 onClick={runReverse}
                 disabled={submitting}
               >
-                {submitting ? "Đang đảo…" : "Xác nhận đảo"}
+                {submitting ? "Đang hủy…" : "Xác nhận hủy khớp"}
               </button>
             </div>
           </div>

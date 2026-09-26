@@ -84,7 +84,7 @@ const rows: { object: string; state: string; edit: string; remove: string; voidO
     state: "Đã chốt",
     edit: "Không sửa",
     remove: "Không xóa",
-    voidOrReverse: "Đảo phân bổ",
+    voidOrReverse: "Hủy phân bổ",
     permission: "Người khác người tạo mới chốt",
   },
   {
@@ -100,7 +100,7 @@ const rows: { object: string; state: string; edit: string; remove: string; voidO
     state: "Đã chấp nhận / Đã khớp",
     edit: "Không sửa header",
     remove: "Không xóa",
-    voidOrReverse: "Hủy khớp hoặc đảo dòng khớp",
+    voidOrReverse: "Hủy khớp hoặc hủy dòng khớp",
     permission: "Khớp chứng từ",
   },
   {
@@ -108,7 +108,7 @@ const rows: { object: string; state: string; edit: string; remove: string; voidO
     state: "Đang hiệu lực",
     edit: "Điều chỉnh +/- có lý do, không ghi đè số ghi nhận",
     remove: "Không xóa",
-    voidOrReverse: "Xóa sổ phần còn lại, hoặc đảo ghi nhận khi chưa tất toán",
+    voidOrReverse: "Xóa sổ phần còn lại, hoặc hủy ghi nhận khi chưa tất toán",
     permission: "AP / AR",
   },
   {
@@ -116,7 +116,7 @@ const rows: { object: string; state: string; edit: string; remove: string; voidO
     state: "Đang mở, chưa có phân bổ đã chốt",
     edit: "Không sửa số tiền",
     remove: "Không xóa",
-    voidOrReverse: "Hủy phiếu + lý do; phân bổ nháp bị đảo",
+    voidOrReverse: "Hủy phiếu + lý do; phân bổ nháp bị hủy",
     permission: "Thanh toán / Thu tiền",
   },
   {
@@ -124,7 +124,7 @@ const rows: { object: string; state: string; edit: string; remove: string; voidO
     state: "Có phân bổ đã chốt",
     edit: "Không sửa",
     remove: "Không hủy phiếu",
-    voidOrReverse: "Đảo phân bổ đã chốt rồi mới hủy phiếu",
+    voidOrReverse: "Hủy phân bổ đã chốt rồi mới hủy phiếu",
     permission: "Thanh toán / Thu tiền",
   },
 ];
@@ -162,7 +162,7 @@ export default async function LifecycleMatrixPage() {
                 <th>Trạng thái</th>
                 <th>Sửa</th>
                 <th>Xóa</th>
-                <th>Hủy / đảo</th>
+                <th>Hủy / hoàn tác</th>
                 <th>Quyền</th>
               </tr>
             </thead>

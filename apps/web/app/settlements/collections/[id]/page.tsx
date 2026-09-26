@@ -68,7 +68,9 @@ export default async function CollectionDetailPage({
   }
 
   const collection = colRes.data;
-  const arItems = arRes.ok ? arRes.data.filter(isOutstanding) : [];
+  const allAr = arRes.ok ? arRes.data : [];
+  const arById = new Map(allAr.map((a) => [a.id, a]));
+  const arItems = allAr.filter(isOutstanding);
   const targets = arItems
     .filter(
       (a) =>
@@ -76,14 +78,17 @@ export default async function CollectionDetailPage({
           collection.currencyCode.toUpperCase() &&
         (!collection.billId || a.billId === collection.billId || !a.billId)
     )
-    .map((a) => ({
-      id: a.id,
-      label: a.billId
-        ? `${arLabel} · Bill ${a.billId.slice(0, 8)}…`
-        : `${arLabel} · ${a.id.slice(0, 8)}…`,
-      outstanding: a.outstanding,
-      currencyCode: a.currencyCode,
-    }));
+    .map((a) => {
+      const bill = settlementBillLinkLabel(a.billId, a.billNo, billLabel);
+      return {
+        id: a.id,
+        label: bill
+          ? `${arLabel} · ${bill} · còn ${formatMoney(a.outstanding, a.currencyCode)}`
+          : `${arLabel} · còn ${formatMoney(a.outstanding, a.currencyCode)}`,
+        outstanding: a.outstanding,
+        currencyCode: a.currencyCode,
+      };
+    });
 
   const draftAllocs = collection.allocations.filter((a) =>
     isDraftAllocation(a.allocationStatus)
@@ -106,7 +111,7 @@ export default async function CollectionDetailPage({
           {formatMoney(collection.amount, collection.currencyCode)}
         </h1>
         <p className="lede">
-          {collectionLabel} ≠ {revenueLabel}. Chốt phân bổ nháp; đảo khi cần trả
+          {collectionLabel} ≠ {revenueLabel}. Chốt phân bổ nháp; hủy phân bổ khi cần trả
           outstanding.
         </p>
         {openCollection && !hasFinalized ? (
@@ -117,7 +122,7 @@ export default async function CollectionDetailPage({
         ) : null}
         {openCollection && hasFinalized ? (
           <p className="note">
-            Còn phân bổ đã chốt — đảo phân bổ trước khi hủy phiếu thu.
+            Còn phân bổ đã chốt — hủy phân bổ trước khi hủy phiếu thu.
           </p>
         ) : null}
 
@@ -172,7 +177,7 @@ export default async function CollectionDetailPage({
         <h2 className="section-title">Phân bổ</h2>
         <p className="note">
           Tiến trình: ghi nhận {collectionLabel.toLowerCase()} → phân bổ nháp → chốt
-          (mới giảm outstanding {arLabel}). Đảo được khi còn nháp / đã chốt.
+          (mới giảm outstanding {arLabel}). Hủy phân bổ được khi còn nháp / đã chốt.
         </p>
         <SettlementAllocationTimeline
           terms={terms}
@@ -181,17 +186,28 @@ export default async function CollectionDetailPage({
           valueDate={collection.valueDate}
           cashAmount={collection.amount}
           currencyCode={collection.currencyCode}
-          allocations={collection.allocations.map((a) => ({
-            id: a.id,
-            amount: a.amount,
-            currencyCode: a.currencyCode,
-            allocationStatus: a.allocationStatus,
-            createdAt: a.createdAt,
-            finalizedAt: a.finalizedAt,
-            reversedAt: a.reversedAt,
-            reverseReason: a.reverseReason,
-            targetId: a.accountsReceivableId,
-          }))}
+          allocations={collection.allocations.map((a) => {
+            const ar = arById.get(a.accountsReceivableId);
+            const bill = ar
+              ? settlementBillLinkLabel(ar.billId, ar.billNo, billLabel)
+              : null;
+            return {
+              id: a.id,
+              amount: a.amount,
+              currencyCode: a.currencyCode,
+              allocationStatus: a.allocationStatus,
+              createdAt: a.createdAt,
+              finalizedAt: a.finalizedAt,
+              reversedAt: a.reversedAt,
+              reverseReason: a.reverseReason,
+              targetId: a.accountsReceivableId,
+              targetDisplay: bill
+                ? `${arLabel} · ${bill}`
+                : ar
+                  ? `${arLabel} · còn ${formatMoney(ar.outstanding, ar.currencyCode)}`
+                  : arLabel,
+            };
+          })}
           renderActions={(a) => (
             <>
               {isDraftAllocation(a.allocationStatus) ? (

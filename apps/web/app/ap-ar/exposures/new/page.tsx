@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { CreateExposureForm } from "@/components/CreateExposureForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
+import { getBill } from "@/lib/bills";
 import {
   listCostsByBill,
   listRevenuesByBill,
@@ -40,6 +41,11 @@ export default async function NewExposurePage({
   } = await searchParams;
   const kind = kindRaw === "receivable" ? "receivable" : "payable";
   const terms = await fetchTerminology();
+  let defaultBillNo: string | undefined;
+  if (billId) {
+    const billRes = await getBill(billId);
+    if (billRes.ok) defaultBillNo = billRes.data.billNo;
+  }
   const exposureLabel =
     kind === "payable"
       ? term(terms, "PAYABLE_EXPOSURE", "Nghĩa vụ phải trả (exposure)")
@@ -127,6 +133,7 @@ export default async function NewExposurePage({
           terms={terms}
           kind={kind}
           defaultBillId={billId}
+          defaultBillNo={defaultBillNo}
           defaultCurrency={currency || "VND"}
           defaultAmount={defaultAmount}
           defaultCostId={costId}

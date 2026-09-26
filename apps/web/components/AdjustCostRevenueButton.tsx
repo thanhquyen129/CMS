@@ -213,7 +213,7 @@ export function AdjustCostRevenueButton({
                     checked={adjustmentType === "reversal"}
                     onChange={() => setAdjustmentType("reversal")}
                   />{" "}
-                  Đảo / hoàn (số dương → trừ)
+                  Hoàn tác (số dương → trừ)
                 </label>
               </div>
             </fieldset>

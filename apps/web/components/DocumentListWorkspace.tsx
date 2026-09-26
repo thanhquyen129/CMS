@@ -239,15 +239,24 @@ export function DocumentListWorkspace({
                   <Link
                     className="row-link"
                     href={
-                      selected.direction?.toLowerCase() === "receivable"
-                        ? "/ap-ar?tab=ar"
-                        : "/ap-ar?tab=ap"
+                      selected.billId
+                        ? selected.direction?.toLowerCase() === "receivable"
+                          ? `/ap-ar?tab=ar&billId=${encodeURIComponent(selected.billId)}`
+                          : `/ap-ar?tab=ap&billId=${encodeURIComponent(selected.billId)}`
+                        : selected.direction?.toLowerCase() === "receivable"
+                          ? "/ap-ar?tab=ar"
+                          : "/ap-ar?tab=ap"
                     }
                   >
                     Xem sổ{" "}
                     {selected.direction?.toLowerCase() === "receivable"
                       ? "phải thu (AR)"
                       : "phải trả (AP)"}
+                    {selected.billId
+                      ? selected.billNo?.trim()
+                        ? ` · ${selected.billNo.trim()}`
+                        : " của Bill này"
+                      : ""}
                   </Link>
                 </li>
                 {selected.billId ? (

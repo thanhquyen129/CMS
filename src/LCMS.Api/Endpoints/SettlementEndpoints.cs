@@ -1,3 +1,4 @@
+using LCMS.Application.Bills.Queries;
 using LCMS.Application.Settlements.Commands;
 using LCMS.Application.Settlements.Queries;
 using MediatR;
@@ -13,13 +14,14 @@ public static class SettlementEndpoints
         payments.MapPost("/", async (CreatePaymentRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            var billId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
             var id = await sender.Send(
                 new CreatePaymentCommand(
                     body.Amount,
                     body.CurrencyCode,
                     body.ValueDate,
                     body.CounterpartyId,
-                    body.BillId,
+                    billId,
                     body.ReferenceNo,
                     body.Notes,
                     idempotencyKey.ToString()),
@@ -92,13 +94,14 @@ public static class SettlementEndpoints
         collections.MapPost("/", async (CreateCollectionRequest body, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
+            var billId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
             var id = await sender.Send(
                 new CreateCollectionCommand(
                     body.Amount,
                     body.CurrencyCode,
                     body.ValueDate,
                     body.CounterpartyId,
-                    body.BillId,
+                    billId,
                     body.ReferenceNo,
                     body.Notes,
                     idempotencyKey.ToString()),
@@ -175,7 +178,7 @@ public sealed record CreatePaymentRequest(
     string CurrencyCode,
     DateOnly? ValueDate,
     Guid? CounterpartyId,
-    Guid? BillId,
+    string? BillId,
     string? ReferenceNo,
     string? Notes);
 
@@ -184,7 +187,7 @@ public sealed record CreateCollectionRequest(
     string CurrencyCode,
     DateOnly? ValueDate,
     Guid? CounterpartyId,
-    Guid? BillId,
+    string? BillId,
     string? ReferenceNo,
     string? Notes);
 

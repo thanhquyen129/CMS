@@ -196,13 +196,11 @@ export function CreateExposuresFromMatchButton({
                         : p.amount.toLocaleString("vi-VN")}
                     </td>
                     <td className="muted small">
-                      {p.costId ? (
-                        <code>{p.costId.slice(0, 8)}…</code>
-                      ) : p.revenueId ? (
-                        <code>{p.revenueId.slice(0, 8)}…</code>
-                      ) : (
-                        "—"
-                      )}
+                      {p.kind === "payable"
+                        ? "Chi phí đã khớp"
+                        : p.kind === "receivable"
+                          ? "Doanh thu đã khớp"
+                          : "—"}
                     </td>
                     <td>
                       {p.alreadyExists ? (

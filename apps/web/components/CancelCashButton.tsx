@@ -81,7 +81,7 @@ export function CancelCashButton({ kind, cashId }: Props) {
             />
           </label>
           <p className="note">
-            Phân bổ nháp sẽ được đảo cùng phiếu. Phân bổ đã chốt phải đảo trước.
+            Phân bổ nháp sẽ được hủy cùng phiếu. Phân bổ đã chốt phải hủy phân bổ trước.
             Không xóa số tiền.
           </p>
           {error ? (

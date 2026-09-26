@@ -89,7 +89,7 @@ export function detailStatusLabel(
     case "active":
       return "Hiệu lực";
     case "reversed":
-      return term(terms, "MATCH_DETAIL_REVERSED", "Đã đảo");
+      return term(terms, "MATCH_DETAIL_REVERSED", "Đã hủy khớp");
     default:
       return status || "—";
   }

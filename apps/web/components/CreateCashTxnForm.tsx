@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { BillTypeahead } from "@/components/BillTypeahead";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { withIdempotency } from "@/lib/idempotency";
@@ -15,6 +16,7 @@ type Props = {
   terms: TerminologyMap;
   kind: Kind;
   defaultBillId?: string;
+  defaultBillNo?: string;
   defaultCurrency?: string;
 };
 
@@ -22,6 +24,7 @@ export function CreateCashTxnForm({
   terms,
   kind,
   defaultBillId,
+  defaultBillNo,
   defaultCurrency = "VND",
 }: Props) {
   const router = useRouter();
@@ -184,17 +187,12 @@ export function CreateCashTxnForm({
         <fieldset className="group-box">
           <legend>Tham chiếu</legend>
           <div className="form-grid">
-            <div className="field">
-              <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
-              <input
-                id="billId"
-                name="billId"
-                defaultValue={defaultBillId ?? ""}
-                disabled={busy}
-                placeholder="Gắn Bill nếu có"
-                autoComplete="off"
-              />
-            </div>
+            <BillTypeahead
+              label={`${billLabel} (tuỳ chọn)`}
+              defaultId={defaultBillId}
+              defaultLabel={defaultBillNo}
+              disabled={busy}
+            />
             <div className="field">
               <label htmlFor="referenceNo">Số tham chiếu</label>
               <input

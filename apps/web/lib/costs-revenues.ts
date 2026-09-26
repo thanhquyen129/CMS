@@ -124,7 +124,7 @@ export function adjustmentTypeLabel(type: string): string {
     case "adjustment":
       return "Điều chỉnh";
     case "reversal":
-      return "Đảo / hoàn";
+      return "Hoàn tác";
     default:
       return type;
   }

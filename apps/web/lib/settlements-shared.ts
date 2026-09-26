@@ -91,7 +91,7 @@ export function allocationStatusLabel(
     case "finalized":
       return term(terms, "ALLOCATION_FINALIZED", "Đã chốt phân bổ");
     case "reversed":
-      return term(terms, "ALLOCATION_REVERSED", "Đã đảo phân bổ");
+      return term(terms, "ALLOCATION_REVERSED", "Đã hủy phân bổ");
     default:
       return status || "—";
   }
@@ -113,9 +113,9 @@ export function canReverseAllocation(status: string): boolean {
 export function settlementBillLinkLabel(
   billId: string | null | undefined,
   billNo: string | null | undefined,
-  billLabel = "Bill"
+  _billLabel = "Bill"
 ): string | null {
   if (!billId) return null;
   if (billNo?.trim()) return billNo.trim();
-  return `${billLabel} ${billId.slice(0, 8)}…`;
+  return "Chưa có số Bill";
 }

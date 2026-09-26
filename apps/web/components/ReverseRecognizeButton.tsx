@@ -37,7 +37,7 @@ export function ReverseRecognizeButton({
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const label = term(terms, "REVERSE_RECOGNIZE", "Đảo ghi nhận");
+  const label = term(terms, "REVERSE_RECOGNIZE", "Hủy ghi nhận");
   const canReverse =
     recordStatus?.toLowerCase() === "active" &&
     settledAmount <= 0 &&
@@ -51,7 +51,7 @@ export function ReverseRecognizeButton({
   const run = useCallback(async () => {
     const trimmed = reason.trim();
     if (!trimmed) {
-      setError("Nhập lý do đảo ghi nhận.");
+      setError("Nhập lý do hủy ghi nhận.");
       return;
     }
     setSubmitting(true);
@@ -80,7 +80,7 @@ export function ReverseRecognizeButton({
         const body = (await res.json().catch(() => ({}))) as {
           message?: string;
         };
-        setError(body.message || "Đảo ghi nhận thất bại.");
+        setError(body.message || "Hủy ghi nhận thất bại.");
         return;
       }
       setOpen(false);
@@ -121,10 +121,10 @@ export function ReverseRecognizeButton({
             aria-modal="true"
             aria-labelledby={dialogTitleId}
           >
-            <h2 id={dialogTitleId}>Đảo ghi nhận?</h2>
+            <h2 id={dialogTitleId}>Hủy ghi nhận?</h2>
             <p>
               Soft-reverse số dư {formatMoney(outstanding, currencyCode)}. Không
-              xóa lịch sử ghi nhận; exposure mở lại phần tương ứng. Phải đảo
+              xóa lịch sử ghi nhận; exposure mở lại phần tương ứng. Phải hủy
               phân bổ đã chốt trước (nếu có).
             </p>
             <div className="field">
@@ -159,7 +159,7 @@ export function ReverseRecognizeButton({
                 onClick={run}
                 disabled={submitting}
               >
-                {submitting ? "Đang đảo…" : "Xác nhận đảo ghi nhận"}
+                {submitting ? "Đang hủy…" : "Xác nhận hủy ghi nhận"}
               </button>
             </div>
           </div>

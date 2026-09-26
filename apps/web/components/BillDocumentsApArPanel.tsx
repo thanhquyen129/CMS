@@ -65,7 +65,8 @@ export function BillDocumentsApArPanel({
   );
 
   const docsHref = `/documents?billId=${encodeURIComponent(billId)}`;
-  const apArSettledHref = `/ap-ar?status=settled`;
+  const apArSettledHref = `/ap-ar?tab=ap&status=settled&billId=${encodeURIComponent(billId)}`;
+  const arSettledHref = `/ap-ar?tab=ar&status=settled&billId=${encodeURIComponent(billId)}`;
 
   return (
     <>
@@ -315,7 +316,7 @@ export function BillDocumentsApArPanel({
           {arOpen.length === 0 && arSettled.length > 0 ? (
             <p className="note">
               Toàn bộ {arLabel.toLowerCase()} trên Bill đã tất toán.{" "}
-              <Link className="row-link" href={apArSettledHref}>
+              <Link className="row-link" href={arSettledHref}>
                 Xem sổ đã tất toán
               </Link>
               .

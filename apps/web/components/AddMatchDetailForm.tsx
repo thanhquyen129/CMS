@@ -71,7 +71,7 @@ export function AddMatchDetailForm({
     return (
       <div className="empty-state" role="status">
         <p>
-          Không còn dòng mở để khớp (open = 0). Thêm dòng trên chứng từ hoặc đảo
+          Không còn dòng mở để khớp (open = 0). Thêm dòng trên chứng từ hoặc hủy khớp
           khớp trước.
         </p>
         {documentId ? (

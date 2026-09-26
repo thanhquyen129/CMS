@@ -83,7 +83,7 @@ export default async function RecognizeExposurePage({
             <>
               {" · "}
               <Link className="row-link" href={`/bills/${exp.billId}`}>
-                Mở Bill
+                {exp.billNo?.trim() || "Mở hồ sơ Bill"}
               </Link>
             </>
           ) : null}

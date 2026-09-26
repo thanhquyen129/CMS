@@ -38,17 +38,21 @@ type SearchParams = Promise<{
   status?: string;
   page?: string;
   pageSize?: string;
+  billId?: string;
+  id?: string;
 }>;
 
 function apArHref(opts: {
   tab?: string;
   status?: ApArStatusFilter;
+  billId?: string | null;
 }): string {
   const p = new URLSearchParams();
   if (opts.tab && opts.tab !== "ap") p.set("tab", opts.tab);
   if (opts.status && opts.status !== "outstanding") {
     p.set("status", opts.status);
   }
+  if (opts.billId) p.set("billId", opts.billId);
   const qs = p.toString();
   return qs ? `/ap-ar?${qs}` : "/ap-ar";
 }
@@ -108,11 +112,19 @@ export default async function ApArPage({
     redirect("/login");
   }
 
-  const { tab, status: statusRaw, page: pageRaw, pageSize: pageSizeRaw } =
-    await searchParams;
+  const {
+    tab,
+    status: statusRaw,
+    page: pageRaw,
+    pageSize: pageSizeRaw,
+    billId: billIdRaw,
+    id: selectedIdRaw,
+  } = await searchParams;
   const activeTab =
     tab === "ar" || tab === "exposure" ? tab : "ap";
   const statusFilter = parseApArStatusFilter(statusRaw);
+  const filterBillId = billIdRaw?.trim() || null;
+  const initialSelectedId = selectedIdRaw?.trim() || null;
 
   const terms = await fetchTerminology();
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
@@ -145,24 +157,42 @@ export default async function ApArPage({
   ]);
 
   const apItems = apRes.ok
-    ? filterByApArStatus(apRes.data, statusFilter)
+    ? filterByApArStatus(apRes.data, statusFilter).filter(
+        (r) => !filterBillId || r.billId === filterBillId
+      )
     : [];
   const arItems = arRes.ok
-    ? filterByApArStatus(arRes.data, statusFilter)
+    ? filterByApArStatus(arRes.data, statusFilter).filter(
+        (r) => !filterBillId || r.billId === filterBillId
+      )
     : [];
   const apSettledCount = apRes.ok
-    ? apRes.data.filter((r) => r.settlementStatus?.toLowerCase() === "settled")
-        .length
+    ? apRes.data.filter(
+        (r) =>
+          r.settlementStatus?.toLowerCase() === "settled" &&
+          (!filterBillId || r.billId === filterBillId)
+      ).length
     : 0;
   const arSettledCount = arRes.ok
-    ? arRes.data.filter((r) => r.settlementStatus?.toLowerCase() === "settled")
-        .length
+    ? arRes.data.filter(
+        (r) =>
+          r.settlementStatus?.toLowerCase() === "settled" &&
+          (!filterBillId || r.billId === filterBillId)
+      ).length
     : 0;
   const peItems = peRes.ok
-    ? peRes.data.filter((e) => e.openAmount > 0 || e.status !== "recognized")
+    ? peRes.data.filter(
+        (e) =>
+          (e.openAmount > 0 || e.status !== "recognized") &&
+          (!filterBillId || e.billId === filterBillId)
+      )
     : [];
   const reItems = reRes.ok
-    ? reRes.data.filter((e) => e.openAmount > 0 || e.status !== "recognized")
+    ? reRes.data.filter(
+        (e) =>
+          (e.openAmount > 0 || e.status !== "recognized") &&
+          (!filterBillId || e.billId === filterBillId)
+      )
     : [];
 
   const showSettledAmount =
@@ -177,11 +207,17 @@ export default async function ApArPage({
   const pages = calcTotalPages(activeRows.length, pageSize);
   const page = parsePage(pageRaw, pages);
   const pageRows = slicePage(activeRows, page, pageSize);
-  const pageParams = { tab: activeTab, status: statusFilter };
+  const pageParams = {
+    tab: activeTab,
+    status: statusFilter,
+    ...(filterBillId ? { billId: filterBillId } : {}),
+  };
 
   // —— Denser aging KPI (not-due / 0-30 / >30 / settled) when data exists ——
   const agingSide =
-    activeTab === "ar" ? agingRes.ok && agingRes.data.receivable : agingRes.ok && agingRes.data.payable;
+    activeTab === "ar"
+      ? agingRes.ok && agingRes.data.receivable
+      : agingRes.ok && agingRes.data.payable;
   const agingBuckets =
     activeTab === "ar"
       ? agingRes.ok
@@ -192,17 +228,40 @@ export default async function ApArPage({
         : undefined;
   const agingCurrency =
     (activeTab === "ar"
-      ? agingRes.ok && agingRes.data.receivable?.receivableItems?.[0]?.currencyCode
-      : agingRes.ok && agingRes.data.payable?.payableItems?.[0]?.currencyCode) ||
+      ? agingRes.ok &&
+        agingRes.data.receivable?.receivableItems?.[0]?.currencyCode
+      : agingRes.ok &&
+        agingRes.data.payable?.payableItems?.[0]?.currencyCode) ||
     activeRows[0]?.currencyCode ||
     "VND";
   const notDue = agingOutstanding(agingBuckets, ["current", "no_due_date"]);
   const due0to30 = agingOutstanding(agingBuckets, ["1_30"]);
-  const dueOver30 = agingOutstanding(agingBuckets, ["31_60", "61_90", "90_plus"]);
+  const dueOver30 = agingOutstanding(agingBuckets, [
+    "31_60",
+    "61_90",
+    "90_plus",
+  ]);
 
   const cashLabel = activeTab === "ar" ? collectionLabel : paymentLabel;
   const cashCreateHref =
-    activeTab === "ar" ? "/settlements/collections/new" : "/settlements/payments/new";
+    activeTab === "ar"
+      ? `/settlements/collections/new${filterBillId ? `?billId=${encodeURIComponent(filterBillId)}` : ""}`
+      : `/settlements/payments/new${filterBillId ? `?billId=${encodeURIComponent(filterBillId)}` : ""}`;
+
+  const primaryAction =
+    activeTab === "exposure" ? (
+      <Link className="btn" href="/ap-ar/exposures/new?kind=payable">
+        Tạo exposure
+      </Link>
+    ) : activeTab === "ar" ? (
+      <Link className="btn" href={cashCreateHref}>
+        Tạo {collectionLabel.toLowerCase()}
+      </Link>
+    ) : (
+      <Link className="btn" href={cashCreateHref}>
+        Tạo {paymentLabel.toLowerCase()}
+      </Link>
+    );
 
   const statCards: StatCardModel[] = [
     {
@@ -274,11 +333,30 @@ export default async function ApArPage({
             </>
           }
           action={
-            <Link className="btn" href="/ap-ar/aging">
-              Tuổi nợ
-            </Link>
+            <div className="toolbar-row" style={{ margin: 0, gap: "0.5rem" }}>
+              {primaryAction}
+              <Link className="btn btn-ghost btn-sm" href="/ap-ar/aging">
+                Tuổi nợ
+              </Link>
+            </div>
           }
         />
+
+        {filterBillId ? (
+          <p className="note">
+            Đang lọc theo Bill.{" "}
+            <Link className="row-link" href={`/bills/${filterBillId}`}>
+              Mở hồ sơ Bill
+            </Link>
+            {" · "}
+            <Link
+              className="row-link"
+              href={apArHref({ tab: activeTab, status: statusFilter })}
+            >
+              Bỏ lọc Bill
+            </Link>
+          </p>
+        ) : null}
 
         {activeTab !== "exposure" ? <StatCardGrid cards={statCards} /> : null}
 
@@ -305,41 +383,34 @@ export default async function ApArPage({
           </AnalyticsRow>
         ) : null}
 
-        <div className="toolbar-row" role="group" aria-label="Thao tác AP/AR">
-          <Link className="btn btn-sm" href="/settlements">
-            {paymentLabel} &amp; thu tiền
-          </Link>
-          <Link className="btn btn-sm" href="/ap-ar/exposures/new?kind=payable">
-            Tạo exposure phải trả
-          </Link>
+        <div className="filter-tabs" role="tablist" aria-label="Chọn sổ">
           <Link
-            className="btn btn-sm"
-            href="/ap-ar/exposures/new?kind=receivable"
-          >
-            Tạo exposure phải thu
-          </Link>
-        </div>
-
-        <div className="search-bar" role="tablist" aria-label="Chọn sổ">
-          <Link
-            className={activeTab === "ap" ? "btn" : "btn btn-ghost"}
-            href={apArHref({ tab: "ap", status: statusFilter })}
+            className={activeTab === "ap" ? "active" : undefined}
+            href={apArHref({
+              tab: "ap",
+              status: statusFilter,
+              billId: filterBillId,
+            })}
             role="tab"
             aria-selected={activeTab === "ap"}
           >
             {apLabel}
           </Link>
           <Link
-            className={activeTab === "ar" ? "btn" : "btn btn-ghost"}
-            href={apArHref({ tab: "ar", status: statusFilter })}
+            className={activeTab === "ar" ? "active" : undefined}
+            href={apArHref({
+              tab: "ar",
+              status: statusFilter,
+              billId: filterBillId,
+            })}
             role="tab"
             aria-selected={activeTab === "ar"}
           >
             {arLabel}
           </Link>
           <Link
-            className={activeTab === "exposure" ? "btn" : "btn btn-ghost"}
-            href={apArHref({ tab: "exposure" })}
+            className={activeTab === "exposure" ? "active" : undefined}
+            href={apArHref({ tab: "exposure", billId: filterBillId })}
             role="tab"
             aria-selected={activeTab === "exposure"}
           >
@@ -349,36 +420,53 @@ export default async function ApArPage({
 
         {activeTab === "ap" || activeTab === "ar" ? (
           <div
-            className="search-bar"
+            className="filter-tabs"
             role="group"
             aria-label="Lọc trạng thái tất toán"
           >
             <Link
               className={
-                statusFilter === "outstanding" ? "btn btn-sm" : "btn btn-ghost btn-sm"
+                statusFilter === "outstanding" ? "active" : undefined
               }
-              href={apArHref({ tab: activeTab, status: "outstanding" })}
+              href={apArHref({
+                tab: activeTab,
+                status: "outstanding",
+                billId: filterBillId,
+              })}
             >
               Còn dư
             </Link>
             <Link
-              className={
-                statusFilter === "settled" ? "btn btn-sm" : "btn btn-ghost btn-sm"
-              }
-              href={apArHref({ tab: activeTab, status: "settled" })}
+              className={statusFilter === "settled" ? "active" : undefined}
+              href={apArHref({
+                tab: activeTab,
+                status: "settled",
+                billId: filterBillId,
+              })}
             >
               {settledLabel}
             </Link>
             <Link
-              className={
-                statusFilter === "all" ? "btn btn-sm" : "btn btn-ghost btn-sm"
-              }
-              href={apArHref({ tab: activeTab, status: "all" })}
+              className={statusFilter === "all" ? "active" : undefined}
+              href={apArHref({
+                tab: activeTab,
+                status: "all",
+                billId: filterBillId,
+              })}
             >
               Tất cả
             </Link>
           </div>
-        ) : null}
+        ) : (
+          <p className="note" style={{ marginTop: "0.5rem" }}>
+            <Link
+              className="btn btn-ghost btn-sm"
+              href={`/ap-ar/exposures/new?kind=receivable${filterBillId ? `&billId=${encodeURIComponent(filterBillId)}` : ""}`}
+            >
+              Tạo exposure phải thu
+            </Link>
+          </p>
+        )}
 
         {activeTab === "ap" ? (
           <>
@@ -428,6 +516,9 @@ export default async function ApArPage({
                   showSettledAmount={showSettledAmount}
                   cashLabel={cashLabel}
                   cashCreateHref={cashCreateHref}
+                  initialSelectedId={
+                    activeTab === "ap" ? initialSelectedId : null
+                  }
                 />
                 <ListPagination
                   basePath="/ap-ar"
@@ -488,6 +579,9 @@ export default async function ApArPage({
                   showSettledAmount={showSettledAmount}
                   cashLabel={cashLabel}
                   cashCreateHref={cashCreateHref}
+                  initialSelectedId={
+                    activeTab === "ar" ? initialSelectedId : null
+                  }
                 />
                 <ListPagination
                   basePath="/ap-ar"
@@ -562,7 +656,7 @@ export default async function ApArPage({
                         <td>
                           {row.billId ? (
                             <Link className="row-link" href={`/bills/${row.billId}`}>
-                              {row.billNo?.trim() || billLabel}
+                              {row.billNo?.trim() || "—"}
                             </Link>
                           ) : (
                             "—"
@@ -632,7 +726,7 @@ export default async function ApArPage({
                         <td>
                           {row.billId ? (
                             <Link className="row-link" href={`/bills/${row.billId}`}>
-                              {row.billNo?.trim() || billLabel}
+                              {row.billNo?.trim() || "—"}
                             </Link>
                           ) : (
                             "—"

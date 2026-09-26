@@ -119,9 +119,6 @@ export function MatchSuggestionsPanel({ matchId, draft }: Props) {
                     <td>
                       <span className="muted small">{kindLabel(s.targetKind)}</span>{" "}
                       {s.targetLabel}
-                      <div className="muted small">
-                        <code>{s.targetId.slice(0, 8)}…</code>
-                      </div>
                     </td>
                     <td className="num">
                       {s.suggestedMatchedAmount.toLocaleString("vi-VN")}{" "}

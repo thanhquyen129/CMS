@@ -1,3 +1,4 @@
+using LCMS.Application.Bills.Queries;
 using LCMS.Application.Exposures.Commands;
 using LCMS.Application.Exposures.Queries;
 using MediatR;
@@ -12,13 +13,14 @@ public static class ExposureApArEndpoints
 
         payableExposures.MapPost("/", async (CreatePayableExposureRequest body, ISender sender, CancellationToken ct) =>
         {
+            var billId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
             var id = await sender.Send(
                 new CreatePayableExposureCommand(
                     body.Amount,
                     body.CurrencyCode,
                     body.EffectiveDate,
                     body.DueDate,
-                    body.BillId,
+                    billId,
                     body.CounterpartyId,
                     body.CostId,
                     body.FinancialDocumentId,
@@ -73,13 +75,14 @@ public static class ExposureApArEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
+            var billId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
             var id = await sender.Send(
                 new CreateReceivableExposureCommand(
                     body.Amount,
                     body.CurrencyCode,
                     body.EffectiveDate,
                     body.DueDate,
-                    body.BillId,
+                    billId,
                     body.CounterpartyId,
                     body.RevenueId,
                     body.FinancialDocumentId,
@@ -310,7 +313,7 @@ public sealed record CreatePayableExposureRequest(
     string CurrencyCode,
     DateOnly? EffectiveDate,
     DateOnly? DueDate,
-    Guid? BillId,
+    string? BillId,
     Guid? CounterpartyId,
     Guid? CostId,
     Guid? FinancialDocumentId,
@@ -323,7 +326,7 @@ public sealed record CreateReceivableExposureRequest(
     string CurrencyCode,
     DateOnly? EffectiveDate,
     DateOnly? DueDate,
-    Guid? BillId,
+    string? BillId,
     Guid? CounterpartyId,
     Guid? RevenueId,
     Guid? FinancialDocumentId,

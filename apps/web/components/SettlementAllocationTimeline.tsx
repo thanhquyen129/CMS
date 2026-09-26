@@ -13,6 +13,8 @@ export type SettlementTimelineAlloc = {
   reversedAt: string | null;
   reverseReason: string | null;
   targetId: string;
+  /** Business label for AP/AR target (no UUID). */
+  targetDisplay?: string | null;
 };
 
 type Props = {
@@ -101,8 +103,7 @@ export function SettlementAllocationTimeline({
             <div className="settlement-timeline-body">
               <div className="settlement-timeline-head">
                 <strong>
-                  Phân bổ → {targetLabel}{" "}
-                  <code className="mono-id">{a.targetId.slice(0, 8)}…</code>
+                  Phân bổ → {a.targetDisplay?.trim() || targetLabel}
                 </strong>
                 <span
                   className={
@@ -122,7 +123,7 @@ export function SettlementAllocationTimeline({
               </div>
               {a.reverseReason ? (
                 <span className="muted small block">
-                  Lý do đảo: {a.reverseReason}
+                  Lý do hủy: {a.reverseReason}
                 </span>
               ) : null}
               <div className="row-actions settlement-timeline-actions">

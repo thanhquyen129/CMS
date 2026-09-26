@@ -1,5 +1,31 @@
 # Handoff
 
+## 2026-09-26 — UAT Fix Cycle 02 (Bill linkage + UI identifiers)
+
+### User
+UAT đã dừng; đọc `docs/po/26092026/LCMS_UAT_Issue_Fix_Register_2026-09-26` (docx/xlsx) rồi fix.
+
+### Answer
+Root cause: Payment/Collection/Exposure create nhận `Guid? BillId` nên mã nghiệp vụ (`HAWB-UAT-001`) làm request fail; tester bỏ Bill → AP/AR mất linkage → Bill Financial Summary AR/AP = 0. Giờ API nhận `string? BillId` và resolve qua `ResolveBillReferenceQuery` (giống chứng từ). Form thanh toán/thu/exposure dùng `BillTypeahead`. Matching/AP-AR/settlement không còn UUID làm nhãn chính. Deep-link `/ap-ar?tab=ap|ar&billId=` (+ `id=` mở drawer). Thuật ngữ UI: Hủy phân bổ / Hủy khớp / Hủy ghi nhận (không lạm dụng «Đảo»). Hierarchy AP/AR: một CTA chính theo tab + `filter-tabs`.
+
+### Regression / tests
+- `Payment_Collection_Exposure_ByBillBusinessCode_StoresBillId` (payment/collection/exposure/AP/AR + Bill financial profile outstanding)
+- `CancelOpenPayment_ReversesDraft_AndBlocksWhenAllocationIsFinalized` (UAT02-012 guard)
+- `ReceiveDocument_ByBillBusinessCode_*`, `SettlementBillNoTests`
+- `npx tsc --noEmit` web OK
+
+### Files
+- API: `SettlementEndpoints.cs`, `ExposureApArEndpoints.cs`
+- Terms: `VietnameseUiTerms.cs`
+- Web forms: `CreateCashTxnForm.tsx`, `CreateExposureForm.tsx`, `BillTypeahead` reuse; new pages payments/collections/exposures
+- Labels: match detail, suggestions, settlements timeline, ApArListWorkspace, DocumentListWorkspace, BillDocumentsApArPanel
+- AP/AR chrome: `ap-ar/page.tsx` (`billId`/`id` query, primary CTA, filter-tabs)
+- Reverse buttons + status copy: Hủy phân bổ / Hủy khớp / Hủy ghi nhận
+- Test: `ControlPackageTests.cs`
+
+### Note
+Record AP/AR cũ đã tạo khi bỏ Bill vẫn `billId=null` — không backfill; tạo mới từ Cycle 02 trở đi giữ linkage. Retest RG-01…RG-09 theo register.
+
 ## 2026-09-25 — Cột Bill chứng từ hiện số Bill
 
 ### User

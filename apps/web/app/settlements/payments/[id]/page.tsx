@@ -68,21 +68,26 @@ export default async function PaymentDetailPage({
   }
 
   const payment = payRes.data;
-  const apItems = apRes.ok ? apRes.data.filter(isOutstanding) : [];
+  const allAp = apRes.ok ? apRes.data : [];
+  const apById = new Map(allAp.map((a) => [a.id, a]));
+  const apItems = allAp.filter(isOutstanding);
   const targets = apItems
     .filter(
       (a) =>
         a.currencyCode.toUpperCase() === payment.currencyCode.toUpperCase() &&
         (!payment.billId || a.billId === payment.billId || !a.billId)
     )
-    .map((a) => ({
-      id: a.id,
-      label: a.billId
-        ? `${apLabel} · Bill ${a.billId.slice(0, 8)}…`
-        : `${apLabel} · ${a.id.slice(0, 8)}…`,
-      outstanding: a.outstanding,
-      currencyCode: a.currencyCode,
-    }));
+    .map((a) => {
+      const bill = settlementBillLinkLabel(a.billId, a.billNo, billLabel);
+      return {
+        id: a.id,
+        label: bill
+          ? `${apLabel} · ${bill} · còn ${formatMoney(a.outstanding, a.currencyCode)}`
+          : `${apLabel} · còn ${formatMoney(a.outstanding, a.currencyCode)}`,
+        outstanding: a.outstanding,
+        currencyCode: a.currencyCode,
+      };
+    });
 
   const draftAllocs = payment.allocations.filter((a) =>
     isDraftAllocation(a.allocationStatus)
@@ -104,7 +109,7 @@ export default async function PaymentDetailPage({
           {paymentLabel} · {formatMoney(payment.amount, payment.currencyCode)}
         </h1>
         <p className="lede">
-          {paymentLabel} ≠ {costLabel}. Chốt phân bổ nháp; đảo khi cần trả
+          {paymentLabel} ≠ {costLabel}. Chốt phân bổ nháp; hủy phân bổ khi cần trả
           outstanding.
         </p>
         {openPayment && !hasFinalized ? (
@@ -115,7 +120,7 @@ export default async function PaymentDetailPage({
         ) : null}
         {openPayment && hasFinalized ? (
           <p className="note">
-            Còn phân bổ đã chốt — đảo phân bổ trước khi hủy thanh toán.
+            Còn phân bổ đã chốt — hủy phân bổ trước khi hủy thanh toán.
           </p>
         ) : null}
 
@@ -161,7 +166,7 @@ export default async function PaymentDetailPage({
         <h2 className="section-title">Phân bổ</h2>
         <p className="note">
           Tiến trình: ghi nhận {paymentLabel.toLowerCase()} → phân bổ nháp → chốt
-          (mới giảm outstanding {apLabel}). Đảo được khi còn nháp / đã chốt.
+          (mới giảm outstanding {apLabel}). Hủy phân bổ được khi còn nháp / đã chốt.
         </p>
         <SettlementAllocationTimeline
           terms={terms}
@@ -170,17 +175,28 @@ export default async function PaymentDetailPage({
           valueDate={payment.valueDate}
           cashAmount={payment.amount}
           currencyCode={payment.currencyCode}
-          allocations={payment.allocations.map((a) => ({
-            id: a.id,
-            amount: a.amount,
-            currencyCode: a.currencyCode,
-            allocationStatus: a.allocationStatus,
-            createdAt: a.createdAt,
-            finalizedAt: a.finalizedAt,
-            reversedAt: a.reversedAt,
-            reverseReason: a.reverseReason,
-            targetId: a.accountsPayableId,
-          }))}
+          allocations={payment.allocations.map((a) => {
+            const ap = apById.get(a.accountsPayableId);
+            const bill = ap
+              ? settlementBillLinkLabel(ap.billId, ap.billNo, billLabel)
+              : null;
+            return {
+              id: a.id,
+              amount: a.amount,
+              currencyCode: a.currencyCode,
+              allocationStatus: a.allocationStatus,
+              createdAt: a.createdAt,
+              finalizedAt: a.finalizedAt,
+              reversedAt: a.reversedAt,
+              reverseReason: a.reverseReason,
+              targetId: a.accountsPayableId,
+              targetDisplay: bill
+                ? `${apLabel} · ${bill}`
+                : ap
+                  ? `${apLabel} · còn ${formatMoney(ap.outstanding, ap.currencyCode)}`
+                  : apLabel,
+            };
+          })}
           renderActions={(a) => (
             <>
               {isDraftAllocation(a.allocationStatus) ? (

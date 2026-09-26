@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { BillTypeahead } from "@/components/BillTypeahead";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
@@ -20,6 +21,7 @@ type Props = {
   terms: TerminologyMap;
   kind: Kind;
   defaultBillId?: string;
+  defaultBillNo?: string;
   defaultCurrency?: string;
   defaultAmount?: number;
   defaultCostId?: string;
@@ -32,6 +34,7 @@ export function CreateExposureForm({
   terms,
   kind,
   defaultBillId,
+  defaultBillNo,
   defaultCurrency = "VND",
   defaultAmount,
   defaultCostId,
@@ -228,17 +231,12 @@ export function CreateExposureForm({
         <fieldset className="group-box">
           <legend>Liên kết</legend>
           <div className="form-grid">
-            <div className="field">
-              <label htmlFor="billId">{billLabel} (tuỳ chọn, UUID)</label>
-              <input
-                id="billId"
-                name="billId"
-                defaultValue={defaultBillId ?? ""}
-                disabled={busy}
-                placeholder="Gắn Bill nếu có"
-                autoComplete="off"
-              />
-            </div>
+            <BillTypeahead
+              label={`${billLabel} (tuỳ chọn)`}
+              defaultId={defaultBillId}
+              defaultLabel={defaultBillNo}
+              disabled={busy}
+            />
             {linkOptions.length > 0 ? (
               <div className="field">
                 <label htmlFor="linkedId">

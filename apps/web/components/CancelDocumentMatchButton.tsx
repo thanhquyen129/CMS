@@ -68,7 +68,7 @@ export function CancelDocumentMatchButton({
         setError(
           body.message ||
             (res.status === 409
-              ? "Phải đảo hết chi tiết hiệu lực trước khi hủy phiên."
+              ? "Phải hủy hết chi tiết hiệu lực trước khi hủy phiên."
               : "Hủy phiên khớp thất bại.")
         );
         return;
@@ -128,7 +128,7 @@ export function CancelDocumentMatchButton({
           >
             <h2 id={dialogTitleId}>Hủy phiên khớp?</h2>
             <p>
-              Chỉ hủy khi không còn chi tiết hiệu lực. Đảo các dòng khớp trước
+              Chỉ hủy khi không còn chi tiết hiệu lực. Hủy các dòng khớp trước
               nếu cần.
             </p>
             <div className="field">

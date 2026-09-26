@@ -199,6 +199,66 @@ public sealed class ControlPackageTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Payment_Collection_Exposure_ByBillBusinessCode_StoresBillId()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "HAWB-UAT-002");
+
+        var paymentId = await PostId(tenantId, "/api/payments", new
+        {
+            amount = 100m,
+            currencyCode = "USD",
+            billId = "HAWB-UAT-002",
+            referenceNo = "UAT-PAY-AP-001"
+        });
+        var payment = await GetAsync<CashBillBody>(tenantId, $"/api/payments/{paymentId}");
+        Assert.Equal(billId, payment.BillId);
+        Assert.Equal("HAWB-UAT-002", payment.BillNo);
+
+        var collectionId = await PostId(tenantId, "/api/collections", new
+        {
+            amount = 100m,
+            currencyCode = "USD",
+            billId = "HAWB-UAT-002",
+            referenceNo = "UAT-COL-AR-001"
+        });
+        var collection = await GetAsync<CashBillBody>(tenantId, $"/api/collections/{collectionId}");
+        Assert.Equal(billId, collection.BillId);
+        Assert.Equal("HAWB-UAT-002", collection.BillNo);
+
+        var payableExposureId = await PostId(tenantId, "/api/payable-exposures", new
+        {
+            amount = 280m,
+            currencyCode = "USD",
+            billId = "HAWB-UAT-002"
+        });
+        var payable = await GetAsync<ExposureBillBody>(tenantId, $"/api/payable-exposures/{payableExposureId}");
+        Assert.Equal(billId, payable.BillId);
+        Assert.Equal("HAWB-UAT-002", payable.BillNo);
+
+        var receivableExposureId = await PostId(tenantId, "/api/receivable-exposures", new
+        {
+            amount = 280m,
+            currencyCode = "USD",
+            billId = "HAWB-UAT-002"
+        });
+        var receivable = await GetAsync<ExposureBillBody>(tenantId, $"/api/receivable-exposures/{receivableExposureId}");
+        Assert.Equal(billId, receivable.BillId);
+        Assert.Equal("HAWB-UAT-002", receivable.BillNo);
+
+        var apId = await PostId(tenantId, $"/api/payable-exposures/{payableExposureId}/recognize", new { amount = 280m });
+        var arId = await PostId(tenantId, $"/api/receivable-exposures/{receivableExposureId}/recognize", new { amount = 280m });
+        var ap = await GetAsync<ApArBillBody>(tenantId, $"/api/accounts-payable/{apId}");
+        var ar = await GetAsync<ApArBillBody>(tenantId, $"/api/accounts-receivable/{arId}");
+        Assert.Equal(billId, ap.BillId);
+        Assert.Equal(billId, ar.BillId);
+
+        var profile = await GetAsync<BillProfileBody>(tenantId, $"/api/bills/{billId}/financial-profile");
+        Assert.Contains(profile.SettlementOutstanding, b => b.CurrencyCode == "USD" && b.AccountsPayableOutstanding == 280m);
+        Assert.Contains(profile.SettlementOutstanding, b => b.CurrencyCode == "USD" && b.AccountsReceivableOutstanding == 280m);
+    }
+
+    [Fact]
     public async Task ReceiveDocument_ByBillBusinessCode_StoresBill_AndRejectsUnknownCurrency()
     {
         var tenantId = await CreateTenantAsync();
@@ -469,4 +529,12 @@ public sealed class ControlPackageTests : IAsyncLifetime
     private sealed record DocLine(Guid? BillId, string? BillNo);
     private sealed record DocWithLines(Guid BillId, string? BillNo, List<DocLine> Lines);
     private sealed record DocListItem(Guid Id, string? BillNo);
+    private sealed record CashBillBody(Guid? BillId, string? BillNo);
+    private sealed record ExposureBillBody(Guid? BillId, string? BillNo);
+    private sealed record ApArBillBody(Guid? BillId);
+    private sealed record BillProfileBody(List<SettlementBucket> SettlementOutstanding);
+    private sealed record SettlementBucket(
+        string CurrencyCode,
+        decimal AccountsPayableOutstanding,
+        decimal AccountsReceivableOutstanding);
 }

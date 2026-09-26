@@ -110,7 +110,7 @@ export function ConfirmDocumentMatchButton({
           >
             <h2 id={dialogTitleId}>Xác nhận phiên khớp?</h2>
             <p>
-              Sau khi xác nhận, không thêm chi tiết mới. Có thể đảo chi tiết rồi
+              Sau khi xác nhận, không thêm chi tiết mới. Có thể hủy chi tiết rồi
               hủy phiên nếu cần. Không tạo chi phí/doanh thu.
             </p>
             {error ? (

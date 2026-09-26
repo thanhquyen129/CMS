@@ -1,5 +1,19 @@
 # Handoff
 
+## 2026-09-26 — Phân trang danh sách + nhãn menu + tỷ giá VCB
+
+### User
+Chuyển trang Bill không mượt như Shipment; Chặng/Chuyến, phụ lục giá, doanh thu theo Bill, báo cáo doanh thu, thanh toán & thu tiền, sao kê, địa điểm chưa phân trang; menu Doanh thu & Lợi nhuận hiện `&amp;`; tiền tệ thêm phổ biến + cập nhật tỷ giá VCB.
+
+### Answer
+- Menu: bỏ `&amp;` trong JSX (hiện đúng «&»).
+- Bill: chuyển trang dùng `page`/`pageSize` API khi không lọc trạng thái/ngày/tuyến/khách — chỉ enrich trang hiện tại.
+- Thêm phân trang: operations, phụ lục giá, Theo Bill trên `/revenues`, báo cáo doanh thu, settlements, bank-feed, địa điểm.
+- Tiền tệ: seed CNY/JPY/KRW/SGD/…; nút cập nhật tỷ giá Vietcombank (`POST /api/fx-rates/sync-vcb`).
+
+### Commit
+`aa748c4`
+
 ## 2026-09-26 — UAT Fix Cycle 02 (Bill linkage + UI identifiers)
 
 ### User

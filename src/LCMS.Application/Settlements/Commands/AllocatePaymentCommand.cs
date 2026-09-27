@@ -156,6 +156,7 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
             PaymentId = payment.Id,
             AccountsPayableId = ap.Id,
             Amount = amount,
+            CurrencyCode = payment.CurrencyCode,
             AllocationStatus = SettlementAllocationStatuses.Draft,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };

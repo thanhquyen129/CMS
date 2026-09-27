@@ -73,7 +73,7 @@ public sealed class FinalizePaymentAllocationCommandHandler : IRequestHandler<Fi
         if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {
             throw new ConflictAppException(
-                "Không thể chốt phân bổ thanh toán đã đảo. Tạo phân bổ mới nếu cần.");
+                "Không thể chốt phân bổ thanh toán đã hủy. Tạo phân bổ mới nếu cần.");
         }
 
         if (!string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Draft, StringComparison.OrdinalIgnoreCase))

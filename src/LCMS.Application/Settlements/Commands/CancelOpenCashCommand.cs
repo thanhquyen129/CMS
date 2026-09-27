@@ -62,7 +62,7 @@ public sealed class CancelPaymentCommandHandler : IRequestHandler<CancelPaymentC
             .ToListAsync(cancellationToken);
         if (allocations.Any(a => string.Equals(a.AllocationStatus, SettlementAllocationStatuses.Finalized, StringComparison.OrdinalIgnoreCase)))
         {
-            throw new ConflictAppException("Phải đảo phân bổ đã chốt trước khi hủy thanh toán.");
+            throw new ConflictAppException("Phải hủy phân bổ đã chốt trước khi hủy thanh toán.");
         }
 
         var reason = request.Reason.Trim();
@@ -144,7 +144,7 @@ public sealed class CancelCollectionCommandHandler : IRequestHandler<CancelColle
             .ToListAsync(cancellationToken);
         if (allocations.Any(a => string.Equals(a.AllocationStatus, SettlementAllocationStatuses.Finalized, StringComparison.OrdinalIgnoreCase)))
         {
-            throw new ConflictAppException("Phải đảo phân bổ đã chốt trước khi hủy phiếu thu.");
+            throw new ConflictAppException("Phải hủy phân bổ đã chốt trước khi hủy phiếu thu.");
         }
 
         var reason = request.Reason.Trim();

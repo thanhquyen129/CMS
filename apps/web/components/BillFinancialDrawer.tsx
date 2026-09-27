@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AuditTrailPanel } from "./AuditTrailPanel";
+import { BillFinancialHistoryPanel } from "./BillFinancialHistoryPanel";
 import { DetailDrawer } from "./DetailDrawer";
 import { DrawerTabs } from "./list/DrawerTabs";
 import {
@@ -545,12 +545,7 @@ export function BillFinancialDrawer({
           ) : null}
 
           {tab === "history" ? (
-            <AuditTrailPanel
-              terms={terms}
-              objectType="Bill"
-              objectId={bill.id}
-              title="Lịch sử Bill"
-            />
+            <BillFinancialHistoryPanel billId={bill.id} />
           ) : null}
 
               {tab === "related" ? (

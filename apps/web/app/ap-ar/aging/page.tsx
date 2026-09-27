@@ -42,7 +42,7 @@ function BucketTable({
       </div>
       {buckets.length === 0 ? (
         <div className="empty-state" role="status">
-          Không có dòng outstanding trong phạm vi lọc.
+          Không có khoản còn dư trong phạm vi lọc.
         </div>
       ) : (
         <div className="table-wrap">

@@ -1441,6 +1441,9 @@ internal sealed class AccountsPayableAdjustmentConfiguration : IEntityTypeConfig
         builder.Property(e => e.OutstandingAfter).HasPrecision(18, 4);
 
         builder.HasIndex(e => new { e.TenantId, e.AccountsPayableId, e.CreatedAt });
+        builder.HasIndex(e => new { e.TenantId, e.ReversesAdjustmentId })
+            .IsUnique()
+            .HasFilter("reverses_adjustment_id IS NOT NULL");
 
         builder.HasOne(e => e.AccountsPayable)
             .WithMany()
@@ -1468,6 +1471,9 @@ internal sealed class AccountsReceivableAdjustmentConfiguration : IEntityTypeCon
         builder.Property(e => e.OutstandingAfter).HasPrecision(18, 4);
 
         builder.HasIndex(e => new { e.TenantId, e.AccountsReceivableId, e.CreatedAt });
+        builder.HasIndex(e => new { e.TenantId, e.ReversesAdjustmentId })
+            .IsUnique()
+            .HasFilter("reverses_adjustment_id IS NOT NULL");
 
         builder.HasOne(e => e.AccountsReceivable)
             .WithMany()

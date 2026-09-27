@@ -21,8 +21,8 @@ public sealed class ReverseRecognizeAccountsReceivableCommandValidator
     {
         RuleFor(x => x.AccountsReceivableId).NotEmpty().WithMessage("Khoản phải thu không hợp lệ.");
         RuleFor(x => x.Reason)
-            .NotEmpty().WithMessage("Lý do đảo ghi nhận không được để trống.")
-            .MaximumLength(1024).WithMessage("Lý do đảo ghi nhận không được vượt quá 1024 ký tự.");
+            .NotEmpty().WithMessage("Lý do hủy ghi nhận không được để trống.")
+            .MaximumLength(1024).WithMessage("Lý do hủy ghi nhận không được vượt quá 1024 ký tự.");
     }
 }
 
@@ -63,18 +63,18 @@ public sealed class ReverseRecognizeAccountsReceivableCommandHandler
 
         if (string.Equals(ar.RecordStatus, ApArRecordStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Khoản phải thu đã được đảo ghi nhận.");
+            throw new ConflictAppException("Khoản phải thu đã được hủy ghi nhận.");
         }
 
         if (!string.Equals(ar.RecordStatus, ApArRecordStatuses.Active, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Chỉ đảo ghi nhận khoản phải thu đang hiệu lực.");
+            throw new ConflictAppException("Chỉ hủy ghi nhận khoản phải thu đang hiệu lực.");
         }
 
         if (ar.FinalizedSettledAmount > 0m)
         {
             throw new ConflictAppException(
-                "Phải đảo phân bổ thu tiền đã chốt trước khi đảo ghi nhận AR.");
+                "Phải hủy phân bổ thu tiền đã chốt trước khi hủy ghi nhận AR.");
         }
 
         var exposure = await _db.ReceivableExposures
@@ -94,7 +94,7 @@ public sealed class ReverseRecognizeAccountsReceivableCommandHandler
         ar.UpdatedAt = now;
         ar.UpdatedBy = _user.UserId;
 
-        var reasonLine = $"[đảo ghi nhận] {reason}";
+        var reasonLine = $"[hủy ghi nhận] {reason}";
         ar.Notes = string.IsNullOrWhiteSpace(ar.Notes)
             ? reasonLine
             : $"{ar.Notes}\n{reasonLine}";

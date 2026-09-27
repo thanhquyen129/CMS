@@ -239,7 +239,7 @@ public sealed class Sprint8FullSettlementTests : IAsyncLifetime
             var response = await _client.SendAsync(finalizeReversed);
             Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
             var err = await response.Content.ReadFromJsonAsync<ErrorResponse>(JsonOptions);
-            Assert.Contains("đã đảo", err!.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("đã hủy", err!.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         // Idempotent finalize on a fresh finalized allocation

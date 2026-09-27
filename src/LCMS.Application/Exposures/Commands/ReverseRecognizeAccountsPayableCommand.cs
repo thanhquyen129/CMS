@@ -24,8 +24,8 @@ public sealed class ReverseRecognizeAccountsPayableCommandValidator
     {
         RuleFor(x => x.AccountsPayableId).NotEmpty().WithMessage("Khoản phải trả không hợp lệ.");
         RuleFor(x => x.Reason)
-            .NotEmpty().WithMessage("Lý do đảo ghi nhận không được để trống.")
-            .MaximumLength(1024).WithMessage("Lý do đảo ghi nhận không được vượt quá 1024 ký tự.");
+            .NotEmpty().WithMessage("Lý do hủy ghi nhận không được để trống.")
+            .MaximumLength(1024).WithMessage("Lý do hủy ghi nhận không được vượt quá 1024 ký tự.");
     }
 }
 
@@ -66,18 +66,18 @@ public sealed class ReverseRecognizeAccountsPayableCommandHandler
 
         if (string.Equals(ap.RecordStatus, ApArRecordStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Khoản phải trả đã được đảo ghi nhận.");
+            throw new ConflictAppException("Khoản phải trả đã được hủy ghi nhận.");
         }
 
         if (!string.Equals(ap.RecordStatus, ApArRecordStatuses.Active, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Chỉ đảo ghi nhận khoản phải trả đang hiệu lực.");
+            throw new ConflictAppException("Chỉ hủy ghi nhận khoản phải trả đang hiệu lực.");
         }
 
         if (ap.FinalizedSettledAmount > 0m)
         {
             throw new ConflictAppException(
-                "Phải đảo phân bổ thanh toán đã chốt trước khi đảo ghi nhận AP.");
+                "Phải hủy phân bổ thanh toán đã chốt trước khi hủy ghi nhận AP.");
         }
 
         var exposure = await _db.PayableExposures
@@ -98,7 +98,7 @@ public sealed class ReverseRecognizeAccountsPayableCommandHandler
         ap.UpdatedAt = now;
         ap.UpdatedBy = _user.UserId;
 
-        var reasonLine = $"[đảo ghi nhận] {reason}";
+        var reasonLine = $"[hủy ghi nhận] {reason}";
         ap.Notes = string.IsNullOrWhiteSpace(ap.Notes)
             ? reasonLine
             : $"{ap.Notes}\n{reasonLine}";

@@ -25,6 +25,23 @@ type Props = {
   title?: string;
 };
 
+const ACTION_LABELS: Record<string, string> = {
+  "payment.cancel": "Hủy phiếu chi",
+  "collection.cancel": "Hủy phiếu thu",
+  "payment_allocation.finalize": "Chốt phân bổ thanh toán",
+  "collection_allocation.finalize": "Chốt phân bổ thu tiền",
+  "payment_allocation.reverse": "Hủy phân bổ thanh toán",
+  "collection_allocation.reverse": "Hủy phân bổ thu tiền",
+  "accounts_payable.adjust": "Điều chỉnh công nợ phải trả",
+  "accounts_receivable.adjust": "Điều chỉnh công nợ phải thu",
+  "accounts_payable.write_off": "Xóa nợ phải trả",
+  "accounts_receivable.write_off": "Xóa nợ phải thu",
+  "accounts_payable.write_off_reverse": "Hoàn tác xóa nợ phải trả",
+  "accounts_receivable.write_off_reverse": "Hoàn tác xóa nợ phải thu",
+  "accounts_payable.reverse_recognize": "Hủy ghi nhận công nợ phải trả",
+  "accounts_receivable.reverse_recognize": "Hủy ghi nhận công nợ phải thu",
+};
+
 function prettyJson(raw: string | null): string {
   if (!raw) return "—";
   try {
@@ -123,7 +140,9 @@ export function AuditTrailPanel({
                     <tr>
                       <td>{formatDateTimeVi(row.occurredAt)}</td>
                       <td>
-                        <code className="mono-id">{row.action}</code>
+                        {ACTION_LABELS[row.action] ?? (
+                          <code className="mono-id">{row.action}</code>
+                        )}
                       </td>
                       <td>{row.reason?.trim() || "—"}</td>
                       <td>

@@ -99,7 +99,7 @@ export default async function SettlementsPage({
           lede={
             <>
               {paymentLabel} ≠ {costLabel}; {collectionLabel} ≠ {revenueLabel}. Phân
-              bổ nháp rồi <strong>chốt phân bổ</strong> mới giảm outstanding AP/AR.
+              bổ nháp rồi <strong>chốt phân bổ</strong> mới giảm số dư công nợ phải trả / phải thu.
             </>
           }
           action={

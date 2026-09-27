@@ -80,7 +80,7 @@ public sealed class CancelFinancialDocumentCommandHandler
             if (hasActiveMatch)
             {
                 throw new ConflictAppException(
-                    "Phải đảo các chi tiết khớp đang hiệu lực trước khi hủy chứng từ.");
+                    "Phải hủy các chi tiết khớp đang hiệu lực trước khi hủy chứng từ.");
             }
         }
 

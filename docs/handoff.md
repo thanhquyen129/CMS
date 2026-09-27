@@ -1,5 +1,25 @@
 # Handoff
 
+## 2026-09-27 — UAT AR Regression (Sổ công nợ + Hoàn tác xóa nợ)
+
+### User
+Đọc `docs/po/27092026/LCMS_UAT_Issue_Fix_Notes_2026-09-27_AR_Regression.docx` + `..._Register_...xlsx` rồi fix.
+
+### Answer
+- **Sổ công nợ AR/AP** (ADR-0037): `GET /api/accounts-{receivable|payable}/{id}/ledger` dựng từ bản ghi nguồn bất biến (ghi nhận, dòng điều chỉnh/xóa nợ/hoàn tác/hủy ghi nhận, phân bổ đã chốt, hủy phân bổ), số dư trước/sau lũy kế, người thực hiện, lý do, mã giao dịch nội bộ, link phiếu thu/chi; cờ `reconciled` so với `DeriveOutstanding()`. Số tham chiếu chỉ là metadata.
+- **Hoàn tác xóa nợ**: `POST /api/accounts-{receivable|payable}/{id}/write-offs/{adjustmentId}/reverse` `{reason}` + If-Match → dòng `write_off_reversal` liên kết `reverses_adjustment_id` (unique, chặn hoàn tác 2 lần); không sửa/xóa dòng gốc; Doanh thu/Chi phí không đổi; quyền `ar.write_off`/`ap.write_off`; audit `accounts_*.write_off_reverse`. UAT dùng lại xóa nợ 30 USD HAWB-UAT-001 → số dư 250 → 280.
+- **Bill → Lịch sử**: `GET /api/bills/{id}/financial-history` (AR cần `revenue.read`, AP cần `cost.read`) thay panel audit objectType=Bill luôn rỗng.
+- Audit mới: điều chỉnh AR/AP (`accounts_*.adjust`), hủy phân bổ (`*_allocation.reverse`). Danh sách điều chỉnh AR/AP giờ kiểm tra quyền + phạm vi dữ liệu.
+- Sửa tiền: phân bổ lưu `currency_code` = tiền tệ phiếu thu/chi (trước luôn VND → hiện «35 đ»); hủy phân bổ trừ `SettledAmount ?? Amount`. Migration `ArLedgerWriteOffReversal` back-fill currency cho phân bổ cũ.
+- UI: drawer AP/AR thêm tab **Sổ công nợ** (Mở từng dòng → hồ sơ, bút toán gốc/hoàn tác, nút **Hoàn tác xóa nợ**); deep-link `/ap-ar?tab=ar&status=all&billId=&id=&view=ledger`. Bỏ ngưỡng xóa nợ hard-code trên UI (server theo hạn mức tenant quyết định, trả 202 nếu cần duyệt). Bỏ «còn …» lặp trong dropdown phân bổ; «outstanding» → «số dư»; «đảo» → «hủy/hoàn tác» ở thông báo backend/web; trang phiếu thu/chi có «Nhật ký» (lý do/người/thời điểm hủy).
+
+### Tests
+- `ArLedgerRegressionTests` (chuỗi 280→260→280→245→280→250→hoàn tác 280, chặn hoàn tác lần 2, Doanh thu không đổi, audit, Bill history, cô lập tenant).
+- Local SQLite: 3 test Sprint11 (approval queue ORDER BY DateTimeOffset, FX stub text) lỗi cả trên HEAD — CI chạy Postgres.
+
+### Follow-up
+- Phân bổ khác tiền tệ đã hủy trước fix có thể hiện `reconciled=false` → đối soát có kiểm soát, không tự tính lại.
+
 ## 2026-09-26 — CI #261: sửa build settlements
 
 ### User

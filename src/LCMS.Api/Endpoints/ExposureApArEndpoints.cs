@@ -177,6 +177,25 @@ public static class ExposureApArEndpoints
             return Results.Ok(list);
         });
 
+        ap.MapGet("/{id:guid}/ledger", async (Guid id, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetAccountsPayableLedgerQuery(id), ct)));
+
+        ap.MapPost("/{id:guid}/write-offs/{adjustmentId:guid}/reverse", async (
+            Guid id,
+            Guid adjustmentId,
+            ReverseWriteOffRequest body,
+            HttpRequest http,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            var reversalId = await sender.Send(
+                new LCMS.Application.Settlements.Commands.ReverseWriteOffAccountsPayableCommand(
+                    id, adjustmentId, body.Reason, ifMatch.ToString()),
+                ct);
+            return Results.Created($"/api/accounts-payable/{id}/adjustments/{reversalId}", new { id = reversalId });
+        });
+
         ap.MapPost("/{id:guid}/reverse-recognize", async (
             Guid id,
             ReverseRecognizeRequest body,
@@ -264,6 +283,29 @@ public static class ExposureApArEndpoints
             return Results.Ok(list);
         });
 
+        ar.MapGet("/{id:guid}/ledger", async (Guid id, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetAccountsReceivableLedgerQuery(id), ct)));
+
+        ar.MapPost("/{id:guid}/write-offs/{adjustmentId:guid}/reverse", async (
+            Guid id,
+            Guid adjustmentId,
+            ReverseWriteOffRequest body,
+            HttpRequest http,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            var reversalId = await sender.Send(
+                new LCMS.Application.Settlements.Commands.ReverseWriteOffAccountsReceivableCommand(
+                    id, adjustmentId, body.Reason, ifMatch.ToString()),
+                ct);
+            return Results.Created($"/api/accounts-receivable/{id}/adjustments/{reversalId}", new { id = reversalId });
+        });
+
+        app.MapGroup("/api/bills").WithTags("Bills")
+            .MapGet("/{id:guid}/financial-history", async (Guid id, ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new GetBillFinancialHistoryQuery(id), ct)));
+
         ar.MapPost("/{id:guid}/reverse-recognize", async (
             Guid id,
             ReverseRecognizeRequest body,
@@ -345,5 +387,7 @@ public sealed record AdjustApArRequest(decimal DeltaAmount, string Reason);
 public sealed record ReverseRecognizeRequest(string Reason);
 
 public sealed record WriteOffRequest(decimal Amount, string Reason);
+
+public sealed record ReverseWriteOffRequest(string Reason);
 
 public sealed record LinkDocumentRequest(Guid FinancialDocumentId);

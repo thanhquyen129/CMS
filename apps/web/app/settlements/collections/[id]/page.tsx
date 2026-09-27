@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AllocateCashForm } from "@/components/AllocateCashForm";
+import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { FinalizeAllocationButton } from "@/components/FinalizeAllocationButton";
 import { CancelCashButton } from "@/components/CancelCashButton";
 import { ReverseAllocationButton } from "@/components/ReverseAllocationButton";
@@ -111,14 +112,14 @@ export default async function CollectionDetailPage({
           {formatMoney(collection.amount, collection.currencyCode)}
         </h1>
         <p className="lede">
-          {collectionLabel} ≠ {revenueLabel}. Chốt phân bổ nháp; hủy phân bổ khi cần trả
-          outstanding.
+          {collectionLabel} ≠ {revenueLabel}. Chốt phân bổ nháp để giảm số dư công nợ; hủy phân bổ khi cần hoàn lại
+          số dư.
         </p>
         {openCollection && !hasFinalized ? (
           <CancelCashButton kind="collection" cashId={collection.id} />
         ) : null}
         {!openCollection ? (
-          <p className="note">Phiếu thu đã hủy. Số tiền giữ trong audit.</p>
+          <p className="note">Phiếu thu đã hủy — lý do, người hủy và thời điểm xem ở nhật ký bên dưới.</p>
         ) : null}
         {openCollection && hasFinalized ? (
           <p className="note">
@@ -177,7 +178,7 @@ export default async function CollectionDetailPage({
         <h2 className="section-title">Phân bổ</h2>
         <p className="note">
           Tiến trình: ghi nhận {collectionLabel.toLowerCase()} → phân bổ nháp → chốt
-          (mới giảm outstanding {arLabel}). Hủy phân bổ được khi còn nháp / đã chốt.
+          (mới giảm số dư {arLabel}). Hủy phân bổ được khi còn nháp / đã chốt.
         </p>
         <SettlementAllocationTimeline
           terms={terms}
@@ -194,7 +195,7 @@ export default async function CollectionDetailPage({
             return {
               id: a.id,
               amount: a.amount,
-              currencyCode: a.currencyCode,
+              currencyCode: collection.currencyCode,
               allocationStatus: a.allocationStatus,
               createdAt: a.createdAt,
               finalizedAt: a.finalizedAt,
@@ -216,7 +217,7 @@ export default async function CollectionDetailPage({
                   kind="collection"
                   allocationId={a.id}
                   amount={a.amount}
-                  currencyCode={a.currencyCode}
+                  currencyCode={collection.currencyCode}
                   rowVersion={collection.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
               ) : null}
@@ -226,7 +227,7 @@ export default async function CollectionDetailPage({
                   kind="collection"
                   allocationId={a.id}
                   amount={a.amount}
-                  currencyCode={a.currencyCode}
+                  currencyCode={collection.currencyCode}
                   allocationStatus={a.allocationStatus}
                   rowVersion={collection.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
@@ -237,7 +238,7 @@ export default async function CollectionDetailPage({
 
         {draftAllocs.length > 0 ? (
           <p className="note">
-            Có {draftAllocs.length} phân bổ nháp — chốt để giảm outstanding{" "}
+            Có {draftAllocs.length} phân bổ nháp — chốt để giảm số dư{" "}
             {arLabel}.
           </p>
         ) : null}
@@ -260,6 +261,13 @@ export default async function CollectionDetailPage({
             />
           </>
         )}
+
+        <AuditTrailPanel
+          terms={terms}
+          objectType="collection"
+          objectId={collection.id}
+          title="Nhật ký phiếu thu"
+        />
       </section>
     </AppShell>
   );

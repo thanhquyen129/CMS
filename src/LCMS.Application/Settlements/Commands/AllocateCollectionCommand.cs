@@ -153,6 +153,7 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
             CollectionId = collection.Id,
             AccountsReceivableId = ar.Id,
             Amount = amount,
+            CurrencyCode = collection.CurrencyCode,
             AllocationStatus = SettlementAllocationStatuses.Draft,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };

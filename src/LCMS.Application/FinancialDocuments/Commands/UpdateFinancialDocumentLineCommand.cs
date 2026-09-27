@@ -72,7 +72,7 @@ public sealed class UpdateFinancialDocumentLineCommandHandler : IRequestHandler<
                 cancellationToken);
         if (hasMatchHistory)
         {
-            throw new ConflictAppException("Dòng đã từng tham gia khớp — không sửa số/xóa; chỉ đảo chi tiết khớp.");
+            throw new ConflictAppException("Dòng đã từng tham gia khớp — không sửa số/xóa; chỉ hủy chi tiết khớp.");
         }
 
         var amount = DocumentLineIntegrity.RoundMoney(request.Amount);

@@ -40,6 +40,7 @@ type SearchParams = Promise<{
   pageSize?: string;
   billId?: string;
   id?: string;
+  view?: string;
 }>;
 
 function apArHref(opts: {
@@ -119,7 +120,9 @@ export default async function ApArPage({
     pageSize: pageSizeRaw,
     billId: billIdRaw,
     id: selectedIdRaw,
+    view,
   } = await searchParams;
+  const initialDrawerTab = view === "ledger" ? "ledger" : "overview";
   const activeTab =
     tab === "ar" || tab === "exposure" ? tab : "ap";
   const statusFilter = parseApArStatusFilter(statusRaw);
@@ -519,6 +522,7 @@ export default async function ApArPage({
                   initialSelectedId={
                     activeTab === "ap" ? initialSelectedId : null
                   }
+                  initialTab={initialDrawerTab}
                 />
                 <ListPagination
                   basePath="/ap-ar"
@@ -582,6 +586,7 @@ export default async function ApArPage({
                   initialSelectedId={
                     activeTab === "ar" ? initialSelectedId : null
                   }
+                  initialTab={initialDrawerTab}
                 />
                 <ListPagination
                   basePath="/ap-ar"

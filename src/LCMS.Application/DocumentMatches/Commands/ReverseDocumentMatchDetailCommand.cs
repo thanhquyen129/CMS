@@ -22,8 +22,8 @@ public sealed class ReverseDocumentMatchDetailCommandValidator
         RuleFor(x => x.MatchId).NotEmpty().WithMessage("Phiên khớp không hợp lệ.");
         RuleFor(x => x.DetailId).NotEmpty().WithMessage("Chi tiết khớp không hợp lệ.");
         RuleFor(x => x.Reason)
-            .NotEmpty().WithMessage("Lý do đảo khớp không được để trống.")
-            .MaximumLength(512).WithMessage("Lý do đảo khớp không được vượt quá 512 ký tự.");
+            .NotEmpty().WithMessage("Lý do hủy khớp không được để trống.")
+            .MaximumLength(512).WithMessage("Lý do hủy khớp không được vượt quá 512 ký tự.");
     }
 }
 
@@ -64,7 +64,7 @@ public sealed class ReverseDocumentMatchDetailCommandHandler
 
         if (string.Equals(match.MatchStatus, DocumentMatchStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Phiên khớp đã hủy; không thể đảo chi tiết.");
+            throw new ConflictAppException("Phiên khớp đã hủy; không thể hủy chi tiết.");
         }
 
         var detail = await _db.DocumentMatchDetails
@@ -73,7 +73,7 @@ public sealed class ReverseDocumentMatchDetailCommandHandler
 
         if (string.Equals(detail.DetailStatus, DocumentMatchDetailStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Chi tiết khớp đã được đảo.");
+            throw new ConflictAppException("Chi tiết khớp đã được hủy.");
         }
 
         var sourceLine = await _db.FinancialDocumentLines

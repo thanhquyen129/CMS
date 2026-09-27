@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { AuditTrailPanel } from "@/components/AuditTrailPanel";
+import { BillFinancialHistoryPanel } from "@/components/BillFinancialHistoryPanel";
 import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
@@ -565,12 +565,7 @@ export default async function BillDetailPage({
         {tab === "rating" ? <BillRatingPanel terms={terms} billId={id} /> : null}
 
         {tab === "history" ? (
-          <AuditTrailPanel
-            terms={terms}
-            objectType="Bill"
-            objectId={id}
-            title="Lịch sử / audit"
-          />
+          <BillFinancialHistoryPanel billId={id} />
         ) : null}
       </section>
     </AppShell>

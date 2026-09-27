@@ -73,7 +73,7 @@ public static class DocumentLineIntegrity
     {
         if (line.MatchedAmount > MoneyEpsilon)
         {
-            throw new ConflictAppException("Dòng đã khớp một phần/toàn phần — đảo chi tiết khớp trước khi sửa/xóa.");
+            throw new ConflictAppException("Dòng đã khớp một phần/toàn phần — hủy chi tiết khớp trước khi sửa/xóa.");
         }
     }
 }

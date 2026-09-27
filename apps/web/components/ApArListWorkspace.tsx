@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { DetailDrawer } from "./DetailDrawer";
 import { DrawerTabs } from "./list/DrawerTabs";
 import { AdjustApArButton } from "./AdjustApArButton";
+import { ApArLedgerPanel } from "./ApArLedgerPanel";
 import { ReverseRecognizeButton } from "./ReverseRecognizeButton";
 import { WriteOffButton } from "./WriteOffButton";
 import {
@@ -29,6 +30,7 @@ type Props = {
   cashLabel: string;
   cashCreateHref: string;
   initialSelectedId?: string | null;
+  initialTab?: "overview" | "ledger";
 };
 
 export function ApArListWorkspace({
@@ -42,11 +44,14 @@ export function ApArListWorkspace({
   cashLabel,
   cashCreateHref,
   initialSelectedId = null,
+  initialTab = "overview",
 }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(
     initialSelectedId
   );
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState<string>(
+    initialSelectedId ? initialTab : "overview"
+  );
   const selected = useMemo(
     () => items.find((r) => r.id === selectedId) ?? null,
     [items, selectedId]
@@ -193,6 +198,7 @@ export function ApArListWorkspace({
             <DrawerTabs
               tabs={[
                 { id: "overview", label: "Tổng quan" },
+                { id: "ledger", label: "Sổ công nợ" },
                 { id: "related", label: "Liên quan" },
               ]}
               activeId={tab}
@@ -233,6 +239,14 @@ export function ApArListWorkspace({
                   </dd>
                 </div>
               </dl>
+            ) : null}
+            {tab === "ledger" ? (
+              <ApArLedgerPanel
+                key={`${selected.id}:${selected.rowVersion ?? ""}`}
+                kind={kind}
+                accountId={selected.id}
+                rowVersion={selected.rowVersion}
+              />
             ) : null}
             {tab === "related" ? (
               <ul className="stack-list">

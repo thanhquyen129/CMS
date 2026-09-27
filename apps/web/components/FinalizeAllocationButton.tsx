@@ -129,7 +129,7 @@ export function FinalizeAllocationButton({
           >
             <h2 id={dialogTitleId}>Chốt phân bổ?</h2>
             <p>
-              {formatMoney(amount, currencyCode)} sẽ giảm outstanding {target}.
+              {formatMoney(amount, currencyCode)} sẽ giảm số dư {target}.
               Trạng thái → <strong>{finalizeLabel}</strong>. Hủy phân bổ là
               bước riêng (nút Hủy phân bổ).
             </p>

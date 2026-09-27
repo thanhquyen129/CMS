@@ -10,7 +10,7 @@ public sealed class AccountsPayableAdjustment : TenantEntityBase
 {
     public Guid AccountsPayableId { get; set; }
 
-    /// <summary>adjustment | write_off | reverse_recognize</summary>
+    /// <summary>adjustment | write_off | write_off_reversal | reverse_recognize</summary>
     public string AdjustmentType { get; set; } = ApArAdjustmentTypes.Adjustment;
 
     public decimal DeltaAmount { get; set; }
@@ -22,6 +22,9 @@ public sealed class AccountsPayableAdjustment : TenantEntityBase
     public decimal AdjustmentAmountAfter { get; set; }
     public decimal OutstandingBefore { get; set; }
     public decimal OutstandingAfter { get; set; }
+
+    /// <summary>Set on a compensating row (e.g. write_off_reversal); unique so one row is reversed at most once.</summary>
+    public Guid? ReversesAdjustmentId { get; set; }
 
     public AccountsPayable? AccountsPayable { get; set; }
 }
@@ -33,7 +36,7 @@ public sealed class AccountsReceivableAdjustment : TenantEntityBase
 {
     public Guid AccountsReceivableId { get; set; }
 
-    /// <summary>adjustment | write_off | reverse_recognize</summary>
+    /// <summary>adjustment | write_off | write_off_reversal | reverse_recognize</summary>
     public string AdjustmentType { get; set; } = ApArAdjustmentTypes.Adjustment;
 
     public decimal DeltaAmount { get; set; }
@@ -46,6 +49,9 @@ public sealed class AccountsReceivableAdjustment : TenantEntityBase
     public decimal OutstandingBefore { get; set; }
     public decimal OutstandingAfter { get; set; }
 
+    /// <summary>Set on a compensating row (e.g. write_off_reversal); unique so one row is reversed at most once.</summary>
+    public Guid? ReversesAdjustmentId { get; set; }
+
     public AccountsReceivable? AccountsReceivable { get; set; }
 }
 
@@ -53,6 +59,7 @@ public static class ApArAdjustmentTypes
 {
     public const string Adjustment = "adjustment";
     public const string WriteOff = "write_off";
+    public const string WriteOffReversal = "write_off_reversal";
     public const string ReverseRecognize = "reverse_recognize";
 }
 

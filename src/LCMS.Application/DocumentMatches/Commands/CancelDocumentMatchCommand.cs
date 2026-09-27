@@ -67,7 +67,7 @@ public sealed class CancelDocumentMatchCommandHandler : IRequestHandler<CancelDo
         if (hasActiveDetails)
         {
             throw new ConflictAppException(
-                "Phải đảo tất cả chi tiết khớp đang hiệu lực trước khi hủy phiên.");
+                "Phải hủy tất cả chi tiết khớp đang hiệu lực trước khi hủy phiên.");
         }
 
         match.MatchStatus = DocumentMatchStatuses.Cancelled;

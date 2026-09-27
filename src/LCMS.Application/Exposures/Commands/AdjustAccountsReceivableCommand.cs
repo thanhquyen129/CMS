@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
@@ -36,19 +37,22 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
     private readonly ICurrentUserContext _user;
     private readonly IRowVersionGuard _versions;
     private readonly IIdempotencyGate _idempotency;
+    private readonly IAuditWriter _audit;
 
     public AdjustAccountsReceivableCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
         IRowVersionGuard versions,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _versions = versions;
         _idempotency = idempotency;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(AdjustAccountsReceivableCommand request, CancellationToken cancellationToken)
@@ -81,7 +85,7 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
         var outstandingBefore = ar.DeriveOutstanding();
         if (outstandingBefore + delta < 0)
         {
-            throw new ConflictAppException("Số dư còn lại (outstanding) sau điều chỉnh không được âm.");
+            throw new ConflictAppException("Số dư còn lại sau điều chỉnh không được âm.");
         }
 
         var adjBefore = ar.AdjustmentAmount;
@@ -109,6 +113,27 @@ public sealed class AdjustAccountsReceivableCommandHandler : IRequestHandler<Adj
             OutstandingAfter = ar.DeriveOutstanding()
         };
         _db.AccountsReceivableAdjustments.Add(row);
+        _audit.Append(
+            AuditActions.AccountsReceivableAdjust,
+            AuditObjectTypes.AccountsReceivable,
+            ar.Id,
+            beforeJson: AuditJson.Serialize(new
+            {
+                accountsReceivableId = ar.Id,
+                adjustmentAmount = adjBefore,
+                outstanding = outstandingBefore
+            }),
+            afterJson: AuditJson.Serialize(new
+            {
+                accountsReceivableId = ar.Id,
+                adjustmentId = row.Id,
+                deltaAmount = delta,
+                currencyCode = ar.CurrencyCode,
+                adjustmentAmount = ar.AdjustmentAmount,
+                outstanding = row.OutstandingAfter,
+                billId = ar.BillId
+            }),
+            reason: reason);
         if (!string.IsNullOrWhiteSpace(request.IdempotencyKey))
         {
             _idempotency.Remember(

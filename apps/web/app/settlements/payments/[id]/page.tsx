@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { AllocateCashForm } from "@/components/AllocateCashForm";
+import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { FinalizeAllocationButton } from "@/components/FinalizeAllocationButton";
 import { CancelCashButton } from "@/components/CancelCashButton";
 import { ReverseAllocationButton } from "@/components/ReverseAllocationButton";
@@ -109,14 +110,14 @@ export default async function PaymentDetailPage({
           {paymentLabel} · {formatMoney(payment.amount, payment.currencyCode)}
         </h1>
         <p className="lede">
-          {paymentLabel} ≠ {costLabel}. Chốt phân bổ nháp; hủy phân bổ khi cần trả
-          outstanding.
+          {paymentLabel} ≠ {costLabel}. Chốt phân bổ nháp để giảm số dư công nợ; hủy phân bổ khi cần hoàn lại
+          số dư.
         </p>
         {openPayment && !hasFinalized ? (
           <CancelCashButton kind="payment" cashId={payment.id} />
         ) : null}
         {!openPayment ? (
-          <p className="note">Thanh toán đã hủy. Số tiền giữ trong audit.</p>
+          <p className="note">Thanh toán đã hủy — lý do, người hủy và thời điểm xem ở nhật ký bên dưới.</p>
         ) : null}
         {openPayment && hasFinalized ? (
           <p className="note">
@@ -166,7 +167,7 @@ export default async function PaymentDetailPage({
         <h2 className="section-title">Phân bổ</h2>
         <p className="note">
           Tiến trình: ghi nhận {paymentLabel.toLowerCase()} → phân bổ nháp → chốt
-          (mới giảm outstanding {apLabel}). Hủy phân bổ được khi còn nháp / đã chốt.
+          (mới giảm số dư {apLabel}). Hủy phân bổ được khi còn nháp / đã chốt.
         </p>
         <SettlementAllocationTimeline
           terms={terms}
@@ -183,7 +184,7 @@ export default async function PaymentDetailPage({
             return {
               id: a.id,
               amount: a.amount,
-              currencyCode: a.currencyCode,
+              currencyCode: payment.currencyCode,
               allocationStatus: a.allocationStatus,
               createdAt: a.createdAt,
               finalizedAt: a.finalizedAt,
@@ -205,7 +206,7 @@ export default async function PaymentDetailPage({
                   kind="payment"
                   allocationId={a.id}
                   amount={a.amount}
-                  currencyCode={a.currencyCode}
+                  currencyCode={payment.currencyCode}
                   rowVersion={payment.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
               ) : null}
@@ -215,7 +216,7 @@ export default async function PaymentDetailPage({
                   kind="payment"
                   allocationId={a.id}
                   amount={a.amount}
-                  currencyCode={a.currencyCode}
+                  currencyCode={payment.currencyCode}
                   allocationStatus={a.allocationStatus}
                   rowVersion={payment.allocations.find((x) => x.id === a.id)?.rowVersion}
                 />
@@ -226,7 +227,7 @@ export default async function PaymentDetailPage({
 
         {draftAllocs.length > 0 ? (
           <p className="note">
-            Có {draftAllocs.length} phân bổ nháp — chốt để giảm outstanding{" "}
+            Có {draftAllocs.length} phân bổ nháp — chốt để giảm số dư{" "}
             {apLabel}.
           </p>
         ) : null}
@@ -249,6 +250,13 @@ export default async function PaymentDetailPage({
             />
           </>
         )}
+
+        <AuditTrailPanel
+          terms={terms}
+          objectType="payment"
+          objectId={payment.id}
+          title="Nhật ký thanh toán"
+        />
       </section>
     </AppShell>
   );

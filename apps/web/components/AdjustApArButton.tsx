@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition } from "react";
 import { formatApiErrorMessage } from "@/lib/api-error";
+import { formatMoney } from "@/lib/money";
 import { newIdempotencyKey, withIdempotency, withRowVersion } from "@/lib/idempotency";
 
 type Kind = "payable" | "receivable";
@@ -36,7 +37,7 @@ export function AdjustApArButton({
   async function submit() {
     const parsed = Number(String(delta).replace(",", "."));
     if (!Number.isFinite(parsed) || parsed === 0) {
-      setError("Số điều chỉnh khác 0. Âm là giảm outstanding.");
+      setError("Số điều chỉnh phải khác 0. Số âm là giảm số dư.");
       return;
     }
     const trimmed = reason.trim();
@@ -101,7 +102,8 @@ export function AdjustApArButton({
         >
           <h2 id={dialogTitleId}>Điều chỉnh khoản {label}</h2>
           <p className="note">
-            Outstanding hiện {outstanding} {currencyCode}. Điều chỉnh không phải xóa nợ và không phải thanh toán.
+            Số dư hiện tại {formatMoney(outstanding, currencyCode)}. Điều chỉnh không phải xóa nợ và
+            không phải thanh toán; mỗi lần điều chỉnh được ghi vào sổ công nợ kèm lý do.
           </p>
           <label>
             Số điều chỉnh (+/−)

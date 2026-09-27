@@ -82,7 +82,7 @@ public sealed class CorrectFinancialDocumentHeaderCommandHandler
             .ToListAsync(cancellationToken);
         if (lines.Any(l => l.MatchedAmount > 0))
         {
-            throw new ConflictAppException("Dòng đã khớp — không sửa header. Đảo khớp trước.");
+            throw new ConflictAppException("Dòng đã khớp — không sửa header. Hủy khớp trước.");
         }
 
         var before = $"{{\"currency\":\"{document.CurrencyCode}\",\"billId\":\"{document.BillId}\"}}";

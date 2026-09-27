@@ -140,14 +140,14 @@ export function ReverseAllocationButton({
             <p>
               {isDraft ? (
                 <>
-                  Hủy phân bổ nháp {formatMoney(amount, currencyCode)}. Không
-                  đụng outstanding {target}. Trạng thái →{" "}
+                  Hủy phân bổ nháp {formatMoney(amount, currencyCode)}. Số dư{" "}
+                  {target} không đổi. Trạng thái →{" "}
                   <strong>{reverseLabel}</strong>.
                 </>
               ) : (
                 <>
-                  {formatMoney(amount, currencyCode)} sẽ trả lại outstanding{" "}
-                  {target}. Không xóa cứng; trạng thái →{" "}
+                  {formatMoney(amount, currencyCode)} sẽ được hoàn lại vào số dư{" "}
+                  {target}. Không xóa bản ghi; trạng thái →{" "}
                   <strong>{reverseLabel}</strong>.
                 </>
               )}

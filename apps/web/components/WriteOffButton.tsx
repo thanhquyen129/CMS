@@ -9,12 +9,6 @@ import { term, type TerminologyMap } from "@/lib/terminology";
 
 type Kind = "payable" | "receivable";
 
-/** Matches Settlement:MaxWriteOffAmount — apply immediately under this; above → Approval (P03). */
-export const MAX_WRITE_OFF_IMMEDIATE = 1000;
-
-/** Matches ApprovalMatrix MinAmount 10000 → cấp 2 (appsettings). */
-export const APPROVAL_LEVEL2_MIN_AMOUNT = 10000;
-
 type Props = {
   terms: TerminologyMap;
   kind: Kind;
@@ -23,10 +17,6 @@ type Props = {
   currencyCode: string;
   rowVersion?: string | null;
 };
-
-function estimateApprovalLevel(amount: number): 1 | 2 {
-  return amount >= APPROVAL_LEVEL2_MIN_AMOUNT ? 2 : 1;
-}
 
 export function WriteOffButton({
   terms,
@@ -47,7 +37,7 @@ export function WriteOffButton({
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const writeOffLabel = term(terms, "WRITE_OFF", "Xóa nợ / write-off");
+  const writeOffLabel = term(terms, "WRITE_OFF", "Xóa nợ");
   const apLabel = term(terms, "ACCOUNTS_PAYABLE", "Khoản phải trả");
   const arLabel = term(terms, "ACCOUNTS_RECEIVABLE", "Khoản phải thu");
   const target = kind === "payable" ? apLabel : arLabel;
@@ -56,14 +46,7 @@ export function WriteOffButton({
   const cashLabel = kind === "payable" ? paymentLabel : collectionLabel;
   const approvalQueueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
 
-  const defaultAmount = Math.min(outstanding, MAX_WRITE_OFF_IMMEDIATE);
   const parsedPreview = Number(String(amount).replace(",", "."));
-  const previewOk = Number.isFinite(parsedPreview) && parsedPreview > 0;
-  const needsApproval =
-    previewOk && parsedPreview > MAX_WRITE_OFF_IMMEDIATE;
-  const estimatedLevel = previewOk
-    ? estimateApprovalLevel(parsedPreview)
-    : null;
 
   const close = useCallback(() => {
     if (submitting) return;
@@ -147,7 +130,7 @@ export function WriteOffButton({
         setReason("");
         setInfo(
           (body.message ||
-            `Đã gửi phê duyệt xóa nợ (vượt trần ${formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)}). Số dư chưa đổi cho đến khi duyệt.`) +
+            "Đã gửi phê duyệt xóa nợ theo hạn mức của đơn vị. Số dư chưa đổi cho đến khi duyệt.") +
             levelNote
         );
         startTransition(() => router.refresh());
@@ -180,6 +163,9 @@ export function WriteOffButton({
     }
   }, [accountsId, amount, currencyCode, kind, outstanding, reason, router, rowVersion]);
 
+  const approvalNote =
+    "Trong hạn mức xóa nợ của đơn vị: áp dụng ngay. Vượt hạn mức: hệ thống gửi phê duyệt, số dư chỉ đổi khi được duyệt.";
+
   if (outstanding <= 0) return null;
 
   return (
@@ -190,7 +176,7 @@ export function WriteOffButton({
         onClick={() => {
           setError(null);
           setInfo(null);
-          setAmount(String(defaultAmount));
+          setAmount(String(outstanding));
           setReason("");
           setStep(1);
           setOpen(true);
@@ -264,27 +250,7 @@ export function WriteOffButton({
                     required
                   />
                 </div>
-                {previewOk ? (
-                  <div className="alert alert-info" role="status">
-                    {needsApproval ? (
-                      <>
-                        Số tiền vượt trần áp dụng ngay (
-                        {formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)}) —
-                        sẽ gửi {approvalQueueLabel.toLowerCase()}. Ước tính cấp
-                        phê duyệt: <strong>cấp {estimatedLevel}</strong>
-                        {estimatedLevel === 2
-                          ? ` (≥ ${formatMoney(APPROVAL_LEVEL2_MIN_AMOUNT, currencyCode)}).`
-                          : "."}
-                      </>
-                    ) : (
-                      <>
-                        Trong trần{" "}
-                        {formatMoney(MAX_WRITE_OFF_IMMEDIATE, currencyCode)} —
-                        áp dụng ngay sau xác nhận (không qua phê duyệt).
-                      </>
-                    )}
-                  </div>
-                ) : null}
+                <p className="muted">{approvalNote}</p>
                 {error ? (
                   <div className="alert alert-error" role="alert">
                     {error}
@@ -316,10 +282,9 @@ export function WriteOffButton({
                   <strong>
                     {formatMoney(parsedPreview, currencyCode)}
                   </strong>
-                  {needsApproval
-                    ? ` → phê duyệt (ước tính cấp ${estimatedLevel}).`
-                    : " → áp dụng ngay."}{" "}
-                  Số dư chưa đổi nếu chờ duyệt.
+
+                  . Lý do được lưu vĩnh viễn trong sổ công nợ; có thể hoàn tác
+                  bằng bút toán bù, không sửa hoặc xóa bản ghi.
                 </p>
                 <div className="field">
                   <label htmlFor={`wo-reason-${accountsId}`}>Lý do</label>

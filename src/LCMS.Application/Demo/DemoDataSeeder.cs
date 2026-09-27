@@ -407,7 +407,7 @@ public sealed class DemoDataSeeder
 
         var payDraft = Pay(tid, billAp.Id, vendor.Id, 800_000m, today, "DEMO-PAY-DRAFT", "Chờ phân bổ / chốt");
         var payFinal = Pay(tid, billAp.Id, vendor.Id, 400_000m, today, "DEMO-PAY-FINAL", "Đã chốt phân bổ");
-        var payReversed = Pay(tid, billAp.Id, vendor.Id, 200_000m, today, "DEMO-PAY-REV", "Phân bổ đã đảo");
+        var payReversed = Pay(tid, billAp.Id, vendor.Id, 200_000m, today, "DEMO-PAY-REV", "Phân bổ đã hủy");
         var payCancel = Pay(tid, billAp.Id, vendor.Id, 50_000m, today, "DEMO-PAY-CANCEL", "Giao dịch hủy");
         payCancel.Status = PaymentStatuses.Cancelled;
         _db.Payments.AddRange(payDraft, payFinal, payReversed, payCancel);
@@ -416,7 +416,7 @@ public sealed class DemoDataSeeder
         _db.PaymentAllocations.AddRange(
             PayAlloc(tid, payDraft.Id, apOpen.Id, 500_000m, SettlementAllocationStatuses.Draft),
             PayAlloc(tid, payFinal.Id, apPartialSettle.Id, 400_000m, SettlementAllocationStatuses.Finalized, now),
-            PayAlloc(tid, payReversed.Id, apPartialSettle.Id, 200_000m, SettlementAllocationStatuses.Reversed, now, now, "Demo đảo phân bổ"));
+            PayAlloc(tid, payReversed.Id, apPartialSettle.Id, 200_000m, SettlementAllocationStatuses.Reversed, now, now, "Demo hủy phân bổ"));
 
         // --- AR flow (DEMO-04-AR) ---
         var arRev = Revenue(tid, billAr.Id, RevenueMaturities.Actual, 4_000_000m, today, "AR-FREIGHT", customer.Id);

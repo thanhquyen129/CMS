@@ -115,7 +115,7 @@ public static class WriteOffApplier
             ? reasonLine
             : $"{ap.Notes}\n{reasonLine}";
 
-        db.AccountsPayableAdjustments.Add(new AccountsPayableAdjustment
+        var row = new AccountsPayableAdjustment
         {
             TenantId = ap.TenantId,
             AccountsPayableId = ap.Id,
@@ -128,7 +128,8 @@ public static class WriteOffApplier
             AdjustmentAmountAfter = ap.AdjustmentAmount,
             OutstandingBefore = outstanding,
             OutstandingAfter = ap.DeriveOutstanding()
-        });
+        };
+        db.AccountsPayableAdjustments.Add(row);
 
         audit.Append(
             AuditActions.AccountsPayableWriteOff,
@@ -138,6 +139,7 @@ public static class WriteOffApplier
             afterJson: AuditJson.Serialize(new
             {
                 id = ap.Id,
+                adjustmentId = row.Id,
                 billId = ap.BillId,
                 writeOff = amount,
                 recognized = ap.RecognizedAmount,
@@ -216,7 +218,7 @@ public static class WriteOffApplier
             ? reasonLine
             : $"{ar.Notes}\n{reasonLine}";
 
-        db.AccountsReceivableAdjustments.Add(new AccountsReceivableAdjustment
+        var row = new AccountsReceivableAdjustment
         {
             TenantId = ar.TenantId,
             AccountsReceivableId = ar.Id,
@@ -229,7 +231,8 @@ public static class WriteOffApplier
             AdjustmentAmountAfter = ar.AdjustmentAmount,
             OutstandingBefore = outstanding,
             OutstandingAfter = ar.DeriveOutstanding()
-        });
+        };
+        db.AccountsReceivableAdjustments.Add(row);
 
         audit.Append(
             AuditActions.AccountsReceivableWriteOff,
@@ -239,6 +242,7 @@ public static class WriteOffApplier
             afterJson: AuditJson.Serialize(new
             {
                 id = ar.Id,
+                adjustmentId = row.Id,
                 billId = ar.BillId,
                 writeOff = amount,
                 recognized = ar.RecognizedAmount,

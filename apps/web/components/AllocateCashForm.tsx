@@ -165,7 +165,7 @@ export function AllocateCashForm({
     <form className="receive-form" onSubmit={onSubmit} noValidate>
       <p className="note">
         Tạo {allocLabel.toLowerCase()} ở trạng thái <strong>{draftLabel}</strong>
-        . Outstanding AP/AR chỉ đổi sau khi chốt phân bổ.
+        . Số dư công nợ chỉ đổi sau khi chốt phân bổ.
       </p>
       <p className="note">
         {availableLabel}:{" "}
@@ -187,7 +187,7 @@ export function AllocateCashForm({
             <option value="">— Chọn —</option>
             {targets.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.label} · còn {formatMoney(t.outstanding, t.currencyCode)}
+                {t.label}
               </option>
             ))}
           </select>

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
@@ -17,8 +18,8 @@ public sealed class ReverseCollectionAllocationCommandValidator
     {
         RuleFor(x => x.AllocationId).NotEmpty().WithMessage("Phân bổ thu tiền không hợp lệ.");
         RuleFor(x => x.Reason)
-            .NotEmpty().WithMessage("Phải nêu lý do đảo phân bổ thu tiền.")
-            .MaximumLength(1024).WithMessage("Lý do đảo không được vượt quá 1024 ký tự.");
+            .NotEmpty().WithMessage("Phải nêu lý do hủy phân bổ thu tiền.")
+            .MaximumLength(1024).WithMessage("Lý do hủy phân bổ không được vượt quá 1024 ký tự.");
     }
 }
 
@@ -33,17 +34,20 @@ public sealed class ReverseCollectionAllocationCommandHandler
     private readonly ITenantContext _tenantContext;
     private readonly ICurrentUserContext _user;
     private readonly IRowVersionGuard _versions;
+    private readonly IAuditWriter _audit;
 
     public ReverseCollectionAllocationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ICurrentUserContext user,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
         _versions = versions;
+        _audit = audit;
     }
 
     public async Task Handle(ReverseCollectionAllocationCommand request, CancellationToken cancellationToken)
@@ -60,22 +64,26 @@ public sealed class ReverseCollectionAllocationCommandHandler
 
         if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Reversed, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Phân bổ thu tiền đã được đảo.");
+            throw new ConflictAppException("Phân bổ thu tiền đã được hủy.");
         }
+
+        var reason = request.Reason.Trim();
+        var statusBefore = allocation.AllocationStatus;
 
         if (string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Draft, StringComparison.OrdinalIgnoreCase))
         {
             allocation.AllocationStatus = SettlementAllocationStatuses.Reversed;
             allocation.ReversedAt = DateTimeOffset.UtcNow;
             allocation.ReversedBy = _user.UserId;
-            allocation.ReverseReason = request.Reason.Trim();
+            allocation.ReverseReason = reason;
+            AppendAudit(allocation, statusBefore, null, null, reason);
             await _db.SaveChangesAsync(cancellationToken);
             return;
         }
 
         if (!string.Equals(allocation.AllocationStatus, SettlementAllocationStatuses.Finalized, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ConflictAppException("Chỉ đảo phân bổ thu tiền ở trạng thái nháp hoặc đã chốt.");
+            throw new ConflictAppException("Chỉ hủy phân bổ thu tiền ở trạng thái nháp hoặc đã chốt.");
         }
 
         var ar = await _db.AccountsReceivable
@@ -86,15 +94,52 @@ public sealed class ReverseCollectionAllocationCommandHandler
         allocation.AllocationStatus = SettlementAllocationStatuses.Reversed;
         allocation.ReversedAt = now;
         allocation.ReversedBy = _user.UserId;
-        allocation.ReverseReason = request.Reason.Trim();
+        allocation.ReverseReason = reason;
 
+        var outstandingBefore = ar.DeriveOutstanding();
         ar.FinalizedSettledAmount = decimal.Round(
-            Math.Max(0m, ar.FinalizedSettledAmount - allocation.Amount), 4, MidpointRounding.AwayFromZero);
+            Math.Max(0m, ar.FinalizedSettledAmount - SettlementCurrency.TargetAmount(allocation)),
+            4,
+            MidpointRounding.AwayFromZero);
         ar.SettlementStatus = SettlementHelpers.DeriveApArSettlementStatus(
             ar.RecognizedAmount, ar.AdjustmentAmount, ar.FinalizedSettledAmount);
         ar.UpdatedAt = now;
         ar.UpdatedBy = _user.UserId;
 
+        AppendAudit(allocation, statusBefore, outstandingBefore, ar.DeriveOutstanding(), reason);
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private void AppendAudit(
+        CollectionAllocation allocation,
+        string statusBefore,
+        decimal? outstandingBefore,
+        decimal? outstandingAfter,
+        string reason)
+    {
+        _audit.Append(
+            AuditActions.CollectionAllocationReverse,
+            AuditObjectTypes.CollectionAllocation,
+            allocation.Id,
+            beforeJson: AuditJson.Serialize(new
+            {
+                allocationId = allocation.Id,
+                collectionId = allocation.CollectionId,
+                accountsReceivableId = allocation.AccountsReceivableId,
+                status = statusBefore,
+                outstanding = outstandingBefore
+            }),
+            afterJson: AuditJson.Serialize(new
+            {
+                allocationId = allocation.Id,
+                collectionId = allocation.CollectionId,
+                accountsReceivableId = allocation.AccountsReceivableId,
+                status = allocation.AllocationStatus,
+                amount = allocation.Amount,
+                currencyCode = allocation.CurrencyCode,
+                settledAmount = SettlementCurrency.TargetAmount(allocation),
+                outstanding = outstandingAfter
+            }),
+            reason: reason);
     }
 }

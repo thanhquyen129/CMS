@@ -89,7 +89,7 @@ export function SettlementAllocationTimeline({
           <div className="settlement-timeline-body">
             <strong>Chưa phân bổ</strong>
             <span className="muted small block">
-              Tạo phân bổ nháp bên dưới — chỉ phân bổ đã chốt mới giảm outstanding.
+              Tạo phân bổ nháp bên dưới — chỉ phân bổ đã chốt mới giảm số dư công nợ.
             </span>
           </div>
         </li>

@@ -65,7 +65,7 @@ export default async function ControlHubPage() {
     {
       href: "/control/lifecycle",
       title: "Ma trận thao tác",
-      desc: "Trạng thái × sửa / hủy / đảo. Số tài chính không xóa cứng.",
+      desc: "Trạng thái × sửa / hủy / hoàn tác. Số tài chính không xóa cứng.",
       count: null,
     },
   ];

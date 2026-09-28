@@ -1,5 +1,34 @@
 # Handoff
 
+## 2026-09-28 — UAT AR Regression follow-up (UI-TABLE-01 + FIN-DATA-01)
+
+### User
+Đọc `docs/po/28092026/LCMS_UAT_AR_Regression_Followup_Register_2026-09-28_v1.0.xlsx` + `..._Result_Followup_...docx` rồi fix. UAT đóng functional AR batch; còn mở UI-TABLE-01 (bảng nhiều cột trong drawer) và FIN-DATA-01 (dữ liệu cũ phân bổ khác tiền tệ đã hủy).
+
+### Answer
+- **UI-TABLE-01** — pattern dùng chung: `components/list/ResponsiveData.tsx` (trang rộng: bảng; container ≤ 44rem — drawer, side panel, mobile: danh sách gọn; `layout="list"` ép danh sách trong drawer) + `components/list/TxnList.tsx` (loại + số tiền; số dư sau + trạng thái; ngày · người; lý do tối đa 2 dòng; nút Mở; chi tiết riêng). Số tiền `nowrap`, tên nghiệp vụ không tách từng từ. Áp dụng: Sổ công nợ AR/AP (drawer AP/AR, Bill drawer, Bill page), Nhật ký (`AuditTrailPanel` — phiếu thu/chi, chi phí, doanh thu, đối tác, bản chốt), Lịch sử điều chỉnh chi phí/doanh thu, timeline phân bổ (amount nowrap).
+- **Before → After** (`components/BalanceImpact.tsx`) trên popup đổi số dư: Xóa nợ (bước 1 xem trước, bước 2 xác nhận), Điều chỉnh, Hoàn tác xóa nợ, Hủy ghi nhận, Chốt / Hủy phân bổ (khi cùng tiền tệ với công nợ).
+- **FIN-DATA-01** (ADR-0038) — không tự rewrite lịch sử:
+  - `GET /api/ap-ar/balance-reconciliation`: kiểm kê mọi AR/AP có số dư lưu ≠ số dư dựng từ sổ; so sánh đã tất toán lưu vs theo phân bổ đã chốt, điều chỉnh lưu vs theo bút toán; liệt kê phân bổ khác tiền tệ đã hủy (số tiền/tiền tệ phiếu, số quy đổi khi chốt). Nguyên nhân `legacy_cross_currency_reversal` hoặc `unexplained`.
+  - `POST /api/accounts-{receivable|payable}/{id}/settlement-correction {reason}` + If-Match: chỉ cho nguyên nhân legacy; đặt `FinalizedSettledAmount` = tổng phân bổ đã chốt còn hiệu lực; audit `accounts_*.settlement_correction` (before/after + danh sách phân bổ). Phân bổ, phiếu, bút toán, bản chốt giữ nguyên. Lệch không giải thích được → 409, xử lý thủ công.
+  - Quyền mới `apar.reconcile` “Đối soát số dư công nợ” (Admin + FinancialController, tự seed khi API khởi động). AR cần thêm `revenue.read`, AP cần `cost.read` + data scope.
+  - UI: trang **`/ap-ar/reconciliation`** “Đối soát số dư công nợ” (tổng: đã kiểm tra / lệch / đối soát được / cần kiểm tra thủ công; danh sách lệch; chi tiết; nút **Đối soát** với Before → After + lý do; Lịch sử đối soát). Link từ toolbar AP/AR, trang Báo cáo, và cảnh báo đỏ trong Sổ công nợ.
+- `/api/ap-ar` thêm vào money-path rate limit.
+
+### Files
+- API: `ExposureApArEndpoints.cs`, `Settlements/ApArBalanceAnalyzer.cs`, `Exposures/Queries/ApArBalanceReconciliationQueries.cs`, `Settlements/Commands/CorrectApArSettledBalanceCommands.cs`, `PermissionCodes.cs`, `SystemRoleCatalog.cs`, `AuditEvent.cs`, rate-limit config. Không có migration.
+- Web: `ResponsiveData`, `TxnList`, `BalanceImpact`, `ApArReconciliationWorkspace`, `app/ap-ar/reconciliation/page.tsx`, BFF `bff/ap-ar/balance-reconciliation`, `bff/accounts-*/[id]/settlement-correction`; sửa `ApArLedgerPanel`, `AuditTrailPanel`, `AdjustmentHistoryTable`, các nút xóa nợ/điều chỉnh/phân bổ, `globals.css`.
+- ADR: `docs/adr/ADR-0038-ap-ar-balance-reconciliation.md`.
+
+### Tests
+- `ApArBalanceReconciliationTests`: legacy VND→USD kiểm kê + đối soát 280→180, lịch sử đối soát, lặp lại 409, audit; lệch không giải thích → 409; cô lập tenant (404); thiếu `apar.reconcile` → 403; người chỉ có `cost.read` không thấy AR.
+- Full suite local: 232/235 (3 Sprint11 SQLite-only như trước). `tsc` + `next build` OK.
+
+### Follow-up
+- UAT cross-currency riêng trước khi đóng FIN-DATA-01; chạy `/ap-ar/reconciliation` trên production để lập danh sách legacy.
+- Bảng hàng đợi toàn trang (duyệt, ngoại lệ, đối soát chứng từ) vẫn là bảng trên desktop; mobile card cho các hàng đợi này là bước tiếp theo nếu UAT yêu cầu.
+- Kiểm kê quét trong bộ nhớ theo tenant — chuyển sang SQL aggregate trên Postgres khi quy mô lớn.
+
 ## 2026-09-27 — UAT AR Regression (Sổ công nợ + Hoàn tác xóa nợ)
 
 ### User

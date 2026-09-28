@@ -219,6 +219,8 @@ export default async function CollectionDetailPage({
                   amount={a.amount}
                   currencyCode={collection.currencyCode}
                   rowVersion={collection.allocations.find((x) => x.id === a.id)?.rowVersion}
+                  targetOutstanding={arById.get(a.targetId)?.outstanding ?? null}
+                  targetCurrencyCode={arById.get(a.targetId)?.currencyCode ?? null}
                 />
               ) : null}
               {canReverseAllocation(a.allocationStatus) ? (
@@ -230,6 +232,8 @@ export default async function CollectionDetailPage({
                   currencyCode={collection.currencyCode}
                   allocationStatus={a.allocationStatus}
                   rowVersion={collection.allocations.find((x) => x.id === a.id)?.rowVersion}
+                  targetOutstanding={arById.get(a.targetId)?.outstanding ?? null}
+                  targetCurrencyCode={arById.get(a.targetId)?.currencyCode ?? null}
                 />
               ) : null}
             </>

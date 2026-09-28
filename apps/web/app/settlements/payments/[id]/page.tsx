@@ -208,6 +208,8 @@ export default async function PaymentDetailPage({
                   amount={a.amount}
                   currencyCode={payment.currencyCode}
                   rowVersion={payment.allocations.find((x) => x.id === a.id)?.rowVersion}
+                  targetOutstanding={apById.get(a.targetId)?.outstanding ?? null}
+                  targetCurrencyCode={apById.get(a.targetId)?.currencyCode ?? null}
                 />
               ) : null}
               {canReverseAllocation(a.allocationStatus) ? (
@@ -219,6 +221,8 @@ export default async function PaymentDetailPage({
                   currencyCode={payment.currencyCode}
                   allocationStatus={a.allocationStatus}
                   rowVersion={payment.allocations.find((x) => x.id === a.id)?.rowVersion}
+                  targetOutstanding={apById.get(a.targetId)?.outstanding ?? null}
+                  targetCurrencyCode={apById.get(a.targetId)?.currencyCode ?? null}
                 />
               ) : null}
             </>

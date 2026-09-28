@@ -110,6 +110,11 @@ export default async function ReportsPage({
       desc: "As-of loại trừ thanh toán/thu phát sinh sau mốc.",
     },
     {
+      href: "/ap-ar/reconciliation",
+      title: "Đối soát số dư công nợ",
+      desc: "Khoản có số dư lệch sổ công nợ; đối soát có lý do và nhật ký.",
+    },
+    {
       href: sp.asOf ? `/reports/cash?asOf=${sp.asOf}` : "/reports/cash",
       title: "Tiền và tất toán",
       desc: "Thanh toán/thu chưa gán; drill về giao dịch.",

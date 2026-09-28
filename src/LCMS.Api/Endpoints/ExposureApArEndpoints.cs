@@ -306,6 +306,38 @@ public static class ExposureApArEndpoints
             .MapGet("/{id:guid}/financial-history", async (Guid id, ISender sender, CancellationToken ct) =>
                 Results.Ok(await sender.Send(new GetBillFinancialHistoryQuery(id), ct)));
 
+        app.MapGroup("/api/ap-ar").WithTags("AccountsReceivable")
+            .MapGet("/balance-reconciliation", async (ISender sender, CancellationToken ct) =>
+                Results.Ok(await sender.Send(new GetApArBalanceReconciliationQuery(), ct)));
+
+        ap.MapPost("/{id:guid}/settlement-correction", async (
+            Guid id,
+            SettlementCorrectionRequest body,
+            HttpRequest http,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            return Results.Ok(await sender.Send(
+                new LCMS.Application.Settlements.Commands.CorrectAccountsPayableSettledBalanceCommand(
+                    id, body.Reason, ifMatch.ToString()),
+                ct));
+        });
+
+        ar.MapPost("/{id:guid}/settlement-correction", async (
+            Guid id,
+            SettlementCorrectionRequest body,
+            HttpRequest http,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            http.Headers.TryGetValue("If-Match", out var ifMatch);
+            return Results.Ok(await sender.Send(
+                new LCMS.Application.Settlements.Commands.CorrectAccountsReceivableSettledBalanceCommand(
+                    id, body.Reason, ifMatch.ToString()),
+                ct));
+        });
+
         ar.MapPost("/{id:guid}/reverse-recognize", async (
             Guid id,
             ReverseRecognizeRequest body,
@@ -389,5 +421,7 @@ public sealed record ReverseRecognizeRequest(string Reason);
 public sealed record WriteOffRequest(decimal Amount, string Reason);
 
 public sealed record ReverseWriteOffRequest(string Reason);
+
+public sealed record SettlementCorrectionRequest(string Reason);
 
 public sealed record LinkDocumentRequest(Guid FinancialDocumentId);

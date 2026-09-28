@@ -5,6 +5,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { withRowVersion } from "@/lib/idempotency";
 import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { BalanceImpact } from "./BalanceImpact";
 
 type Kind = "payable" | "receivable";
 
@@ -123,10 +124,11 @@ export function ReverseRecognizeButton({
           >
             <h2 id={dialogTitleId}>Hủy ghi nhận?</h2>
             <p>
-              Soft-reverse số dư {formatMoney(outstanding, currencyCode)}. Không
-              xóa lịch sử ghi nhận; exposure mở lại phần tương ứng. Phải hủy
+              Hủy ghi nhận toàn bộ số dư {formatMoney(outstanding, currencyCode)}. Không
+              xóa lịch sử ghi nhận; khoản dự kiến mở lại phần tương ứng. Phải hủy
               phân bổ đã chốt trước (nếu có).
             </p>
+            <BalanceImpact before={outstanding} after={0} currencyCode={currencyCode} />
             <div className="field">
               <label htmlFor="rev-rec-reason">Lý do</label>
               <input

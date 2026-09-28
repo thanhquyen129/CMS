@@ -167,6 +167,12 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "accounts_receivable.write_off": "Xóa nợ phải thu",
   "accounts_payable.recognize": "Ghi nhận phải trả",
   "accounts_receivable.recognize": "Ghi nhận phải thu",
+  "accounts_payable.adjust": "Điều chỉnh phải trả",
+  "accounts_receivable.adjust": "Điều chỉnh phải thu",
+  "accounts_payable.write_off_reverse": "Hoàn tác xóa nợ phải trả",
+  "accounts_receivable.write_off_reverse": "Hoàn tác xóa nợ phải thu",
+  "accounts_payable.settlement_correction": "Đối soát số dư phải trả",
+  "accounts_receivable.settlement_correction": "Đối soát số dư phải thu",
 };
 
 export const AUDIT_OBJECT_LABELS: Record<string, string> = {

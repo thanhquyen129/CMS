@@ -21,6 +21,8 @@ public static class PermissionCodes
     public const string RevenueMappingOverride = "revenue.mapping.override";
     public const string ApWriteOff = "ap.write_off";
     public const string ArWriteOff = "ar.write_off";
+    /// <summary>Balance reconciliation / controlled correction of AR/AP settled totals (ADR-0038).</summary>
+    public const string ApArReconcile = "apar.reconcile";
     public const string MasterOrgManage = "master.org.manage";
     public const string MasterPartyManage = "master.party.manage";
     public const string MasterCurrencyManage = "master.currency.manage";
@@ -59,6 +61,7 @@ public static class PermissionCodes
         (RevenueMappingOverride, "Sửa kết quả chia doanh thu tự động"),
         (ApWriteOff, "Xóa nợ phải trả"),
         (ArWriteOff, "Xóa nợ phải thu"),
+        (ApArReconcile, "Đối soát số dư công nợ"),
         (MasterOrgManage, "Quản lý tổ chức"),
         (MasterPartyManage, "Quản lý đối tác"),
         (MasterCurrencyManage, "Quản lý tiền tệ"),
@@ -97,6 +100,7 @@ public static class PermissionCodes
         RevenueMappingOverride,
         ApWriteOff,
         ArWriteOff,
+        ApArReconcile,
         MasterOrgManage,
         MasterPartyManage,
         MasterCurrencyManage,

@@ -78,6 +78,65 @@ export function cashDetailHref(entry: ApArLedgerEntry, kind: ApArLedgerKind): st
     : `/settlements/payments/${entry.cashId}`;
 }
 
+export type ApArLegacyAllocation = {
+  allocationId: string;
+  cashId: string;
+  cashReference: string | null;
+  cashAmount: number;
+  cashCurrencyCode: string;
+  settledAmount: number;
+  reversedAt: string;
+};
+
+export type ApArBalanceMismatch = {
+  kind: "ar" | "ap";
+  accountId: string;
+  billId: string | null;
+  billNo: string | null;
+  currencyCode: string;
+  recordStatus: string;
+  currentOutstanding: number;
+  ledgerBalance: number;
+  difference: number;
+  storedAdjustmentAmount: number;
+  derivedAdjustmentAmount: number;
+  storedSettledAmount: number;
+  derivedSettledAmount: number;
+  cause: "legacy_cross_currency_reversal" | "unexplained";
+  correctable: boolean;
+  rowVersion: string | null;
+  legacyAllocations: ApArLegacyAllocation[];
+};
+
+export type ApArBalanceCorrection = {
+  auditEventId: string;
+  kind: "ar" | "ap";
+  accountId: string;
+  occurredAt: string;
+  actorId: string | null;
+  actorName: string | null;
+  reason: string | null;
+  outstandingBefore: number | null;
+  outstandingAfter: number | null;
+  currencyCode: string | null;
+};
+
+export type ApArBalanceReconciliation = {
+  generatedAt: string;
+  includesReceivables: boolean;
+  includesPayables: boolean;
+  checkedReceivables: number;
+  checkedPayables: number;
+  items: ApArBalanceMismatch[];
+  recentCorrections: ApArBalanceCorrection[];
+};
+
+export function mismatchCauseLabel(cause: ApArBalanceMismatch["cause"]): string {
+  return cause === "legacy_cross_currency_reversal"
+    ? "Hủy phân bổ khác tiền tệ trước bản sửa"
+    : "Chưa xác định — cần kiểm tra thủ công";
+}
+
 export function apArLedgerHref(
   kind: ApArLedgerKind,
   accountId: string,

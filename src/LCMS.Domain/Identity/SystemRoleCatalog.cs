@@ -53,6 +53,7 @@ public static class SystemRoleCatalog
                 (PermissionCodes.RevenueMappingOverride, DataScopes.All),
                 (PermissionCodes.ApWriteOff, DataScopes.All),
                 (PermissionCodes.ArWriteOff, DataScopes.All),
+                (PermissionCodes.ApArReconcile, DataScopes.All),
                 (PermissionCodes.RateBuyRead, DataScopes.All),
                 (PermissionCodes.RateSellRead, DataScopes.All),
                 (PermissionCodes.RateBuyPublish, DataScopes.All),

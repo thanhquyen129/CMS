@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/money";
 import { withIdempotency, withRowVersion } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
 import { formatHttpError, readApiErrorBody } from "@/lib/api-error";
+import { BalanceImpact } from "./BalanceImpact";
 
 type Kind = "payment" | "collection";
 
@@ -17,6 +18,9 @@ type Props = {
   amount: number;
   currencyCode: string;
   rowVersion?: string | null;
+  /** Current AR/AP balance — shows Before → After when in the same currency as the cash. */
+  targetOutstanding?: number | null;
+  targetCurrencyCode?: string | null;
 };
 
 export function FinalizeAllocationButton({
@@ -26,6 +30,8 @@ export function FinalizeAllocationButton({
   amount,
   currencyCode,
   rowVersion,
+  targetOutstanding = null,
+  targetCurrencyCode = null,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -133,6 +139,15 @@ export function FinalizeAllocationButton({
               Trạng thái → <strong>{finalizeLabel}</strong>. Hủy phân bổ là
               bước riêng (nút Hủy phân bổ).
             </p>
+            {targetOutstanding != null &&
+            targetCurrencyCode?.toUpperCase() === currencyCode.toUpperCase() ? (
+              <BalanceImpact
+                label={`Số dư ${target.toLowerCase()}`}
+                before={targetOutstanding}
+                after={targetOutstanding - amount}
+                currencyCode={currencyCode}
+              />
+            ) : null}
             {error ? (
               <div className="alert alert-error" role="alert">
                 {error}

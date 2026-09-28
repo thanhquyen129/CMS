@@ -341,6 +341,9 @@ export default async function ApArPage({
               <Link className="btn btn-ghost btn-sm" href="/ap-ar/aging">
                 Tuổi nợ
               </Link>
+              <Link className="btn btn-ghost btn-sm" href="/ap-ar/reconciliation">
+                Đối soát số dư
+              </Link>
             </div>
           }
         />

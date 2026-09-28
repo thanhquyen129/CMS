@@ -57,6 +57,8 @@ public static class AuditActions
     public const string AccountsReceivableWriteOffReverse = "accounts_receivable.write_off_reverse";
     public const string PaymentAllocationReverse = "payment_allocation.reverse";
     public const string CollectionAllocationReverse = "collection_allocation.reverse";
+    public const string AccountsPayableSettlementCorrection = "accounts_payable.settlement_correction";
+    public const string AccountsReceivableSettlementCorrection = "accounts_receivable.settlement_correction";
     public const string FinancialDocumentReceive = "financial_document.receive";
     public const string FinancialDocumentCorrectHeader = "financial_document.correct_header";
     public const string FinancialDocumentCancel = "financial_document.cancel";

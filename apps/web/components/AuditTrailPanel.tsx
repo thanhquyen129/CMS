@@ -3,6 +3,8 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { formatDateTimeVi } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { ResponsiveData } from "./list/ResponsiveData";
+import { TxnItem, TxnList } from "./list/TxnList";
 
 export type AuditEventRow = {
   id: string;
@@ -23,6 +25,7 @@ type Props = {
   objectId: string;
   /** Optional heading override. */
   title?: string;
+  layout?: "auto" | "list";
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -40,6 +43,8 @@ const ACTION_LABELS: Record<string, string> = {
   "accounts_receivable.write_off_reverse": "Hoàn tác xóa nợ phải thu",
   "accounts_payable.reverse_recognize": "Hủy ghi nhận công nợ phải trả",
   "accounts_receivable.reverse_recognize": "Hủy ghi nhận công nợ phải thu",
+  "accounts_payable.settlement_correction": "Đối soát số dư phải trả",
+  "accounts_receivable.settlement_correction": "Đối soát số dư phải thu",
 };
 
 function prettyJson(raw: string | null): string {
@@ -56,6 +61,7 @@ export function AuditTrailPanel({
   objectType,
   objectId,
   title,
+  layout = "auto",
 }: Props) {
   const auditLabel = term(terms, "AUDIT_TRAIL", "Nhật ký kiểm toán");
   const [rows, setRows] = useState<AuditEventRow[] | null>(null);
@@ -122,6 +128,36 @@ export function AuditTrailPanel({
           Chưa có sự kiện kiểm toán cho đối tượng này.
         </div>
       ) : (
+        <ResponsiveData
+          layout={layout}
+          list={
+            <TxnList label={title ?? auditLabel}>
+              {rows.map((row) => {
+                const open = expanded === row.id;
+                return (
+                  <TxnItem
+                    key={row.id}
+                    selected={open}
+                    title={ACTION_LABELS[row.action] ?? <code className="mono-id">{row.action}</code>}
+                    meta={formatDateTimeVi(row.occurredAt)}
+                    reason={row.reason}
+                    actions={
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        aria-expanded={open}
+                        onClick={() => setExpanded(open ? null : row.id)}
+                      >
+                        {open ? "Thu gọn" : "Trước / sau"}
+                      </button>
+                    }
+                    detail={open ? <AuditDiff row={row} stacked /> : null}
+                  />
+                );
+              })}
+            </TxnList>
+          }
+          table={
         <div className="table-wrap">
           <table className="data-table">
             <thead>
@@ -161,20 +197,7 @@ export function AuditTrailPanel({
                     {open ? (
                       <tr>
                         <td colSpan={4}>
-                          <div className="dash-split">
-                            <div>
-                              <h3 className="section-title sm">Trước</h3>
-                              <pre className="note mono-id" style={{ whiteSpace: "pre-wrap" }}>
-                                {prettyJson(row.beforeJson)}
-                              </pre>
-                            </div>
-                            <div>
-                              <h3 className="section-title sm">Sau</h3>
-                              <pre className="note mono-id" style={{ whiteSpace: "pre-wrap" }}>
-                                {prettyJson(row.afterJson)}
-                              </pre>
-                            </div>
-                          </div>
+                          <AuditDiff row={row} />
                         </td>
                       </tr>
                     ) : null}
@@ -184,7 +207,28 @@ export function AuditTrailPanel({
             </tbody>
           </table>
         </div>
+          }
+        />
       )}
     </section>
+  );
+}
+
+function AuditDiff({ row, stacked = false }: { row: AuditEventRow; stacked?: boolean }) {
+  return (
+    <div className={stacked ? "stack" : "dash-split"}>
+      <div>
+        <h3 className="section-title sm">Trước</h3>
+        <pre className="note mono-id" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {prettyJson(row.beforeJson)}
+        </pre>
+      </div>
+      <div>
+        <h3 className="section-title sm">Sau</h3>
+        <pre className="note mono-id" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+          {prettyJson(row.afterJson)}
+        </pre>
+      </div>
+    </div>
   );
 }

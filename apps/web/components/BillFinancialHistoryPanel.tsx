@@ -9,10 +9,16 @@ import { formatMoney } from "@/lib/money";
 type Props = {
   billId: string;
   title?: string;
+  /** "list" inside the Bill drawer; "auto" on the Bill page. */
+  layout?: "auto" | "list";
 };
 
 /** Bill history = AR/AP ledger events on this Bill (recognition, allocation, adjustment, write-off, reversals). */
-export function BillFinancialHistoryPanel({ billId, title = "Lịch sử công nợ" }: Props) {
+export function BillFinancialHistoryPanel({
+  billId,
+  title = "Lịch sử công nợ",
+  layout = "auto",
+}: Props) {
   const [ledgers, setLedgers] = useState<ApArLedger[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,7 +87,7 @@ export function BillFinancialHistoryPanel({ billId, title = "Lịch sử công n
                     Mở sổ công nợ
                   </Link>
                 </div>
-                <ApArLedgerTable kind={kind} ledger={ledger} reverse={null} compact />
+                <ApArLedgerTable kind={kind} ledger={ledger} reverse={null} layout={layout} />
               </div>
             );
           })}

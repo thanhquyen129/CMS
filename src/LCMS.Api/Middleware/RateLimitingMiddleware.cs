@@ -159,6 +159,7 @@ public sealed class RateLimitingOptions
         "/api/collection-allocations",
         "/api/accounts-payable",
         "/api/accounts-receivable",
+        "/api/ap-ar",
         "/api/payable-exposures",
         "/api/receivable-exposures",
         "/api/financial-closes",

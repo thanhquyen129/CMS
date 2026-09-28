@@ -545,7 +545,7 @@ export function BillFinancialDrawer({
           ) : null}
 
           {tab === "history" ? (
-            <BillFinancialHistoryPanel billId={bill.id} />
+            <BillFinancialHistoryPanel billId={bill.id} layout="list" />
           ) : null}
 
               {tab === "related" ? (

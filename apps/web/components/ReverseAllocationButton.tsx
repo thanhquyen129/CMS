@@ -5,6 +5,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { withRowVersion } from "@/lib/idempotency";
 import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { BalanceImpact } from "./BalanceImpact";
 
 type Kind = "payment" | "collection";
 
@@ -17,6 +18,9 @@ type Props = {
   /** draft | finalized — copy differs slightly */
   allocationStatus: string;
   rowVersion?: string | null;
+  /** Current AR/AP balance — shows Before → After when in the same currency as the cash. */
+  targetOutstanding?: number | null;
+  targetCurrencyCode?: string | null;
 };
 
 export function ReverseAllocationButton({
@@ -27,6 +31,8 @@ export function ReverseAllocationButton({
   currencyCode,
   allocationStatus,
   rowVersion,
+  targetOutstanding = null,
+  targetCurrencyCode = null,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -152,6 +158,15 @@ export function ReverseAllocationButton({
                 </>
               )}
             </p>
+            {targetOutstanding != null &&
+            targetCurrencyCode?.toUpperCase() === currencyCode.toUpperCase() ? (
+              <BalanceImpact
+                label={`Số dư ${target.toLowerCase()}`}
+                before={targetOutstanding}
+                after={isDraft ? targetOutstanding : targetOutstanding + amount}
+                currencyCode={currencyCode}
+              />
+            ) : null}
             <div className="field">
               <label htmlFor={`rev-alloc-${allocationId}`}>Lý do hủy</label>
               <input

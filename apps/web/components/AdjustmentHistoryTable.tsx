@@ -6,6 +6,8 @@ import {
 } from "@/lib/costs-revenues";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { ResponsiveData } from "./list/ResponsiveData";
+import { TxnItem, TxnList } from "./list/TxnList";
 
 type Props = {
   terms: TerminologyMap;
@@ -35,7 +37,34 @@ export function AdjustmentHistoryTable({
     );
   }
 
+  const list = (
+    <TxnList label="Lịch sử điều chỉnh">
+      {adjustments.map((a) => {
+        const ccy = a.currencyCode || currencyCode;
+        return (
+          <TxnItem
+            key={a.id}
+            title={`${adjustmentTypeLabel(a.adjustmentType)} · ${maturityVi(terms, a.appliedToMaturity)}`}
+            amount={formatMoney(a.deltaAmount, ccy)}
+            amountTone={a.deltaAmount < 0 ? "neg" : null}
+            sub={
+              <>
+                <span className="num">{formatMoney(a.amountBefore, ccy)}</span> →{" "}
+                <span className="num">{formatMoney(a.amountAfter, ccy)}</span>
+              </>
+            }
+            meta={`Hiệu lực ${a.effectiveDate} · ghi lúc ${formatDateTimeVi(a.createdAt)}`}
+            reason={a.reason}
+          />
+        );
+      })}
+    </TxnList>
+  );
+
   return (
+    <ResponsiveData
+      list={list}
+      table={
     <div className="table-wrap">
       <table className="data-table">
         <caption className="sr-only">Lịch sử điều chỉnh</caption>
@@ -75,6 +104,8 @@ export function AdjustmentHistoryTable({
         </tbody>
       </table>
     </div>
+      }
+    />
   );
 }
 

@@ -246,6 +246,7 @@ export function ApArListWorkspace({
                 kind={kind}
                 accountId={selected.id}
                 rowVersion={selected.rowVersion}
+                layout="list"
               />
             ) : null}
             {tab === "related" ? (

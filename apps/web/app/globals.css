@@ -5130,6 +5130,170 @@ html[data-layout="horizontal"] .login-page {
 .settlement-timeline-amount {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Responsive data (UI-TABLE-01): full table on wide content, compact transaction list in drawer / narrow viewport */
+.rdata {
+  container-type: inline-size;
+}
+
+.rdata-list {
+  display: none;
+}
+
+@container (max-width: 44rem) {
+  .rdata-table {
+    display: none;
+  }
+
+  .rdata-list {
+    display: block;
+  }
+}
+
+.rdata.is-list .rdata-table {
+  display: none;
+}
+
+.rdata.is-list .rdata-list {
+  display: block;
+}
+
+.txn-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.txn-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.6rem 0.75rem;
+  min-width: 0;
+}
+
+.txn-item.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.txn-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.txn-title {
+  font-weight: 600;
+  min-width: 0;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+.txn-amount {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.txn-amount.neg {
+  color: var(--danger-ink);
+}
+
+.txn-amount.pos {
+  color: var(--success-ink);
+}
+
+.txn-sub {
+  margin-top: 0.25rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.txn-sub .num {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.txn-sub .status-pill {
+  flex: none;
+}
+
+.txn-meta {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.txn-reason {
+  margin-top: 0.3rem;
+  font-size: 0.84rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.txn-actions {
+  margin-top: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.txn-detail {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--line);
+}
+
+.txn-detail .metric-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 0;
+}
+
+/* Before → After on money-changing dialogs */
+.balance-impact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.6rem;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.balance-impact-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.balance-impact-value {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.balance-impact-arrow {
+  color: var(--muted);
+}
+
+.balance-impact.is-invalid {
+  border-color: var(--danger);
+  background: var(--danger-bg);
 }
 
 .settlement-timeline-actions {

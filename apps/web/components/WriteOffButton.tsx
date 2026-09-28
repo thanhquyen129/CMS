@@ -6,6 +6,7 @@ import { useCallback, useId, useState, useTransition } from "react";
 import { withRowVersion } from "@/lib/idempotency";
 import { formatMoney } from "@/lib/money";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { BalanceImpact } from "./BalanceImpact";
 
 type Kind = "payable" | "receivable";
 
@@ -250,6 +251,15 @@ export function WriteOffButton({
                     required
                   />
                 </div>
+                <BalanceImpact
+                  before={outstanding}
+                  after={
+                    Number.isFinite(parsedPreview) && parsedPreview > 0
+                      ? outstanding - parsedPreview
+                      : null
+                  }
+                  currencyCode={currencyCode}
+                />
                 <p className="muted">{approvalNote}</p>
                 {error ? (
                   <div className="alert alert-error" role="alert">
@@ -286,6 +296,11 @@ export function WriteOffButton({
                   . Lý do được lưu vĩnh viễn trong sổ công nợ; có thể hoàn tác
                   bằng bút toán bù, không sửa hoặc xóa bản ghi.
                 </p>
+                <BalanceImpact
+                  before={outstanding}
+                  after={outstanding - parsedPreview}
+                  currencyCode={currencyCode}
+                />
                 <div className="field">
                   <label htmlFor={`wo-reason-${accountsId}`}>Lý do</label>
                   <input

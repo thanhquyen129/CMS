@@ -5,6 +5,7 @@ import { useId, useRef, useState, useTransition } from "react";
 import { formatApiErrorMessage } from "@/lib/api-error";
 import { formatMoney } from "@/lib/money";
 import { newIdempotencyKey, withIdempotency, withRowVersion } from "@/lib/idempotency";
+import { BalanceImpact } from "./BalanceImpact";
 
 type Kind = "payable" | "receivable";
 
@@ -33,6 +34,11 @@ export function AdjustApArButton({
   const [busy, setBusy] = useState(false);
   const [isPending, startTransition] = useTransition();
   const label = kind === "payable" ? "phải trả" : "phải thu";
+  const parsedDelta = Number(String(delta).replace(",", "."));
+  const previewAfter =
+    delta.trim() !== "" && Number.isFinite(parsedDelta) && parsedDelta !== 0
+      ? outstanding + parsedDelta
+      : null;
 
   async function submit() {
     const parsed = Number(String(delta).replace(",", "."));
@@ -114,6 +120,11 @@ export function AdjustApArButton({
               required
             />
           </label>
+          <BalanceImpact
+            before={outstanding}
+            after={previewAfter}
+            currencyCode={currencyCode}
+          />
           <label>
             Lý do
             <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1024} required rows={3} />

@@ -73,7 +73,10 @@ public sealed record BillProfitabilityDto(
     decimal? ReportingCost = null,
     decimal? ReportingProfit = null,
     IReadOnlyList<ProfitabilityFxTraceDto>? FxTrace = null,
-    IReadOnlyList<string>? UnconvertedCurrencies = null);
+    IReadOnlyList<string>? UnconvertedCurrencies = null,
+    int MissingFxCount = 0,
+    bool ReportingComplete = true,
+    decimal? ReportingMarginRate = null);
 
 public sealed record ProfitabilityFxTraceDto(
     string CurrencyCode,
@@ -91,13 +94,13 @@ public sealed class GetBillProfitabilityQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
-    private readonly IFxRateLookup _fx;
+    private readonly IReportingCurrencyProvider _reporting;
 
-    public GetBillProfitabilityQueryHandler(ILcmsDbContext db, ITenantContext tenantContext, IFxRateLookup fx)
+    public GetBillProfitabilityQueryHandler(ILcmsDbContext db, ITenantContext tenantContext, IReportingCurrencyProvider reporting)
     {
         _db = db;
         _tenantContext = tenantContext;
-        _fx = fx;
+        _reporting = reporting;
     }
 
     public async Task<BillProfitabilityDto> Handle(
@@ -132,7 +135,7 @@ public sealed class GetBillProfitabilityQueryHandler
             where d.BillId == bill.Id
                   && a.AllocationStatus == CostAllocationStatuses.Finalized
                   && c.RecordStatus == "active"
-            select new { d.AllocatedAmount, c.CurrencyCode }
+            select new { d.AllocatedAmount, c.CurrencyCode, AllocationId = a.Id, DetailId = d.Id, c.FxRate, c.FxStatus, c.FxSourceType }
         ).ToListAsync(cancellationToken);
 
         var currencyCodes = revenues.Select(r => r.CurrencyCode)
@@ -191,8 +194,37 @@ public sealed class GetBillProfitabilityQueryHandler
             ? $"{label}: Không cộng gộp khác loại tiền tệ. {viewLabel}={view}. Allocated cost luôn gồm trong Cost."
             : $"{label}: {viewLabel}={view}. Profit = Revenue − (Direct + Allocated). Không lưu SoT trên Bill.";
 
-        var (reportingRevenue, reportingCost, reportingProfit, trace, missing) =
-            await ConvertAsync(request.ReportingCurrency, buckets, cancellationToken);
+        var reporting = await _reporting.GetAsync(cancellationToken);
+        var revenueFx = revenues
+            .Select(r => new FxLine(r.CurrencyCode, ShareOf(view, r, shares), ReportingValue.Of(r, ShareOf(view, r, shares), reporting), SourceOf(r, reporting), true))
+            .ToList();
+        var costFx = directCosts
+            .Select(c =>
+            {
+                var amount = ProfitabilityShare.Layer(view, c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount);
+                return new FxLine(c.CurrencyCode, amount, ReportingValue.Of(c, amount, reporting), SourceOf(c, reporting), false);
+            })
+            .ToList();
+        var allocationIds = allocatedList.Select(a => a.AllocationId).Distinct().ToList();
+        var allDetails = allocationIds.Count == 0
+            ? []
+            : await _db.CostAllocationDetails.AsNoTracking()
+                .Where(d => allocationIds.Contains(d.AllocationId))
+                .Select(d => new AllocationDetailSlice(d.AllocationId, d.Id, d.AllocatedAmount))
+                .ToListAsync(cancellationToken);
+        var allocShares = ReportingAllocation.Split(
+            allDetails,
+            allocatedList.GroupBy(a => a.AllocationId)
+                .ToDictionary(g => g.Key, g => new AllocationFx(g.First().CurrencyCode, g.First().FxRate, g.First().FxStatus)),
+            reporting);
+        costFx.AddRange(allocatedList.Select(a => new FxLine(
+            a.CurrencyCode,
+            a.AllocatedAmount,
+            allocShares.TryGetValue(a.DetailId, out var share) ? share : null,
+            ReportingValue.SameCurrency(a.CurrencyCode, reporting) ? FxSourceTypes.Identity : a.FxSourceType ?? "-",
+            false)));
+        var (reportingRevenue, reportingCost, reportingProfit, trace, missing, missingCount) =
+            Convert(reporting, revenueFx, costFx);
 
         return new BillProfitabilityDto(
             bill.Id,
@@ -202,12 +234,17 @@ public sealed class GetBillProfitabilityQueryHandler
             buckets,
             mixed,
             note,
-            string.IsNullOrWhiteSpace(request.ReportingCurrency) ? null : request.ReportingCurrency.Trim().ToUpperInvariant(),
+            reporting,
             reportingRevenue,
             reportingCost,
             reportingProfit,
             trace,
-            missing);
+            missing,
+            missingCount,
+            missingCount == 0,
+            reportingProfit is { } rp && reportingRevenue is { } rr
+                ? ProfitabilityShare.MarginPercent(rr, rp)
+                : null);
     }
 
     private async Task<List<Revenue>> LoadRevenuesAsync(Guid billId, CancellationToken cancellationToken)
@@ -275,47 +312,59 @@ public sealed class GetBillProfitabilityQueryHandler
             share.Amount);
     }
 
-    private async Task<(decimal? Revenue, decimal? Cost, decimal? Profit, IReadOnlyList<ProfitabilityFxTraceDto>? Trace, IReadOnlyList<string>? Missing)> ConvertAsync(
-        string? reportingCurrency,
-        IReadOnlyList<ProfitabilityCurrencyBucketDto> buckets,
-        CancellationToken cancellationToken)
+    private sealed record FxLine(string CurrencyCode, decimal Amount, decimal? Reporting, string Source, bool IsRevenue);
+
+    private static string SourceOf(IReportingFx record, string reporting) =>
+        ReportingValue.SameCurrency(record.CurrencyCode, reporting)
+            ? FxSourceTypes.Identity
+            : record.FxSourceType ?? "-";
+
+    /// <summary>
+    /// Sums per-record snapshot conversions (FX-ARCH-08). Profit only when every line converted (AC-FX-011/012).
+    /// </summary>
+    private static (decimal? Revenue, decimal? Cost, decimal? Profit, IReadOnlyList<ProfitabilityFxTraceDto>? Trace, IReadOnlyList<string>? Missing, int MissingCount) Convert(
+        string reporting,
+        IReadOnlyList<FxLine> revenueLines,
+        IReadOnlyList<FxLine> costLines)
     {
-        if (string.IsNullOrWhiteSpace(reportingCurrency) || buckets.Count == 0)
+        var all = revenueLines.Concat(costLines).ToList();
+        if (all.Count == 0)
         {
-            return (null, null, null, null, null);
+            return (null, null, null, null, null, 0);
         }
 
-        var target = reportingCurrency.Trim().ToUpperInvariant();
-        var asOf = DateOnly.FromDateTime(DateTime.UtcNow);
-        var trace = new List<ProfitabilityFxTraceDto>();
-        var missing = new List<string>();
-        foreach (var bucket in buckets)
-        {
-            if (string.Equals(bucket.CurrencyCode, target, StringComparison.OrdinalIgnoreCase))
+        var trace = all
+            .GroupBy(l => l.CurrencyCode.ToUpperInvariant())
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .Select(g =>
             {
-                trace.Add(new ProfitabilityFxTraceDto(bucket.CurrencyCode, 1m, "identity", asOf, null, bucket.RevenueAmount, bucket.RevenueAmount, bucket.CostAmount, bucket.CostAmount));
-                continue;
-            }
+                var converted = g.Where(l => l.Reporting.HasValue).ToList();
+                var original = converted.Sum(l => l.Amount);
+                var value = converted.Sum(l => l.Reporting!.Value);
+                var rate = ReportingValue.SameCurrency(g.Key, reporting) ? 1m
+                    : original != 0m ? decimal.Round(value / original, 8, MidpointRounding.AwayFromZero)
+                    : 0m;
+                var sources = string.Join(", ", converted.Select(l => l.Source).Distinct(StringComparer.Ordinal));
+                return new ProfitabilityFxTraceDto(
+                    g.Key,
+                    rate,
+                    string.IsNullOrEmpty(sources) ? FxStatuses.Missing : sources,
+                    null,
+                    null,
+                    decimal.Round(g.Where(l => l.IsRevenue).Sum(l => l.Amount), 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(converted.Where(l => l.IsRevenue).Sum(l => l.Reporting!.Value), 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(g.Where(l => !l.IsRevenue).Sum(l => l.Amount), 4, MidpointRounding.AwayFromZero),
+                    decimal.Round(converted.Where(l => !l.IsRevenue).Sum(l => l.Reporting!.Value), 4, MidpointRounding.AwayFromZero));
+            })
+            .ToList();
 
-            var rate = await _fx.ResolveAsync(bucket.CurrencyCode, target, asOf, cancellationToken);
-            if (rate is null)
-            {
-                missing.Add(bucket.CurrencyCode);
-                continue;
-            }
-
-            var revenue = decimal.Round(bucket.RevenueAmount * rate.Rate, 4, MidpointRounding.AwayFromZero);
-            var cost = decimal.Round(bucket.CostAmount * rate.Rate, 4, MidpointRounding.AwayFromZero);
-            trace.Add(new ProfitabilityFxTraceDto(bucket.CurrencyCode, rate.Rate, rate.Source, rate.RateDate, rate.FxRateId, bucket.RevenueAmount, revenue, bucket.CostAmount, cost));
-        }
-
-        if (missing.Count > 0)
-        {
-            return (null, null, null, trace, missing);
-        }
-
-        var reportingRevenue = trace.Sum(t => t.ConvertedRevenue);
-        var reportingCost = trace.Sum(t => t.ConvertedCost);
-        return (reportingRevenue, reportingCost, decimal.Round(reportingRevenue - reportingCost, 4, MidpointRounding.AwayFromZero), trace, missing);
+        var missingLines = all.Where(l => l.Reporting is null).ToList();
+        var missing = missingLines.Select(l => l.CurrencyCode.ToUpperInvariant()).Distinct().OrderBy(c => c).ToList();
+        var revenue = decimal.Round(revenueLines.Sum(l => l.Reporting ?? 0m), 4, MidpointRounding.AwayFromZero);
+        var cost = decimal.Round(costLines.Sum(l => l.Reporting ?? 0m), 4, MidpointRounding.AwayFromZero);
+        decimal? profit = missingLines.Count == 0
+            ? decimal.Round(revenue - cost, 4, MidpointRounding.AwayFromZero)
+            : null;
+        return (revenue, cost, profit, trace, missing, missingLines.Count);
     }
 }

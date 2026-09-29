@@ -5,7 +5,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Fx;
 
-public sealed record FxRateResolution(Guid FxRateId, decimal Rate, DateOnly RateDate, int Version, string Source);
+public sealed record FxRateResolution(
+    Guid FxRateId,
+    decimal Rate,
+    DateOnly RateDate,
+    int Version,
+    string Source,
+    bool Inverse = false);
 
 /// <summary>
 /// Dated fx_rates lookup: latest RateDate ≤ asOf for from→to (tenant-scoped).
@@ -58,11 +64,32 @@ public sealed class FxRateLookup : IFxRateLookup
             .Select(r => new { r.Id, r.Rate, r.RateDate, r.Version, r.Source })
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (match is null || match.Rate <= 0)
+        if (match is not null && match.Rate > 0)
+        {
+            return new FxRateResolution(match.Id, match.Rate, match.RateDate, match.Version, match.Source);
+        }
+
+        var inverse = await _db.FxRates
+            .AsNoTracking()
+            .Where(r => r.FromCurrencyCode == to
+                        && r.ToCurrencyCode == from
+                        && r.RateDate <= asOf
+                        && r.Rate > 0)
+            .OrderByDescending(r => r.RateDate)
+            .ThenByDescending(r => r.Version)
+            .Select(r => new { r.Id, r.Rate, r.RateDate, r.Version, r.Source })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (inverse is null)
         {
             return null;
         }
 
-        return new FxRateResolution(match.Id, match.Rate, match.RateDate, match.Version, match.Source);
+        return new FxRateResolution(
+            inverse.Id,
+            decimal.Round(1m / inverse.Rate, 8, MidpointRounding.AwayFromZero),
+            inverse.RateDate,
+            inverse.Version,
+            inverse.Source,
+            Inverse: true);
     }
 }

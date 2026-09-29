@@ -23,7 +23,9 @@ public sealed record CreateCostCommand(
     string? SourceType,
     Guid? SourceId,
     Guid? OrganizationId,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    decimal? FxRate = null,
+    string? FxOverrideReason = null) : IRequest<Guid>;
 
 public sealed class CreateCostCommandValidator : AbstractValidator<CreateCostCommand>
 {
@@ -207,7 +209,7 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             throw new ConflictAppException("Chi phí chung (shared) không gắn Bill trực tiếp; dùng phân bổ.");
         }
 
-        await _fx.ApplyToCostAsync(cost, amount, cancellationToken);
+        await _fx.ApplyToCostAsync(cost, amount, new Fx.FxManualInput(request.FxRate, request.FxOverrideReason), cancellationToken);
         await _approvalGate.RefreshPendingFlagAsync(cost, cancellationToken);
 
         _db.Costs.Add(cost);

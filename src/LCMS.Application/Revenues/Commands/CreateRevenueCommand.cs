@@ -23,7 +23,9 @@ public sealed record CreateRevenueCommand(
     Guid? SourceId,
     string? RecognitionPolicyVersion,
     string? ActualRevenueOwner = null,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    decimal? FxRate = null,
+    string? FxOverrideReason = null) : IRequest<Guid>;
 
 public sealed class CreateRevenueCommandValidator : AbstractValidator<CreateRevenueCommand>
 {
@@ -194,7 +196,7 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
             EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
         };
 
-        await _fx.ApplyToRevenueAsync(revenue, amount, cancellationToken);
+        await _fx.ApplyToRevenueAsync(revenue, amount, new Fx.FxManualInput(request.FxRate, request.FxOverrideReason), cancellationToken);
         _approvalGate.RefreshPendingFlag(revenue);
 
         _db.Revenues.Add(revenue);

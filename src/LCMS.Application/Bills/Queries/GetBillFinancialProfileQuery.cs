@@ -1,6 +1,9 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
+using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using LCMS.Domain.Terminology;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +39,27 @@ public sealed record BillFinancialProfileDto(
     IReadOnlyList<SettlementOutstandingBucketDto> SettlementOutstanding,
     bool HasMixedCurrencies,
     string Note,
-    string? AsOfLimitationNote);
+    string? AsOfLimitationNote,
+    BillReportingSummaryDto? Reporting = null);
+
+/// <summary>Bill totals in the tenant reporting currency only (FX-ARCH-10); lines carry the FX trace.</summary>
+public sealed record BillReportingSummaryDto(
+    string ReportingCurrencyCode,
+    bool CanViewRevenue,
+    bool CanViewCost,
+    decimal? RevenueBestAvailable,
+    decimal? CostBestAvailable,
+    decimal? DirectCostBestAvailable,
+    decimal? AllocatedCostAmount,
+    decimal? ProfitBestAvailable,
+    decimal? MarginPercent,
+    MaturityBreakdownDto? RevenueMaturity,
+    MaturityBreakdownDto? DirectCostMaturity,
+    decimal? AccountsPayableOutstanding,
+    decimal? AccountsReceivableOutstanding,
+    int MissingFxCount,
+    bool Complete,
+    IReadOnlyList<ReportingLineDto> Lines);
 
 public sealed record CurrencyFinancialBucketDto(
     string CurrencyCode,
@@ -59,11 +82,19 @@ public sealed class GetBillFinancialProfileQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IReportingCurrencyProvider _reporting;
+    private readonly IPermissionService _permissions;
 
-    public GetBillFinancialProfileQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetBillFinancialProfileQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IReportingCurrencyProvider reporting,
+        IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _reporting = reporting;
+        _permissions = permissions;
     }
 
     public async Task<BillFinancialProfileDto> Handle(
@@ -111,7 +142,20 @@ public sealed class GetBillFinancialProfileQueryHandler
             where d.BillId == bill.Id
                   && a.AllocationStatus == CostAllocationStatuses.Finalized
                   && c.RecordStatus == "active"
-            select new { d.AllocatedAmount, c.CurrencyCode, a.FinalizedAt }
+            select new
+            {
+                d.AllocatedAmount,
+                c.CurrencyCode,
+                a.FinalizedAt,
+                AllocationId = a.Id,
+                DetailId = d.Id,
+                CostId = c.Id,
+                c.FxRate,
+                c.FxStatus,
+                c.FxSourceType,
+                c.FxSourceName,
+                c.FxRateDate
+            }
         ).ToListAsync(cancellationToken);
 
         var allocatedLines = allocatedRaw.AsEnumerable();
@@ -294,6 +338,31 @@ public sealed class GetBillFinancialProfileQueryHandler
             .Where(s => s.AccountsPayableOutstanding != 0m || s.AccountsReceivableOutstanding != 0m)
             .ToList();
 
+        var reportingSummary = await BuildReportingAsync(
+            revenues,
+            directCosts,
+            allocatedList.Select(a => new AllocatedLine(
+                a.AllocationId, a.DetailId, a.CostId, a.AllocatedAmount, a.CurrencyCode,
+                a.FxRate, a.FxStatus, a.FxSourceType, a.FxSourceName, a.FxRateDate)).ToList(),
+            apRows.Select(a => (Row: a, Outstanding: asOf.HasValue
+                ? OutstandingAtAsOf(
+                    a.RecognizedAmount,
+                    AdjustmentAtAsOf(a.Id, a.AdjustmentAmount, payable: true),
+                    paymentAllocs.Where(p => p.AccountsPayableId == a.Id)
+                        .Select(p => new SettlementAllocSlice(p.Amount, p.AllocationStatus, p.FinalizedAt, p.ReversedAt)),
+                    asOf.Value)
+                : a.DeriveOutstanding())).ToList(),
+            arRows.Select(a => (Row: a, Outstanding: asOf.HasValue
+                ? OutstandingAtAsOf(
+                    a.RecognizedAmount,
+                    AdjustmentAtAsOf(a.Id, a.AdjustmentAmount, payable: false),
+                    collectionAllocs.Where(c => c.AccountsReceivableId == a.Id)
+                        .Select(c => new SettlementAllocSlice(c.Amount, c.AllocationStatus, c.FinalizedAt, c.ReversedAt)),
+                    asOf.Value)
+                : a.DeriveOutstanding())).ToList(),
+            asOf,
+            cancellationToken);
+
         var mixed = buckets.Count > 1;
         var profileLabel = VietnameseUiTerms.Get("BILL_FINANCIAL_PROFILE");
         var bestAvailableLabel = VietnameseUiTerms.Get("BEST_AVAILABLE");
@@ -333,7 +402,132 @@ public sealed class GetBillFinancialProfileQueryHandler
             settlement,
             mixed,
             note,
-            asOfLimitation);
+            asOfLimitation,
+            reportingSummary);
+    }
+
+    private sealed record AllocatedLine(
+        Guid AllocationId,
+        Guid DetailId,
+        Guid CostId,
+        decimal Amount,
+        string CurrencyCode,
+        decimal? FxRate,
+        string FxStatus,
+        string? FxSourceType,
+        string? FxSourceName,
+        DateOnly? FxRateDate);
+
+    private async Task<BillReportingSummaryDto> BuildReportingAsync(
+        IReadOnlyList<Revenue> revenues,
+        IReadOnlyList<Cost> directCosts,
+        IReadOnlyList<AllocatedLine> allocated,
+        IReadOnlyList<(AccountsPayable Row, decimal Outstanding)> payables,
+        IReadOnlyList<(AccountsReceivable Row, decimal Outstanding)> receivables,
+        DateOnly? asOf,
+        CancellationToken cancellationToken)
+    {
+        var reporting = await _reporting.GetAsync(cancellationToken);
+        var canRevenue = await _permissions.HasPermissionAsync(PermissionCodes.RevenueRead, cancellationToken);
+        var canCost = await _permissions.HasPermissionAsync(PermissionCodes.CostRead, cancellationToken);
+        var lines = new List<ReportingLineDto>();
+
+        ReportingSum revBest = new(), revExp = new(), revConf = new(), revAct = new();
+        foreach (var r in revenues)
+        {
+            var p = ProjectMaturity(r.ExpectedAmount, r.ConfirmedAmount, r.ConfirmedAt, r.ActualAmount, r.ActualizedAt, asOf);
+            revBest.Add(ReportingValue.Of(r, p.BestAvailable, reporting));
+            revExp.Add(ReportingValue.Of(r, p.Expected, reporting));
+            revConf.Add(ReportingValue.Of(r, p.Confirmed ?? 0m, reporting));
+            revAct.Add(ReportingValue.Of(r, p.Actual ?? 0m, reporting));
+            lines.Add(ReportingValue.Line("revenue", r.Id, r.RevenueTypeCode, r, p.BestAvailable, reporting));
+        }
+
+        ReportingSum costBest = new(), costExp = new(), costConf = new(), costAct = new();
+        foreach (var c in directCosts)
+        {
+            var p = ProjectMaturity(c.ExpectedAmount, c.ConfirmedAmount, c.ConfirmedAt, c.ActualAmount, c.ActualizedAt, asOf);
+            costBest.Add(ReportingValue.Of(c, p.BestAvailable, reporting));
+            costExp.Add(ReportingValue.Of(c, p.Expected, reporting));
+            costConf.Add(ReportingValue.Of(c, p.Confirmed ?? 0m, reporting));
+            costAct.Add(ReportingValue.Of(c, p.Actual ?? 0m, reporting));
+            lines.Add(ReportingValue.Line("cost", c.Id, c.CostTypeCode, c, p.BestAvailable, reporting));
+        }
+
+        var allocationIds = allocated.Select(a => a.AllocationId).Distinct().ToList();
+        var allDetails = allocationIds.Count == 0
+            ? []
+            : await _db.CostAllocationDetails.AsNoTracking()
+                .Where(d => allocationIds.Contains(d.AllocationId))
+                .Select(d => new AllocationDetailSlice(d.AllocationId, d.Id, d.AllocatedAmount))
+                .ToListAsync(cancellationToken);
+        var fxByAllocation = allocated
+            .GroupBy(a => a.AllocationId)
+            .ToDictionary(g => g.Key, g => new AllocationFx(g.First().CurrencyCode, g.First().FxRate, g.First().FxStatus));
+        var shares = ReportingAllocation.Split(allDetails, fxByAllocation, reporting);
+        var alloc = new ReportingSum();
+        foreach (var a in allocated)
+        {
+            decimal? share = shares.TryGetValue(a.DetailId, out var s) ? s : null;
+            alloc.Add(share);
+            var same = ReportingValue.SameCurrency(a.CurrencyCode, reporting);
+            lines.Add(new ReportingLineDto(
+                "allocated",
+                a.CostId,
+                "Phân bổ chi phí chung",
+                a.CurrencyCode.ToUpperInvariant(),
+                decimal.Round(a.Amount, 4, MidpointRounding.AwayFromZero),
+                same ? 1m : a.FxRate,
+                same ? FxSourceTypes.Identity : a.FxSourceType,
+                same ? null : a.FxSourceName,
+                same ? null : a.FxRateDate,
+                share,
+                share is null ? FxStatuses.Missing : FxStatuses.Converted));
+        }
+
+        var apOut = new ReportingSum();
+        foreach (var (row, outstanding) in payables)
+        {
+            apOut.Add(ReportingValue.Of(row, outstanding, reporting));
+            lines.Add(ReportingValue.Line("ap", row.Id, "Công nợ phải trả còn lại", row, outstanding, reporting));
+        }
+
+        var arOut = new ReportingSum();
+        foreach (var (row, outstanding) in receivables)
+        {
+            arOut.Add(ReportingValue.Of(row, outstanding, reporting));
+            lines.Add(ReportingValue.Line("ar", row.Id, "Công nợ phải thu còn lại", row, outstanding, reporting));
+        }
+
+        var costTotal = costBest.Rounded + alloc.Rounded;
+        var profit = revBest.Rounded - costTotal;
+        var costMissing = costBest.Missing + alloc.Missing + apOut.Missing;
+        var revenueMissing = revBest.Missing + arOut.Missing;
+        var missing = (canCost ? costMissing : 0) + (canRevenue ? revenueMissing : 0);
+        var visibleLines = lines
+            .Where(l => l.Kind is "revenue" or "ar" ? canRevenue : canCost)
+            .ToList();
+        var both = canRevenue && canCost;
+
+        return new BillReportingSummaryDto(
+            reporting,
+            canRevenue,
+            canCost,
+            canRevenue ? revBest.Rounded : null,
+            canCost ? costTotal : null,
+            canCost ? costBest.Rounded : null,
+            canCost ? alloc.Rounded : null,
+            both ? profit : null,
+            both && revBest.Complete && costBest.Complete && alloc.Complete
+                ? ProfitabilityShare.MarginPercent(revBest.Rounded, profit)
+                : null,
+            canRevenue ? new MaturityBreakdownDto(revExp.Rounded, revConf.Rounded, revAct.Rounded) : null,
+            canCost ? new MaturityBreakdownDto(costExp.Rounded, costConf.Rounded, costAct.Rounded) : null,
+            canCost ? apOut.Rounded : null,
+            canRevenue ? arOut.Rounded : null,
+            missing,
+            missing == 0,
+            visibleLines);
     }
 
     /// <summary>

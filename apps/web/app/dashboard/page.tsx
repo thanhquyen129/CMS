@@ -286,7 +286,9 @@ export default async function DashboardPage() {
                 <div>
                   <h4>{profitLabel}</h4>
                   <div className={`big${profitAmt < 0 ? " is-neg" : ""}`}>
-                    {formatMoney(profitAmt, currency)}
+                    {roll && roll.profitBestAvailableBase == null
+                      ? "Chưa đủ tỷ giá"
+                      : formatMoney(profitAmt, currency)}
                   </div>
                   <small>DT − CP ({bestAvailableLabel})</small>
                 </div>
@@ -405,6 +407,11 @@ export default async function DashboardPage() {
               {hasMonthAmount && monthNote ? (
                 <p className="muted small" style={{ margin: "0.75rem 1rem 0" }}>
                   {monthNote}
+                </p>
+              ) : null}
+              {roll?.fxStubNote ? (
+                <p className="muted small" style={{ margin: "0.35rem 1rem 0" }}>
+                  {roll.fxStubNote}
                 </p>
               ) : null}
             </section>

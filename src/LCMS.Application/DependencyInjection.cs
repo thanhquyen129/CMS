@@ -76,6 +76,9 @@ public static class DependencyInjection
         services.AddScoped<DemoDataSeeder>();
 
         services.AddScoped<IFxRateLookup, FxRateLookup>();
+        services.AddScoped<IReportingCurrencyProvider, ReportingCurrencyProvider>();
+        services.AddScoped<IFxSnapshotService, FxSnapshotService>();
+        services.AddSingleton<IFxRateProvider, VietcombankFxRateProvider>();
         services.AddScoped<ICostFxStub, CostFxStub>();
         services.AddScoped<ICostApprovalGate, CostApprovalGate>();
         services.AddScoped<LCMS.Application.Exposures.IRecognitionApprovalGate, LCMS.Application.Exposures.RecognitionApprovalGate>();

@@ -1,14 +1,15 @@
-using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Fx;
 using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.Costs;
 
 /// <summary>
-/// FX conversion for Cost: dated fx_rates first; StubFxRatesToBase fallback (FxRateId null).
+/// FX snapshot for Cost to the tenant reporting currency (ADR-0040): identity, dated fx_rates,
+/// config policy fallback (non-production), or a user-entered manual/override rate.
 /// </summary>
 public interface ICostFxStub
 {
+    /// <summary>Tenant reporting currency.</summary>
     string BaseCurrency { get; }
 
     /// <summary>Sync stub-only (approval gate fallback when BaseAmount unset).</summary>
@@ -20,30 +21,42 @@ public interface ICostFxStub
         DateOnly asOf,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Keeps the existing snapshot when valid (FX-ARCH-07); resolves one otherwise.</summary>
     Task ApplyToCostAsync(
         Domain.Entities.Cost cost,
         decimal amountInTxnCurrency,
+        CancellationToken cancellationToken = default);
+
+    Task ApplyToCostAsync(
+        Domain.Entities.Cost cost,
+        decimal amountInTxnCurrency,
+        FxManualInput? manual,
         CancellationToken cancellationToken = default);
 }
 
 public sealed class CostFxStub : ICostFxStub
 {
     private readonly CostOptions _options;
-    private readonly IFxRateLookup _lookup;
+    private readonly IFxSnapshotService _fx;
+    private readonly IReportingCurrencyProvider _reporting;
 
-    public CostFxStub(IOptions<CostOptions> options, IFxRateLookup lookup)
+    public CostFxStub(IOptions<CostOptions> options, IFxSnapshotService fx, IReportingCurrencyProvider reporting)
     {
         _options = options.Value;
-        _lookup = lookup;
+        _fx = fx;
+        _reporting = reporting;
     }
 
-    public string BaseCurrency =>
-        string.IsNullOrWhiteSpace(_options.BaseCurrency)
-            ? "VND"
-            : _options.BaseCurrency.Trim().ToUpperInvariant();
+    public string BaseCurrency => _reporting.Get();
+
+    private FxStubPolicy Stub => new(
+        string.IsNullOrWhiteSpace(_options.BaseCurrency) ? "VND" : _options.BaseCurrency.Trim().ToUpperInvariant(),
+        _options.AllowStubFxFallback,
+        _options.StubFxRatesToBase,
+        CostOptions.SectionName);
 
     public decimal ToBaseAmount(string currencyCode, decimal amount) =>
-        ConvertWithStubOnly(currencyCode, amount);
+        FxStubMath.ConvertWithStubOnly(currencyCode, amount, BaseCurrency, Stub);
 
     public async Task<decimal> ToBaseAmountAsync(
         string currencyCode,
@@ -51,88 +64,32 @@ public sealed class CostFxStub : ICostFxStub
         DateOnly asOf,
         CancellationToken cancellationToken = default)
     {
-        var currency = currencyCode.Trim().ToUpperInvariant();
-        var rounded = decimal.Round(amount, 4, MidpointRounding.AwayFromZero);
-        if (string.Equals(currency, BaseCurrency, StringComparison.OrdinalIgnoreCase))
-        {
-            return rounded;
-        }
-
-        var resolved = await _lookup.ResolveAsync(currency, BaseCurrency, asOf, cancellationToken);
-        if (resolved is not null)
-        {
-            return decimal.Round(rounded * resolved.Rate, 4, MidpointRounding.AwayFromZero);
-        }
-
-        return ConvertWithStubOnly(currency, rounded);
+        var snap = await _fx.ResolveAsync(new FxResolveRequest(currencyCode, asOf, Stub: Stub), cancellationToken);
+        return FxMath.ToReporting(decimal.Round(amount, 4, MidpointRounding.AwayFromZero), snap.Rate);
     }
+
+    public Task ApplyToCostAsync(
+        Domain.Entities.Cost cost,
+        decimal amountInTxnCurrency,
+        CancellationToken cancellationToken = default) =>
+        ApplyToCostAsync(cost, amountInTxnCurrency, null, cancellationToken);
 
     public async Task ApplyToCostAsync(
         Domain.Entities.Cost cost,
         decimal amountInTxnCurrency,
+        FxManualInput? manual,
         CancellationToken cancellationToken = default)
     {
-        var currency = cost.CurrencyCode.Trim().ToUpperInvariant();
         var rounded = decimal.Round(amountInTxnCurrency, 4, MidpointRounding.AwayFromZero);
-        if (string.Equals(currency, BaseCurrency, StringComparison.OrdinalIgnoreCase))
+        var snap = manual is { HasRate: true } ? null : _fx.FromRecord(cost);
+        if (snap is null)
         {
-            cost.BaseAmount = rounded;
-            cost.FxRateId = null;
-            return;
+            snap = await _fx.ResolveAsync(
+                new FxResolveRequest(cost.CurrencyCode, cost.EffectiveDate, manual?.Rate, manual?.Reason, Stub),
+                cancellationToken);
+            _fx.Apply(cost, snap, "cost", cost.Id);
         }
 
-        var resolved = await _lookup.ResolveAsync(
-            currency,
-            BaseCurrency,
-            cost.EffectiveDate,
-            cancellationToken);
-
-        if (resolved is not null)
-        {
-            cost.BaseAmount = decimal.Round(rounded * resolved.Rate, 4, MidpointRounding.AwayFromZero);
-            cost.FxRateId = resolved.FxRateId;
-            return;
-        }
-
-        cost.BaseAmount = ConvertWithStubOnly(currency, rounded);
-        cost.FxRateId = null;
+        cost.BaseAmount = FxMath.ToReporting(rounded, snap.Rate);
     }
-
-    private decimal ConvertWithStubOnly(string currencyCode, decimal amount)
-    {
-        var currency = currencyCode.Trim().ToUpperInvariant();
-        var rounded = decimal.Round(amount, 4, MidpointRounding.AwayFromZero);
-        if (string.Equals(currency, BaseCurrency, StringComparison.OrdinalIgnoreCase))
-        {
-            return rounded;
-        }
-
-        if (!_options.AllowStubFxFallback)
-        {
-            throw MissingDatedRate(currency);
-        }
-
-        var rates = _options.StubFxRatesToBase ?? new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-        if (!rates.TryGetValue(currency, out var rate) || rate <= 0)
-        {
-            throw new ValidationAppException(new Dictionary<string, string[]>
-            {
-                ["CurrencyCode"] =
-                [
-                    $"Chưa có tỷ giá quy đổi từ {currency} sang {BaseCurrency}. Thêm fx_rates hoặc khai báo Cost:StubFxRatesToBase."
-                ]
-            });
-        }
-
-        return decimal.Round(rounded * rate, 4, MidpointRounding.AwayFromZero);
-    }
-
-    private ValidationAppException MissingDatedRate(string currency) =>
-        new(new Dictionary<string, string[]>
-        {
-            ["CurrencyCode"] =
-            [
-                $"Chưa có tỷ giá ngày hiệu lực từ {currency} sang {BaseCurrency}. Khai báo trên sổ tỷ giá trước khi ghi số tiền."
-            ]
-        });
 }

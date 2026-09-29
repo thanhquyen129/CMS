@@ -1,7 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
-using LCMS.Application.Costs;
-using LCMS.Application.Revenues;
+using LCMS.Application.Fx;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using LCMS.Domain.Terminology;
@@ -99,21 +98,18 @@ public sealed class GetDashboardSummaryQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
-    private readonly ICostFxStub _costFx;
-    private readonly IRevenueFxStub _revenueFx;
+    private readonly IReportingCurrencyProvider _reporting;
     private readonly IPermissionService _permissions;
 
     public GetDashboardSummaryQueryHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
-        ICostFxStub costFx,
-        IRevenueFxStub revenueFx,
+        IReportingCurrencyProvider reporting,
         IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
-        _costFx = costFx;
-        _revenueFx = revenueFx;
+        _reporting = reporting;
         _permissions = permissions;
     }
 
@@ -127,7 +123,6 @@ public sealed class GetDashboardSummaryQueryHandler
         }
 
         var asOf = DateTimeOffset.UtcNow;
-        var asOfDate = DateOnly.FromDateTime(asOf.UtcDateTime);
 
         var canViewCost = await _permissions.HasPermissionAsync(PermissionCodes.CostRead, cancellationToken);
         var canViewRevenue = await _permissions.HasPermissionAsync(PermissionCodes.RevenueRead, cancellationToken);
@@ -225,14 +220,34 @@ public sealed class GetDashboardSummaryQueryHandler
         var costs = canViewCost
             ? await _db.Costs.AsNoTracking()
                 .Where(c => c.RecordStatus == "active")
-                .Select(c => new { c.CurrencyCode, c.ExpectedAmount, c.ConfirmedAmount, c.ActualAmount, c.EffectiveDate })
+                .Select(c => new
+                {
+                    c.CurrencyCode,
+                    c.ExpectedAmount,
+                    c.ConfirmedAmount,
+                    c.ActualAmount,
+                    c.EffectiveDate,
+                    c.FxRate,
+                    c.FxStatus,
+                    c.FxSourceName
+                })
                 .ToListAsync(cancellationToken)
             : [];
 
         var revenues = canViewRevenue
             ? await _db.Revenues.AsNoTracking()
                 .Where(r => r.RecordStatus == "active")
-                .Select(r => new { r.CurrencyCode, r.ExpectedAmount, r.ConfirmedAmount, r.ActualAmount, r.EffectiveDate })
+                .Select(r => new
+                {
+                    r.CurrencyCode,
+                    r.ExpectedAmount,
+                    r.ConfirmedAmount,
+                    r.ActualAmount,
+                    r.EffectiveDate,
+                    r.FxRate,
+                    r.FxStatus,
+                    r.FxSourceName
+                })
                 .ToListAsync(cancellationToken)
             : [];
 
@@ -265,10 +280,11 @@ public sealed class GetDashboardSummaryQueryHandler
             .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        var reportingCurrency = await _reporting.GetAsync(cancellationToken);
         var totals = new List<DashboardCurrencyTotalsDto>();
-        decimal costBase = 0m;
-        var fxGapNote = "";
-        decimal revenueBase = 0m;
+        var costReporting = new ReportingSum();
+        var revenueReporting = new ReportingSum();
+        var usedStub = false;
         foreach (var code in currencyCodes)
         {
             decimal? costTotal = null;
@@ -302,87 +318,103 @@ public sealed class GetDashboardSummaryQueryHandler
                 costTotal,
                 revenueTotal,
                 profit));
+        }
 
-            if (request.IncludeBaseCurrencyRollUp)
+        if (request.IncludeBaseCurrencyRollUp)
+        {
+            if (canViewCost)
             {
-                try
+                foreach (var c in costs)
                 {
-                    if (canViewCost && costTotal is decimal ct)
-                    {
-                        costBase += await _costFx.ToBaseAmountAsync(code, ct, asOfDate, cancellationToken);
-                    }
-
-                    if (canViewRevenue && revenueTotal is decimal rt)
-                    {
-                        revenueBase += await _revenueFx.ToBaseAmountAsync(code, rt, asOfDate, cancellationToken);
-                    }
+                    var amount = BestAvailable(c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount);
+                    costReporting.Add(ReportingValue.Of(c.CurrencyCode, amount, reportingCurrency, c.FxRate, c.FxStatus));
+                    usedStub |= c.FxSourceName?.Contains("stub", StringComparison.OrdinalIgnoreCase) == true;
                 }
-                catch (ValidationAppException)
+            }
+
+            if (canViewRevenue)
+            {
+                foreach (var r in revenues)
                 {
-                    fxGapNote = string.IsNullOrEmpty(fxGapNote)
-                        ? $" Không quy đổi {code}: chưa có tỷ giá ngày hiệu lực."
-                        : fxGapNote + $" Không quy đổi {code}: chưa có tỷ giá ngày hiệu lực.";
+                    var amount = BestAvailable(r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount);
+                    revenueReporting.Add(ReportingValue.Of(r.CurrencyCode, amount, reportingCurrency, r.FxRate, r.FxStatus));
+                    usedStub |= r.FxSourceName?.Contains("stub", StringComparison.OrdinalIgnoreCase) == true;
                 }
             }
         }
 
+        var missingFx = costReporting.Missing + revenueReporting.Missing;
         DashboardBaseCurrencyRollUpDto? rollUp = null;
         if (request.IncludeBaseCurrencyRollUp && (canViewCost || canViewRevenue))
         {
-            var baseCurrency = _costFx.BaseCurrency;
+            var gap = missingFx > 0
+                ? $" Thiếu tỷ giá {missingFx} dòng — không tính vào tổng."
+                : "";
+            var stub = usedStub ? " Có dòng dùng tỷ giá cấu hình (stub)." : "";
             rollUp = new DashboardBaseCurrencyRollUpDto(
-                baseCurrency,
-                canViewCost ? decimal.Round(costBase, 4, MidpointRounding.AwayFromZero) : null,
-                canViewRevenue ? decimal.Round(revenueBase, 4, MidpointRounding.AwayFromZero) : null,
-                canViewMargin
-                    ? decimal.Round(revenueBase - costBase, 4, MidpointRounding.AwayFromZero)
+                reportingCurrency,
+                canViewCost ? costReporting.Rounded : null,
+                canViewRevenue ? revenueReporting.Rounded : null,
+                canViewMargin && costReporting.Complete && revenueReporting.Complete
+                    ? decimal.Round(revenueReporting.Rounded - costReporting.Rounded, 4, MidpointRounding.AwayFromZero)
                     : null,
-                $"Quy đổi theo sổ tỷ giá ngày {asOfDate:yyyy-MM-dd}.{fxGapNote}");
+                $"Tổng tiền tệ báo cáo theo snapshot tỷ giá từng dòng.{gap}{stub}");
         }
 
         var year = asOf.Year;
         IReadOnlyList<DashboardMonthPointDto> monthlySeries;
         string monthlySeriesNote;
-        if (totals.Count != 1)
+        if (totals.Count == 0)
         {
             monthlySeries = [];
-            monthlySeriesNote = totals.Count == 0
-                ? "Chưa có dòng chi phí hoặc doanh thu. Không vẽ chuỗi tháng."
-                : "Nhiều loại tiền — không gộp một cột theo tháng.";
+            monthlySeriesNote = "Chưa có dòng chi phí hoặc doanh thu. Không vẽ chuỗi tháng.";
         }
         else
         {
-            var seriesCurrency = totals[0].CurrencyCode;
             monthlySeries = Enumerable.Range(1, 12)
                 .Select(month =>
                 {
-                    var monthCosts = costs.Where(c =>
-                        c.EffectiveDate.Year == year
-                        && c.EffectiveDate.Month == month
-                        && string.Equals(c.CurrencyCode, seriesCurrency, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    var monthRevenues = revenues.Where(r =>
-                        r.EffectiveDate.Year == year
-                        && r.EffectiveDate.Month == month
-                        && string.Equals(r.CurrencyCode, seriesCurrency, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    decimal? costPoint = canViewCost && monthCosts.Count > 0
-                        ? decimal.Round(
-                            monthCosts.Sum(c => BestAvailable(c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount)),
-                            4,
-                            MidpointRounding.AwayFromZero)
-                        : null;
-                    decimal? revenuePoint = canViewRevenue && monthRevenues.Count > 0
-                        ? decimal.Round(
-                            monthRevenues.Sum(r => BestAvailable(r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount)),
-                            4,
-                            MidpointRounding.AwayFromZero)
-                        : null;
+                    var monthCosts = costs.Where(c => c.EffectiveDate.Year == year && c.EffectiveDate.Month == month).ToList();
+                    var monthRevenues = revenues.Where(r => r.EffectiveDate.Year == year && r.EffectiveDate.Month == month).ToList();
+                    decimal? costPoint = null;
+                    if (canViewCost && monthCosts.Count > 0)
+                    {
+                        var sum = new ReportingSum();
+                        foreach (var c in monthCosts)
+                        {
+                            sum.Add(ReportingValue.Of(
+                                c.CurrencyCode,
+                                BestAvailable(c.ActualAmount, c.ConfirmedAmount, c.ExpectedAmount),
+                                reportingCurrency,
+                                c.FxRate,
+                                c.FxStatus));
+                        }
+
+                        costPoint = sum.Missing == 0 ? sum.Rounded : null;
+                    }
+
+                    decimal? revenuePoint = null;
+                    if (canViewRevenue && monthRevenues.Count > 0)
+                    {
+                        var sum = new ReportingSum();
+                        foreach (var r in monthRevenues)
+                        {
+                            sum.Add(ReportingValue.Of(
+                                r.CurrencyCode,
+                                BestAvailable(r.ActualAmount, r.ConfirmedAmount, r.ExpectedAmount),
+                                reportingCurrency,
+                                r.FxRate,
+                                r.FxStatus));
+                        }
+
+                        revenuePoint = sum.Missing == 0 ? sum.Rounded : null;
+                    }
+
                     return new DashboardMonthPointDto(year, month, costPoint, revenuePoint);
                 })
                 .ToList();
             monthlySeriesNote =
-                $"Theo ngày hiệu lực năm {year}, tiền {seriesCurrency}. Tháng không có dòng để trống. Không so với tháng trước.";
+                $"Theo ngày hiệu lực năm {year}, tiền tệ báo cáo {reportingCurrency}. Tháng không có dòng để trống. Không so với tháng trước.";
         }
 
         var mixed = totals.Count > 1;

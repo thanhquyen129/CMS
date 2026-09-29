@@ -176,12 +176,7 @@ public sealed class AllocatePaymentCommandHandler : IRequestHandler<AllocatePaym
                 allocation.FxRateId = rateId ?? allocation.FxRateId;
             },
             cancellationToken);
-        await _fx.ApplyToPaymentAllocationAsync(
-            allocation,
-            payment.CurrencyCode,
-            amount,
-            payment.ValueDate,
-            cancellationToken);
+        _fx.ApplyToPaymentAllocation(allocation, payment, ap);
 
         _db.PaymentAllocations.Add(allocation);
         _idempotency.Remember(

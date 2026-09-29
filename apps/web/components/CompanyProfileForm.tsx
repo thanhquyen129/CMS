@@ -268,7 +268,7 @@ export function CompanyProfileForm({ profile, currencies }: Props) {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="coCcy">Tiền tệ mặc định</label>
+          <label htmlFor="coCcy">Tiền tệ báo cáo</label>
           <select
             id="coCcy"
             name="defaultCurrencyCode"
@@ -296,8 +296,8 @@ export function CompanyProfileForm({ profile, currencies }: Props) {
         </div>
       </div>
       <p className="note">
-        Múi giờ và định dạng ngày chỉ để hiển thị trên chứng từ / báo cáo. Sổ tiền và audit luôn
-        lưu UTC.
+        Tiền tệ báo cáo là của thuê bao. Đã có chứng từ quy đổi thì không đổi được. Múi giờ và
+        định dạng ngày chỉ để hiển thị. Sổ tiền và audit luôn lưu UTC.
       </p>
       <div className="cta-row">
         <button type="submit" className="btn" disabled={waiting}>

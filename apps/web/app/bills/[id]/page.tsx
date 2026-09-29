@@ -19,6 +19,7 @@ import {
   getFinancialProfile,
   getProfitability,
   operationalStatusLabel,
+  type BillReportingSummary,
   type CurrencyFinancialBucket,
   type MaturityBreakdown,
 } from "@/lib/bills";
@@ -72,6 +73,102 @@ function MaturityRow({
       <td className="num">{formatMoney(maturity.confirmedTotal, currency)}</td>
       <td className="num">{formatMoney(maturity.actualTotal, currency)}</td>
     </tr>
+  );
+}
+
+function ReportingProfile({
+  summary,
+  terms,
+}: {
+  summary: BillReportingSummary;
+  terms: TerminologyMap;
+}) {
+  const ccy = summary.reportingCurrencyCode;
+  const revenue = term(terms, "REVENUE", "Doanh thu");
+  const cost = term(terms, "COST", "Chi phí");
+  const profit = term(terms, "PROFIT", "Lợi nhuận");
+  const kindLabel: Record<string, string> = {
+    revenue: "Doanh thu",
+    cost: "Chi phí",
+    allocated: "Phân bổ",
+    ap: "Phải trả",
+    ar: "Phải thu",
+  };
+  return (
+    <div className="currency-card">
+      <h3 className="currency-title">Tiền tệ báo cáo {ccy}</h3>
+      {!summary.complete ? (
+        <div className="alert alert-error" role="alert">
+          Thiếu tỷ giá {summary.missingFxCount} dòng. Tổng chưa đủ — dòng thiếu không được tính vào tổng.
+        </div>
+      ) : null}
+      <dl className="metric-grid">
+        {summary.canViewRevenue ? (
+          <div>
+            <dt>{revenue}</dt>
+            <dd>{formatMoney(summary.revenueBestAvailable ?? 0, ccy)}</dd>
+          </div>
+        ) : null}
+        {summary.canViewCost ? (
+          <div>
+            <dt>{cost}</dt>
+            <dd>{formatMoney(summary.costBestAvailable ?? 0, ccy)}</dd>
+          </div>
+        ) : null}
+        {summary.canViewRevenue && summary.canViewCost ? (
+          <div>
+            <dt>{profit}</dt>
+            <dd className={(summary.profitBestAvailable ?? 0) < 0 ? "neg" : undefined}>
+              {summary.complete
+                ? formatMoney(summary.profitBestAvailable ?? 0, ccy)
+                : "Chưa đủ tỷ giá"}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {summary.lines.length > 0 ? (
+        <details>
+          <summary>Chi tiết gốc × tỷ giá ({summary.lines.length})</summary>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Dòng</th>
+                  <th scope="col">Gốc</th>
+                  <th scope="col">Tỷ giá</th>
+                  <th scope="col">Nguồn</th>
+                  <th scope="col" className="num">
+                    Báo cáo
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.lines.map((line, index) => (
+                  <tr key={`${line.kind}-${line.id}-${index}`}>
+                    <td>
+                      {kindLabel[line.kind] ?? line.kind}
+                      {line.label ? ` · ${line.label}` : ""}
+                    </td>
+                    <td>{formatMoney(line.originalAmount, line.currencyCode)}</td>
+                    <td>{line.fxRate ?? "—"}</td>
+                    <td>
+                      {line.fxStatus === "missing" || line.fxStatus === "requires_review"
+                        ? "Thiếu tỷ giá"
+                        : line.fxSourceName ?? line.fxSourceType ?? "—"}
+                    </td>
+                    <td className="num">
+                      {line.reportingAmount == null
+                        ? "—"
+                        : formatMoney(line.reportingAmount, ccy)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
+    </div>
   );
 }
 
@@ -388,9 +485,11 @@ export default async function BillDetailPage({
                 <p className="muted small">
                   {asOf ? `Hồ sơ cắt tại ngày ${asOf}. ` : ""}
                   Cập nhật: {formatDateTimeVi(profileRes.data.asOfTimestamp)}
-                  {profileRes.data.hasMixedCurrencies
-                    ? " · Nhiều loại tiền — không cộng gộp chéo."
-                    : ""}
+                  {profileRes.data.reporting
+                    ? ` · Tổng theo tiền tệ báo cáo ${profileRes.data.reporting.reportingCurrencyCode}.`
+                    : profileRes.data.hasMixedCurrencies
+                      ? " · Nhiều loại tiền — không cộng gộp chéo."
+                      : ""}
                 </p>
                 {profileRes.data.note ? (
                   <p className="note">{profileRes.data.note}</p>
@@ -401,7 +500,9 @@ export default async function BillDetailPage({
                   </div>
                 ) : null}
 
-                {profileRes.data.byCurrency.length === 0 ? (
+                {profileRes.data.reporting ? (
+                  <ReportingProfile summary={profileRes.data.reporting} terms={terms} />
+                ) : profileRes.data.byCurrency.length === 0 ? (
                   <div className="empty-state" role="status">
                     Chưa có dòng {costLabel.toLowerCase()} /{" "}
                     {revenueLabel.toLowerCase()} trên {billLabel} này.
@@ -418,7 +519,7 @@ export default async function BillDetailPage({
                   </div>
                 )}
 
-                {profileRes.data.settlementOutstanding.length > 0 ? (
+                {!profileRes.data.reporting && profileRes.data.settlementOutstanding.length > 0 ? (
                   <div className="settlement-block">
                     <h3 className="section-title sm">{settlementLabel}</h3>
                     <div className="table-wrap">

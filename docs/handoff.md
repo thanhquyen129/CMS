@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-09-29 — Reporting currency & FX snapshot
+
+- Tiền tệ báo cáo = `Tenant.DefaultCurrencyCode` (khóa khi đã có snapshot). ADR-0040.
+- Cost/Revenue/Payment/Collection/AP/AR lưu snapshot tỷ giá. Tổng Bill, dashboard, lợi nhuận, tuổi nợ, tiền mặt và snapshot chốt cộng số báo cáo; dòng thiếu tỷ giá bị loại và đếm riêng.
+- `GET /api/fx-rates/preview`, `GET /api/fx-rates/exceptions`. Tạo CP/DT/thanh toán/thu nhận `fxRate` + `fxOverrideReason`. Quyền `fx.override`.
+- Migration `20260929164828_ReportingCurrencyFx`: cùng tiền tệ → tỷ giá 1; có `fx_rate_id` → chép sổ; còn lại `requires_review`.
+
 ## 2026-09-29 — Operational Reference Edit & Rating Context (D01–D08)
 
 ### User

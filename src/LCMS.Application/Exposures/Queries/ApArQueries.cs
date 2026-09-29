@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
 using LCMS.Application.Identity;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
@@ -62,7 +63,11 @@ public sealed record ApArAgingReportDto(
     DateOnly AsOf,
     IReadOnlyList<AgingBucketSummaryDto> Buckets,
     IReadOnlyList<AccountsPayableDto>? PayableItems,
-    IReadOnlyList<AccountsReceivableDto>? ReceivableItems);
+    IReadOnlyList<AccountsReceivableDto>? ReceivableItems,
+    string? ReportingCurrency = null,
+    decimal? ReportingOutstanding = null,
+    int MissingFxCount = 0,
+    bool ReportingComplete = true);
 
 public sealed record ListAccountsPayableQuery(string? SettlementStatus, DateOnly? AsOf)
     : IRequest<IReadOnlyList<AccountsPayableDto>>;
@@ -393,17 +398,20 @@ public sealed class GetAccountsPayableAgingQueryHandler
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
     private readonly ITenantSettingsService _settings;
+    private readonly IReportingCurrencyProvider _reporting;
 
     public GetAccountsPayableAgingQueryHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IPermissionService permissions,
-        ITenantSettingsService settings)
+        ITenantSettingsService settings,
+        IReportingCurrencyProvider reporting)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
         _settings = settings;
+        _reporting = reporting;
     }
 
     public async Task<ApArAgingReportDto> Handle(
@@ -477,7 +485,22 @@ public sealed class GetAccountsPayableAgingQueryHandler
             })
             .ToList();
 
-        return new ApArAgingReportDto(asOf, buckets, items, null);
+        var reporting = await _reporting.GetAsync(cancellationToken);
+        var reportingSum = new ReportingSum();
+        foreach (var a in rows)
+        {
+            var settledAmt = settled.TryGetValue(a.Id, out var paid) ? paid : 0m;
+            var outstanding = AsOfOutstanding.Outstanding(a.RecognizedAmount, a.AdjustmentAmount, settledAmt);
+            if (!request.IncludeSettled && outstanding <= 0m)
+            {
+                continue;
+            }
+
+            reportingSum.Add(ReportingValue.Of(a, outstanding, reporting));
+        }
+
+        return new ApArAgingReportDto(
+            asOf, buckets, items, null, reporting, reportingSum.Rounded, reportingSum.Missing, reportingSum.Complete);
     }
 }
 
@@ -488,17 +511,20 @@ public sealed class GetAccountsReceivableAgingQueryHandler
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
     private readonly ITenantSettingsService _settings;
+    private readonly IReportingCurrencyProvider _reporting;
 
     public GetAccountsReceivableAgingQueryHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IPermissionService permissions,
-        ITenantSettingsService settings)
+        ITenantSettingsService settings,
+        IReportingCurrencyProvider reporting)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
         _settings = settings;
+        _reporting = reporting;
     }
 
     public async Task<ApArAgingReportDto> Handle(
@@ -572,6 +598,21 @@ public sealed class GetAccountsReceivableAgingQueryHandler
             })
             .ToList();
 
-        return new ApArAgingReportDto(asOf, buckets, null, items);
+        var reporting = await _reporting.GetAsync(cancellationToken);
+        var reportingSum = new ReportingSum();
+        foreach (var a in rows)
+        {
+            var settledAmt = settled.TryGetValue(a.Id, out var collected) ? collected : 0m;
+            var outstanding = AsOfOutstanding.Outstanding(a.RecognizedAmount, a.AdjustmentAmount, settledAmt);
+            if (!request.IncludeSettled && outstanding <= 0m)
+            {
+                continue;
+            }
+
+            reportingSum.Add(ReportingValue.Of(a, outstanding, reporting));
+        }
+
+        return new ApArAgingReportDto(
+            asOf, buckets, null, items, reporting, reportingSum.Rounded, reportingSum.Missing, reportingSum.Complete);
     }
 }

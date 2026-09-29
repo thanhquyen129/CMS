@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,11 +52,13 @@ public sealed class UpsertFxRateCommandHandler : IRequestHandler<UpsertFxRateCom
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public UpsertFxRateCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public UpsertFxRateCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<Guid> Handle(UpsertFxRateCommand request, CancellationToken cancellationToken)
@@ -65,10 +68,18 @@ public sealed class UpsertFxRateCommandHandler : IRequestHandler<UpsertFxRateCom
             throw new TenantRequiredAppException();
         }
 
+        await _permissions.EnsureAsync(
+            PermissionCodes.MasterCurrencyManage,
+            "Bạn không có quyền quản lý sổ tỷ giá.",
+            cancellationToken);
         var tenantId = _tenantContext.TenantId!.Value;
         var from = request.FromCurrencyCode.Trim().ToUpperInvariant();
         var to = request.ToCurrencyCode.Trim().ToUpperInvariant();
-        var version = request.Version is > 0 ? request.Version.Value : 1;
+        var latest = await _db.FxRates
+            .Where(r => r.FromCurrencyCode == from && r.ToCurrencyCode == to && r.RateDate == request.RateDate)
+            .OrderByDescending(r => r.Version)
+            .FirstOrDefaultAsync(cancellationToken);
+        var version = request.Version is > 0 ? request.Version.Value : latest?.Version ?? 1;
         var source = string.IsNullOrWhiteSpace(request.Source)
             ? FxRateSources.Manual
             : request.Source.Trim().ToLowerInvariant();
@@ -83,11 +94,15 @@ public sealed class UpsertFxRateCommandHandler : IRequestHandler<UpsertFxRateCom
 
         if (existing is not null)
         {
-            existing.Rate = rate;
-            existing.Source = source;
-            existing.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
-            await _db.SaveChangesAsync(cancellationToken);
-            return existing.Id;
+            if (existing.Rate == rate && existing.Source == source)
+            {
+                existing.Note = string.IsNullOrWhiteSpace(request.Note) ? existing.Note : request.Note.Trim();
+                await _db.SaveChangesAsync(cancellationToken);
+                return existing.Id;
+            }
+
+            // A changed rate is a new version: records snapshotted from the old row keep a valid trace (FX-HIST-01).
+            version = (latest?.Version ?? existing.Version) + 1;
         }
 
         var row = new FxRate
@@ -122,11 +137,13 @@ public sealed class SoftDeleteFxRateCommandHandler : IRequestHandler<SoftDeleteF
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public SoftDeleteFxRateCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public SoftDeleteFxRateCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task Handle(SoftDeleteFxRateCommand request, CancellationToken cancellationToken)
@@ -136,6 +153,10 @@ public sealed class SoftDeleteFxRateCommandHandler : IRequestHandler<SoftDeleteF
             throw new TenantRequiredAppException();
         }
 
+        await _permissions.EnsureAsync(
+            PermissionCodes.MasterCurrencyManage,
+            "Bạn không có quyền quản lý sổ tỷ giá.",
+            cancellationToken);
         var row = await _db.FxRates.FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
         if (row is null)
         {

@@ -6,7 +6,7 @@ namespace LCMS.Domain.Entities;
 /// Table: revenues (D06) — Single Economic Revenue, Bill-attributable (C-004).
 /// Maturity layers keep separate amounts (C-009); no shared revenue allocation in Core V1.
 /// </summary>
-public sealed class Revenue : TenantEntityBase
+public sealed class Revenue : TenantEntityBase, IReportingFx
 {
     /// <summary>Required — revenues are Bill-attributable only.</summary>
     public Guid BillId { get; set; }
@@ -33,6 +33,15 @@ public sealed class Revenue : TenantEntityBase
     public string CurrencyCode { get; set; } = "VND";
     public decimal? BaseAmount { get; set; }
     public Guid? FxRateId { get; set; }
+    public string? ReportingCurrencyCode { get; set; }
+    public decimal? FxRate { get; set; }
+    public string? FxSourceType { get; set; }
+    public string? FxSourceName { get; set; }
+    public DateOnly? FxRateDate { get; set; }
+    public string? FxOverrideReason { get; set; }
+    public Guid? FxAppliedBy { get; set; }
+    public DateTimeOffset? FxAppliedAt { get; set; }
+    public string FxStatus { get; set; } = FxStatuses.Missing;
 
     public string? SourceType { get; set; }
     public Guid? SourceId { get; set; }

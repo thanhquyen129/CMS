@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CurrencySelect } from "@/components/CurrencySelect";
+import { FxRateBox, readFx } from "@/components/FxRateBox";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { withIdempotency } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
@@ -24,6 +25,9 @@ export function CreateCostForm({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [currency, setCurrency] = useState(defaultCurrency);
+  const [amountText, setAmountText] = useState("");
+  const [asOf, setAsOf] = useState("");
   const [isPending, startTransition] = useTransition();
   const idem = useIdempotency("cost-create");
 
@@ -64,6 +68,7 @@ export function CreateCostForm({
       vendorPartyId,
       sourceType: null,
       sourceId: null,
+      ...readFx(fd),
     };
 
     try {
@@ -138,15 +143,19 @@ export function CreateCostForm({
                 step="any"
                 required
                 disabled={busy}
+                value={amountText}
+                onChange={(e) => setAmountText(e.target.value)}
               />
             </div>
             <CurrencySelect
               id="currencyCode"
               defaultValue={defaultCurrency}
               disabled={busy}
+              onChange={setCurrency}
             />
           </div>
         </fieldset>
+        <FxRateBox currency={currency} amount={amountText} asOf={asOf} disabled={busy} />
         <fieldset className="group-box">
           <legend>Phân loại</legend>
           <div className="form-grid">
@@ -157,6 +166,8 @@ export function CreateCostForm({
                 name="effectiveDate"
                 type="date"
                 disabled={busy}
+                value={asOf}
+                onChange={(e) => setAsOf(e.target.value)}
               />
             </div>
             <div className="field">

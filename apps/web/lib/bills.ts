@@ -55,6 +55,41 @@ export type BillFinancialProfile = {
   hasMixedCurrencies: boolean;
   note: string;
   asOfLimitationNote: string | null;
+  reporting?: BillReportingSummary | null;
+};
+
+export type ReportingLine = {
+  kind: string;
+  id: string;
+  label: string | null;
+  currencyCode: string;
+  originalAmount: number;
+  fxRate: number | null;
+  fxSourceType: string | null;
+  fxSourceName: string | null;
+  fxRateDate: string | null;
+  reportingAmount: number | null;
+  fxStatus: string;
+  fxOverrideReason?: string | null;
+};
+
+export type BillReportingSummary = {
+  reportingCurrencyCode: string;
+  canViewRevenue: boolean;
+  canViewCost: boolean;
+  revenueBestAvailable: number | null;
+  costBestAvailable: number | null;
+  directCostBestAvailable: number | null;
+  allocatedCostAmount: number | null;
+  profitBestAvailable: number | null;
+  marginPercent: number | null;
+  revenueMaturity: MaturityBreakdown | null;
+  directCostMaturity: MaturityBreakdown | null;
+  accountsPayableOutstanding: number | null;
+  accountsReceivableOutstanding: number | null;
+  missingFxCount: number;
+  complete: boolean;
+  lines: ReportingLine[];
 };
 
 export type ProfitabilityCurrencyBucket = {

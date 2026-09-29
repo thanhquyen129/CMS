@@ -173,12 +173,7 @@ public sealed class AllocateCollectionCommandHandler : IRequestHandler<AllocateC
                 allocation.FxRateId = rateId ?? allocation.FxRateId;
             },
             cancellationToken);
-        await _fx.ApplyToCollectionAllocationAsync(
-            allocation,
-            collection.CurrencyCode,
-            amount,
-            collection.ValueDate,
-            cancellationToken);
+        _fx.ApplyToCollectionAllocation(allocation, collection, ar);
 
         _db.CollectionAllocations.Add(allocation);
         _idempotency.Remember(

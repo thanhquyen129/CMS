@@ -41,6 +41,12 @@ public sealed class TenantFinancialSettings
 
     /// <summary>Upper day bound of the third past-due aging bucket (default 90).</summary>
     public int? AgingBucket3Days { get; set; }
+
+    /// <summary>Allow a manually entered FX rate when no provider/book rate exists (default true).</summary>
+    public bool? FxManualAllowed { get; set; }
+
+    /// <summary>Require a reason when overriding a provider/book FX rate (default true).</summary>
+    public bool? FxOverrideReasonRequired { get; set; }
 }
 
 public static class RecognitionPolicyModes

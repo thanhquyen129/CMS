@@ -5,6 +5,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +40,7 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
     private readonly ICloseEligibilityChecker _eligibility;
     private readonly IIdempotencyGate _idempotency;
     private readonly IRowVersionGuard _versions;
+    private readonly IReportingCurrencyProvider _reporting;
 
     public CreateFinancialCloseSnapshotCommandHandler(
         ILcmsDbContext db,
@@ -47,7 +49,8 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         IAuditWriter audit,
         ICloseEligibilityChecker eligibility,
         IIdempotencyGate idempotency,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IReportingCurrencyProvider reporting)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -56,6 +59,7 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         _eligibility = eligibility;
         _idempotency = idempotency;
         _versions = versions;
+        _reporting = reporting;
     }
 
     public async Task<Guid> Handle(CreateFinancialCloseSnapshotCommand request, CancellationToken cancellationToken)
@@ -214,6 +218,20 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
             new("waiver_count", waived.Count, null, "exception", null, null)
         };
 
+        var reporting = await _reporting.GetAsync(cancellationToken);
+        var costReporting = SumReporting(costList, c => c.Amount, reporting);
+        var revenueReporting = SumReporting(revenueList, r => r.Amount, reporting);
+        var apReporting = SumReporting(apList, a => a.DeriveOutstanding(), reporting);
+        var arReporting = SumReporting(arList, a => a.DeriveOutstanding(), reporting);
+        metrics.Add(new SnapshotMetric("cost_reporting_total", costReporting.Rounded, reporting, "cost", null, null));
+        metrics.Add(new SnapshotMetric("cost_missing_fx_count", costReporting.Missing, reporting, "cost", null, null));
+        metrics.Add(new SnapshotMetric("revenue_reporting_total", revenueReporting.Rounded, reporting, "revenue", null, null));
+        metrics.Add(new SnapshotMetric("revenue_missing_fx_count", revenueReporting.Missing, reporting, "revenue", null, null));
+        metrics.Add(new SnapshotMetric("ap_reporting_outstanding", apReporting.Rounded, reporting, "accounts_payable", null, null));
+        metrics.Add(new SnapshotMetric("ap_missing_fx_count", apReporting.Missing, reporting, "accounts_payable", null, null));
+        metrics.Add(new SnapshotMetric("ar_reporting_outstanding", arReporting.Rounded, reporting, "accounts_receivable", null, null));
+        metrics.Add(new SnapshotMetric("ar_missing_fx_count", arReporting.Missing, reporting, "accounts_receivable", null, null));
+
         foreach (var w in waived.OrderBy(e => e.Id))
         {
             metrics.Add(new SnapshotMetric(
@@ -226,6 +244,18 @@ public sealed class CreateFinancialCloseSnapshotCommandHandler
         }
 
         return metrics;
+    }
+
+    private static ReportingSum SumReporting<T>(IEnumerable<T> rows, Func<T, decimal> amount, string reporting)
+        where T : IReportingFx
+    {
+        var sum = new ReportingSum();
+        foreach (var row in rows)
+        {
+            sum.Add(ReportingValue.Of(row, amount(row), reporting));
+        }
+
+        return sum;
     }
 
     private static string ComputeImmutableHash(

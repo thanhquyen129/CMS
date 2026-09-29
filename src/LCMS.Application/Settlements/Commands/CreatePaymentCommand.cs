@@ -16,7 +16,9 @@ public sealed record CreatePaymentCommand(
     Guid? BillId,
     string? ReferenceNo,
     string? Notes,
-    string? IdempotencyKey = null) : IRequest<Guid>;
+    string? IdempotencyKey = null,
+    decimal? FxRate = null,
+    string? FxOverrideReason = null) : IRequest<Guid>;
 
 public sealed class CreatePaymentCommandValidator : AbstractValidator<CreatePaymentCommand>
 {
@@ -99,7 +101,7 @@ public sealed class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentC
             Status = PaymentStatuses.Open,
             RecordStatus = "active"
         };
-        await _fx.ApplyToPaymentAsync(payment, amount, cancellationToken);
+        await _fx.ApplyToPaymentAsync(payment, amount, new Fx.FxManualInput(request.FxRate, request.FxOverrideReason), cancellationToken);
 
         _db.Payments.Add(payment);
         _idempotency.Remember(

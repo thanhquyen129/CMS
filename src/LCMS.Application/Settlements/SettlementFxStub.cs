@@ -1,188 +1,148 @@
-using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Fx;
+using LCMS.Domain.Entities;
 using Microsoft.Extensions.Options;
 
 namespace LCMS.Application.Settlements;
 
 /// <summary>
-/// FX conversion for Settlement: dated fx_rates first; StubFxRatesToBase fallback (FxRateId null).
+/// FX snapshot for Payment/Collection to the tenant reporting currency (ADR-0040) and the
+/// reporting-currency trace of allocations (cash side vs AP/AR side ⇒ FX difference, FX-ARCH-11).
 /// </summary>
 public interface ISettlementFxStub
 {
+    /// <summary>Tenant reporting currency.</summary>
     string BaseCurrency { get; }
 
     decimal ToBaseAmount(string currencyCode, decimal amount);
 
     Task ApplyToPaymentAsync(
-        Domain.Entities.Payment payment,
+        Payment payment,
         decimal amountInTxnCurrency,
+        FxManualInput? manual = null,
         CancellationToken cancellationToken = default);
 
     Task ApplyToCollectionAsync(
-        Domain.Entities.Collection collection,
+        Collection collection,
         decimal amountInTxnCurrency,
+        FxManualInput? manual = null,
         CancellationToken cancellationToken = default);
 
-    Task ApplyToPaymentAllocationAsync(
-        Domain.Entities.PaymentAllocation allocation,
-        string currencyCode,
-        decimal amountInTxnCurrency,
-        DateOnly asOf,
-        CancellationToken cancellationToken = default);
+    void ApplyToPaymentAllocation(PaymentAllocation allocation, Payment payment, AccountsPayable payable);
 
-    Task ApplyToCollectionAllocationAsync(
-        Domain.Entities.CollectionAllocation allocation,
-        string currencyCode,
-        decimal amountInTxnCurrency,
-        DateOnly asOf,
-        CancellationToken cancellationToken = default);
+    void ApplyToCollectionAllocation(CollectionAllocation allocation, Collection collection, AccountsReceivable receivable);
 }
 
 public sealed class SettlementFxStub : ISettlementFxStub
 {
     private readonly SettlementOptions _options;
-    private readonly IFxRateLookup _lookup;
+    private readonly IFxSnapshotService _fx;
+    private readonly IReportingCurrencyProvider _reporting;
 
-    public SettlementFxStub(IOptions<SettlementOptions> options, IFxRateLookup lookup)
+    public SettlementFxStub(
+        IOptions<SettlementOptions> options,
+        IFxSnapshotService fx,
+        IReportingCurrencyProvider reporting)
     {
         _options = options.Value;
-        _lookup = lookup;
+        _fx = fx;
+        _reporting = reporting;
     }
 
-    public string BaseCurrency =>
-        string.IsNullOrWhiteSpace(_options.BaseCurrency)
-            ? "VND"
-            : _options.BaseCurrency.Trim().ToUpperInvariant();
+    public string BaseCurrency => _reporting.Get();
+
+    private FxStubPolicy Stub => new(
+        string.IsNullOrWhiteSpace(_options.BaseCurrency) ? "VND" : _options.BaseCurrency.Trim().ToUpperInvariant(),
+        _options.AllowStubFxFallback,
+        _options.StubFxRatesToBase,
+        SettlementOptions.SectionName);
 
     public decimal ToBaseAmount(string currencyCode, decimal amount) =>
-        ConvertWithStubOnly(currencyCode, amount);
+        FxStubMath.ConvertWithStubOnly(currencyCode, amount, BaseCurrency, Stub);
 
-    public Task ApplyToPaymentAsync(
-        Domain.Entities.Payment payment,
+    public async Task ApplyToPaymentAsync(
+        Payment payment,
         decimal amountInTxnCurrency,
-        CancellationToken cancellationToken = default) =>
-        ApplyAsync(
-            payment.CurrencyCode,
-            amountInTxnCurrency,
-            payment.ValueDate,
-            (baseAmount, fxRateId) =>
-            {
-                payment.BaseAmount = baseAmount;
-                payment.FxRateId = fxRateId;
-            },
-            cancellationToken);
+        FxManualInput? manual = null,
+        CancellationToken cancellationToken = default)
+    {
+        var snap = await ResolveAsync(payment, payment.ValueDate, manual, "payment", payment.Id, cancellationToken);
+        payment.BaseAmount = FxMath.ToReporting(Round(amountInTxnCurrency), snap.Rate);
+    }
 
-    public Task ApplyToCollectionAsync(
-        Domain.Entities.Collection collection,
+    public async Task ApplyToCollectionAsync(
+        Collection collection,
         decimal amountInTxnCurrency,
-        CancellationToken cancellationToken = default) =>
-        ApplyAsync(
-            collection.CurrencyCode,
-            amountInTxnCurrency,
-            collection.ValueDate,
-            (baseAmount, fxRateId) =>
-            {
-                collection.BaseAmount = baseAmount;
-                collection.FxRateId = fxRateId;
-            },
-            cancellationToken);
+        FxManualInput? manual = null,
+        CancellationToken cancellationToken = default)
+    {
+        var snap = await ResolveAsync(collection, collection.ValueDate, manual, "collection", collection.Id, cancellationToken);
+        collection.BaseAmount = FxMath.ToReporting(Round(amountInTxnCurrency), snap.Rate);
+    }
 
-    public Task ApplyToPaymentAllocationAsync(
-        Domain.Entities.PaymentAllocation allocation,
-        string currencyCode,
-        decimal amountInTxnCurrency,
+    public void ApplyToPaymentAllocation(PaymentAllocation allocation, Payment payment, AccountsPayable payable)
+    {
+        var (cash, settled, diff) = Trace(
+            allocation.Amount,
+            SettlementCurrency.TargetAmount(allocation),
+            payment,
+            payable);
+        allocation.ReportingCurrencyCode = BaseCurrency;
+        allocation.BaseAmount = cash;
+        allocation.SettledReportingAmount = settled;
+        allocation.FxDifferenceAmount = diff;
+    }
+
+    public void ApplyToCollectionAllocation(
+        CollectionAllocation allocation,
+        Collection collection,
+        AccountsReceivable receivable)
+    {
+        var (cash, settled, diff) = Trace(
+            allocation.Amount,
+            SettlementCurrency.TargetAmount(allocation),
+            collection,
+            receivable);
+        allocation.ReportingCurrencyCode = BaseCurrency;
+        allocation.BaseAmount = cash;
+        allocation.SettledReportingAmount = settled;
+        allocation.FxDifferenceAmount = diff;
+    }
+
+    private async Task<FxSnapshotResult> ResolveAsync(
+        IReportingFx record,
         DateOnly asOf,
-        CancellationToken cancellationToken = default) =>
-        ApplyAsync(
-            currencyCode,
-            amountInTxnCurrency,
-            asOf,
-            (baseAmount, fxRateId) =>
-            {
-                allocation.BaseAmount = baseAmount;
-                allocation.FxRateId = fxRateId;
-            },
-            cancellationToken);
-
-    public Task ApplyToCollectionAllocationAsync(
-        Domain.Entities.CollectionAllocation allocation,
-        string currencyCode,
-        decimal amountInTxnCurrency,
-        DateOnly asOf,
-        CancellationToken cancellationToken = default) =>
-        ApplyAsync(
-            currencyCode,
-            amountInTxnCurrency,
-            asOf,
-            (baseAmount, fxRateId) =>
-            {
-                allocation.BaseAmount = baseAmount;
-                allocation.FxRateId = fxRateId;
-            },
-            cancellationToken);
-
-    private async Task ApplyAsync(
-        string currencyCode,
-        decimal amountInTxnCurrency,
-        DateOnly asOf,
-        Action<decimal, Guid?> assign,
+        FxManualInput? manual,
+        string objectType,
+        Guid objectId,
         CancellationToken cancellationToken)
     {
-        var currency = currencyCode.Trim().ToUpperInvariant();
-        var rounded = decimal.Round(amountInTxnCurrency, 4, MidpointRounding.AwayFromZero);
-        if (string.Equals(currency, BaseCurrency, StringComparison.OrdinalIgnoreCase))
+        var snap = manual is { HasRate: true } ? null : _fx.FromRecord(record);
+        if (snap is not null)
         {
-            assign(rounded, null);
-            return;
+            return snap;
         }
 
-        var resolved = await _lookup.ResolveAsync(currency, BaseCurrency, asOf, cancellationToken);
-        if (resolved is not null)
-        {
-            assign(
-                decimal.Round(rounded * resolved.Rate, 4, MidpointRounding.AwayFromZero),
-                resolved.FxRateId);
-            return;
-        }
-
-        assign(ConvertWithStubOnly(currency, rounded), null);
+        snap = await _fx.ResolveAsync(
+            new FxResolveRequest(record.CurrencyCode, asOf, manual?.Rate, manual?.Reason, Stub),
+            cancellationToken);
+        _fx.Apply(record, snap, objectType, objectId);
+        return snap;
     }
 
-    private decimal ConvertWithStubOnly(string currencyCode, decimal amount)
+    private (decimal? Cash, decimal? Settled, decimal? Difference) Trace(
+        decimal cashAmount,
+        decimal settledAmount,
+        IReportingFx cashRecord,
+        IReportingFx openItem)
     {
-        var currency = currencyCode.Trim().ToUpperInvariant();
-        var rounded = decimal.Round(amount, 4, MidpointRounding.AwayFromZero);
-        if (string.Equals(currency, BaseCurrency, StringComparison.OrdinalIgnoreCase))
-        {
-            return rounded;
-        }
-
-        if (!_options.AllowStubFxFallback)
-        {
-            throw MissingDatedRate(currency);
-        }
-
-        var rates = _options.StubFxRatesToBase ?? new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
-        if (!rates.TryGetValue(currency, out var rate) || rate <= 0)
-        {
-            throw new ValidationAppException(new Dictionary<string, string[]>
-            {
-                ["CurrencyCode"] =
-                [
-                    $"Chưa có tỷ giá quy đổi từ {currency} sang {BaseCurrency}. Thêm fx_rates hoặc khai báo Settlement:StubFxRatesToBase."
-                ]
-            });
-        }
-
-        return decimal.Round(rounded * rate, 4, MidpointRounding.AwayFromZero);
+        var cashRate = _fx.FromRecord(cashRecord)?.Rate;
+        var itemRate = _fx.FromRecord(openItem)?.Rate;
+        decimal? cash = cashRate is { } cr ? FxMath.ToReporting(cashAmount, cr) : null;
+        decimal? settled = itemRate is { } ir ? FxMath.ToReporting(settledAmount, ir) : null;
+        decimal? diff = cash is { } c && settled is { } s ? c - s : null;
+        return (cash, settled, diff);
     }
 
-    private ValidationAppException MissingDatedRate(string currency) =>
-        new(new Dictionary<string, string[]>
-        {
-            ["CurrencyCode"] =
-            [
-                $"Chưa có tỷ giá ngày hiệu lực từ {currency} sang {BaseCurrency}. Khai báo trên sổ tỷ giá trước khi ghi số tiền."
-            ]
-        });
+    private static decimal Round(decimal amount) =>
+        decimal.Round(amount, 4, MidpointRounding.AwayFromZero);
 }

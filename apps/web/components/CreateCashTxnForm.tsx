@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BillTypeahead } from "@/components/BillTypeahead";
 import { CurrencySelect } from "@/components/CurrencySelect";
+import { FxRateBox, readFx } from "@/components/FxRateBox";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { withIdempotency } from "@/lib/idempotency";
 import { useIdempotency } from "@/lib/use-idempotency";
@@ -30,6 +31,9 @@ export function CreateCashTxnForm({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [currency, setCurrency] = useState(defaultCurrency);
+  const [amountText, setAmountText] = useState("");
+  const [asOf, setAsOf] = useState("");
   const [isPending, startTransition] = useTransition();
   const isPayment = kind === "payment";
   const idem = useIdempotency(isPayment ? "payment" : "collection");
@@ -72,6 +76,7 @@ export function CreateCashTxnForm({
       billId: billIdRaw || null,
       referenceNo: String(fd.get("referenceNo") ?? "").trim() || null,
       notes: String(fd.get("notes") ?? "").trim() || null,
+      ...readFx(fd),
     };
 
     const endpoint = isPayment ? "/bff/payments" : "/bff/collections";
@@ -166,12 +171,15 @@ export function CreateCashTxnForm({
                 step="any"
                 required
                 disabled={busy}
+                value={amountText}
+                onChange={(e) => setAmountText(e.target.value)}
               />
             </div>
             <CurrencySelect
               id="currencyCode"
               defaultValue={defaultCurrency}
               disabled={busy}
+              onChange={setCurrency}
             />
             <div className="field">
               <label htmlFor="valueDate">Ngày giá trị</label>
@@ -180,10 +188,13 @@ export function CreateCashTxnForm({
                 name="valueDate"
                 type="date"
                 disabled={busy}
+                value={asOf}
+                onChange={(e) => setAsOf(e.target.value)}
               />
             </div>
           </div>
         </fieldset>
+        <FxRateBox currency={currency} amount={amountText} asOf={asOf} disabled={busy} />
         <fieldset className="group-box">
           <legend>Tham chiếu</legend>
           <div className="form-grid">

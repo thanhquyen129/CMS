@@ -201,7 +201,21 @@ public sealed class UpdateTenantProfileCommandHandler
         tenant.PostalCode = Norm(request.PostalCode);
         tenant.TimeZoneId = request.TimeZoneId.Trim();
         tenant.DateFormat = request.DateFormat.Trim();
-        tenant.DefaultCurrencyCode = request.DefaultCurrencyCode.Trim().ToUpperInvariant();
+        var reportingCurrency = request.DefaultCurrencyCode.Trim().ToUpperInvariant();
+        if (!string.Equals(tenant.DefaultCurrencyCode, reportingCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            var locked = await _db.Costs.AnyAsync(c => c.FxStatus == FxStatuses.Converted, cancellationToken)
+                || await _db.Revenues.AnyAsync(r => r.FxStatus == FxStatuses.Converted, cancellationToken)
+                || await _db.Payments.AnyAsync(p => p.FxStatus == FxStatuses.Converted, cancellationToken)
+                || await _db.Collections.AnyAsync(c => c.FxStatus == FxStatuses.Converted, cancellationToken);
+            if (locked)
+            {
+                throw new ConflictAppException(
+                    "Đã có chứng từ quy đổi sang tiền tệ báo cáo. Không đổi tiền tệ báo cáo của thuê bao.");
+            }
+        }
+
+        tenant.DefaultCurrencyCode = reportingCurrency;
 
         _audit.Append(
             AuditActions.TenantProfileUpdate,

@@ -26,7 +26,9 @@ public static class CostEndpoints
                     body.SourceType,
                     body.SourceId,
                     body.OrganizationId,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    body.FxRate,
+                    body.FxOverrideReason),
                 ct);
             return Results.Created($"/api/costs/{id}", new { id });
         });
@@ -196,7 +198,9 @@ public sealed record CreateCostRequest(
     Guid? VendorPartyId,
     string? SourceType,
     Guid? SourceId,
-    Guid? OrganizationId = null);
+    Guid? OrganizationId = null,
+    decimal? FxRate = null,
+    string? FxOverrideReason = null);
 
 public sealed record ConfirmCostRequest(decimal? ConfirmedAmount);
 

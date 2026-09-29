@@ -142,12 +142,17 @@ export function BillFinancialDrawer({
 
   const bill = view?.bill;
   const bucket = view?.profile?.byCurrency?.[0];
-  const currency = bucket?.currencyCode ?? bill?.summaryCurrencyCode ?? "VND";
+  const reporting = view?.profile?.reporting;
+  const currency = reporting?.reportingCurrencyCode ?? bucket?.currencyCode ?? bill?.summaryCurrencyCode ?? "VND";
+  const revenueBest = reporting?.revenueBestAvailable ?? bucket?.revenueBestAvailable;
+  const costMaturity = reporting?.directCostMaturity ?? bucket?.directCostMaturity;
+  const revenueMaturity = reporting?.revenueMaturity ?? bucket?.revenueMaturity;
+  const profitBest = reporting ? reporting.profitBestAvailable : bucket?.profitBestAvailable;
   const primaryOrder = view?.graph?.orders?.[0];
   const primaryShipment = view?.graph?.shipments?.[0];
   const profitMargin =
-    bucket && bucket.revenueBestAvailable !== 0
-      ? (bucket.profitBestAvailable / bucket.revenueBestAvailable) * 100
+    revenueBest
+      ? ((profitBest ?? 0) / revenueBest) * 100
       : null;
 
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ");
@@ -315,19 +320,19 @@ export function BillFinancialDrawer({
                     <div>
                       <dt>{labels.expected}</dt>
                       <dd>
-                        {money(bucket?.revenueMaturity.expectedTotal, currency)}
+                        {money(revenueMaturity?.expectedTotal, currency)}
                       </dd>
                     </div>
                     <div>
                       <dt>{labels.confirmed}</dt>
                       <dd>
-                        {money(bucket?.revenueMaturity.confirmedTotal, currency)}
+                        {money(revenueMaturity?.confirmedTotal, currency)}
                       </dd>
                     </div>
                     <div>
                       <dt>{labels.actual}</dt>
                       <dd>
-                        {money(bucket?.revenueMaturity.actualTotal, currency)}
+                        {money(revenueMaturity?.actualTotal, currency)}
                       </dd>
                     </div>
                   </dl>
@@ -339,7 +344,7 @@ export function BillFinancialDrawer({
                       <dt>{labels.expected}</dt>
                       <dd>
                         {money(
-                          bucket?.directCostMaturity.expectedTotal,
+                          costMaturity?.expectedTotal,
                           currency
                         )}
                       </dd>
@@ -348,7 +353,7 @@ export function BillFinancialDrawer({
                       <dt>{labels.confirmed}</dt>
                       <dd>
                         {money(
-                          bucket?.directCostMaturity.confirmedTotal,
+                          costMaturity?.confirmedTotal,
                           currency
                         )}
                       </dd>
@@ -356,7 +361,7 @@ export function BillFinancialDrawer({
                     <div>
                       <dt>{labels.actual}</dt>
                       <dd>
-                        {money(bucket?.directCostMaturity.actualTotal, currency)}
+                        {money(costMaturity?.actualTotal, currency)}
                       </dd>
                     </div>
                   </dl>
@@ -368,12 +373,14 @@ export function BillFinancialDrawer({
                       <dt>Dự kiến (tốt nhất)</dt>
                       <dd
                         className={
-                          bucket && bucket.profitBestAvailable < 0
+                          (profitBest ?? 0) < 0
                             ? "neg"
                             : undefined
                         }
                       >
-                        {money(bucket?.profitBestAvailable, currency)}
+                        {reporting && !reporting.complete
+                          ? "Chưa đủ tỷ giá"
+                          : money(profitBest, currency)}
                       </dd>
                     </div>
                     <div>

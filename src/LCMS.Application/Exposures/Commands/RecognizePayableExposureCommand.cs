@@ -4,6 +4,7 @@ using LCMS.Application.Audit;
 using LCMS.Application.Exposures;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -44,6 +45,7 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
     private readonly IIdempotencyGate _idempotency;
     private readonly IRecognitionApprovalGate _recognitionApproval;
     private readonly IRowVersionGuard _versions;
+    private readonly IFxSnapshotService _fx;
 
     public RecognizePayableExposureCommandHandler(
         ILcmsDbContext db,
@@ -53,8 +55,10 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
         TenantFinancialOptionsResolver financial,
         IIdempotencyGate idempotency,
         IRecognitionApprovalGate recognitionApproval,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IFxSnapshotService fx)
     {
+        _fx = fx;
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
@@ -157,6 +161,11 @@ public sealed class RecognizePayableExposureCommandHandler : IRequestHandler<Rec
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
             RecordStatus = "active"
         };
+        var sourceCost = exposure.CostId is { } costId
+            ? await _db.Costs.AsNoTracking().FirstOrDefaultAsync(c => c.Id == costId, cancellationToken)
+            : null;
+        await OpenItemFx.SnapshotAsync(_fx, ap, sourceCost, exposure.EffectiveDate, "accounts_payable", ap.Id, cancellationToken);
+        ap.ReportingAmount = OpenItemFx.ReportingOf(ap, amount);
 
         exposure.RecognizedAmount = decimal.Round(
             alreadyRecognized + amount, 4, MidpointRounding.AwayFromZero);

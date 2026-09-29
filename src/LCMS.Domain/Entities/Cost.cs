@@ -6,7 +6,7 @@ namespace LCMS.Domain.Entities;
 /// Table: costs (D05) — Single Economic Cost.
 /// Maturity layers keep separate amounts (C-009); allocation does not create a new Cost (C-003).
 /// </summary>
-public sealed class Cost : TenantEntityBase
+public sealed class Cost : TenantEntityBase, IReportingFx
 {
     /// <summary>Nullable when attribution_type = shared.</summary>
     public Guid? BillId { get; set; }
@@ -37,6 +37,15 @@ public sealed class Cost : TenantEntityBase
     public string CurrencyCode { get; set; } = "VND";
     public decimal? BaseAmount { get; set; }
     public Guid? FxRateId { get; set; }
+    public string? ReportingCurrencyCode { get; set; }
+    public decimal? FxRate { get; set; }
+    public string? FxSourceType { get; set; }
+    public string? FxSourceName { get; set; }
+    public DateOnly? FxRateDate { get; set; }
+    public string? FxOverrideReason { get; set; }
+    public Guid? FxAppliedBy { get; set; }
+    public DateTimeOffset? FxAppliedAt { get; set; }
+    public string FxStatus { get; set; } = FxStatuses.Missing;
 
     public string? SourceType { get; set; }
     public Guid? SourceId { get; set; }

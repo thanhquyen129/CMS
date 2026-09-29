@@ -43,6 +43,27 @@ export type BillFinancialProfile = {
   hasMixedCurrencies: boolean;
   note: string;
   asOfLimitationNote: string | null;
+  reporting?: {
+    reportingCurrencyCode: string;
+    revenueBestAvailable: number | null;
+    costBestAvailable: number | null;
+    profitBestAvailable: number | null;
+    revenueMaturity: MaturityBreakdown | null;
+    directCostMaturity: MaturityBreakdown | null;
+    missingFxCount: number;
+    complete: boolean;
+    lines: {
+      kind: string;
+      id: string;
+      label: string | null;
+      currencyCode: string;
+      originalAmount: number;
+      fxRate: number | null;
+      fxSourceName: string | null;
+      reportingAmount: number | null;
+      fxStatus: string;
+    }[];
+  } | null;
 };
 
 export type BillProgressStep = {

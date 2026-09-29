@@ -164,8 +164,9 @@ public sealed class Sprint11FullFinancialProfileReportingTests : IAsyncLifetime
         using var mixedReq = new HttpRequestMessage(HttpMethod.Get, "/api/dashboard/summary");
         mixedReq.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var mixed = (await (await _client.SendAsync(mixedReq)).Content.ReadFromJsonAsync<MonthSeriesSummary>(JsonOptions))!;
-        Assert.Empty(mixed.MonthlySeries);
-        Assert.Contains("Nhiều loại tiền", mixed.MonthlySeriesNote);
+        Assert.Equal(12, mixed.MonthlySeries.Count);
+        Assert.Equal(1000m + 250_000m, Assert.Single(mixed.MonthlySeries, p => p.Month == 1).CostBestAvailable);
+        Assert.Contains("tiền tệ báo cáo", mixed.MonthlySeriesNote, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

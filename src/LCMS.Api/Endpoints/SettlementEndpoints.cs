@@ -24,7 +24,9 @@ public static class SettlementEndpoints
                     billId,
                     body.ReferenceNo,
                     body.Notes,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    body.FxRate,
+                    body.FxOverrideReason),
                 ct);
             return Results.Created($"/api/payments/{id}", new { id });
         });
@@ -104,7 +106,9 @@ public static class SettlementEndpoints
                     billId,
                     body.ReferenceNo,
                     body.Notes,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    body.FxRate,
+                    body.FxOverrideReason),
                 ct);
             return Results.Created($"/api/collections/{id}", new { id });
         });
@@ -180,7 +184,9 @@ public sealed record CreatePaymentRequest(
     Guid? CounterpartyId,
     string? BillId,
     string? ReferenceNo,
-    string? Notes);
+    string? Notes,
+    decimal? FxRate = null,
+    string? FxOverrideReason = null);
 
 public sealed record CreateCollectionRequest(
     decimal Amount,
@@ -189,7 +195,9 @@ public sealed record CreateCollectionRequest(
     Guid? CounterpartyId,
     string? BillId,
     string? ReferenceNo,
-    string? Notes);
+    string? Notes,
+    decimal? FxRate = null,
+    string? FxOverrideReason = null);
 
 public sealed record AllocatePaymentRequest(Guid AccountsPayableId, decimal Amount, string? Notes);
 

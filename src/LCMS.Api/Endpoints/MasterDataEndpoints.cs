@@ -453,6 +453,21 @@ public static class MasterDataEndpoints
                 ct);
             return Results.Ok(list);
         });
+        fxRates.MapGet("/preview", async (
+            string currencyCode,
+            DateOnly? asOf,
+            decimal? amount,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var preview = await sender.Send(new PreviewFxQuery(currencyCode, asOf, amount), ct);
+            return Results.Ok(preview);
+        });
+        fxRates.MapGet("/exceptions", async (ISender sender, CancellationToken ct) =>
+        {
+            var list = await sender.Send(new ListFxExceptionsQuery(), ct);
+            return Results.Ok(list);
+        });
         fxRates.MapGet("/resolve", async (
             string fromCurrencyCode,
             string toCurrencyCode,

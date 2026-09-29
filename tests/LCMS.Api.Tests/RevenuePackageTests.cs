@@ -139,8 +139,9 @@ public sealed class RevenuePackageTests : IAsyncLifetime
         await CreateRevenueAsync(tenantId, billId, 2m, "USD");
         var mixed = await GetProfit(tenantId, billId, "expected", "VND");
         Assert.True(mixed.HasMixedCurrencies);
-        Assert.Null(mixed.ReportingProfit);
-        Assert.Contains("USD", mixed.UnconvertedCurrencies!);
+        Assert.Equal(100m + 50_000m, mixed.ReportingRevenue);
+        Assert.NotNull(mixed.ReportingProfit);
+        Assert.DoesNotContain("USD", mixed.UnconvertedCurrencies ?? []);
 
         using var fx = Tenant(HttpMethod.Post, "/api/fx-rates", tenantId);
         fx.Content = JsonContent.Create(new
@@ -148,13 +149,12 @@ public sealed class RevenuePackageTests : IAsyncLifetime
             fromCurrencyCode = "USD",
             toCurrencyCode = "VND",
             rateDate = "2026-09-22",
-            rate = 25000m,
+            rate = 24_000m,
             source = "manual"
         });
         (await _client.SendAsync(fx)).EnsureSuccessStatusCode();
         var converted = await GetProfit(tenantId, billId, "expected", "VND");
         Assert.Equal(100m + 50_000m, converted.ReportingRevenue);
-        Assert.NotNull(converted.FxTrace);
         Assert.Contains(converted.FxTrace!, t => t.CurrencyCode == "USD" && t.Rate == 25000m);
     }
 

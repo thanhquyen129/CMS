@@ -5,6 +5,7 @@ using LCMS.Application.Exposures;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
 using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -48,6 +49,7 @@ public sealed class RecognizeReceivableExposureCommandHandler
     private readonly IIdempotencyGate _idempotency;
     private readonly IRecognitionApprovalGate _recognitionApproval;
     private readonly IRowVersionGuard _versions;
+    private readonly IFxSnapshotService _fx;
 
     public RecognizeReceivableExposureCommandHandler(
         ILcmsDbContext db,
@@ -58,8 +60,10 @@ public sealed class RecognizeReceivableExposureCommandHandler
         IPartyDirectoryService parties,
         IIdempotencyGate idempotency,
         IRecognitionApprovalGate recognitionApproval,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        IFxSnapshotService fx)
     {
+        _fx = fx;
         _db = db;
         _tenantContext = tenantContext;
         _user = user;
@@ -169,6 +173,11 @@ public sealed class RecognizeReceivableExposureCommandHandler
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
             RecordStatus = "active"
         };
+        var sourceRevenue = exposure.RevenueId is { } revenueId
+            ? await _db.Revenues.AsNoTracking().FirstOrDefaultAsync(r => r.Id == revenueId, cancellationToken)
+            : null;
+        await OpenItemFx.SnapshotAsync(_fx, ar, sourceRevenue, exposure.EffectiveDate, "accounts_receivable", ar.Id, cancellationToken);
+        ar.ReportingAmount = OpenItemFx.ReportingOf(ar, amount);
 
         exposure.RecognizedAmount = decimal.Round(
             alreadyRecognized + amount, 4, MidpointRounding.AwayFromZero);

@@ -31,6 +31,14 @@ public sealed class PaymentAllocation : TenantEntityBase
     public decimal? FxRate { get; set; }
     public string? FxSource { get; set; }
     public DateOnly? FxRateDate { get; set; }
+    /// <summary>Tenant reporting currency for BaseAmount / SettledReportingAmount / FxDifferenceAmount.</summary>
+    public string? ReportingCurrencyCode { get; set; }
+
+    /// <summary>Settled amount valued at the AP/AR snapshot rate (reporting currency).</summary>
+    public decimal? SettledReportingAmount { get; set; }
+
+    /// <summary>BaseAmount − SettledReportingAmount; trace only, gain/loss posting deferred (FX-ARCH-11).</summary>
+    public decimal? FxDifferenceAmount { get; set; }
 
     /// <summary>draft | finalized | reversed</summary>
     public string AllocationStatus { get; set; } = SettlementAllocationStatuses.Draft;

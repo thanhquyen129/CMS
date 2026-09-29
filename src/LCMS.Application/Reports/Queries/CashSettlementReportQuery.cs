@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Fx;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +21,11 @@ public sealed record CashSettlementReportRow(
 public sealed record CashSettlementReportDto(
     DateOnly? AsOf,
     IReadOnlyList<CashSettlementReportRow> Items,
-    decimal UnappliedTotal);
+    decimal UnappliedTotal,
+    string? ReportingCurrency = null,
+    decimal? ReportingUnappliedTotal = null,
+    int MissingFxCount = 0,
+    bool ReportingComplete = true);
 
 /// <summary>Cash and settlement report: payments/collections with unapplied cash at optional as-of.</summary>
 public sealed record GetCashSettlementReportQuery(DateOnly? AsOf = null)
@@ -31,11 +36,16 @@ public sealed class GetCashSettlementReportQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenant;
+    private readonly IReportingCurrencyProvider _reporting;
 
-    public GetCashSettlementReportQueryHandler(ILcmsDbContext db, ITenantContext tenant)
+    public GetCashSettlementReportQueryHandler(
+        ILcmsDbContext db,
+        ITenantContext tenant,
+        IReportingCurrencyProvider reporting)
     {
         _db = db;
         _tenant = tenant;
+        _reporting = reporting;
     }
 
     public async Task<CashSettlementReportDto> Handle(
@@ -125,7 +135,28 @@ public sealed class GetCashSettlementReportQueryHandler
                 c.Status));
         }
 
-        return new CashSettlementReportDto(asOf, rows, rows.Sum(r => r.UnappliedAmount));
+        var reporting = await _reporting.GetAsync(cancellationToken);
+        var unapplied = new ReportingSum();
+        foreach (var p in payments)
+        {
+            var allocated = payMap.TryGetValue(p.Id, out var paid) ? paid : 0m;
+            unapplied.Add(ReportingValue.Of(p, p.Amount - allocated, reporting));
+        }
+
+        foreach (var c in collections)
+        {
+            var allocated = collMap.TryGetValue(c.Id, out var collected) ? collected : 0m;
+            unapplied.Add(ReportingValue.Of(c, c.Amount - allocated, reporting));
+        }
+
+        return new CashSettlementReportDto(
+            asOf,
+            rows,
+            rows.Sum(r => r.UnappliedAmount),
+            reporting,
+            unapplied.Rounded,
+            unapplied.Missing,
+            unapplied.Complete);
     }
 
     private static bool CountsAtAsOf(

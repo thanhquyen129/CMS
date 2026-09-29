@@ -47,6 +47,8 @@ public static class PermissionCodes
     public const string OperationalReferenceUpdate = "opref.update";
     /// <summary>Controlled override of fields owned by an integrated source system (ADR-0039).</summary>
     public const string OperationalSourceOverride = "opref.source_override";
+    /// <summary>Enter a manual FX rate or override a provider/book rate on a financial record (ADR-0040).</summary>
+    public const string FxOverride = "fx.override";
 
     public static readonly IReadOnlyList<(string Code, string Name)> CoreCatalog =
     [
@@ -86,7 +88,8 @@ public static class PermissionCodes
         (RateQuantityOverride, "Ghi đè số lượng tính giá"),
         (RateRerate, "Tính lại giá"),
         (OperationalReferenceUpdate, "Sửa tham chiếu vận hành"),
-        (OperationalSourceOverride, "Ghi đè dữ liệu hệ thống nguồn")
+        (OperationalSourceOverride, "Ghi đè dữ liệu hệ thống nguồn"),
+        (FxOverride, "Nhập / ghi đè tỷ giá")
     ];
 
     public static readonly string[] CoreActionCodes =
@@ -127,7 +130,8 @@ public static class PermissionCodes
         RateQuantityOverride,
         RateRerate,
         OperationalReferenceUpdate,
-        OperationalSourceOverride
+        OperationalSourceOverride,
+        FxOverride
     ];
 }
 

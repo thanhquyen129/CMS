@@ -26,7 +26,9 @@ public static class RevenueEndpoints
                     body.SourceId,
                     body.RecognitionPolicyVersion,
                     body.ActualRevenueOwner,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    body.FxRate,
+                    body.FxOverrideReason),
                 ct);
             return Results.Created($"/api/revenues/{id}", new { id });
         });
@@ -196,7 +198,9 @@ public sealed record CreateRevenueRequest(
     string? SourceType,
     Guid? SourceId,
     string? RecognitionPolicyVersion,
-    string? ActualRevenueOwner = null);
+    string? ActualRevenueOwner = null,
+    decimal? FxRate = null,
+    string? FxOverrideReason = null);
 
 public sealed record ConfirmRevenueRequest(decimal? ConfirmedAmount);
 

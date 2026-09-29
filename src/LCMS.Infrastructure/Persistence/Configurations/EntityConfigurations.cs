@@ -25,6 +25,18 @@ internal static class EntityBaseConfiguration
         builder.Property(e => e.DeletedAt);
         builder.Ignore(e => e.IsDeleted);
     }
+
+    public static void ConfigureReportingFx<TEntity>(EntityTypeBuilder<TEntity> builder)
+        where TEntity : class, IReportingFx
+    {
+        builder.Property(nameof(IReportingFx.ReportingCurrencyCode)).HasMaxLength(3);
+        builder.Property(nameof(IReportingFx.FxRate)).HasPrecision(18, 8);
+        builder.Property(nameof(IReportingFx.FxSourceType)).HasMaxLength(32);
+        builder.Property(nameof(IReportingFx.FxSourceName)).HasMaxLength(128);
+        builder.Property(nameof(IReportingFx.FxOverrideReason)).HasMaxLength(512);
+        builder.Property(nameof(IReportingFx.FxStatus)).HasMaxLength(32).IsRequired()
+            .HasDefaultValue(FxStatuses.Missing);
+    }
 }
 
 internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
@@ -332,6 +344,7 @@ internal sealed class CostConfiguration : IEntityTypeConfiguration<Cost>
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
+        EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.SourceType).HasMaxLength(64);
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.ApprovalStatus).HasMaxLength(32).IsRequired();
@@ -452,6 +465,7 @@ internal sealed class RevenueConfiguration : IEntityTypeConfiguration<Revenue>
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
+        EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.SourceType).HasMaxLength(64);
         builder.Property(e => e.RecognitionPolicyVersion).HasMaxLength(64);
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
@@ -1372,6 +1386,8 @@ internal sealed class AccountsPayableConfiguration : IEntityTypeConfiguration<Ac
         builder.Property(e => e.AdjustmentAmount).HasPrecision(18, 4);
         builder.Property(e => e.FinalizedSettledAmount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.ReportingAmount).HasPrecision(18, 4);
+        EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.SettlementStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Notes).HasMaxLength(2048);
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
@@ -1404,6 +1420,8 @@ internal sealed class AccountsReceivableConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.AdjustmentAmount).HasPrecision(18, 4);
         builder.Property(e => e.FinalizedSettledAmount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.ReportingAmount).HasPrecision(18, 4);
+        EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.SettlementStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Notes).HasMaxLength(2048);
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
@@ -1508,6 +1526,7 @@ internal sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
+        EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.ReferenceNo).HasMaxLength(128);
         builder.Property(e => e.Notes).HasMaxLength(2048);
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
@@ -1534,6 +1553,7 @@ internal sealed class CollectionConfiguration : IEntityTypeConfiguration<Collect
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
+        EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.ReferenceNo).HasMaxLength(128);
         builder.Property(e => e.Notes).HasMaxLength(2048);
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
@@ -1567,6 +1587,9 @@ internal sealed class PaymentAllocationConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.SettledAmount).HasPrecision(18, 4);
         builder.Property(e => e.FxRate).HasPrecision(18, 8);
         builder.Property(e => e.FxSource).HasMaxLength(32);
+        builder.Property(e => e.ReportingCurrencyCode).HasMaxLength(3);
+        builder.Property(e => e.SettledReportingAmount).HasPrecision(18, 4);
+        builder.Property(e => e.FxDifferenceAmount).HasPrecision(18, 4);
         builder.Property(e => e.ReverseReason).HasMaxLength(1024);
         builder.Property(e => e.Notes).HasMaxLength(2048);
 
@@ -1602,6 +1625,9 @@ internal sealed class CollectionAllocationConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.SettledAmount).HasPrecision(18, 4);
         builder.Property(e => e.FxRate).HasPrecision(18, 8);
         builder.Property(e => e.FxSource).HasMaxLength(32);
+        builder.Property(e => e.ReportingCurrencyCode).HasMaxLength(3);
+        builder.Property(e => e.SettledReportingAmount).HasPrecision(18, 4);
+        builder.Property(e => e.FxDifferenceAmount).HasPrecision(18, 4);
         builder.Property(e => e.ReverseReason).HasMaxLength(1024);
         builder.Property(e => e.Notes).HasMaxLength(2048);
 

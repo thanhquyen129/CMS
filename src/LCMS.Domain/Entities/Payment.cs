@@ -7,7 +7,7 @@ namespace LCMS.Domain.Entities;
 /// Outstanding on AP changes only via finalized payment_allocations (AC-007 / C-008).
 /// Never invents Cost (C-003).
 /// </summary>
-public sealed class Payment : TenantEntityBase
+public sealed class Payment : TenantEntityBase, IReportingFx
 {
     /// <summary>Transaction (cash-out) amount.</summary>
     public decimal Amount { get; set; }
@@ -19,6 +19,15 @@ public sealed class Payment : TenantEntityBase
 
     /// <summary>Set when converted via persisted fx_rates; null when same-currency or stub fallback.</summary>
     public Guid? FxRateId { get; set; }
+    public string? ReportingCurrencyCode { get; set; }
+    public decimal? FxRate { get; set; }
+    public string? FxSourceType { get; set; }
+    public string? FxSourceName { get; set; }
+    public DateOnly? FxRateDate { get; set; }
+    public string? FxOverrideReason { get; set; }
+    public Guid? FxAppliedBy { get; set; }
+    public DateTimeOffset? FxAppliedAt { get; set; }
+    public string FxStatus { get; set; } = FxStatuses.Missing;
 
     public DateOnly ValueDate { get; set; }
     public Guid? CounterpartyId { get; set; }

@@ -143,6 +143,7 @@ try
     app.MapTenantAdminEndpoints();
     app.MapSampleDataEndpoints();
     app.MapOperationalReferenceEndpoints();
+    app.MapOperationalReferenceEditEndpoints();
     app.MapRatePricingEndpoints();
     app.MapCostEndpoints();
     app.MapRevenueEndpoints();

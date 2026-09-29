@@ -88,6 +88,12 @@ export async function forwardApiMutation(
               : res.status === 409
                 ? "Không thể thực hiện vì xung đột trạng thái. Tải lại trang và thử lại."
                 : "Thao tác thất bại."),
+          ...((payload as { missing?: unknown }).missing
+            ? { missing: (payload as { missing?: unknown }).missing }
+            : {}),
+          ...((payload as { errors?: unknown }).errors
+            ? { errors: (payload as { errors?: unknown }).errors }
+            : {}),
         },
         { status: res.status }
       );

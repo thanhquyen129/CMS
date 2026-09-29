@@ -50,6 +50,33 @@ public sealed class FieldOwnership : TenantEntityBase
     public string OwnerSystem { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Table: operational_field_overrides — controlled LCMS override of a source/system value (ADR-0039).
+/// While active, sync writes land in <see cref="SourceValue"/> and never replace the override silently.
+/// </summary>
+public sealed class OperationalFieldOverride : TenantEntityBase
+{
+    public string ObjectType { get; set; } = string.Empty;
+    public Guid ObjectId { get; set; }
+    public string FieldCode { get; set; } = string.Empty;
+    public string? SourceValue { get; set; }
+    public string? OverrideValue { get; set; }
+    public string SourceChannel { get; set; } = MeasureSourceChannels.Manual;
+    public string Reason { get; set; } = string.Empty;
+    public Guid? OverriddenBy { get; set; }
+    public DateTimeOffset OverriddenAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+/// <summary>Where a measure value came from.</summary>
+public static class MeasureSourceChannels
+{
+    public const string Manual = "manual";
+    public const string Import = "import";
+    public const string Api = "api";
+    public const string System = "system";
+    public const string Override = "override";
+}
+
 public static class MeasureCodes
 {
     public const string PackageCount = "package_count";
@@ -76,5 +103,10 @@ public static class OperationalObjectTypes
     public static readonly IReadOnlySet<string> CargoParents = new HashSet<string>(StringComparer.Ordinal)
     {
         Bill, Order, Shipment
+    };
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Bill, Order, Shipment, Leg, Movement
     };
 }

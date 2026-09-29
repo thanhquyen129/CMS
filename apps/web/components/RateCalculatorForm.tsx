@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useState } from "react";
 import { formatMoney } from "@/lib/money";
+import { basisLabel, formatChargeable } from "@/lib/opref-edit";
 
 type Option = { id: string; label: string };
 
@@ -43,7 +44,7 @@ export function RateCalculatorForm({
     setResult(null);
     setBusy(true);
     const fd = new FormData(e.currentTarget);
-    const quantity = Number(String(fd.get("chargeable") || fd.get("gross") || ""));
+    const quantity = Number(String(fd.get("chargeable") || ""));
     const body = {
       billId: String(fd.get("billId") ?? ""),
       rateVersionId: String(fd.get("rateVersionId") ?? ""),
@@ -64,9 +65,18 @@ export function RateCalculatorForm({
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(body),
       });
-      const created = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
+      const created = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        message?: string;
+        code?: string;
+        missing?: { label: string; message: string }[];
+      };
       if (!res.ok || !created.id) {
-        setError(created.message || "Không tính được giá.");
+        setError(
+          created.code === "rating_not_ready" && created.missing?.length
+            ? `Chưa đủ dữ liệu: ${created.missing.map((m) => `${m.label} — ${m.message.replace(/^[A-Z_]+:\s*/, "")}`).join("; ")}`
+            : created.message || "Không tính được giá."
+        );
         return;
       }
       const got = await fetch(`/bff/ratings/${created.id}`, { headers: { Accept: "application/json" } });
@@ -142,15 +152,15 @@ export function RateCalculatorForm({
             </div>
             <div className="field">
               <label htmlFor="gross">Trọng lượng thực</label>
-              <input id="gross" name="gross" inputMode="decimal" placeholder="85" />
+              <input id="gross" name="gross" inputMode="decimal" placeholder="Theo Bill" />
             </div>
             <div className="field">
               <label htmlFor="chargeable">Trọng lượng tính cước</label>
-              <input id="chargeable" name="chargeable" inputMode="decimal" placeholder="100" />
+              <input id="chargeable" name="chargeable" inputMode="decimal" placeholder="Theo Bill / hệ thống tính" />
             </div>
             <div className="field">
               <label htmlFor="volume">Thể tích</label>
-              <input id="volume" name="volume" inputMode="decimal" placeholder="0.68" />
+              <input id="volume" name="volume" inputMode="decimal" placeholder="Theo Bill" />
             </div>
             <div className="field field-span">
               <label htmlFor="reason">Lý do ghi đè trọng lượng tính cước</label>
@@ -173,7 +183,7 @@ export function RateCalculatorForm({
             <dl className="metric-grid">
               <div><dt>Giá cơ bản</dt><dd>{formatMoney(base, result.currencyCode)}</dd></div>
               <div><dt>Tổng sau phụ phí</dt><dd>{formatMoney(result.totalAmount, result.currencyCode)}</dd></div>
-              <div><dt>Cơ sở tính cước</dt><dd>{result.chargeableBasis || "—"} {result.chargeableWeightKg ?? ""}</dd></div>
+              <div><dt>Cơ sở tính cước</dt><dd>{basisLabel(result.chargeableBasis)} · {result.chargeableBasis === "not_required" ? "Không cần" : formatChargeable(result.chargeableWeightKg ?? null)}</dd></div>
               <div><dt>Tỷ giá</dt><dd>{result.fxSource || "—"} {result.fxRate ?? ""}</dd></div>
             </dl>
             <table className="data-table">

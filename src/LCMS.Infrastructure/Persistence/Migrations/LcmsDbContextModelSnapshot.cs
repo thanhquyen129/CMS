@@ -4801,6 +4801,103 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.ToTable("master_catalog_items", (string)null);
                 });
 
+            modelBuilder.Entity("LCMS.Domain.Entities.OperationalFieldOverride", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<string>("FieldCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("field_code");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("object_id");
+
+                    b.Property<string>("ObjectType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("object_type");
+
+                    b.Property<DateTimeOffset>("OverriddenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("overridden_at");
+
+                    b.Property<Guid?>("OverriddenBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("overridden_by");
+
+                    b.Property<string>("OverrideValue")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("override_value");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SourceChannel")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_channel");
+
+                    b.Property<string>("SourceValue")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("source_value");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_operational_field_overrides");
+
+                    b.HasIndex("TenantId", "ObjectType", "ObjectId", "FieldCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_operational_field_overrides_tenant_id_object_type_object_id")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("operational_field_overrides", (string)null);
+                });
+
             modelBuilder.Entity("LCMS.Domain.Entities.OperationalMeasurement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6915,6 +7012,15 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
                         .HasColumnName("service_type_code");
+
+                    b.Property<DateTimeOffset?>("StaleAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("stale_at");
+
+                    b.Property<string>("StaleReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("stale_reason");
 
                     b.Property<string>("Status")
                         .IsRequired()

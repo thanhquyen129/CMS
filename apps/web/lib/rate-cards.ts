@@ -95,6 +95,10 @@ export type RatingHistoryItem = {
   weight: number | null;
   status: string;
   supersedesRatingId: string | null;
+  chargeableWeightKg?: number | null;
+  chargeableBasis?: string | null;
+  staleAt?: string | null;
+  staleReason?: string | null;
 };
 
 export type RatingDetail = {

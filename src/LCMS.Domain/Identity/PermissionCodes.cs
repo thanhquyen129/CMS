@@ -43,6 +43,10 @@ public static class PermissionCodes
     public const string RateSellPublish = "rate.sell.publish";
     public const string RateQuantityOverride = "rate.quantity.override";
     public const string RateRerate = "rate.rerate";
+    /// <summary>Edit Order / Shipment / Chặng / Chuyến reference fields (Bill uses bill.update).</summary>
+    public const string OperationalReferenceUpdate = "opref.update";
+    /// <summary>Controlled override of fields owned by an integrated source system (ADR-0039).</summary>
+    public const string OperationalSourceOverride = "opref.source_override";
 
     public static readonly IReadOnlyList<(string Code, string Name)> CoreCatalog =
     [
@@ -80,7 +84,9 @@ public static class PermissionCodes
         (RateSellWrite, "Sửa bảng giá bán"),
         (RateSellPublish, "Phát hành bảng giá bán"),
         (RateQuantityOverride, "Ghi đè số lượng tính giá"),
-        (RateRerate, "Tính lại giá")
+        (RateRerate, "Tính lại giá"),
+        (OperationalReferenceUpdate, "Sửa tham chiếu vận hành"),
+        (OperationalSourceOverride, "Ghi đè dữ liệu hệ thống nguồn")
     ];
 
     public static readonly string[] CoreActionCodes =
@@ -119,7 +125,9 @@ public static class PermissionCodes
         RateSellWrite,
         RateSellPublish,
         RateQuantityOverride,
-        RateRerate
+        RateRerate,
+        OperationalReferenceUpdate,
+        OperationalSourceOverride
     ];
 }
 

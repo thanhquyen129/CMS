@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Application.Ratings.Commands;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -115,14 +116,26 @@ public sealed class CompareRatesQueryHandler : IRequestHandler<CompareRatesQuery
             {
                 var selected = RatingEngine.Select(applicable);
                 var factor = selected.FirstOrDefault(r => r.VolumetricFactor is not null || r.RoundingStep is not null);
-                var computed = RatingEngine.Chargeable(
+                var computed = ChargeableWeightPolicy.Compute(
                     mode ?? card.TransportMode,
                     request.GrossWeightKg,
                     request.VolumeCbm,
                     factor?.VolumetricFactor,
                     factor?.RoundingStep);
-                var quantity = request.Quantity ?? computed ?? 1m;
-                var (total, first, codes) = Price(selected, components, breaks, containers, quantity);
+                var byRule = components.GroupBy(c => c.PricingRuleId).ToDictionary(g => g.Key, g => g.ToList());
+                var quantity = request.Quantity ?? computed.Value;
+                if (quantity is null)
+                {
+                    if (selected.Any(r => RatingContextResolver.NeedsQuantity(r, byRule)))
+                    {
+                        throw new ConflictAppException(
+                            $"Trọng lượng tính cước chưa xác định — nhập Khối tính cước, hoặc cả Trọng lượng thực và Thể tích. {computed.MissingReason}".Trim());
+                    }
+
+                    quantity = 1m;
+                }
+
+                var (total, first, codes) = Price(selected, components, breaks, containers, quantity.Value);
                 quotes.Add(new RateQuoteDto(
                     card.Id, version.Id, card.Code, card.Name, card.CarrierName, card.PartyType,
                     version.VersionNo, card.CurrencyCode, total, first, total - first,

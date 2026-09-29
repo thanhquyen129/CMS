@@ -47,9 +47,16 @@ public sealed class ExceptionHandlingMiddleware
         string code;
         string message;
         object? errors = null;
+        object? missing = null;
 
         switch (exception)
         {
+            case LCMS.Application.Ratings.RatingNotReadyAppException notReady:
+                statusCode = notReady.StatusCode;
+                code = notReady.ErrorCode;
+                message = notReady.Message;
+                missing = notReady.Missing;
+                break;
             case ValidationAppException validation:
                 statusCode = validation.StatusCode;
                 code = validation.ErrorCode;
@@ -86,6 +93,11 @@ public sealed class ExceptionHandlingMiddleware
         if (errors is not null)
         {
             payload["errors"] = errors;
+        }
+
+        if (missing is not null)
+        {
+            payload["missing"] = missing;
         }
 
         if (_env.IsDevelopment() && statusCode >= 500)

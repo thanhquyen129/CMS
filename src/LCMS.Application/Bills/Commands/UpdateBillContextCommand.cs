@@ -77,6 +77,7 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
     private readonly IBillPartyPolicyStore _partyPolicy;
     private readonly ICanonicalPlaceBinder _places;
     private readonly IOperationalCargoStore _cargo;
+    private readonly LCMS.Application.Ratings.IRatingStalenessService _staleness;
 
     public UpdateBillContextCommandHandler(
         ILcmsDbContext db,
@@ -88,8 +89,10 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         IPartySnapshotCapture snapshots,
         IBillPartyPolicyStore partyPolicy,
         ICanonicalPlaceBinder places,
-        IOperationalCargoStore cargo)
+        IOperationalCargoStore cargo,
+        LCMS.Application.Ratings.IRatingStalenessService staleness)
     {
+        _staleness = staleness;
         _db = db;
         _tenantContext = tenantContext;
         _userContext = userContext;
@@ -151,6 +154,10 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         {
             throw new NotFoundAppException("Không tìm thấy Bill.");
         }
+
+        var ratingInputsBefore = RatingInputs(bill, await _db.OperationalMeasurements.AsNoTracking()
+            .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id)
+            .ToListAsync(cancellationToken));
 
         if (request.CustomerPartyId is Guid partyId)
         {
@@ -221,7 +228,40 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
                 cancellationToken);
         }
 
+        var ratingInputsAfter = RatingInputs(bill, _db.OperationalMeasurements.Local
+            .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id && m.DeletedAt == null)
+            .ToList());
+        var changed = ratingInputsBefore.Keys
+            .Where(k => !string.Equals(ratingInputsBefore[k], ratingInputsAfter[k], StringComparison.Ordinal))
+            .ToList();
+        if (changed.Count > 0)
+        {
+            await _staleness.MarkForBillChangeAsync(
+                bill.Id,
+                changed,
+                $"Bill {bill.BillNo} đổi {string.Join(", ", changed.Select(c => LCMS.Application.OperationalReferences.Edit.OperationalFieldCatalog.Label(OperationalObjectTypes.Bill, c)))} sau khi tính giá.",
+                cancellationToken);
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static Dictionary<string, string?> RatingInputs(Bill bill, IReadOnlyList<OperationalMeasurement> measures)
+    {
+        string? M(string code) => LCMS.Application.OperationalReferences.Edit.OperationalFieldValues.FormatDecimal(
+            measures.FirstOrDefault(m => m.MeasureCode == code)?.Quantity);
+        return new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["route_code"] = bill.RouteCode,
+            ["transport_mode"] = bill.TransportMode,
+            ["origin_code"] = bill.OriginCode,
+            ["destination_code"] = bill.DestinationCode,
+            ["service_type_code"] = bill.ServiceTypeCode,
+            ["commodity_type_id"] = bill.CommodityTypeId?.ToString(),
+            [MeasureCodes.GrossWeightKg] = M(MeasureCodes.GrossWeightKg),
+            [MeasureCodes.VolumeCbm] = M(MeasureCodes.VolumeCbm),
+            [MeasureCodes.ChargeableWeightKg] = M(MeasureCodes.ChargeableWeightKg)
+        };
     }
 
     private async Task BindPlacesAsync(Bill bill, UpdateBillContextCommand request, CancellationToken cancellationToken)

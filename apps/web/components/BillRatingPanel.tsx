@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { RateBillForm } from "@/components/RateBillForm";
+import { RerateRatingButton } from "@/components/RerateRatingButton";
+import { basisLabel, formatChargeable, ratingStatusView } from "@/lib/opref-edit";
 import { SeedExpectedCostsButton } from "@/components/SeedExpectedCostsButton";
 import { SeedExpectedRevenuesButton } from "@/components/SeedExpectedRevenuesButton";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
@@ -40,9 +42,19 @@ export async function BillRatingPanel({ terms, billId }: Props) {
 
   const ratings = ratingsRes.ok ? ratingsRes.data : [];
 
+  const staleCount = ratings.filter(
+    (r) => r.staleAt && r.status?.toLowerCase() !== "superseded"
+  ).length;
+
   return (
-    <div className="stack" style={{ marginTop: "1.5rem" }}>
+    <div className="stack" style={{ marginTop: "1.5rem" }} id="bill-rating">
       <h2 className="section-title">Tính giá / Rating</h2>
+      {staleCount > 0 ? (
+        <div className="alert alert-warning" role="status">
+          <strong>Cần tính giá lại</strong> — {staleCount} lần tính giá dùng dữ liệu Bill đã thay đổi. Kết quả cũ
+          được giữ nguyên; bấm “Tính giá lại” ở dòng tương ứng để tạo lần tính giá mới.
+        </div>
+      ) : null}
       <p className="note">
         Áp bảng giá đã phát hành lên {billLabel} này.         Seed tạo chi phí / doanh thu lớp {expected} từ thành phần bảng giá
         (không ghi đè dòng đã seed).{" "}
@@ -82,24 +94,43 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                   Tổng
                 </th>
                 <th scope="col" className="num">
-                  SL
+                  TL tính cước
                 </th>
                 <th scope="col">Trạng thái</th>
-                <th scope="col">Seed</th>
+                <th scope="col">Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              {ratings.map((r) => (
+              {ratings.map((r) => {
+                const status = ratingStatusView(r.status, r.staleAt);
+                const superseded = r.status?.toLowerCase() === "superseded";
+                return (
                 <tr key={r.id}>
                   <td>{formatDateTimeVi(r.ratedAt)}</td>
                   <td className="num">
                     {formatMoney(r.totalAmount, r.currencyCode)}
                   </td>
-                  <td className="num">{r.quantity}</td>
-                  <td>{r.status}</td>
+                  <td className="num">
+                    {r.chargeableBasis === "not_required"
+                      ? "Không cần"
+                      : formatChargeable(r.chargeableWeightKg ?? null)}
+                    <span className="muted small block">{basisLabel(r.chargeableBasis)}</span>
+                  </td>
                   <td>
-                    {r.status?.toLowerCase() === "superseded" ? (
+                    <span className={status.className}>{status.label}</span>
+                    {r.staleAt && !superseded && r.staleReason ? (
+                      <span className="muted small block">{r.staleReason}</span>
+                    ) : null}
+                  </td>
+                  <td>
+                    {superseded ? (
                       <span className="muted">—</span>
+                    ) : r.staleAt ? (
+                      <RerateRatingButton
+                        billId={billId}
+                        ratingId={r.id}
+                        rateVersionId={r.rateVersionId}
+                      />
                     ) : (
                       <div className="row-actions">
                         <SeedExpectedCostsButton terms={terms} ratingId={r.id} />
@@ -111,7 +142,8 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -194,6 +194,28 @@ internal sealed class CargoContainerConfiguration : IEntityTypeConfiguration<Car
     }
 }
 
+internal sealed class OperationalFieldOverrideConfiguration : IEntityTypeConfiguration<OperationalFieldOverride>
+{
+    public void Configure(EntityTypeBuilder<OperationalFieldOverride> builder)
+    {
+        builder.ToTable("operational_field_overrides");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ObjectId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.FieldCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.SourceValue).HasMaxLength(2000);
+        builder.Property(e => e.OverrideValue).HasMaxLength(2000);
+        builder.Property(e => e.SourceChannel).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Reason).HasMaxLength(500).IsRequired();
+        builder.Property(e => e.OverriddenBy).HasColumnType("uuid");
+        builder.Property(e => e.OverriddenAt).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.FieldCode })
+            .IsUnique()
+            .HasFilter("deleted_at IS NULL");
+    }
+}
+
 internal sealed class FieldOwnershipConfiguration : IEntityTypeConfiguration<FieldOwnership>
 {
     public void Configure(EntityTypeBuilder<FieldOwnership> builder)

@@ -6,6 +6,8 @@ import { LinkBillToRefForm } from "@/components/LinkBillToRefForm";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
+import { OperationalReferenceEditor } from "@/components/OperationalReferenceEditor";
+import { objectTypeFromKind } from "@/lib/opref-edit";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { operationalStatusLabel } from "@/lib/bills-shared";
@@ -145,6 +147,10 @@ export default async function OperationalDetailPage({
               objectId={id}
             />
           </>
+        ) : null}
+
+        {objectTypeFromKind(kind) ? (
+          <OperationalReferenceEditor objectType={objectTypeFromKind(kind)!} objectId={id} />
         ) : null}
 
         <h2 className="section-title">{billLabel} liên kết</h2>

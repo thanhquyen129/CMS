@@ -1,5 +1,47 @@
 # Handoff
 
+## 2026-09-29 — Operational Reference Edit & Rating Context (D01–D08)
+
+### User
+Đọc `docs/po/29092026/LCMS_DEV_Fix_Operational_Reference_Edit_Rating_Context_Matrix_v1.0.xlsx` + `..._v1.0.docx` rồi fix (RATING-CW-01, BILL-EDIT-01, RATING-READY-01, RERATE-01, OPREF-EDIT-01, OPREF-SOT-01; AC-01..AC-12).
+
+### Answer
+- **Sửa thông tin Bill / Đơn hàng / Lô hàng / Chặng / Chuyến** — một pattern chung (ADR-0039):
+  - `GET /api/operational-references/{type}/{id}/edit` (trường, nguồn, khóa, CW, lần tính giá hiện hành — không trả số tiền).
+  - `PATCH /api/operational-references/{type}/{id}` `{changes:{code:value|null}, reason, revertFields}` + If-Match.
+  - `POST /api/operational-references/{type}/{id}/chargeable-weight/confirm`.
+  - Quyền: Bill → `bill.update`; còn lại → mới `opref.update` (Ops: Organization; FinancialController: All). Ghi đè trường thuộc hệ thống nguồn (API) → mới `opref.source_override` + lý do. Ngoài phạm vi dữ liệu → 404.
+- **Nguồn dữ liệu (SoT)**: nhãn Hệ thống tính / API / Import / Nhập thủ công / Ghi đè trên từng trường. Sửa trường Import/API = ghi đè có lý do, lưu bảng `operational_field_overrides` (giá trị nguồn, giá trị ghi đè, lý do, người, lúc). Sync/import sau đó **không** xóa ghi đè — chỉ cập nhật giá trị nguồn. "Bỏ ghi đè" trả về giá trị nguồn mới nhất.
+- **Trọng lượng tính cước (CW)**: không bao giờ lấy Trọng lượng thực / 0 / mặc định. Hệ thống tính khi đủ phương thức + trọng lượng thực + thể tích (Air 167 / Sea W/M). Chưa đủ → "Chưa xác định / Chưa tính được". Xác nhận ≠ ghi đè: xác nhận không cần lý do; sửa số đã xác nhận / hệ thống / nguồn = ghi đè, cần `rate.quantity.override` + lý do + audit.
+- **Kiểm tra trước khi tính giá**: `POST /api/ratings/readiness` + rating create dùng chung `RatingContextResolver`; chỉ đòi dữ liệu mà quy tắc được chọn cần. Thiếu → 409 `rating_not_ready` + `missing[]` (trường, quy tắc, hành động). Bỏ mặc định số lượng = 1.
+- **Cần tính giá lại**: sửa trường mà lần tính giá đã dùng → `ratings.stale_at/stale_reason` (chỉ lần tính giá liên quan; sửa Đơn hàng/Lô/Chặng/Chuyến → Bill liên kết). Kết quả cũ, Chi phí, Doanh thu, AP, AR giữ nguyên. "Tính giá lại" tạo lần mới, lần cũ "Đã thay thế".
+- Form ngữ cảnh Bill cũ (`PATCH /api/bills/{id}/context`) cũng đánh dấu cần tính giá lại; xác nhận CW khi chưa có số → 409.
+- `/api/ratings/compare` và Tính giá nhanh không còn suy CW từ trọng lượng thực.
+
+### UI (người dùng)
+- Bill → tab Tổng quan và tab Tính giá: khối **"Thông tin vận hành & ngữ cảnh tính giá"** (CW + trạng thái + nguồn, nút "Xác nhận TL tính cước", "Bỏ ghi đè", cảnh báo "Cần tính giá lại") và nút **"Sửa thông tin Bill"** (nhóm Hàng hóa & đo lường / Tuyến & lịch / Dịch vụ / Khác; ô "Lý do ghi đè" chỉ hiện khi cần).
+- Trang chi tiết Đơn hàng / Lô hàng / Chặng / Chuyến: cùng khối, nút "Sửa thông tin …".
+- Form tính giá: không còn số lượng mặc định 1 / loại hàng mặc định; dữ liệu lấy từ Bill; hộp kiểm tra "Chưa đủ dữ liệu" liệt kê trường thiếu + quy tắc + link "Sửa thông tin Bill"; ghi đè số lượng nằm trong mục tuỳ chọn, kèm lý do.
+- Lịch sử tính giá: cột TL tính cước + cơ sở; trạng thái Hiện hành / Cần tính giá lại / Đã thay thế; nút "Tính giá lại".
+- Form tạo Order/Bill/Shipment: ô CW "Chưa xác định", tick xác nhận chỉ bật khi có số; bỏ ô lý do ghi đè khi tạo.
+
+### Files
+- Domain: `Rating.StaleAt/StaleReason`, `OperationalFieldOverride`, `PermissionCodes` (`opref.update`, `opref.source_override`), `SystemRoleCatalog`, `AuditEvent`.
+- Application: `OperationalReferences/Edit/*` (catalog, record, access, CW policy, query, edit/confirm commands, `OperationalOverrideGuard`), `Ratings/RatingReadiness.cs`, `Ratings/RatingStalenessService.cs`, `Ratings/Queries/GetRatingReadinessQuery.cs`; sửa `CreateRatingCommand`, `CompareRatesQuery`, `GetRatingByIdQuery` (history có CW/basis/stale), `UpdateBillContextCommand`, `OperationalCargoStore`, `ImportOperationalBatchCommand`, Upsert Order/Shipment/Leg/Movement.
+- API: `OperationalReferenceEditEndpoints.cs`, `/api/ratings/readiness`, middleware trả `missing`.
+- Migration: `20260929104232_OperationalReferenceEditRatingContext` (thêm 2 cột + 1 bảng).
+- Web: `OperationalReferenceEditor`, `RatingReadinessBox`, `RerateRatingButton`, `lib/opref-edit.ts`, BFF `bff/operational-references/[type]/[id]{,/edit,/chargeable-weight/confirm}`, `bff/ratings/readiness`; sửa `RateBillForm`, `BillRatingPanel`, `CreateCargoFields`, `RateCalculatorForm`, `bff-api` (chuyển tiếp `missing`/`errors`), trang Bill + operations detail, nhãn audit, `globals.css`.
+- ADR: `docs/adr/ADR-0039-operational-reference-edit-rating-context.md`.
+
+### Tests
+- `OperationalReferenceEditRatingContextTests` (7): CW thiếu không bằng 0 + readiness chặn + không tạo rating; CW hệ thống cần đủ gross+volume, xác nhận ≠ ghi đè, rating dùng CW đã xác nhận; sửa trường không dùng → không stale, sửa volume → stale, số tiền giữ nguyên, tính lại → lịch sử 2 dòng; ghi đè CW cần lý do + bỏ ghi đè; trường Import cần lý do + import lại không xóa ghi đè; sửa Đơn hàng → Bill liên kết stale + tenant khác 404; giá trị sai / ETD sau ETA bị chặn.
+- Full suite local: pass trừ 3 Sprint11 SQLite-only như trước. `tsc` + `next build` OK.
+
+### Follow-up
+- Cấu hình tenant cho chính sách Import (chỉ đọc vs ghi đè có lý do).
+- Quyền riêng cho tạo rating (`rate.execute`) — hiện chưa có (có từ trước).
+- Đánh dấu cần tính giá lại khi sync Order/Shipment API đổi dữ liệu (hiện chỉ khi người dùng sửa).
+
 ## 2026-09-28 — UAT AR Regression follow-up (UI-TABLE-01 + FIN-DATA-01)
 
 ### User

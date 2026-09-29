@@ -70,19 +70,22 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
     private readonly ISender _sender;
     private readonly IFxRateLookup _fx;
     private readonly IPermissionService _permissions;
+    private readonly RatingContextResolver _resolver;
 
     public CreateRatingCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         ISender sender,
         IFxRateLookup fx,
-        IPermissionService permissions)
+        IPermissionService permissions,
+        RatingContextResolver resolver)
     {
         _db = db;
         _tenantContext = tenantContext;
         _sender = sender;
         _fx = fx;
         _permissions = permissions;
+        _resolver = resolver;
     }
 
     public async Task<Guid> Handle(CreateRatingCommand request, CancellationToken cancellationToken)
@@ -94,53 +97,56 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
 
         var tenantId = _tenantContext.TenantId!.Value;
 
-        var bill = await _db.Bills.AsNoTracking().FirstOrDefaultAsync(b => b.Id == request.BillId, cancellationToken);
-        if (bill is null)
+        var ctx = await _resolver.ResolveAsync(
+            new RatingInput(
+                request.BillId,
+                request.RateVersionId,
+                request.Quantity,
+                request.Weight,
+                request.ServiceTypeCode,
+                request.PartyTypeCode,
+                request.RouteCode,
+                request.RateDate,
+                request.OriginCode,
+                request.DestinationCode,
+                request.TransportMode,
+                request.CommodityCode,
+                request.GrossWeightKg,
+                request.VolumeCbm,
+                request.ChargeableOverrideReason,
+                request.Containers),
+            cancellationToken);
+        if (ctx.Missing.Count > 0)
         {
-            throw new NotFoundAppException("Không tìm thấy Bill.");
+            throw new RatingNotReadyAppException(ctx.Missing);
         }
 
-        var version = await _db.RateVersions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(v => v.Id == request.RateVersionId, cancellationToken);
-        if (version is null)
-        {
-            throw new NotFoundAppException("Không tìm thấy phiên bản bảng giá.");
-        }
+        var bill = ctx.Bill;
+        var version = ctx.Version;
+        var card = ctx.Card;
+        var rateDate = ctx.RateDate;
+        var serviceType = ctx.ServiceType;
+        var partyType = ctx.PartyType;
+        var routeCode = ctx.RouteCode;
+        var transportMode = ctx.TransportMode;
+        var originCode = ctx.OriginCode;
+        var destinationCode = ctx.DestinationCode;
+        var commodityCode = ctx.CommodityCode;
+        var selected = ctx.Selected;
+        var componentsByRule = ctx.ComponentsByRule;
+        var breaksByRule = ctx.BreaksByRule;
+        var containerPrices = ctx.ContainerPrices;
+        var gross = ctx.Gross;
+        var volume = ctx.Volume;
+        var quantity = ctx.Quantity!.Value;
+        var basis = ctx.Basis;
 
-        if (!version.IsPublished)
+        if (ctx.RequiresOverride)
         {
-            throw new ConflictAppException("Chỉ được tính giá trên phiên bản bảng giá đã phát hành.");
-        }
-
-        var rateDate = request.RateDate ?? DateTimeOffset.UtcNow;
-        if (version.EffectiveFrom is DateTimeOffset from && rateDate < from)
-        {
-            throw new ConflictAppException("Phiên bản bảng giá chưa đến ngày hiệu lực.");
-        }
-
-        if (version.EffectiveTo is DateTimeOffset to && rateDate > to)
-        {
-            throw new ConflictAppException("Phiên bản bảng giá không còn hiệu lực theo ngày áp dụng.");
-        }
-
-        var card = await _db.RateCards.AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == version.RateCardId, cancellationToken);
-
-        var serviceType = Normalize(request.ServiceTypeCode) ?? Normalize(bill.BillType);
-        var partyType = Normalize(request.PartyTypeCode) ?? Normalize(card?.PartyType);
-        var routeCode = Normalize(request.RouteCode) ?? Normalize(bill.RouteCode);
-        var transportMode = Normalize(request.TransportMode) ?? Normalize(bill.TransportMode);
-        var originCode = Normalize(request.OriginCode) ?? Normalize(bill.OriginCode);
-        var destinationCode = Normalize(request.DestinationCode) ?? Normalize(bill.DestinationCode);
-        var commodityCode = Normalize(request.CommodityCode);
-        if (commodityCode is null && bill.CommodityTypeId is Guid commodityId)
-        {
-            var fromBill = await _db.CommodityTypes.AsNoTracking()
-                .Where(c => c.Id == commodityId)
-                .Select(c => c.Code)
-                .FirstOrDefaultAsync(cancellationToken);
-            commodityCode = Normalize(fromBill);
+            await _permissions.EnsureAsync(
+                PermissionCodes.RateQuantityOverride,
+                "Bạn không có quyền ghi đè số lượng tính giá.",
+                cancellationToken);
         }
 
         Rating? prior = null;
@@ -170,97 +176,6 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                 cancellationToken);
         }
 
-        var rules = await _db.PricingRules
-            .AsNoTracking()
-            .Where(r => r.RateVersionId == version.Id && r.IsActive)
-            .OrderBy(r => r.SortOrder)
-            .ThenBy(r => r.Code)
-            .ToListAsync(cancellationToken);
-
-        var applicable = rules
-            .Where(r => RatingEngine.Matches(
-                r, serviceType, partyType, routeCode, transportMode, originCode, destinationCode, commodityCode))
-            .ToList();
-        var selected = RatingEngine.Select(applicable);
-
-        var ruleIds = selected.Select(r => r.Id).ToList();
-        var components = await _db.PricingRuleComponents
-            .AsNoTracking()
-            .Where(c => ruleIds.Contains(c.PricingRuleId))
-            .OrderBy(c => c.SortOrder)
-            .ThenBy(c => c.Code)
-            .ToListAsync(cancellationToken);
-
-        var componentsByRule = components
-            .GroupBy(c => c.PricingRuleId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        var breaks = await _db.RateBreaks.AsNoTracking()
-            .Where(b => ruleIds.Contains(b.PricingRuleId))
-            .ToListAsync(cancellationToken);
-        var breaksByRule = breaks.GroupBy(b => b.PricingRuleId).ToDictionary(g => g.Key, g => (IReadOnlyList<RateBreak>)g.ToList());
-        var containerPrices = await _db.ContainerRatePrices.AsNoTracking()
-            .Where(p => ruleIds.Contains(p.PricingRuleId))
-            .ToListAsync(cancellationToken);
-
-        var measures = await _db.OperationalMeasurements.AsNoTracking()
-            .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id)
-            .ToListAsync(cancellationToken);
-        var gross = request.GrossWeightKg
-            ?? measures.FirstOrDefault(m => m.MeasureCode == MeasureCodes.GrossWeightKg)?.Quantity;
-        var volume = request.VolumeCbm
-            ?? measures.FirstOrDefault(m => m.MeasureCode == MeasureCodes.VolumeCbm)?.Quantity;
-        var confirmed = measures.FirstOrDefault(m => m.MeasureCode == MeasureCodes.ChargeableWeightKg && m.IsConfirmed);
-        var factorRule = selected.FirstOrDefault(r => r.VolumetricFactor is not null || r.RoundingStep is not null);
-        var computed = RatingEngine.Chargeable(
-            transportMode ?? card?.TransportMode,
-            gross,
-            volume,
-            factorRule?.VolumetricFactor,
-            factorRule?.RoundingStep);
-
-        string basis;
-        decimal quantity;
-        if (request.Quantity is decimal asked)
-        {
-            quantity = asked;
-            basis = "manual";
-            if (confirmed is not null && confirmed.Quantity != asked)
-            {
-                if (string.IsNullOrWhiteSpace(request.ChargeableOverrideReason))
-                {
-                    throw new ConflictAppException("Trọng lượng tính cước đã xác nhận. Nhập lý do để ghi đè.");
-                }
-
-                await _permissions.EnsureAsync(
-                    PermissionCodes.RateQuantityOverride,
-                    "Bạn không có quyền ghi đè số lượng tính giá.",
-                    cancellationToken);
-                basis = "override";
-            }
-        }
-        else if (request.Weight is decimal weight)
-        {
-            quantity = weight;
-            basis = "weight";
-        }
-        else if (confirmed is not null)
-        {
-            quantity = confirmed.Quantity;
-            basis = "confirmed";
-        }
-        else if (computed is decimal chargeable)
-        {
-            quantity = chargeable;
-            var mode = (transportMode ?? card?.TransportMode)?.ToLowerInvariant();
-            basis = mode is "sea" or "ocean" ? "sea_wm" : "air_volumetric";
-        }
-        else
-        {
-            quantity = 1m;
-            basis = "default";
-        }
-
         var rating = new Rating
         {
             TenantId = tenantId,
@@ -276,7 +191,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             BaseAmount = request.BaseAmount,
             Status = RatingStatuses.Completed,
             SupersedesRatingId = prior?.Id,
-            ChargeableWeightKg = confirmed?.Quantity ?? computed ?? quantity,
+            ChargeableWeightKg = basis == "not_required" ? null : quantity,
             ChargeableBasis = basis,
             RateDate = rateDate
         };
@@ -470,6 +385,11 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             volume,
             chargeable = rating.ChargeableWeightKg,
             basis,
+            quantityRule = ctx.QuantityRuleCode,
+            chargeableSource = ctx.BillChargeable.SourceChannel,
+            chargeableState = ctx.BillChargeable.State,
+            chargeableConfirmed = ctx.BillChargeable.IsConfirmed,
+            overrideReason = ctx.RequiresOverride ? request.ChargeableOverrideReason?.Trim() : null,
             versionId = version.Id,
             rules = selected.Select(r => r.Code).ToArray()
         });

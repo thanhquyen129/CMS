@@ -152,6 +152,8 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
         existing.DestinationCode = request.DestinationCode ?? existing.DestinationCode;
         existing.OriginLocationId = request.OriginLocationId ?? existing.OriginLocationId;
         existing.DestinationLocationId = request.DestinationLocationId ?? existing.DestinationLocationId;
+        await LCMS.Application.OperationalReferences.Edit.OperationalOverrideGuard.ReapplyEntityOverridesAsync(
+            _db, OperationalObjectTypes.Leg, existing.Id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }

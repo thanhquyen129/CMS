@@ -46,6 +46,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<CargoPackage> CargoPackages => Set<CargoPackage>();
     public DbSet<CargoContainer> CargoContainers => Set<CargoContainer>();
     public DbSet<FieldOwnership> FieldOwnerships => Set<FieldOwnership>();
+    public DbSet<OperationalFieldOverride> OperationalFieldOverrides => Set<OperationalFieldOverride>();
     public DbSet<Cost> Costs => Set<Cost>();
     public DbSet<CostAdjustment> CostAdjustments => Set<CostAdjustment>();
     public DbSet<CostAllocation> CostAllocations => Set<CostAllocation>();

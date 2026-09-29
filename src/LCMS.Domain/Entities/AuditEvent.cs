@@ -100,6 +100,11 @@ public static class AuditActions
     public const string BillPartyPolicyUpdate = "bill_party_policy.update";
     public const string MeasurementOverride = "measurement.override";
     public const string FieldOverride = "field.override";
+    public const string MeasurementConfirm = "measurement.confirm";
+    public const string MeasurementOverrideClear = "measurement.override_clear";
+    public const string OperationalFieldUpdate = "opref.field_update";
+    public const string OperationalFieldOverride = "opref.field_override";
+    public const string RatingMarkStale = "rating.mark_stale";
     public const string LinkCreate = "link.create";
     public const string LinkRemove = "link.remove";
     public const string ReportExport = "report.export";

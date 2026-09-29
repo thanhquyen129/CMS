@@ -136,6 +136,8 @@ public sealed class UpsertTransportMovementCommandHandler
         existing.TransportMode = request.TransportMode ?? existing.TransportMode;
         existing.OriginLocationId = request.OriginLocationId ?? existing.OriginLocationId;
         existing.DestinationLocationId = request.DestinationLocationId ?? existing.DestinationLocationId;
+        await LCMS.Application.OperationalReferences.Edit.OperationalOverrideGuard.ReapplyEntityOverridesAsync(
+            _db, OperationalObjectTypes.Movement, existing.Id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }

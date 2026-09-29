@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences;
+using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -157,6 +158,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
             await _cargo.ApplyAsync(OperationalObjectTypes.Shipment, existing.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
         }
 
+        await OperationalOverrideGuard.ReapplyEntityOverridesAsync(_db, OperationalObjectTypes.Shipment, existing.Id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }

@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<IPartySnapshotCapture, PartySnapshotCapture>();
         services.AddScoped<IBillPartyPolicyStore, BillPartyPolicyStore>();
         services.AddScoped<IOperationalCargoStore, OperationalCargoStore>();
+        services.AddScoped<LCMS.Application.Ratings.IRatingStalenessService, LCMS.Application.Ratings.RatingStalenessService>();
+        services.AddScoped<LCMS.Application.Ratings.RatingContextResolver>();
         services.AddScoped<OperationalImportBatch>();
         services.AddScoped<RateImportBatch>();
         services.AddScoped<PartyImportBatch>();

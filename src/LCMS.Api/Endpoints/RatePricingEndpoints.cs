@@ -266,6 +266,29 @@ public static class RatePricingEndpoints
                 ct);
             return Results.Created($"/api/ratings/{id}", new { id });
         });
+        ratings.MapPost("/readiness", async (CreateRatingRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var readiness = await sender.Send(
+                new GetRatingReadinessQuery(new LCMS.Application.Ratings.RatingInput(
+                    body.BillId,
+                    body.RateVersionId,
+                    body.Quantity,
+                    body.Weight,
+                    body.ServiceTypeCode,
+                    body.PartyTypeCode,
+                    body.RouteCode,
+                    body.RateDate,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.TransportMode,
+                    body.CommodityCode,
+                    body.GrossWeightKg,
+                    body.VolumeCbm,
+                    body.ChargeableOverrideReason,
+                    body.Containers?.Select(c => new RatingContainerQty(c.ContainerType, c.Quantity)).ToList())),
+                ct);
+            return Results.Ok(readiness);
+        });
         ratings.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             var rating = await sender.Send(new GetRatingByIdQuery(id), ct);

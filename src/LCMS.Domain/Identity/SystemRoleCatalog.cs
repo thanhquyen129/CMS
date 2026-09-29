@@ -60,6 +60,8 @@ public static class SystemRoleCatalog
                 (PermissionCodes.RateSellPublish, DataScopes.All),
                 (PermissionCodes.RateQuantityOverride, DataScopes.All),
                 (PermissionCodes.RateRerate, DataScopes.All),
+                (PermissionCodes.OperationalReferenceUpdate, DataScopes.All),
+                (PermissionCodes.OperationalSourceOverride, DataScopes.All),
                 (PermissionCodes.MasterOrgManage, DataScopes.All),
                 (PermissionCodes.MasterPartyManage, DataScopes.All),
                 (PermissionCodes.MasterCurrencyManage, DataScopes.All),
@@ -115,6 +117,7 @@ public static class SystemRoleCatalog
                 (PermissionCodes.BillCreate, DataScopes.Organization),
                 (PermissionCodes.BillRead, DataScopes.Organization),
                 (PermissionCodes.BillUpdate, DataScopes.Organization),
+                (PermissionCodes.OperationalReferenceUpdate, DataScopes.Organization),
                 (PermissionCodes.CostCreate, DataScopes.Organization),
                 (PermissionCodes.CostRead, DataScopes.Organization)
             ]),

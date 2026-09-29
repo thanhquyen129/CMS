@@ -41,6 +41,11 @@ public sealed class Rating : TenantEntityBase
     public string? FxSource { get; set; }
     public decimal? RoundedAmount { get; set; }
 
+    /// <summary>Set when a rating input changed after this run ("Cần tính giá lại"). Amounts stay frozen.</summary>
+    public DateTimeOffset? StaleAt { get; set; }
+
+    public string? StaleReason { get; set; }
+
     public Bill? Bill { get; set; }
     public RateVersion? RateVersion { get; set; }
     public Rating? SupersedesRating { get; set; }

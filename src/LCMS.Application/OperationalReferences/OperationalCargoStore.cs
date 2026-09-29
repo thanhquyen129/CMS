@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,6 +59,17 @@ public sealed class OperationalCargoStore : IOperationalCargoStore
             }
 
             return;
+        }
+
+        if (context.ChargeableConfirmed == true && context.ChargeableWeightKg is null)
+        {
+            var persisted = await _db.OperationalMeasurements.AsNoTracking().AnyAsync(
+                m => m.ObjectType == type && m.ObjectId == objectId && m.MeasureCode == MeasureCodes.ChargeableWeightKg,
+                cancellationToken);
+            if (!persisted)
+            {
+                throw new ConflictAppException("Chưa có Trọng lượng tính cước hợp lệ để xác nhận.");
+            }
         }
 
         await ApplyParentAsync(type, objectId, context, owner, externalFieldsTouched, cancellationToken);
@@ -163,6 +175,12 @@ public sealed class OperationalCargoStore : IOperationalCargoStore
                 IsConfirmed = confirm,
                 ConfirmedAt = confirm ? DateTimeOffset.UtcNow : null
             });
+            return;
+        }
+
+        if (!string.Equals(owner, OperationalSourceSystems.LcmsManual, StringComparison.OrdinalIgnoreCase)
+            && await OperationalOverrideGuard.CaptureSourceAsync(_db, type, objectId, code, value, cancellationToken))
+        {
             return;
         }
 

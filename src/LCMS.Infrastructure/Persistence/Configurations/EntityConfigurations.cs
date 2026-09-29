@@ -1108,6 +1108,8 @@ internal sealed class RatingConfiguration : IEntityTypeConfiguration<Rating>
         builder.Property(e => e.FxRate).HasPrecision(18, 8);
         builder.Property(e => e.FxSource).HasMaxLength(64);
         builder.Property(e => e.RoundedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.StaleAt);
+        builder.Property(e => e.StaleReason).HasMaxLength(1000);
 
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.RatedAt });
         builder.HasIndex(e => new { e.TenantId, e.RateVersionId });

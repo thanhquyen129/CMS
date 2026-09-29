@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { RateCard, RateVersion } from "@/lib/rate-cards";
 import {
   isPublishedVersion,
@@ -10,6 +10,8 @@ import {
   tariffCommodityOptions,
 } from "@/lib/rate-cards";
 import { term, type TerminologyMap } from "@/lib/terminology";
+import { RatingReadinessBox } from "@/components/RatingReadinessBox";
+import type { ApiError, RatingReadiness } from "@/lib/opref-edit";
 
 type CardWithVersions = {
   card: RateCard;
@@ -20,9 +22,18 @@ type Props = {
   terms: TerminologyMap;
   billId: string;
   cardsWithVersions: CardWithVersions[];
+  /** Anchor of the Bill edit section on the same page. */
+  editAnchor?: string;
 };
 
-export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
+function num(raw: string): number | null {
+  const text = raw.trim().replace(",", ".");
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+export function RateBillForm({ terms, billId, cardsWithVersions, editAnchor = "bill-edit" }: Props) {
   const router = useRouter();
   const cardsWithPublished = cardsWithVersions.filter((c) =>
     c.versions.some((v) => isPublishedVersion(v.status))
@@ -32,9 +43,20 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [cardId, setCardId] = useState(
-    cardsWithPublished[0]?.card.id ?? ""
-  );
+  const [cardId, setCardId] = useState(cardsWithPublished[0]?.card.id ?? "");
+  const [versionId, setVersionId] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [commodityCode, setCommodityCode] = useState("");
+  const [destinationCode, setDestinationCode] = useState("");
+  const [weight, setWeight] = useState("");
+  const [serviceTypeCode, setServiceTypeCode] = useState("");
+  const [partyTypeCode, setPartyTypeCode] = useState("");
+  const [routeCode, setRouteCode] = useState("");
+  const [baseAmount, setBaseAmount] = useState("");
+  const [readiness, setReadiness] = useState<RatingReadiness | null>(null);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const expected = term(terms, "EXPECTED", "Dự kiến");
   const costLabel = term(terms, "COST", "Chi phí");
@@ -45,6 +67,67 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
     return entry.versions.filter((v) => isPublishedVersion(v.status));
   }, [cardId, cardsWithPublished]);
 
+  const selectedCard =
+    cardsWithPublished.find((c) => c.card.id === cardId) ?? cardsWithPublished[0];
+  const effectiveVersionId = versionId || publishedVersions[0]?.id || "";
+  const mode = selectedCard?.card.transportMode?.toLowerCase();
+
+  const body = useMemo(() => {
+    const q = num(quantity);
+    const w = num(weight);
+    return {
+      billId,
+      rateVersionId: effectiveVersionId,
+      quantity: q === null || Number.isNaN(q) ? null : q,
+      weight: w === null || Number.isNaN(w) ? null : w,
+      commodityCode: commodityCode || null,
+      destinationCode: destinationCode || null,
+      serviceTypeCode: serviceTypeCode.trim() || null,
+      partyTypeCode: partyTypeCode.trim() || null,
+      routeCode: routeCode.trim() || null,
+      chargeableOverrideReason: overrideReason.trim() || null,
+    };
+  }, [billId, effectiveVersionId, quantity, weight, commodityCode, destinationCode, serviceTypeCode, partyTypeCode, routeCode, overrideReason]);
+
+  useEffect(() => {
+    if (!body.rateVersionId) {
+      setReadiness(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setChecking(true);
+      setReadinessError(null);
+      try {
+        const res = await fetch("/bff/ratings/readiness", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+        const payload = (await res.json().catch(() => ({}))) as RatingReadiness & ApiError;
+        if (cancelled) return;
+        if (!res.ok) {
+          setReadiness(null);
+          setReadinessError(payload.message ?? "Không kiểm tra được dữ liệu tính giá.");
+          return;
+        }
+        setReadiness(payload);
+      } catch {
+        if (!cancelled) setReadinessError("Không kết nối được máy chủ. Thử lại sau.");
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [body]);
+
   if (cardsWithPublished.length === 0) {
     return (
       <div className="empty-state" role="status">
@@ -54,97 +137,58 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
     );
   }
 
-  const selectedCard =
-    cardsWithPublished.find((c) => c.card.id === cardId) ??
-    cardsWithPublished[0];
-
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    setSubmitting(true);
 
-    const fd = new FormData(e.currentTarget);
-    const qtyRaw = String(fd.get("quantity") ?? "1").trim();
-    const quantity = Number(qtyRaw.replace(",", "."));
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setError("Số lượng phải > 0.");
-      setSubmitting(false);
+    const q = num(quantity);
+    if (q !== null && (Number.isNaN(q) || q <= 0)) {
+      setError("Khối tính cước ghi đè phải > 0.");
       return;
     }
-
-    const baseRaw = String(fd.get("baseAmount") ?? "").trim();
-    const baseAmount = baseRaw
-      ? Number(baseRaw.replace(",", "."))
-      : null;
-    if (baseRaw && (baseAmount === null || !Number.isFinite(baseAmount))) {
-      setError("Số cơ sở không hợp lệ.");
-      setSubmitting(false);
-      return;
-    }
-
-    const weightRaw = String(fd.get("weight") ?? "").trim();
-    const weight = weightRaw ? Number(weightRaw.replace(",", ".")) : null;
-    if (weightRaw && (weight === null || !Number.isFinite(weight) || weight <= 0)) {
+    const w = num(weight);
+    if (w !== null && (Number.isNaN(w) || w <= 0)) {
       setError("Trọng lượng thực phải > 0.");
-      setSubmitting(false);
       return;
     }
-
-    const body = {
-      billId,
-      rateVersionId: String(fd.get("rateVersionId") ?? "").trim(),
-      quantity,
-      weight,
-      commodityCode: String(fd.get("commodityCode") ?? "").trim() || null,
-      destinationCode: String(fd.get("destinationCode") ?? "").trim() || null,
-      transportMode: selectedCard?.card.transportMode ?? null,
-      serviceTypeCode: String(fd.get("serviceTypeCode") ?? "").trim() || null,
-      partyTypeCode: String(fd.get("partyTypeCode") ?? "").trim() || null,
-      routeCode: String(fd.get("routeCode") ?? "").trim() || null,
-      baseAmount,
-      supersedesRatingId: null,
-      seedExpectedCosts: fd.get("seedExpectedCosts") === "on",
-    };
-
     if (!body.rateVersionId) {
       setError("Chọn phiên bản đã phát hành.");
-      setSubmitting(false);
       return;
     }
 
+    const base = num(baseAmount);
+    if (base !== null && Number.isNaN(base)) {
+      setError("Số cơ sở không hợp lệ.");
+      return;
+    }
+
+    const fd = new FormData(e.currentTarget);
+    const seedExpectedCosts = fd.get("seedExpectedCosts") === "on";
+    setSubmitting(true);
     try {
       const res = await fetch("/bff/ratings", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ ...body, baseAmount: base, supersedesRatingId: null, seedExpectedCosts }),
       });
-
       if (res.status === 401) {
         window.location.href = "/login";
         return;
       }
-
       if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as {
-          message?: string;
-        };
+        const payload = (await res.json().catch(() => ({}))) as ApiError;
+        if (payload.code === "rating_not_ready" && payload.missing && readiness) {
+          setReadiness({ ...readiness, ready: false, missing: payload.missing });
+        }
         setError(
           payload.message ||
-            (res.status === 403
-              ? "Bạn không có quyền tính giá."
-              : res.status === 409
-                ? "Không tính giá được (phiên bản chưa phát hành hoặc không khớp)."
-                : "Tính giá thất bại.")
+            (res.status === 403 ? "Bạn không có quyền tính giá." : "Tính giá thất bại.")
         );
         return;
       }
-
       setSuccess(
-        body.seedExpectedCosts
+        seedExpectedCosts
           ? `Đã tính giá và seed ${costLabel.toLowerCase()} ${expected.toLowerCase()}.`
           : "Đã tính giá. Có thể seed chi phí Dự kiến từ lịch sử bên dưới."
       );
@@ -157,15 +201,15 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
   }
 
   const busy = submitting || isPending;
+  const blocked = readiness !== null && !readiness.ready;
+  const hasQuantity = quantity.trim() !== "";
 
   return (
     <form className="receive-form" onSubmit={onSubmit} noValidate>
       <p className="note">
-        Tính giá theo phiên bản đã phát hành. Air nhập kg, Sea nhập CBM.
-        Loại hàng chọn đúng cột bảng giá. Sabah/Sarawak cộng 85.000 đ/kg khi
-        điểm đến là SBH hoặc SWK; bảng Sea cần thêm trọng lượng thực và tỷ giá
-        VND/USD. Tick seed để tạo {costLabel.toLowerCase()} lớp{" "}
-        {expected} (idempotent theo dòng rating).
+        Dữ liệu tính giá lấy từ Bill (phương thức, tuyến, loại hàng, trọng lượng, thể tích, Trọng lượng tính cước).
+        Thiếu gì hệ thống sẽ liệt kê bên dưới — bổ sung trên Bill rồi tính giá. Chỉ nhập các ô bên dưới khi cần
+        khác với Bill.
       </p>
 
       {error ? (
@@ -185,7 +229,11 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
           <select
             id="rateCardId"
             value={selectedCard?.card.id ?? ""}
-            onChange={(ev) => setCardId(ev.target.value)}
+            onChange={(ev) => {
+              setCardId(ev.target.value);
+              setVersionId("");
+              setCommodityCode("");
+            }}
           >
             {cardsWithPublished.map(({ card }) => (
               <option key={card.id} value={card.id}>
@@ -198,10 +246,8 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
           <label htmlFor="rateVersionId">Phiên bản đã phát hành</label>
           <select
             id="rateVersionId"
-            name="rateVersionId"
-            required
-            defaultValue={publishedVersions[0]?.id ?? ""}
-            key={cardId}
+            value={effectiveVersionId}
+            onChange={(ev) => setVersionId(ev.target.value)}
           >
             {publishedVersions.length === 0 ? (
               <option value="">— Không có —</option>
@@ -216,30 +262,11 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="quantity">
-            {selectedCard?.card.transportMode?.toLowerCase() === "sea"
-              ? "Khối tính cước (CBM)"
-              : "Khối tính cước (kg)"}
-          </label>
-          <input
-            id="quantity"
-            name="quantity"
-            defaultValue="1"
-            inputMode="decimal"
-            required
-          />
-        </div>
-        <div className="field">
           <label htmlFor="commodityCode">Loại hàng</label>
-          <select
-            id="commodityCode"
-            name="commodityCode"
-            defaultValue="GENERAL"
-            key={`${cardId}-commodity`}
-          >
+          <select id="commodityCode" value={commodityCode} onChange={(ev) => setCommodityCode(ev.target.value)}>
+            <option value="">Theo Bill</option>
             {tariffCommodityOptions
               .filter((opt) => {
-                const mode = selectedCard?.card.transportMode?.toLowerCase();
                 if (mode !== "air" && mode !== "sea") return true;
                 return (opt.modes as readonly string[]).includes(mode);
               })
@@ -252,45 +279,74 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
         </div>
         <div className="field">
           <label htmlFor="destinationCode">Điểm đến (phụ phí vùng)</label>
-          <select id="destinationCode" name="destinationCode" defaultValue="">
-            <option value="">Không áp Sabah/Sarawak</option>
+          <select id="destinationCode" value={destinationCode} onChange={(ev) => setDestinationCode(ev.target.value)}>
+            <option value="">Theo Bill</option>
             <option value="SBH">Sabah (SBH)</option>
             <option value="SWK">Sarawak (SWK)</option>
           </select>
         </div>
-        <div className="field">
-          <label htmlFor="weight">Trọng lượng thực (kg)</label>
-          <input
-            id="weight"
-            name="weight"
-            inputMode="decimal"
-            placeholder="Bắt buộc nếu Sea + SBH/SWK"
-          />
+      </div>
+
+      <details className="stack">
+        <summary className="muted">Ghi đè khi tính giá (tuỳ chọn)</summary>
+        <div className="form-grid">
+          <div className="field">
+            <label htmlFor="quantity">{mode === "sea" ? "Khối tính cước ghi đè (W/M)" : "Trọng lượng tính cước ghi đè (kg)"}</label>
+            <input
+              id="quantity"
+              inputMode="decimal"
+              placeholder="Theo Bill"
+              value={quantity}
+              onChange={(ev) => setQuantity(ev.target.value)}
+            />
+          </div>
+          {hasQuantity ? (
+            <div className="field">
+              <label htmlFor="chargeableOverrideReason">Lý do ghi đè</label>
+              <input
+                id="chargeableOverrideReason"
+                value={overrideReason}
+                maxLength={500}
+                placeholder="Bắt buộc khi Bill đã có Trọng lượng tính cước"
+                onChange={(ev) => setOverrideReason(ev.target.value)}
+              />
+            </div>
+          ) : null}
+          <div className="field">
+            <label htmlFor="weight">Trọng lượng thực (kg)</label>
+            <input id="weight" inputMode="decimal" placeholder="Theo Bill" value={weight} onChange={(ev) => setWeight(ev.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="serviceTypeCode">Loại dịch vụ</label>
+            <input id="serviceTypeCode" placeholder="Theo Bill" value={serviceTypeCode} onChange={(ev) => setServiceTypeCode(ev.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="partyTypeCode">Mã loại đối tác</label>
+            <input id="partyTypeCode" placeholder="Theo bảng giá" value={partyTypeCode} onChange={(ev) => setPartyTypeCode(ev.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="routeCode">Mã tuyến</label>
+            <input id="routeCode" placeholder="Theo Bill" value={routeCode} onChange={(ev) => setRouteCode(ev.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="baseAmount">Số cơ sở (cho % — tuỳ chọn)</label>
+            <input id="baseAmount" inputMode="decimal" value={baseAmount} onChange={(ev) => setBaseAmount(ev.target.value)} />
+          </div>
         </div>
-        <div className="field">
-          <label htmlFor="baseAmount">Số cơ sở (cho % — tuỳ chọn)</label>
-          <input id="baseAmount" name="baseAmount" inputMode="decimal" />
-        </div>
-        <div className="field">
-          <label htmlFor="serviceTypeCode">Loại dịch vụ (lọc)</label>
-          <input id="serviceTypeCode" name="serviceTypeCode" />
-        </div>
-        <div className="field">
-          <label htmlFor="partyTypeCode">Mã loại đối tác (lọc)</label>
-          <input id="partyTypeCode" name="partyTypeCode" />
-        </div>
-        <div className="field">
-          <label htmlFor="routeCode">Mã tuyến (lọc)</label>
-          <input id="routeCode" name="routeCode" />
-        </div>
+      </details>
+
+      <RatingReadinessBox
+        readiness={readiness}
+        error={readinessError}
+        checking={checking}
+        editAnchor={editAnchor}
+      />
+
+      <div className="form-grid">
         <div className="field field-span">
           <label className="checkbox-label">
-            <input
-              type="checkbox"
-              name="seedExpectedCosts"
-              defaultChecked
-            />{" "}
-            Seed {costLabel.toLowerCase()} {expected.toLowerCase()} ngay
+            <input type="checkbox" name="seedExpectedCosts" defaultChecked /> Seed{" "}
+            {costLabel.toLowerCase()} {expected.toLowerCase()} ngay
           </label>
         </div>
       </div>
@@ -299,7 +355,8 @@ export function RateBillForm({ terms, billId, cardsWithVersions }: Props) {
         <button
           className="btn"
           type="submit"
-          disabled={busy || publishedVersions.length === 0}
+          disabled={busy || publishedVersions.length === 0 || blocked}
+          title={blocked ? "Bổ sung dữ liệu còn thiếu trước khi tính giá." : undefined}
         >
           {busy ? "Đang tính…" : "Tính giá"}
         </button>

@@ -31,6 +31,7 @@ public interface ILcmsDbContext
     DbSet<CargoPackage> CargoPackages { get; }
     DbSet<CargoContainer> CargoContainers { get; }
     DbSet<FieldOwnership> FieldOwnerships { get; }
+    DbSet<OperationalFieldOverride> OperationalFieldOverrides { get; }
     DbSet<Cost> Costs { get; }
     DbSet<CostAdjustment> CostAdjustments { get; }
     DbSet<CostAllocation> CostAllocations { get; }

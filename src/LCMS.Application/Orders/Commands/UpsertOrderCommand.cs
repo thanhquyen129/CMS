@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences;
+using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Application.ReferenceMasters;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -196,6 +197,7 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
             await _cargo.ApplyAsync(OperationalObjectTypes.Order, existing.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
         }
 
+        await OperationalOverrideGuard.ReapplyEntityOverridesAsync(_db, OperationalObjectTypes.Order, existing.Id, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
     }

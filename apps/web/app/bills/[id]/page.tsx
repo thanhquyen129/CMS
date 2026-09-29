@@ -8,6 +8,7 @@ import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
+import { OperationalReferenceEditor } from "@/components/OperationalReferenceEditor";
 import { PartySnapshotPanel } from "@/components/PartySnapshotPanel";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
@@ -366,6 +367,13 @@ export default async function BillDetailPage({
 
             <h2 className="section-title">Ngữ cảnh vận hành</h2>
             <OperationalContextGrid row={bill} />
+            <div id="bill-edit">
+              <OperationalReferenceEditor
+                objectType="bill"
+                objectId={bill.id}
+                ratingHref={`${tabHref("rating")}#bill-rating`}
+              />
+            </div>
             <FieldOwnershipPanel objectType="bill" objectId={bill.id} />
             <h2 className="section-title">Snapshot đối tác</h2>
             <PartySnapshotPanel billId={bill.id} />
@@ -562,7 +570,14 @@ export default async function BillDetailPage({
           />
         ) : null}
 
-        {tab === "rating" ? <BillRatingPanel terms={terms} billId={id} /> : null}
+        {tab === "rating" ? (
+          <>
+            <div id="bill-edit">
+              <OperationalReferenceEditor objectType="bill" objectId={id} ratingHref="#bill-rating" />
+            </div>
+            <BillRatingPanel terms={terms} billId={id} />
+          </>
+        ) : null}
 
         {tab === "history" ? (
           <BillFinancialHistoryPanel billId={id} />

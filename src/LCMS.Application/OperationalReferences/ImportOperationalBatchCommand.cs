@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -223,6 +224,7 @@ public sealed class OperationalImportBatch
             }
 
             var id = await UpsertParentAsync(type, source, tenantId, row, shipments, cancellationToken);
+            await OperationalOverrideGuard.ReapplyEntityOverridesAsync(_db, type, id, cancellationToken);
             await WriteMeasuresAsync(type, id, tenantId, source, row, cancellationToken);
         }
 
@@ -264,6 +266,7 @@ public sealed class OperationalImportBatch
             leg.OriginCode = Trim(row.OriginCode) ?? leg.OriginCode;
             leg.DestinationCode = Trim(row.DestinationCode) ?? leg.DestinationCode;
             leg.SequenceNo = row.SequenceNo ?? leg.SequenceNo;
+            await OperationalOverrideGuard.ReapplyEntityOverridesAsync(_db, OperationalObjectTypes.Leg, leg.Id, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
@@ -426,6 +429,11 @@ public sealed class OperationalImportBatch
                 Uom = uom,
                 SourceChannel = "import"
             });
+            return;
+        }
+
+        if (await OperationalOverrideGuard.CaptureSourceAsync(_db, type, objectId, code, value, cancellationToken))
+        {
             return;
         }
 

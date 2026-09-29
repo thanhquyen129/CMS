@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { SPECIAL_FLAGS, type CatalogOption } from "@/lib/create-workspace";
 
 /** Shared cargo measurement block for Order / Bill / Shipment create. */
@@ -12,6 +15,9 @@ export function CreateCargoFields({
   commodities: CatalogOption[];
   descriptionPlaceholder?: string;
 }) {
+  const [cwRaw, setCwRaw] = useState("");
+  const cwValue = Number(cwRaw.trim().replace(",", "."));
+  const cwValid = cwRaw.trim() !== "" && Number.isFinite(cwValue) && cwValue > 0;
   return (
     <div className="create-grid">
       <div className="cw-field">
@@ -28,8 +34,16 @@ export function CreateCargoFields({
       </div>
       <div className="cw-field">
         <label htmlFor="chargeableWeightKg">Trọng lượng tính cước (kg)</label>
-        <input id="chargeableWeightKg" name="chargeableWeightKg" inputMode="decimal" placeholder="0,00" disabled={disabled} />
-        <p className="cw-hint">Có thể được hệ thống tính theo cấu hình nghiệp vụ.</p>
+        <input
+          id="chargeableWeightKg"
+          name="chargeableWeightKg"
+          inputMode="decimal"
+          placeholder="Chưa xác định"
+          disabled={disabled}
+          value={cwRaw}
+          onChange={(ev) => setCwRaw(ev.target.value)}
+        />
+        <p className="cw-hint">Để trống nếu chưa có. Hệ thống tự tính khi có đủ Trọng lượng thực, Thể tích và phương thức.</p>
       </div>
       <div className="cw-field">
         <label htmlFor="containerCount">Số lượng container</label>
@@ -67,13 +81,15 @@ export function CreateCargoFields({
       ) : null}
       <div className="cw-field s6">
         <label className="create-checks">
-          <input type="checkbox" name="chargeableConfirmed" value="true" disabled={disabled} />
+          <input
+            type="checkbox"
+            name="chargeableConfirmed"
+            value="true"
+            disabled={disabled || !cwValid}
+            title={cwValid ? undefined : "Nhập Trọng lượng tính cước hợp lệ trước khi xác nhận."}
+          />
           Đã xác nhận trọng lượng tính cước
         </label>
-      </div>
-      <div className="cw-field s6">
-        <label htmlFor="chargeableOverrideReason">Lý do ghi đè</label>
-        <input id="chargeableOverrideReason" name="chargeableOverrideReason" disabled={disabled} placeholder="Bắt buộc khi sửa số đã xác nhận hoặc trường thuộc hệ thống nguồn" />
       </div>
     </div>
   );

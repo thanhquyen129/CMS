@@ -52,7 +52,11 @@ public sealed record RatingHistoryItemDto(
     decimal Quantity,
     decimal? Weight,
     string Status,
-    Guid? SupersedesRatingId);
+    Guid? SupersedesRatingId,
+    decimal? ChargeableWeightKg = null,
+    string? ChargeableBasis = null,
+    DateTimeOffset? StaleAt = null,
+    string? StaleReason = null);
 
 public sealed record GetRatingByIdQuery(Guid Id) : IRequest<RatingDto>;
 
@@ -170,7 +174,11 @@ public sealed class ListRatingsByBillQueryHandler
                 r.Quantity,
                 r.Weight,
                 r.Status,
-                r.SupersedesRatingId))
+                r.SupersedesRatingId,
+                r.ChargeableWeightKg,
+                r.ChargeableBasis,
+                r.StaleAt,
+                r.StaleReason))
             .ToListAsync(cancellationToken);
 
         // Client-side order: SQLite cannot ORDER BY DateTimeOffset (tests); Postgres OK either way.

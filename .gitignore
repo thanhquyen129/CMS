@@ -12,6 +12,8 @@ bin/
 obj/
 node_modules/
 .next/
+.expo/
+*.tsbuildinfo
 dist/
 out/
 *.user
@@ -28,7 +30,5 @@ agent-tools/
 ~$*
 *.tmp
 
-
 # Local scratch / articles
 infra/note.txt
-

@@ -1,5 +1,12 @@
 # Handoff
 
+## 2026-09-30 — Mobile app, Contabo disk attachments & push devices
+
+- `GET /api/mobile/bootstrap`: role-adaptive persona, permissions, SoD (`canViewCost`/`canViewRevenue`/`canViewMargin`), bottom tabs, modules, badges, terminology (`GetMobileBootstrapQuery.cs`, `MobileAndAttachmentEndpoints.cs`).
+- `POST/GET/DELETE /api/attachments` & `GET /api/attachments/{id}/content`: store attachments on `/opt/cms/attachments/{tenantId}/{yyyy}/{MM}/` with SHA-256, tenant isolation, Cost≠Revenue SoD, audited soft-delete (`DocumentAttachment.cs`, `AttachmentCommandsAndQueries.cs`, `infra/docker-compose.host.yml`).
+- `POST/DELETE/GET /api/notifications/devices`: push device registration + outbox event `notification.push` (`UserPushDevice.cs`, `PushDeviceCommandsAndQueries.cs`, `NotificationPublisher.cs`, migration `20260930043000_MobilePushDevicesAndAttachments.cs`).
+- `packages/shared` & `apps/mobile`: Expo Router mobile client (SecureStore JWT refresh, biometric confirmation + `BalanceImpactCard`, `expo-sqlite` offline outbox with `Idempotency-Key`/`If-Match`, QR/barcode Bill scanner + CW confirm + Contabo photo upload).
+
 ## 2026-09-29 — Reporting currency & FX snapshot
 
 - Tiền tệ báo cáo = `Tenant.DefaultCurrencyCode` (khóa khi đã có snapshot). ADR-0040.

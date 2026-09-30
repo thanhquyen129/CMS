@@ -2135,3 +2135,49 @@ internal sealed class PolicyConfiguration : IEntityTypeConfiguration<Policy>
         builder.HasIndex(e => new { e.TenantId, e.PolicyKey, e.Status, e.EffectiveFrom });
     }
 }
+
+internal sealed class UserPushDeviceConfiguration : IEntityTypeConfiguration<UserPushDevice>
+{
+    public void Configure(EntityTypeBuilder<UserPushDevice> builder)
+    {
+        builder.ToTable("user_push_devices");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.UserId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.DeviceToken).HasMaxLength(512).IsRequired();
+        builder.Property(e => e.Platform).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.DeviceName).HasMaxLength(128);
+        builder.Property(e => e.AppVersion).HasMaxLength(32);
+        builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.LastSeenAt).IsRequired();
+
+        builder.HasIndex(e => new { e.TenantId, e.UserId, e.DeviceToken })
+            .IsUnique()
+            .HasFilter("deleted_at IS NULL");
+        builder.HasIndex(e => new { e.TenantId, e.UserId, e.IsActive });
+    }
+}
+
+internal sealed class DocumentAttachmentConfiguration : IEntityTypeConfiguration<DocumentAttachment>
+{
+    public void Configure(EntityTypeBuilder<DocumentAttachment> builder)
+    {
+        builder.ToTable("document_attachments");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ObjectType).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.ObjectId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.FileName).HasMaxLength(256).IsRequired();
+        builder.Property(e => e.ContentType).HasMaxLength(128).IsRequired();
+        builder.Property(e => e.SizeBytes).IsRequired();
+        builder.Property(e => e.Sha256Hash).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.StorageRelativePath).HasMaxLength(512).IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(1024);
+        builder.Property(e => e.UploadedBy).HasColumnType("uuid");
+        builder.Property(e => e.UploadedAt).IsRequired();
+        builder.Property(e => e.DeleteReason).HasMaxLength(512);
+
+        builder.HasIndex(e => new { e.TenantId, e.ObjectType, e.ObjectId, e.UploadedAt });
+        builder.HasIndex(e => new { e.TenantId, e.Sha256Hash });
+    }
+}

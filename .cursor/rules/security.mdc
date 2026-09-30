@@ -3,62 +3,39 @@ description: "Security standards: authn/z, secrets, OWASP, TLS, headers, abuse c
 alwaysApply: false
 ---
 
-# Security Standards / Chuẩn Security
+# Security Standards
 
-## Defaults / Mặc định
+## Defaults
 - Deny-by-default authorization; least privilege; short-lived credentials.
-- Authz deny-by-default; least privilege; credential ngắn hạn.
 - Never commit secrets. Env / secret manager only; rotate on exposure.
-- Không commit secret. Chỉ env / secret manager; rotate khi lộ.
 - For non-trivial features: quick threat sketch (assets, actors, entry points, abuse cases) before build.
-- Với tính năng không tầm thường: phác threat nhanh (tài sản, actor, điểm vào, abuse) trước khi làm.
 - Dependency risk → `supply-chain-deps.mdc`. Money/time correctness → `time-money-locale.mdc`.
-- Rủi ro dependency → `supply-chain-deps.mdc`. Đúng đắn tiền/giờ → `time-money-locale.mdc`.
 
 ## AuthN / AuthZ
 - Prefer OIDC/OAuth2. Passwords: modern KDF only (e.g. ASP.NET Identity defaults / Argon2/bcrypt).
-- Ưu tiên OIDC/OAuth2. Mật khẩu: chỉ KDF hiện đại (Identity defaults / Argon2/bcrypt).
 - Enforce authz on **every** sensitive server operation — never trust client roles alone.
-- Enforce authz **mọi** thao tác nhạy cảm phía server — không tin role từ client.
 - Sessions: HttpOnly + Secure cookies; CSRF when cookie-based; MFA for admin/privileged.
-- Session: cookie HttpOnly + Secure; CSRF nếu cookie auth; MFA cho admin/đặc quyền.
 
-## HTTP & API hardening / Siết HTTP & API
+## HTTP & API hardening
 - HTTPS only in staging/prod; redirect HTTP→HTTPS; HSTS when stable.
-- Staging/prod chỉ HTTPS; redirect HTTP→HTTPS; HSTS khi ổn định.
 - Validate and encode untrusted input. Parameterized SQL only. Guard XSS, SSRF, path traversal.
-- Validate/encode input không tin cậy. Chỉ SQL parameterize. Chặn XSS, SSRF, path traversal.
 - Security headers: CSP (as applicable), X-Content-Type-Options, Frame protections, Referrer-Policy.
-- Security header: CSP (khi phù hợp), X-Content-Type-Options, chống frame, Referrer-Policy.
 - Rate-limit auth, write, and expensive endpoints; WAF/bot defenses at the edge under flood.
-- Rate-limit auth, ghi, endpoint đắt; WAF/bot ở edge khi flood.
 - CORS allowlists for browsers; validate Host/forwarded headers behind proxies.
-- CORS allowlist cho browser; validate Host/forwarded header sau proxy.
 
-## Data & privacy / Dữ liệu & riêng tư
+## Data & privacy
 - TLS in transit; encrypt sensitive data at rest. Minimize PII; classify data.
-- TLS lúc truyền; mã hóa dữ liệu nhạy cảm lúc nghỉ. Thu hẹp PII; phân loại dữ liệu.
 - No secrets/PII in logs. Support account export/delete early when required.
-- Không secret/PII trong log. Hỗ trợ xuất/xóa tài khoản sớm khi bắt buộc.
 - Audit privileged and money-moving actions.
-- Audit hành động đặc quyền và liên quan tiền.
 
 ## Self-host / VPS (CMS Contabo)
 - Treat “app runs” as incomplete until the public attack surface is reviewed. See `08-vps-selfhost-hardening.mdc`.
-- Coi “app chạy” là chưa xong nếu chưa review bề mặt public. Xem `08-vps-selfhost-hardening.mdc`.
 - Never expose unauthenticated services (DB, Redis, Ollama, internal admin, raw app ports) to the internet.
-- Không expose service không auth (DB, Redis, Ollama, admin nội bộ, port app thô) ra internet.
 - AuthZ at the app is necessary but not sufficient — edge rate-limit + closed ports stop most automated bots first.
-- AuthZ ở app là bắt buộc nhưng chưa đủ — rate-limit mép + đóng port chặn phần lớn bot tự động trước.
 - Middleware/edge auth frameworks (e.g. Next.js middleware) can have bypass CVEs; pin patched versions and block known bypass headers at the proxy.
-- Framework auth ở middleware/edge có thể có CVE bypass; pin bản đã vá và chặn header bypass đã biết ở proxy.
 
-## Periodic security audit / Audit bảo mật định kỳ
+## Periodic security audit
 - Schedule recurring reviews — default **quarterly** for products with users/money (adjust by risk).
-- Lịch review định kỳ — mặc định **hàng quý** với sản phẩm có user/tiền (chỉnh theo rủi ro).
 - Each cycle covers at least: access & privilege review, secret/key rotation check, dependency CVEs, auth/session config, published ports vs allowlist, container resource limits, backup restore spot-check, top OWASP risks on changed surfaces.
-- Mỗi chu kỳ tối thiểu: review quyền, rotate secret/key, CVE dependency, auth/session, port public vs allowlist, limit tài nguyên container, spot-check restore backup, rủi ro OWASP trên bề mặt đã đổi.
 - Record findings, owners, and due dates; verify remediations. Annual (or pre-major-launch) deeper review / pentest when warranted.
-- Ghi finding, owner, hạn xử lý; verify remediation. Hàng năm (hoặc trước launch lớn) review/pentest sâu hơn khi cần.
 - Continuous: CI dependency scan + secret scanning on every merge (`supply-chain-deps.mdc`, `delivery-ops.mdc`).
-- Liên tục: quét dependency + secret trên mọi merge (`supply-chain-deps.mdc`, `delivery-ops.mdc`).

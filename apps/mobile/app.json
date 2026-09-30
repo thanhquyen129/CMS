@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "LCMS Mobile",
+    "slug": "lcms-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "lcms",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "vn.lcms.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Ứng dụng cần quyền Camera để quét mã vận đơn (HAWB/MAWB) và chụp ảnh chứng từ tại hiện trường.",
+        "NSFaceIDUsageDescription": "Ứng dụng sử dụng Face ID để xác thực bảo mật trước khi phê duyệt hoặc thực hiện thao tác tài chính."
+      }
+    },
+    "android": {
+      "package": "vn.lcms.mobile",
+      "permissions": [
+        "CAMERA",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép LCMS truy cập Camera để quét mã vận đơn và chụp chứng từ."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Cho phép LCMS sử dụng Face ID / Sinh trắc học để xác nhận thao tác tài chính."
+        }
+      ]
+    ]
+  }
+}
+

@@ -108,6 +108,10 @@ public static class AuditActions
     public const string LinkCreate = "link.create";
     public const string LinkRemove = "link.remove";
     public const string ReportExport = "report.export";
+    public const string AttachmentUpload = "attachment.upload";
+    public const string AttachmentDelete = "attachment.delete";
+    public const string PushDeviceRegister = "push_device.register";
+    public const string PushDeviceUnregister = "push_device.unregister";
 }
 
 public static class AuditObjectTypes
@@ -145,4 +149,6 @@ public static class AuditObjectTypes
     public const string Notification = "notification";
     public const string Backup = "backup";
     public const string Report = "report";
+    public const string Attachment = "attachment";
+    public const string PushDevice = "push_device";
 }

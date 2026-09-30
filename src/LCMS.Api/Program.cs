@@ -2,6 +2,7 @@ using LCMS.Api.Auth;
 using LCMS.Api.Endpoints;
 using LCMS.Api.Middleware;
 using LCMS.Application;
+using LCMS.Application.Attachments;
 using LCMS.Application.Currencies;
 using LCMS.Application.Demo;
 using LCMS.Application.Identity;
@@ -37,6 +38,8 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.Configure<RateLimitingOptions>(
         builder.Configuration.GetSection(RateLimitingOptions.SectionName));
+    builder.Services.Configure<AttachmentStorageOptions>(
+        builder.Configuration.GetSection(AttachmentStorageOptions.SectionName));
 
     // P23: optional Redis for distributed rate limit.
     var redisCs = builder.Configuration["RateLimiting:RedisConnection"]
@@ -156,6 +159,7 @@ try
     app.MapDashboardReportingEndpoints();
     app.MapAuditIntegrationEndpoints();
     app.MapTerminologyEndpoints();
+    app.MapMobileAndAttachmentEndpoints();
 
     app.Run();
 }

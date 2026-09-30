@@ -108,6 +108,8 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<Policy> Policies => Set<Policy>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UserPushDevice> UserPushDevices => Set<UserPushDevice>();
+    public DbSet<DocumentAttachment> DocumentAttachments => Set<DocumentAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

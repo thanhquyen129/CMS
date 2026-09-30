@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CMS | Kiến trúc module và tiến độ triển khai</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #162c2b;
+      --muted: #506765;
+      --paper: #f4f5ef;
+      --surface: #fffefa;
+      --line: #d5dfd8;
+      --green: #17675a;
+      --green-soft: #e1f1e9;
+      --amber: #9b571c;
+      --amber-soft: #fff0dc;
+      --red: #943d34;
+      --red-soft: #fae8e2;
+      --blue: #315e78;
+      --blue-soft: #e7f0f4;
+      --serif: "Segoe UI", system-ui, Arial, sans-serif;
+      --sans: "Segoe UI", system-ui, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font: 15px/1.62 var(--sans);
+      font-synthesis: none;
+      letter-spacing: 0;
+      background:
+        linear-gradient(110deg, rgba(23,103,90,.045), transparent 42%),
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(22,44,43,.018) 31px 32px),
+        var(--paper);
+    }
+    a { color: var(--green); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: #0b473f; }
+    .masthead { border-bottom: 1px solid var(--line); background: rgba(255,254,250,.8); }
+    .masthead-inner, main, footer { width: min(1180px, calc(100% - 44px)); margin-inline: auto; }
+    .masthead-inner { display: flex; justify-content: space-between; gap: 24px; padding: 18px 0; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+    main { padding: 42px 0 72px; }
+    .eyebrow { color: var(--green); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    h1, h2, h3 { margin: 0; line-height: 1.2; }
+    h1 { max-width: 900px; margin-top: 12px; font: 650 clamp(36px, 5vw, 58px)/1.12 var(--sans); letter-spacing: 0; }
+    h2 { margin: 48px 0 14px; font: 650 30px/1.25 var(--sans); letter-spacing: 0; }
+    h3 { font-size: 18px; font-weight: 650; letter-spacing: 0; }
+    p { margin: 10px 0; }
+    .dek { max-width: 800px; margin-top: 18px; color: var(--muted); font-size: 18px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 24px; color: var(--muted); font-size: 13px; }
+    .verdict { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start; margin-top: 34px; padding: 24px 26px; border-left: 5px solid var(--green); background: var(--surface); box-shadow: 0 8px 24px rgba(22,44,43,.045); }
+    .verdict strong { display: block; margin-bottom: 7px; font: 650 22px/1.35 var(--sans); }
+    .badge { display: inline-block; white-space: nowrap; border: 1px solid var(--line); border-radius: 4px; padding: 4px 9px; color: var(--green); background: var(--green-soft); font-size: 12px; font-weight: 700; }
+    .badge.partial { color: var(--amber); background: var(--amber-soft); }
+    .badge.open { color: var(--red); background: var(--red-soft); }
+    .badge.deferred { color: var(--blue); background: var(--blue-soft); }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .metric { min-height: 118px; padding: 17px; border-top: 3px solid var(--green); background: var(--surface); }
+    .metric:nth-child(2) { border-color: #3f7e6a; }
+    .metric:nth-child(3) { border-color: #c27a2a; }
+    .metric:nth-child(4) { border-color: #a84f42; }
+    .metric b { display: block; font: 650 28px/1.2 var(--sans); }
+    .metric span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .note { margin: 16px 0; padding: 14px 17px; border: 1px solid var(--line); background: rgba(255,254,250,.72); color: var(--muted); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: #35504e; background: #eaf0e9; font-size: 11px; text-transform: uppercase; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td:first-child { font-weight: 700; white-space: nowrap; }
+    .module-table td:nth-child(2) { min-width: 185px; }
+    .module-table td:nth-child(3) { min-width: 280px; }
+    .module-table td:nth-child(4) { min-width: 210px; }
+    .flow-list { display: grid; gap: 10px; counter-reset: flow; }
+    .flow { position: relative; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 14px; padding: 17px; border: 1px solid var(--line); background: var(--surface); }
+    .flow::before { counter-increment: flow; content: counter(flow, decimal-leading-zero); color: var(--green); font: 650 18px var(--sans); }
+    .flow p { margin: 6px 0 0; color: var(--muted); }
+    code { font: 12px/1.5 Consolas, "Courier New", monospace; overflow-wrap: anywhere; }
+    .flow code { color: #274b48; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .panel { padding: 20px; border: 1px solid var(--line); background: var(--surface); }
+    .panel ul { margin: 12px 0 0; padding-left: 19px; }
+    .panel li { margin: 8px 0; }
+    .sources { columns: 2; column-gap: 34px; padding-left: 18px; }
+    .sources li { break-inside: avoid; margin: 0 0 9px; }
+    footer { padding: 18px 0 32px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    @media (max-width: 760px) {
+      .masthead-inner, main, footer { width: min(100% - 28px, 1180px); }
+      main { padding-top: 30px; }
+      .masthead-inner { flex-direction: column; gap: 3px; }
+      .verdict { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cols { grid-template-columns: 1fr; }
+      .sources { columns: 1; }
+      h2 { margin-top: 38px; }
+    }
+    @media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+    @media print {
+      body { background: white; }
+      .masthead, .metric, .panel, .flow, .verdict { break-inside: avoid; box-shadow: none; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner"><span>CMS / LCMS · Product &amp; Engineering</span><span>Architecture review · 30.09.2026</span></div>
+  </header>
+  <main class="container-xxl">
+    <div class="eyebrow">Báo cáo kiến trúc và trạng thái triển khai</div>
+    <h1>Từ Bill đến chốt tài chính</h1>
+    <p class="dek">Bản đồ 15 module TD3, diễn giải luồng service lõi và đối chiếu tiến độ với checklist, UAT, handoff và ghi chú PO mới nhất có trong workspace.</p>
+    <div class="meta"><span><b>Thời điểm đánh giá:</b> 30/09/2026</span><span><b>Phạm vi:</b> source hiện có + tài liệu tới 29/09</span><span><b>Kiến trúc:</b> modular monolith · ASP.NET Core · PostgreSQL · Next.js</span></div>
+
+    <section class="verdict" aria-label="Kết luận điều hành">
+      <div><strong>Lõi tài chính MVP đã đi qua một vòng Bill → Close và có UAT PASS; sản phẩm chưa đồng nghĩa đã nghiệm thu thương mại/pixel toàn diện.</strong>
+        <p>Checklist go-live ngày 16/09 ghi nhận spine A2–A10 PASS, không còn P0 trên spine. Handoff ngày 29/09 bổ sung nhiều hạng mục sau UAT (FX báo cáo, chỉnh operational reference, rating readiness/rerate). Tuy vậy, xác nhận quyền Cost-only/Revenue-only, nghiệm thu ảnh UI, một số luồng import/UI và vận hành tích hợp vẫn chưa có bằng chứng đóng đồng bộ. Tài liệu trạng thái phải đọc theo ngày; không dùng checklist cũ làm ảnh chụp hiện tại.</p>
+      </div>
+      <span class="badge partial">MVP tài chính: đạt · commercial/UI acceptance: còn mở</span>
+    </section>
+
+    <section class="grid" aria-label="Tóm tắt trạng thái">
+      <div class="metric"><b>15 / 15</b><span>Module có trách nhiệm định nghĩa trong TD3; ranh giới code hiện là quy ước modular monolith.</span></div>
+      <div class="metric"><b>S1–S14</b><span>UAT tổng thể ghi PASS ngày 13/09; S9 tách quyền được SKIP với một tài khoản Admin.</span></div>
+      <div class="metric"><b>29/09</b><span>Handoff gần nhất ghi code/tests cho FX snapshot và edit/rating context; chưa phải UAT production cho mọi phần.</span></div>
+      <div class="metric"><b>UX-01…14</b><span>Chưa có bộ nghiệm thu đầy đủ; chỉ mục pixel 22/09 yêu cầu screenshot/evidence và chữ ký reviewer.</span></div>
+    </section>
+
+    <div class="note"><b>Cách đọc mức độ:</b> “Triển khai” = thấy use case/code; “Đã kiểm chứng” = có test/UAT nêu rõ; “Một phần/Còn mở” = còn thiếu UI, workflow, evidence hoặc vận hành. PASS ở test không tự chứng minh production, và tick checklist lịch sử không chứng minh trạng thái deploy hôm nay.</div>
+
+    <section>
+      <h2>01 · Bản đồ module TD3</h2>
+      <p>TD3 xác định owner theo domain và cấm shared-write xuyên module. Code hiện thực hóa thành các vùng Application/Domain/API thay vì luôn có một thư mục cho mỗi M01–M15; các lớp báo cáo và service dùng chung có thể chạm nhiều domain.</p>
+      <div class="table-wrap table-responsive"><table class="table table-sm align-middle mb-0 module-table">
+        <thead><tr><th>Module</th><th>Trách nhiệm domain</th><th>Code ownership tiêu biểu</th><th>Trạng thái / lưu ý</th></tr></thead>
+        <tbody>
+          <tr><td>M01</td><td>Identity, Tenant &amp; Access: principal, tenant, role/action/data scope.</td><td><a href="../../src/LCMS.Application/Identity/DataScopeFilter.cs">Identity / DataScopeFilter</a>, Tenants, Users, Roles, Organizations; <a href="../../src/LCMS.Infrastructure/Identity/PermissionService.cs">PermissionService</a>.</td><td><span class="badge">Đã triển khai</span><br>Permission và data scope được tách. UAT hai người dùng Cost/Revenue vẫn thiếu.</td></tr>
+          <tr><td>M02</td><td>Master Data: Party, currency, tổ chức, taxonomy và tham chiếu chuẩn.</td><td>BusinessParties, Catalog, Currencies, PartyRoles, ReferenceMasters, Organizations; <a href="../../src/LCMS.Application/BusinessParties/Commands/BusinessPartyCommands.cs">BusinessPartyCommands</a> · <a href="../../src/LCMS.Application/Currencies/Commands/UpsertCurrencyCommand.cs">UpsertCurrencyCommand</a>.</td><td><span class="badge">Đã triển khai</span><br>CRUD/seed hiện hữu; import đối tác bằng file và một số parity chưa hoàn tất.</td></tr>
+          <tr><td>M03</td><td>Operational Reference: Order/Bill/Shipment/Leg/Movement; Bill là neo tài chính.</td><td>Bills, Orders, Shipments, TransportLegs/Movements, OperationalLinks, OperationalReferences; <a href="../../src/LCMS.Application/Bills/Commands/CreateBillCommand.cs">CreateBillCommand</a> · <a href="../../src/LCMS.Application/OperationalReferences/ImportOperationalBatchCommand.cs">OperationalImportBatch</a>.</td><td><span class="badge">Đã triển khai</span><br>Edit, source override, CW/readiness có trong handoff 29/09. TMS (dispatch/GPS/e-POD) ngoài scope.</td></tr>
+          <tr><td>M04</td><td>Rate &amp; Pricing: card/version/rule/component và rating snapshot.</td><td>RateCards, RateVersions, PricingRules, Ratings; <a href="../../src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs">CreateRatingCommand</a> · <a href="../../src/LCMS.Application/RateVersions/Commands/RateVersionCommands.cs">RateVersionCommands</a>.</td><td><span class="badge partial">Đã triển khai, còn parity</span><br>Rating dùng context rule thực tế; UI phụ phí/phụ lục/import còn mỏng theo chỉ mục pixel.</td></tr>
+          <tr><td>M05</td><td>Cost Management: single economic Cost, maturity, adjustment, shared allocation.</td><td>Costs, AllocationMath, AllocationCommands, maturity/adjustment commands; <a href="../../src/LCMS.Application/Costs/Commands/MaturityTransitionCommands.cs">Cost transitions</a> · <a href="../../src/LCMS.Application/Costs/Commands/AllocationCommands.cs">AllocationCommands</a>.</td><td><span class="badge">Đã triển khai</span><br>Expected→Confirmed→Actual và allocation workflow. SoD người tạo không tự chốt còn mở.</td></tr>
+          <tr><td>M06</td><td>Revenue Management: single economic Revenue, maturity, adjustment/mapping.</td><td>Revenues, RevenueApprovalGate, ProfitabilityShare, rating seeding; <a href="../../src/LCMS.Application/Revenues/Commands/MaturityTransitionCommands.cs">Revenue transitions</a> · <a href="../../src/LCMS.Application/Revenues/Commands/SeedExpectedRevenuesFromRatingCommand.cs">Expected revenue seed</a>.</td><td><span class="badge">Đã triển khai</span><br>Seed Expected revenue có handler; checklist 16/09 còn ghi pricing UI/seed follow-up, nên claim đó đã cũ về code, chưa chứng minh UAT mới.</td></tr>
+          <tr><td>M07</td><td>Financial Documents: tiếp nhận, chấp nhận, line matching N:N.</td><td>FinancialDocuments, DocumentMatches; <a href="../../src/LCMS.Application/FinancialDocuments/Commands/AcceptFinancialDocumentCommand.cs">AcceptDocument</a> · <a href="../../src/LCMS.Application/DocumentMatches/Commands/ConfirmDocumentMatchCommand.cs">ConfirmDocumentMatch</a>.</td><td><span class="badge">Đã triển khai</span><br>Received/Accepted/Matched là các chiều tách biệt; UI nhập file chưa tương đương intake/manual/API đầy đủ.</td></tr>
+          <tr><td>M08</td><td>Exposure &amp; AP/AR: nguồn nghĩa vụ/quyền thu và ghi nhận công nợ.</td><td>Exposures; AP/AR ledger, aging, adjustment, recognition/reversal; <a href="../../src/LCMS.Application/Exposures/Commands/RecognizePayableExposureCommand.cs">RecognizePayableExposureCommand</a>.</td><td><span class="badge">Đã triển khai</span><br>Recognition tạo AP/AR từ exposure, không tạo Cost/Revenue. Kiểm kê số dư cũ có reconciliation/correction có kiểm soát.</td></tr>
+          <tr><td>M09</td><td>Settlement: Payment/Collection và allocation tới AP/AR.</td><td>Settlements; BankFeed làm đầu vào sao kê hỗ trợ đối soát; <a href="../../src/LCMS.Application/Settlements/Commands/CreatePaymentCommand.cs">CreatePaymentCommand</a> · <a href="../../src/LCMS.Application/Settlements/Commands/FinalizePaymentAllocationCommand.cs">FinalizePaymentAllocationCommand</a>.</td><td><span class="badge">Đã triển khai</span><br>Cash chỉ giảm outstanding khi allocation được finalize; import payment/collection tổng quát còn partial.</td></tr>
+          <tr><td>M10</td><td>Financial Control: reconciliation, variance, exception, approval.</td><td>Reconciliations, Variances, Exceptions, Approvals, Queues, FinancialControl; <a href="../../src/LCMS.Application/Reconciliations/Commands/AddReconciliationDetailCommand.cs">Reconciliation detail</a> · <a href="../../src/LCMS.Application/Variances/Commands/TransitionVarianceCommand.cs">Variance lifecycle</a>.</td><td><span class="badge">Đã triển khai</span><br>Variance ≠ Exception; Approval độc lập. Cần xem riêng quyền/SoD và bằng chứng UX.</td></tr>
+          <tr><td>M11</td><td>Financial Close: điều kiện chốt, reopen/reclose, snapshot bất biến.</td><td>FinancialCloses, CloseEligibilityChecker, PeriodLockGate.</td><td><span class="badge">Đã kiểm chứng</span><br>S7 PASS và immutability/period lock được ghi nhận; tiếp tục xác minh hash/snapshot trên deploy hiện hành khi release.</td></tr>
+          <tr><td>M12</td><td>Financial Profile &amp; Reporting: read model Bill, profitability, dashboard/report.</td><td><a href="../../src/LCMS.Application/Bills/Queries/GetBillFinancialProfileQuery.cs">Bill financial profile</a>, Dashboard, Reports, Revenues queries.</td><td><span class="badge">Đã triển khai</span><br>Derived/read-only; hỗ trợ maturity/as-of và FX báo cáo mới. Không phải source of truth của transaction.</td></tr>
+          <tr><td>M13</td><td>Configuration &amp; Policy: recognition, close, control, tenant settings.</td><td>Policies, Tenancy, Fx, tenant financial options and resolvers; <a href="../../src/LCMS.Application/Policies/Commands/PolicyCommands.cs">PolicyCommands</a>.</td><td><span class="badge partial">Đã triển khai, cần rà soát</span><br>Policy versioning/settings có; handoff ghi follow-up một số cấu hình tenant và reviewer parity.</td></tr>
+          <tr><td>M14</td><td>Integration: idempotent boundary, import, retry/recovery, outbox.</td><td>Integrations, OperationalReferences import, RateCards import, Notifications, hosted outbox worker; <a href="../../src/LCMS.Application/Integrations/Commands/OutboxStubCommands.cs">Outbox stub</a>.</td><td><span class="badge partial">Một phần</span><br>Outbox hiện là in-process stub, không publish broker ngoài; UAT retry/dead-letter PASS không đồng nghĩa adapter/broker thật.</td></tr>
+          <tr><td>M15</td><td>Audit &amp; History: truy vết actor/action/before-after/reason/correlation.</td><td><a href="../../src/LCMS.Infrastructure/Audit/AuditWriter.cs">AuditWriter</a>, Audit queries, append events ở các use case.</td><td><span class="badge">Đã triển khai</span><br>Cross-cutting; OTel/exporter và đầy đủ coverage/NFR còn là residual.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>02 · Luồng service lõi</h2>
+      <div class="flow-list">
+        <article class="flow"><div><h3>Operational reference → sẵn sàng tính giá</h3><p>Tạo/sửa Bill và object liên quan dưới tenant; giữ provenance nguồn. Edit kiểm tra quyền, If-Match, whitelist field, quy tắc override + reason và audit. Thay đổi field được dùng đánh dấu rating hiện hành stale; không viết lại số tiền hoặc financial records. `RatingContextResolver` chỉ yêu cầu dữ liệu của rule được chọn; thiếu context trả 409 `rating_not_ready`, không suy số lượng mặc định.</p><p><a href="../../src/LCMS.Application/OperationalReferences/Edit/EditOperationalReferenceCommand.cs">EditOperationalReferenceCommand</a> · <a href="../../src/LCMS.Application/Ratings/RatingReadiness.cs">RatingReadiness</a> · <a href="../../src/LCMS.Application/Ratings/RatingStalenessService.cs">RatingStalenessService</a></p></div></article>
+        <article class="flow"><div><h3>Rating → snapshot → Expected Cost / Revenue</h3><p>Rating phải dùng version đã publish và còn hiệu lực; rule được chọn theo applicability/specificity, tie thì báo ambiguous. Engine tính các mode fixed/weight/container/composite và lưu rating detail cùng context/basis. Hai seed command đọc detail theo financial nature, tạo Expected gắn source detail, chống tạo lặp; không có detail revenue phù hợp thì báo lỗi thay vì tự tạo doanh thu giả. Rerate tạo bản mới supersede bản trước.</p><p><a href="../../src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs">CreateRatingCommand</a> · <a href="../../src/LCMS.Application/Ratings/RatingEngine.cs">RatingEngine</a> · <a href="../../src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs">SeedExpectedCostsFromRatingCommand</a> · <a href="../../src/LCMS.Application/Revenues/Commands/SeedExpectedRevenuesFromRatingCommand.cs">SeedExpectedRevenuesFromRatingCommand</a></p></div></article>
+        <article class="flow"><div><h3>Cost / Revenue maturity, adjustment và allocation</h3><p>Cost và Revenue đi Expected→Confirmed→Actual, giữ lại các số maturity cũ, kiểm tra quyền, row version, idempotency, audit và period lock. Approval threshold/critical exception có thể chặn confirm. Shared Cost không mang Bill trực tiếp; allocation yêu cầu ít nhất hai Bill, basis hợp lệ/khác 0, phiên draft có version, finalize bảo toàn tổng và không tạo economic Cost thứ hai. Chỉ mục pixel nêu creator-finalize SoD vẫn mở.</p><p><a href="../../src/LCMS.Application/Costs/Commands/MaturityTransitionCommands.cs">Cost transitions</a> · <a href="../../src/LCMS.Application/Costs/Commands/AllocationCommands.cs">AllocationCommands</a> · <a href="../../src/LCMS.Application/Revenues/Commands/MaturityTransitionCommands.cs">Revenue transitions</a></p></div></article>
+        <article class="flow"><div><h3>Document intake → accept → match → exposure</h3><p>Document nhận và line có integrity riêng; accept kiểm tổng line = header nhưng không tự đổi receipt/matching. Match session lưu method/tolerance; candidate chỉ gợi ý, tie không tự chọn. Detail match tham chiếu Cost/Revenue có sẵn; confirm khóa thêm detail. Exposure proposal bỏ qua line↔line hoặc hướng không hợp lệ, chống duplicate theo source detail; không invent Cost/Revenue/AP/AR.</p><p><a href="../../src/LCMS.Application/FinancialDocuments/Commands/AcceptFinancialDocumentCommand.cs">AcceptFinancialDocumentCommand</a> · <a href="../../src/LCMS.Application/DocumentMatches/Commands/ResolveDocumentMatchCommand.cs">ResolveDocumentMatchCommand</a> · <a href="../../src/LCMS.Application/DocumentMatches/Commands/CreateExposuresFromMatchCommand.cs">CreateExposuresFromMatchCommand</a></p></div></article>
+        <article class="flow"><div><h3>Exposure → AP/AR recognition</h3><p>Policy tenant có thể yêu cầu document link; recognition cho phép ghi từng phần nhưng không vượt open exposure. Số đã ghi nhận được dựng từ các AP/AR active slice, có gate phê duyệt, FX snapshot, idempotency, If-Match và audit. Reverse recognition ghi trạng thái/history theo command riêng. AP/AR không phải CRUD thay thế cho economic Cost/Revenue.</p><p><a href="../../src/LCMS.Application/Exposures/Commands/RecognizePayableExposureCommand.cs">RecognizePayableExposureCommand</a> · <a href="../../src/LCMS.Application/Exposures/RecognitionApprovalGate.cs">RecognitionApprovalGate</a> · <a href="../../src/LCMS.Application/Exposures/Queries/ApArLedgerQueries.cs">AP/AR ledger</a></p></div></article>
+        <article class="flow"><div><h3>Payment / Collection → settlement allocation</h3><p>Tạo cash transaction chỉ ghi nhận tiền; không tạo Cost/Revenue và không tự giảm AP/AR. Draft allocation nối Payment→AP hoặc Collection→AR. Finalize kiểm period lock, giới hạn tổng allocation so với payment và balance recognized/adjusted, cập nhật settled amount/status và audit; finalize lặp lại an toàn. Hủy/reverse có workflow riêng.</p><p><a href="../../src/LCMS.Application/Settlements/Commands/CreatePaymentCommand.cs">CreatePaymentCommand</a> · <a href="../../src/LCMS.Application/Settlements/Commands/FinalizePaymentAllocationCommand.cs">FinalizePaymentAllocationCommand</a> · <a href="../../src/LCMS.Application/Settlements/Commands/AllocateCollectionCommand.cs">AllocateCollectionCommand</a></p></div></article>
+        <article class="flow"><div><h3>Bank feed / reconciliation → variance / exception / approval</h3><p>CSV bank-feed nạp statement lines, reconciliation ghép source/target và tính chênh lệch. Variance là control fact có lifecycle accept/clear/write-off; không tự biến thành Exception. Exception có luồng owner/severity/resolve riêng; Approval là maker-checker tách với permission. Đây là ba khái niệm/lifecycle không được nhập làm một.</p><p><a href="../../src/LCMS.Application/Reconciliations/Commands/AddReconciliationDetailCommand.cs">AddReconciliationDetailCommand</a> · <a href="../../src/LCMS.Application/Variances/Commands/TransitionVarianceCommand.cs">TransitionVarianceCommand</a> · <a href="../../src/LCMS.Application/Approvals/Commands/DecideApprovalCommand.cs">DecideApprovalCommand</a></p></div></article>
+        <article class="flow"><div><h3>Eligibility → close snapshot → lock</h3><p>Close checker tổng hợp các gate theo policy (Strict luôn ép đủ gate; Controlled theo cấu hình). Snapshot command kiểm trạng thái, eligibility và concurrency; chụp metrics, hash, policy version, append snapshot version rồi khóa close trong cùng use case. Reopen/reclose tạo snapshot mới; mutation money path bị period lock chặn. Bill profile/report đọc projection/maturity/FX, không ghi ngược source transaction.</p><p><a href="../../src/LCMS.Application/FinancialCloses/CloseEligibilityChecker.cs">CloseEligibilityChecker</a> · <a href="../../src/LCMS.Application/FinancialCloses/Commands/CreateFinancialCloseSnapshotCommand.cs">CreateFinancialCloseSnapshotCommand</a> · <a href="../../src/LCMS.Application/Bills/Queries/GetBillFinancialProfileQuery.cs">GetBillFinancialProfileQuery</a></p></div></article>
+        <article class="flow"><div><h3>Cross-cutting: tenant, permission, concurrency, idempotency, audit, FX</h3><p>Application handlers nhận tenant context và gọi permission/data-scope service; commands quan trọng dùng row version/idempotency; audit writer append actor, action, before/after, reason, correlation ID. Handoff 29/09 ghi report currency theo tenant và FX snapshot trên financial lines; thiếu tỷ giá được đếm riêng thay vì cộng nhầm currency. Cần xác minh mọi endpoint/route đúng scope và policy trên từng role.</p><p><a href="../../src/LCMS.Infrastructure/Identity/PermissionService.cs">PermissionService</a> · <a href="../../src/LCMS.Application/Identity/DataScopeFilter.cs">DataScopeFilter</a> · <a href="../../src/LCMS.Infrastructure/Audit/AuditWriter.cs">AuditWriter</a> · <a href="../../src/LCMS.Application/Fx/FxSnapshotService.cs">FxSnapshotService</a></p></div></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>03 · Đối chiếu checklist và các mốc</h2>
+      <p>Các trạng thái dưới đây phân biệt “được ghi là Done” với “đã xác minh lại trên code” và “đã có UAT”. Tài liệu cũ hơn vẫn giữ giá trị lịch sử, không tự động phản ánh các thay đổi sau ngày cập nhật.</p>
+      <div class="table-wrap table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Yêu cầu / nguồn</th><th>Bằng chứng trong repo</th><th>Đánh giá tại 30/09</th><th>Việc cần làm</th></tr></thead>
+        <tbody>
+          <tr><td>PO-GAP checklist 13/09: P01–P25 đóng, UAT S1–S14 PASS</td><td><a href="../sprint/PO-GAP-CHECKLIST.md">PO-GAP-CHECKLIST.md</a> và <a href="../sprint/UAT-GO-LIVE-FINANCIAL-RESULT.md">UAT result</a>. Phiếu ghi S9 aging PASS nhưng kiểm quyền 2 người SKIP.</td><td><span class="badge partial">Go-live tài chính có evidence lịch sử</span><br>PASS được ghi theo phiên 13/09; deployment lag đã từng làm S6/S11/S13 fail trước khi rebuild.</td><td>Ở release mới, kiểm tra commit/image production và chạy smoke/regression money-path. Bổ sung UAT thật hai vai Cost-only/Revenue-only.</td></tr>
+          <tr><td>Go-live checklist 16/09: spine A2–A10 PASS; còn pricing UI, quyền, pixel, search</td><td><a href="../ops/go-live-checklist.md">go-live-checklist.md</a> để trống các gap này.</td><td><span class="badge partial">Một phần đã cũ</span><br>Search hiện có nhiều entity; revenue rating seed có handler; handoff sau đó ghi thêm nhiều tính năng. Tách quyền và evidence pixel vẫn là gap.</td><td>Cập nhật checklist theo source/UAT mới; không carry-forward “search chỉ Bill-centric” hoặc “không có seed Expected Revenue” mà chưa xác nhận.</td></tr>
+          <tr><td>Operational reference edit / rating context, handoff 29/09</td><td><a href="../handoff.md">handoff.md</a> ghi ADR-0039, edit/override, CW, 409 readiness, stale/rerate; nêu 7 test và build web pass.</td><td><span class="badge">Đã triển khai, test được handoff báo cáo</span><br>Chưa chứng minh sync/API-source changes cũng đánh stale; handoff ghi follow-up này.</td><td>Đóng follow-up stale khi source sync đổi; quyết định/chứng minh policy tenant cho Import; bổ sung quyền riêng `rate.execute` nếu PO yêu cầu.</td></tr>
+          <tr><td>Reporting currency / FX snapshot, handoff 29/09 (ADR-0040)</td><td><a href="../handoff.md">handoff.md</a> mô tả schema/backfill, FX preview/exceptions, override reason/permission.</td><td><span class="badge partial">Được ghi hoàn thành trong handoff</span><br>Handoff có migration/details nhưng cần kiểm nghiệm report completeness và dữ liệu `requires_review` trên tenant thực.</td><td>Chạy preview/exceptions trên dữ liệu vận hành; đối chiếu thiếu FX và snapshot trước khi đóng UAT.</td></tr>
+          <tr><td>AR regression follow-up 28/09</td><td>Handoff ghi ledger, reverse write-off, correction legacy có ADR-0038; có test cụ thể. Full suite lúc ghi: 232/235, 3 SQLite-only failures đã có từ HEAD; `tsc`/`next build` pass.</td><td><span class="badge partial">Code và test có; cross-currency UAT còn mở</span></td><td>Chạy production reconciliation/đối soát legacy; kiểm kết quả chỉ trên Postgres CI/môi trường tương đương. Không tự rewrite ledger cũ.</td></tr>
+          <tr><td>UI pixel acceptance 22/09 và go-live 16/09</td><td><a href="CMS_PixelPerfect_Gap_Index_2026-09-22.md">Pixel gap index</a>: Dashboard UI-01 PIXEL_OK; phần lớn STRUCTURAL; rate surcharges/appendices và workflow SKELETON; UX-01…14 chưa UAT; reviewer 09B chờ review.</td><td><span class="badge open">Chưa nghiệm thu pixel</span></td><td>Thu screenshot/UI trace theo UX-01…14; đóng responsive/error/loading/accessibility; PO reviewer ký 09B.</td></tr>
+          <tr><td>Standalone commercial product acceptance AC-SCP-01…10</td><td><a href="_extract_baseline_tra_bo_sung.txt">Baseline bổ sung</a> trích ma trận DEV Acceptance còn TODO; pixel index xác định operational/rate import API-only, party Excel import missing, vài flow partial.</td><td><span class="badge open">Không thể gọi commercial parity hoàn tất</span><br>Manual core khá rộng; import UX/provenance và SoT ownership chưa đồng nhất.</td><td>Đánh lại từng AC-SCP trên source + UI + UAT: cùng canonical validation, preview/commit, source provenance/override, tenant scope và audit.</td></tr>
+          <tr><td>Residual NFR / integration trong checklist PO</td><td>PO-GAP ghi OIDC IdP, OTLP, soak CI, broker ngoài process là residual; outbox command hiện tự đánh processed mà không publish broker.</td><td><span class="badge deferred">Hoãn / cần ADR hoặc release gate</span></td><td>Chốt quyết định vận hành/deployment; không mô tả outbox stub như broker production hoặc OTLP như đã bật.</td></tr>
+          <tr><td>Order/Shipment CRUD mở rộng thành TMS</td><td><a href="../ops/go-live-checklist.md">go-live checklist</a> đánh D là ngoài scope; implementation plan/guardrails nói external operational system là SoT và không thay TMS.</td><td><span class="badge deferred">Ngoài phạm vi hiện tại</span></td><td>Không mở rộng dispatch/GPS/e-POD nếu chưa có PO/ADR mới. Operational reference/manual CRUD không đồng nghĩa TMS.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>04 · Mức trưởng thành theo chiều đánh giá</h2>
+      <div class="cols">
+        <article class="panel"><h3>Functional go-live</h3><ul>
+          <li><span class="badge">Tốt cho spine tài chính đã UAT</span> Bill, Cost/Revenue, chứng từ, AP/AR, payment/collection, đối soát, close và audit được ghi PASS trong phiên 13/09.</li>
+          <li><span class="badge partial">Chưa đủ bằng chứng sau thay đổi mới</span> Các cải tiến 24–29/09 cần regression/re-UAT trên bản deploy hiện hành.</li>
+          <li><span class="badge open">Quyền hai vai</span> S9 đã SKIP xác minh riêng Cost vs Revenue; đây là kiểm soát dữ liệu nhạy cảm, không chỉ UI.</li>
+        </ul></article>
+        <article class="panel"><h3>Commercial / functional breadth</h3><ul>
+          <li><span class="badge partial">Nhiều nghiệp vụ đã có</span> Các handler/import API và CRUD master/operational tồn tại.</li>
+          <li><span class="badge open">Parity Manual / Import / API</span> API import chưa đồng nghĩa UI preview/commit, lỗi theo dòng, provenance và audit đã đầy đủ ở mọi object.</li>
+          <li><span class="badge open">Một số vùng mỏng</span> Pixel index nêu rate surcharges/appendices và workflow map là SKELETON; Party Excel import thiếu.</li>
+        </ul></article>
+        <article class="panel"><h3>UI / nghiệm thu PO</h3><ul>
+          <li>Khoảng 1 màn được đánh PIXEL_OK; phần lớn route STRUCTURAL theo đánh giá 22/09.</li>
+          <li>Ảnh UAT UI-09…14 chưa có trong checklist go-live; pixel index yêu cầu UX evidence UI-01…15.</li>
+          <li>Đừng coi route hiện diện hoặc `next build` thành UI acceptance.</li>
+        </ul></article>
+        <article class="panel"><h3>Operations / NFR</h3><ul>
+          <li>Production UAT health/ready PASS lịch sử; từng có lệch image/source gây thiếu endpoint trước redeploy.</li>
+          <li>Broker ngoài process, OIDC IdP, OTLP và soak CI được liệt kê residual; kiểm backup/restore, TLS/SMTP và reviewer sign-off theo release gate.</li>
+          <li>Đánh giá này không chạy test/build, không đăng nhập production, không xác minh DB/VPS ở thời điểm hiện tại.</li>
+        </ul></article>
+      </div>
+    </section>
+
+    <section>
+      <h2>05 · Ưu tiên xác minh / hoàn thiện</h2>
+      <div class="table-wrap table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead><tr><th>Ưu tiên</th><th>Hành động</th><th>Lý do / tiêu chí đóng</th></tr></thead>
+        <tbody>
+          <tr><td>P0 · Control</td><td>UAT hai tài khoản: Cost-only và Revenue-only, thử dashboard, Bill profile, search, AP/AR aging/reconciliation, export và direct API.</td><td>Không nhìn thấy số/chi tiết ngoài action permission + data scope; lưu kết quả và actor rõ ràng.</td></tr>
+          <tr><td>P0 · Release evidence</td><td>Đối chiếu `origin/main`/artifact với VPS; chạy smoke S1, period-lock và các regression mới nhất sau migration 29/09.</td><td>Không lặp lại lỗi production image cũ; mọi API/UI đang test thuộc cùng build.</td></tr>
+          <tr><td>P0 · SoD</td><td>Hoàn tất rule người tạo shared allocation không thể tự finalize khi có approver khác.</td><td>Code/test và UI đều enforce, có test maker-checker; chỉ mục pixel xếp W-L1 là P0.</td></tr>
+          <tr><td>P0 · UI evidence</td><td>Thực hiện UX-01…14, screenshot UI-01…15, mobile/responsive/error/loading và PO review 09B.</td><td>Không còn blocker P0/P1; nghiệm thu fidelity tách biệt khỏi chức năng API.</td></tr>
+          <tr><td>P1 · Input channels</td><td>Ưu tiên UI preview/commit cho operational import, rate import và party CSV; chuẩn hóa row errors, atomic commit, duplicate/idempotency, source provenance và audit.</td><td>Đóng AC-SCP-03/06/07/09 theo cùng canonical command/invariants; công khai trạng thái API-only nếu UI chưa có.</td></tr>
+          <tr><td>P1 · Rating / FX</td><td>UAT rule/component pricing và Expected revenue; hoàn thiện re-rate stale khi import/sync nguồn đổi dữ liệu; rà soát FX exceptions.</td><td>Chụp snapshot đúng version, không default bịa quantity/currency, không sửa ngược economic facts đã xác nhận.</td></tr>
+          <tr><td>P2 · Product polish</td><td>Hoàn thiện phụ phí/phụ lục, workflow diagram, global search coverage, import payments/collections nếu PO chốt.</td><td>Ghi rõ “ngoài scope”/“partial” cho đến khi route, CTA và UAT tương ứng tồn tại.</td></tr>
+          <tr><td>ADR / Ops</td><td>Quyết định broker thật, OIDC, OTLP, soak CI, backup/restore, TLS/SMTP và phạm vi standalone policy.</td><td>Không quảng bá stub/residual là hạ tầng production đã nghiệm thu.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>Nguồn chính đã đối chiếu</h2>
+      <ul class="sources">
+        <li><a href="../../LCMS_BA_docs/Technical Design/LCMS_TD3_Module_Dependency_Responsibility_Matrix_v1.0.xlsx">TD3 module responsibility matrix</a></li>
+        <li><a href="../implementation-plan.md">Implementation plan</a></li>
+        <li><a href="../sprint/PO-GAP-CHECKLIST.md">PO-GAP checklist (13/09)</a></li>
+        <li><a href="../ops/go-live-checklist.md">Go-live checklist (16/09)</a></li>
+        <li><a href="../sprint/UAT-GO-LIVE-FINANCIAL-RESULT.md">UAT go-live result (13/09)</a></li>
+        <li><a href="../handoff.md">Handoff (cập nhật đến 29/09)</a></li>
+        <li><a href="CMS_PixelPerfect_Gap_Index_2026-09-22.md">Pixel-perfect gap index (22/09)</a></li>
+        <li><a href="_extract_baseline_tra_bo_sung.txt">Standalone product / AC-SCP source extract</a></li>
+        <li><a href="../adr/ADR-0038-ap-ar-balance-reconciliation.md">ADR-0038 · AP/AR balance reconciliation</a></li>
+        <li><a href="../adr/ADR-0039-operational-reference-edit-rating-context.md">ADR-0039 · operational edit and rating context</a></li>
+      </ul>
+      <div class="note"><b>Giới hạn:</b> Báo cáo được tạo từ source và tài liệu có trong workspace; không chạy test/build, không kiểm tra environment production/DB, không xác nhận nội dung của mọi workbook/docx PO ngoài các bản đã trích/ghi trong handoff. Mọi trạng thái deployment mới hơn cần được xác minh bằng pipeline và smoke test trước quyết định release.</div>
+    </section>
+  </main>
+  <footer>CMS / LCMS · Báo cáo nội bộ · 30/09/2026</footer>
+</body>
+</html>

@@ -1,48 +1,14 @@
 ---
-description: "After each completed CMS task: update handoff, commit, push GitHub, deploy production. PO-authorized. Always apply."
+description: "Completed app change: commit, push, Actions deploy. No handoff essay. No deploy for rules or docs."
 alwaysApply: true
 ---
 
-# Ship after every completed task / Ship sau mỗi task xong
-
-## Authorization / Ủy quyền
-- PO authorized: when a CMS task is **done**, do not wait for another “commit/deploy?” prompt.
-- PO ủy quyền: task CMS **xong** thì không hỏi lại “commit/deploy chưa?”.
-- This overrides “ask before production deploy” for CMS. Still **ask** before force-push, drop DB, or deleting production data.
-- Ghi đè “hỏi trước khi deploy prod” cho CMS. **Vẫn hỏi** trước force-push, drop DB, hoặc xóa dữ liệu production.
-
-## Before ship / Trước khi ship
-- Update `docs/handoff.md` (date + this turn). This greenfield repo has no `wwwroot/handoff/` yet.
-- Cập nhật `docs/handoff.md` (ngày + lượt này). Repo greenfield chưa có `wwwroot/handoff/`.
-- Append the user question + the answer (no secrets, no passwords, no keys). Note files/API/schema for the next developer.
-- Thêm câu hỏi + trả lời (không secret). Ghi file/API/schema cho dev tiếp theo.
-- End-user flow/UI/copy: mention in the same handoff when it changed.
-- Luồng/UI người dùng đổi thì ghi luôn trong handoff.
-
-## Git / Git
-- Commit with a short why-message. Push `origin` of the current branch (usually `main`).
-- Commit message ngắn nêu lý do. Push nhánh hiện tại lên `origin` (thường `main`).
-- Never commit secrets (`.env`, `hailybato.txt`, `docs/hailybato.txt`, `.secrets/`, keys). Never `--no-verify`, never force-push `main`.
-- Không commit secret. Không `--no-verify`, không force-push `main`.
-- Skip commit when there is nothing to commit; still deploy only if the host is behind.
-- Không có diff thì không commit rỗng; chỉ deploy nếu host đang chậm hơn git.
-
-## Deploy / Deploy
-- Production: `cms-sg-01` (`deploy@194.233.89.26`), app dir `/opt/cms`.
-- Production: `cms-sg-01`, thư mục `/opt/cms`.
-- **Never** deploy onto `a1logex-sg-01` / `/opt/alogex`.
-- **Không** deploy lên `a1logex-sg-01` / `/opt/alogex`.
-- Before/with deploy: enforce `08-vps-selfhost-hardening.mdc` — no public DB/Redis, container `mem_limit`, only 80/443, proxy rate-limit.
-- Trước/kèm deploy: tuân `08-vps-selfhost-hardening.mdc` — không public DB/Redis, có `mem_limit`, chỉ 80/443, proxy rate-limit.
-- **Normal path:** push `origin/main` and let GitHub Actions deploy. Tab: `https://github.com/thanhquyen129/CMS/actions`.
-- **Đường thường:** push `origin/main` rồi để Actions deploy. Tab Actions repo CMS.
-- Do not tar/scp from the operator machine unless the Actions `deploy` job failed or the runner is down.
-- Không tar/scp từ máy operator trừ khi job `deploy` fail hoặc runner chết.
-- The VPS copy is **not** a git clone. Do not `git pull` on the host. Never overwrite `infra/.env`.
-- Bản trên VPS **không** phải git clone. Không `git pull` trên máy. **Không ghi đè** `infra/.env`.
-- After push: wait for workflow `CI` (job `test` then `deploy`) to finish — typically several minutes. Confirm the run is **success**, not just that `/health` still answers (old containers keep serving). Then re-check `/health`, `/ready`, `/`→login, and that host containers restarted.
-- Sau push: **đợi CI xong** (vài phút). Xác nhận run **success**; `/health` cũ không đủ vì container cũ vẫn sống. Rồi kiểm tra `/health` `/ready` `/`→login và container host đã recreate.
-- If tests on the money/auth/cost-financial critical path failed, **do not deploy**; fix or report.
-- Test đường tiền/auth/chi phí-tài chính tới hạn fail thì **không deploy**; sửa hoặc báo.
-- Fallback runbook: `docs/ops/vps-bootstrap.md` + `docs/ops/github-actions.md`.
-- Khi Actions chết: runbook fallback ở hai file trên.
+# Ship
+- App change done: commit with a why-message and push the current branch. Do not ask. This overrides "ask before production deploy".
+- Still ask before force-push, dropping a database, or deleting production data.
+- Never commit secrets (`.env`, `hailybato.txt`, `docs/hailybato.txt`, `.secrets/`, keys). Never `--no-verify`. Never force-push `main`. No empty commit.
+- Production is `cms-sg-01` (`deploy@194.233.89.26`), `/opt/cms`, GitHub Actions on `origin/main`. Never deploy to `a1logex-sg-01` / `/opt/alogex`.
+- Do not tar/scp unless the Actions deploy job failed. The host is not a git clone: no `git pull`, never overwrite `infra/.env`.
+- Do not deploy a diff that cannot affect the running app (rules, docs, handoff). If money, auth, or cost-financial tests fail, do not deploy.
+- Handoff only when behavior, API, schema, or permissions change: prepend a few lines to `docs/handoff.md` (date, change, files). Do not paste the question, reasoning, or a test log. Do not read the rest of that file.
+- Infra or deploy: read `08-vps-selfhost-hardening.mdc` and `05-product-cms.mdc`.

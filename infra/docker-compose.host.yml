@@ -68,6 +68,9 @@ services:
       Demo__SeedOnStartup: "${Demo__SeedOnStartup:-false}"
       Demo__AllowEndpoint: "${Demo__AllowEndpoint:-false}"
       Demo__TenantCode: "${Demo__TenantCode:-ops}"
+      Attachments__StoragePath: "/opt/cms/attachments"
+    volumes:
+      - /opt/cms/attachments:/opt/cms/attachments
     mem_limit: 1g
     cpus: "1.5"
     pids_limit: 512

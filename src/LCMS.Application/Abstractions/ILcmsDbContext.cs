@@ -93,6 +93,8 @@ public interface ILcmsDbContext
     DbSet<IdempotencyRecord> IdempotencyRecords { get; }
     DbSet<Policy> Policies { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<UserPushDevice> UserPushDevices { get; }
+    DbSet<DocumentAttachment> DocumentAttachments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

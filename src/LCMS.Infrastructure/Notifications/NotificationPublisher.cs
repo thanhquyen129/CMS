@@ -64,6 +64,7 @@ public sealed class NotificationPublisher : IOperatorNotificationPublisher
 
         if (inAppOn)
         {
+            var targetUserIds = new List<Guid>();
             foreach (var r in recipients)
             {
                 if (_user.UserId == r.Id)
@@ -71,6 +72,7 @@ public sealed class NotificationPublisher : IOperatorNotificationPublisher
                     continue;
                 }
 
+                targetUserIds.Add(r.Id);
                 _db.InAppNotifications.Add(new InAppNotification
                 {
                     TenantId = tenantId,
@@ -82,6 +84,36 @@ public sealed class NotificationPublisher : IOperatorNotificationPublisher
                     ObjectType = request.ObjectType,
                     ObjectId = request.ObjectId
                 });
+            }
+
+            if (targetUserIds.Count > 0)
+            {
+                var pushTokens = await _db.UserPushDevices.AsNoTracking()
+                    .Where(d => d.IsActive && targetUserIds.Contains(d.UserId))
+                    .Select(d => new { d.UserId, d.DeviceToken, d.Platform })
+                    .ToListAsync(cancellationToken);
+
+                if (pushTokens.Count > 0)
+                {
+                    var pushPayload = JsonSerializer.Serialize(new
+                    {
+                        request.EventType,
+                        request.Title,
+                        request.Body,
+                        request.Href,
+                        request.ObjectType,
+                        request.ObjectId,
+                        devices = pushTokens
+                    });
+                    _db.OutboxMessages.Add(new OutboxMessage
+                    {
+                        TenantId = tenantId,
+                        Topic = "notification.push",
+                        PayloadJson = pushPayload,
+                        Status = OutboxMessageStatuses.Pending,
+                        EnqueuedAt = DateTimeOffset.UtcNow
+                    });
+                }
             }
         }
 

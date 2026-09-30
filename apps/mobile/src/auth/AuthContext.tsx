@@ -507,28 +507,93 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       >("/api/mobile/bootstrap");
 
+      const validTabKeys = new Set([
+        "dashboard",
+        "approvals",
+        "control",
+        "bills",
+        "scanner",
+        "costs",
+        "revenues",
+        "ap",
+        "ar",
+        "documents",
+        "offline",
+        "modules",
+      ]);
+
+      const serverTabs = (raw.bottomTabs ?? [])
+        .filter((t) => validTabKeys.has(t.key))
+        .map((t) => ({
+          ...t,
+          labelVi: t.labelVi ?? t.label ?? t.key,
+        }));
+
+      const fallbackTabs = buildFallbackBottomTabs(
+        raw.primaryPersona ?? "executive_control",
+        raw.badges
+      );
+
+      const finalTabs = serverTabs.length >= 3 ? serverTabs : fallbackTabs;
+      if (!finalTabs.some((t) => t.key === "modules")) {
+        finalTabs.push({
+          key: "modules",
+          labelVi: "Phân hệ",
+          icon: "grid",
+          route: "/(tabs)/modules",
+          badgeCount: raw.badges?.unreadNotifications ?? 0,
+        });
+      }
+
+      const serverModules: MobileModuleDto[] = (raw.modules ?? []).map((m) => ({
+        ...m,
+        titleVi: m.titleVi ?? m.label ?? m.code,
+        subtitleVi: m.subtitleVi ?? m.description ?? "",
+        category:
+          m.category === "finance" ||
+          m.category === "apar" ||
+          m.category === "cost_ap" ||
+          m.category === "revenue_ar"
+            ? m.code === "revenues" || m.code === "ar"
+              ? "revenue_ar"
+              : "cost_ap"
+            : m.category === "operations" || m.category === "pricing"
+            ? "operations"
+            : m.category === "control" ||
+              m.category === "core" ||
+              m.category === "reports"
+            ? "control"
+            : "master_admin",
+      }));
+
+      const fallbackModules = buildFallbackModules({
+        canViewCost: raw.financialVisibility?.canViewCost ?? true,
+        canViewRevenue: raw.financialVisibility?.canViewRevenue ?? true,
+        canViewMargin: raw.financialVisibility?.canViewMargin ?? true,
+        badges: raw.badges ?? {
+          unreadNotifications: 0,
+          pendingApprovals: 0,
+          openExceptions: 0,
+          openVariances: 0,
+          fxExceptions: 0,
+        },
+      });
+
+      const mergedModulesMap = new Map<string, MobileModuleDto>();
+      for (const sm of serverModules) {
+        mergedModulesMap.set(sm.code, sm);
+      }
+      for (const fm of fallbackModules) {
+        if (!mergedModulesMap.has(fm.code)) {
+          mergedModulesMap.set(fm.code, fm);
+        }
+      }
+
       const normalized: MobileBootstrapDto = {
         ...raw,
         asOfUtc: raw.asOfUtc ?? new Date().toISOString(),
-        bottomTabs: (raw.bottomTabs ?? []).map((t) => ({
-          ...t,
-          labelVi: t.labelVi ?? t.label ?? t.key,
-        })),
-        modules: (raw.modules ?? []).map((m) => ({
-          ...m,
-          titleVi: m.titleVi ?? m.label ?? m.code,
-          subtitleVi: m.subtitleVi ?? m.description ?? "",
-          category:
-            m.category === "finance" || m.category === "apar" || m.category === "cost_ap" || m.category === "revenue_ar"
-              ? m.code === "revenues" || m.code === "ar"
-                ? "revenue_ar"
-                : "cost_ap"
-              : m.category === "operations"
-                ? "operations"
-                : m.category === "control" || m.category === "core"
-                  ? "control"
-                  : "master_admin",
-        })),
+        bottomTabs: finalTabs,
+        modules: Array.from(mergedModulesMap.values()),
       };
       setBootstrap(normalized);
     } catch (err) {

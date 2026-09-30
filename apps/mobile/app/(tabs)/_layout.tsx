@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Tabs, useRouter } from "expo-router";
-import { Text } from "react-native";
+import { Text, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/auth/AuthContext";
 
 const ALL_TAB_KEYS = [
@@ -20,6 +21,7 @@ const ALL_TAB_KEYS = [
 
 export default function RoleAdaptiveTabsLayout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isLoading, isAuthenticated, bootstrap } = useAuth();
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export default function RoleAdaptiveTabsLayout() {
   ];
 
   const activeMap = new Map(activeTabs.map((t) => [t.key, t]));
+  const bottomInset = Math.max(insets.bottom, 8);
 
   return (
     <Tabs
@@ -74,13 +77,31 @@ export default function RoleAdaptiveTabsLayout() {
         headerStyle: { backgroundColor: "#0F172A" },
         headerTintColor: "#FFFFFF",
         headerTitleStyle: { fontWeight: "700", fontSize: 16 },
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/modules")}
+            style={{
+              backgroundColor: "#1E293B",
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 8,
+              marginRight: 12,
+              borderWidth: 1,
+              borderColor: "#334155",
+            }}
+          >
+            <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "700" }}>
+              ☰ Menu Phân hệ
+            </Text>
+          </TouchableOpacity>
+        ),
         tabBarActiveTintColor: "#0F172A",
         tabBarInactiveTintColor: "#64748B",
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
           borderTopColor: "#E2E8F0",
-          height: 60,
-          paddingBottom: 8,
+          height: 56 + bottomInset,
+          paddingBottom: bottomInset,
           paddingTop: 6,
         },
       }}
@@ -94,7 +115,7 @@ export default function RoleAdaptiveTabsLayout() {
             key={key}
             name={key}
             options={{
-              title: tabConfig?.labelVi ?? key,
+              title: tabConfig?.labelVi ?? getDefaultTabTitleVi(key),
               href: isVisibleInBottomBar ? undefined : null,
               tabBarBadge:
                 tabConfig && tabConfig.badgeCount > 0
@@ -111,6 +132,37 @@ export default function RoleAdaptiveTabsLayout() {
       })}
     </Tabs>
   );
+}
+
+function getDefaultTabTitleVi(key: string): string {
+  switch (key) {
+    case "dashboard":
+      return "Tổng quan";
+    case "approvals":
+      return "Phê duyệt";
+    case "control":
+      return "Kiểm soát";
+    case "bills":
+      return "Vận đơn";
+    case "scanner":
+      return "Quét & Chụp";
+    case "costs":
+      return "Chi phí";
+    case "revenues":
+      return "Doanh thu";
+    case "ap":
+      return "Công nợ AP";
+    case "ar":
+      return "Công nợ AR";
+    case "documents":
+      return "Chứng từ";
+    case "offline":
+      return "Ngoại tuyến";
+    case "modules":
+      return "Tất cả Phân hệ";
+    default:
+      return key;
+  }
 }
 
 function getTabEmoji(key: string): string {
@@ -143,4 +195,3 @@ function getTabEmoji(key: string): string {
       return "•";
   }
 }
-

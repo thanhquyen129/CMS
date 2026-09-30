@@ -167,6 +167,59 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Quick Access Menu Grid on Home Screen */}
+          <View style={styles.sectionCard}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>
+                🧭 Menu Chức năng &amp; Phân hệ
+              </Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/modules")}>
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#2563EB" }}>
+                  Xem tất cả →
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.menuGrid}>
+              {[
+                { emoji: "📦", label: "Bill, Đơn & Chuyến", route: "/(tabs)/bills" },
+                { emoji: "📷", label: "Quét mã & Chụp", route: "/(tabs)/scanner" },
+                { emoji: "📋", label: "Bảng giá & Tính giá", route: "/modules/rates" },
+                ...(vis.canViewCost
+                  ? [
+                      { emoji: "💸", label: "Chi phí & Phân bổ", route: "/(tabs)/costs" },
+                      { emoji: "🧾", label: "Công nợ AP & Sổ cái", route: "/(tabs)/ap" },
+                    ]
+                  : []),
+                ...(vis.canViewRevenue
+                  ? [
+                      { emoji: "💰", label: "Doanh thu Bill", route: "/(tabs)/revenues" },
+                      { emoji: "🏦", label: "Công nợ AR & Sổ cái", route: "/(tabs)/ar" },
+                    ]
+                  : []),
+                { emoji: "📑", label: "Chứng từ & Khớp N:N", route: "/(tabs)/documents" },
+                { emoji: "💳", label: "Thu/Chi & Sao kê NH", route: "/modules/settlements" },
+                { emoji: "✅", label: "Duyệt (FaceID)", route: "/(tabs)/approvals" },
+                { emoji: "🛡️", label: "Kiểm soát & Cân đối", route: "/(tabs)/control" },
+                { emoji: "🔒", label: "Chốt kỳ & Snapshot", route: "/modules/closes" },
+                { emoji: "📈", label: "Báo cáo Tuổi nợ/Lãi", route: "/modules/reports" },
+                { emoji: "🏢", label: "Đối tác & Tỷ giá VCB", route: "/modules/master" },
+                { emoji: "⚙️", label: "Quản trị & Audit", route: "/modules/settings" },
+                { emoji: "📡", label: "Hàng đợi Offline", route: "/(tabs)/offline" },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.route + item.label}
+                  style={styles.menuTile}
+                  onPress={() => router.push(item.route as never)}
+                >
+                  <Text style={styles.menuTileEmoji}>{item.emoji}</Text>
+                  <Text style={styles.menuTileLabel} numberOfLines={2}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           {/* Base Currency Roll-up (only for sides user is permitted to see) */}
           {summary?.baseCurrencyRollUp ? (
             <View style={styles.sectionCard}>
@@ -441,6 +494,33 @@ const styles = StyleSheet.create({
     color: "#334155",
     marginTop: 6,
     lineHeight: 18,
+  },
+  menuGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+  menuTile: {
+    width: "31.5%",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+  },
+  menuTileEmoji: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  menuTileLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#0F172A",
+    textAlign: "center",
   },
 });
 

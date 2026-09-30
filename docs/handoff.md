@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-10-01 — Complete mobile modules (P0), AP/AR ledger & reconciliation (P1), multi-level ops & navigation menu (P2)
+
+- `apps/mobile/app/modules/*`: implement 6 full mobile module screens (`settlements.tsx`, `rates.tsx`, `closes.tsx`, `reports.tsx`, `master.tsx`, `settings.tsx`) with SoD filtering, `BalanceImpactCard`, biometric confirmation, VCB FX 1-tap sync, and SHA-256 close snapshots.
+- `apps/mobile/app/(tabs)/ap.tsx`, `ar.tsx`, `control.tsx`: add ADR-0037 immutable AP/AR ledger view, write-off reversal, and ADR-0038 balance reconciliation / settlement correction.
+- `apps/mobile/app/(tabs)/bills.tsx`, `bills/[id].tsx`, `dashboard.tsx`, `_layout.tsx`, `src/auth/AuthContext.tsx`, `eas.json`: add Orders/Shipments/Movements tabs & Bill 360 operational graph, top header `☰ Menu Phân hệ` button, Dashboard quick-access module grid, SafeArea bottom tab inset, and EAS build profiles.
+
 ## 2026-09-30 — Mobile app, Contabo disk attachments & push devices
 
 - `GET /api/mobile/bootstrap`: role-adaptive persona, permissions, SoD (`canViewCost`/`canViewRevenue`/`canViewMargin`), bottom tabs, modules, badges, terminology (`GetMobileBootstrapQuery.cs`, `MobileAndAttachmentEndpoints.cs`).

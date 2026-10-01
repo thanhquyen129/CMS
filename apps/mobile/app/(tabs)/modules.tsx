@@ -61,11 +61,10 @@ export default function ModulesHubScreen() {
         <Text style={styles.userName}>{bootstrap?.user.displayName}</Text>
         <Text style={styles.userEmail}>{bootstrap?.user.email}</Text>
         <Text style={styles.roleList}>
-          Vai trò: {(bootstrap?.roleCodes ?? []).join(", ") || "Operator"} • Persona:{" "}
-          {bootstrap?.primaryPersona}
+          Tài khoản doanh nghiệp: {bootstrap?.tenant.name ?? "Hệ thống CMS"}
         </Text>
         <Text style={styles.storageNote}>
-          📁 Chứng từ ảnh/PDF lưu trực tiếp trên ổ đĩa VPS Contabo (/opt/cms/attachments)
+          📁 Chứng từ ảnh &amp; PDF lưu trữ bảo mật trên máy chủ chuyên dụng
         </Text>
       </View>
 
@@ -108,7 +107,7 @@ export default function ModulesHubScreen() {
         }}
       >
         <Text style={styles.logoutBtnText}>
-          Đăng xuất & Hủy đăng ký Push Token thiết bị
+          Đăng xuất khỏi tài khoản
         </Text>
       </TouchableOpacity>
 

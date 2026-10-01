@@ -437,7 +437,7 @@ export default function FinancialClosesModuleScreen() {
                   </Text>
                   <Text style={styles.metaText}>
                     Lúc: {snap.createdAt ? snap.createdAt.slice(0, 16) : "—"} •
-                    Policy: {snap.policyVersion ?? "ADR-0035"}
+                    Quy chuẩn: Chuẩn mực Kế toán Doanh nghiệp
                   </Text>
                 </View>
               ))
@@ -451,7 +451,7 @@ export default function FinancialClosesModuleScreen() {
               disabled={submitting}
             >
               <Text style={styles.submitBtnText}>
-                🔒 Quét Sinh trắc học & Chốt Snapshot SHA-256
+                🔒 Xác nhận Sinh trắc học &amp; Khóa sổ Kế toán
               </Text>
             </TouchableOpacity>
 

@@ -66,10 +66,10 @@ export default function OfflineOutboxScreen() {
     >
       <View style={styles.banner}>
         <Text style={styles.bannerTitle}>
-          Hàng đợi Ngoại tuyến (SQLite Offline Outbox • {items.length})
+          Hàng đợi Lưu trữ &amp; Đồng bộ Ngoại tuyến ({items.length} tác vụ)
         </Text>
         <Text style={styles.bannerDesc}>
-          Mọi thao tác chụp ảnh chứng từ, cập nhật CW tại cảng/kho khi mất sóng được gắn khóa chống trùng (Idempotency-Key) và kiểm tra xung đột phiên bản (If-Match).
+          Mọi thao tác ghi nhận thông số và chứng từ khi không có kết nối Internet được bảo lưu an toàn trên máy và sẽ tự động đồng bộ ngay khi có mạng trở lại.
         </Text>
         <TouchableOpacity
           style={[styles.syncBtn, syncing && styles.syncBtnDisabled]}
@@ -90,7 +90,7 @@ export default function OfflineOutboxScreen() {
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>Tất cả dữ liệu đã đồng bộ</Text>
           <Text style={styles.emptyDesc}>
-            Không có thao tác ngoại tuyến nào đang chờ gửi lên máy chủ Contabo.
+            Không có tác vụ ngoại tuyến nào đang chờ gửi lên máy chủ.
           </Text>
         </View>
       ) : (
@@ -110,7 +110,7 @@ export default function OfflineOutboxScreen() {
               >
                 <Text style={styles.statusText}>
                   {item.status === "conflict"
-                    ? "Xung đột 409 (If-Match)"
+                    ? "Dữ liệu máy chủ đã thay đổi"
                     : item.status === "failed"
                     ? `Chờ thử lại (#${item.retryCount})`
                     : "Đang chờ mạng"}
@@ -119,7 +119,7 @@ export default function OfflineOutboxScreen() {
             </View>
 
             <Text style={styles.metaText}>
-              {item.method} {item.endpoint} • Idempotency: {item.idempotencyKey.slice(0, 14)}…
+              Tác vụ: {item.titleVi} • Mã tham chiếu: #{item.id.slice(0, 8)}
             </Text>
 
             {item.errorMessageVi ? (

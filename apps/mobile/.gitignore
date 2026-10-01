@@ -1,0 +1,3 @@
+# Expo Prebuild native directories
+/android/
+/ios/

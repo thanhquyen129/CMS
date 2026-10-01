@@ -223,8 +223,8 @@ export default function BillsScreen() {
     setShowCreateForm(false);
     setBillNo("");
     Alert.alert(
-      "Đã lưu Hàng đợi Offline",
-      `Vận đơn ${resolvedNo} đã được lưu an toàn trong SQLite trên máy và sẽ đồng bộ khi có sóng.`
+      "Đã lưu Ngoại tuyến",
+      `Vận đơn ${resolvedNo} đã được lưu an toàn trên thiết bị và sẽ tự động đồng bộ khi có kết nối mạng.`
     );
   };
 

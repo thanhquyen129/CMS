@@ -146,7 +146,7 @@ export default function AccountsReceivableScreen() {
       } else {
         Alert.alert(
           "Thành công",
-          "Đã thực hiện xóa nợ (Write-off) AR và cập nhật Sổ công nợ bất biến (ADR-0037)."
+          "Đã ghi nhận xóa nợ khó đòi vào Sổ cái chi tiết công nợ."
         );
       }
     } catch (err) {
@@ -210,12 +210,12 @@ export default function AccountsReceivableScreen() {
     if (!reason.trim()) {
       Alert.alert(
         "Thiếu lý do hiệu chỉnh",
-        "Hiệu chỉnh số dư kế toán (ADR-0038) bắt buộc phải có lý do kiểm toán."
+        "Hiệu chỉnh số dư kế toán bắt buộc phải ghi rõ lý do kiểm toán tuân thủ."
       );
       return;
     }
     const bio = await verifyBiometricForMoneyAction({
-      actionLabelVi: "Hiệu chỉnh Số dư Thu tiền AR (ADR-0038)",
+      actionLabelVi: "Hiệu chỉnh Số dư Thu tiền AR",
       amountSummaryVi: ar.documentNo ?? ar.id.slice(0, 8),
     });
     if (!bio.verified) return;
@@ -262,7 +262,7 @@ export default function AccountsReceivableScreen() {
       }
     >
       <Text style={styles.heading}>
-        Công nợ Phải thu (AR • {items.length}) • Sổ Công nợ Bất biến (ADR-0037)
+        Công nợ Phải thu Khách hàng (AR • {items.length})
       </Text>
 
       {selectedAr ? (
@@ -290,7 +290,7 @@ export default function AccountsReceivableScreen() {
                   sheetMode === "ledger" && styles.modeBtnTextActive,
                 ]}
               >
-                📖 Sổ công nợ &amp; Hoàn tác (ADR-0037)
+                📖 Sổ cái chi tiết &amp; Hoàn tác
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -365,12 +365,12 @@ export default function AccountsReceivableScreen() {
                 disabled={submitting}
               >
                 <Text style={styles.correctionBtnText}>
-                  ⚖️ Đối chiếu &amp; Hiệu chỉnh Số dư Thu tiền (ADR-0038)
+                  ⚖️ Đối soát &amp; Cân đối Số dư Thu tiền
                 </Text>
               </TouchableOpacity>
 
               <Text style={styles.subHeader}>
-                Lịch sử Bút toán Sổ Công nợ Bất biến:
+                Lịch sử Bút toán Sổ cái Chi tiết:
               </Text>
               {loadingLedger ? (
                 <ActivityIndicator size="small" color="#0F172A" />

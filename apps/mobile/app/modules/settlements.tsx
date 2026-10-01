@@ -282,10 +282,10 @@ export default function SettlementsModuleScreen() {
       setActionReason("");
       await loadAll();
       await loadCashDetail(selectedCash.id, isPayment ? "payments" : "collections");
-      Alert.alert(
-        "Đã phân bổ công nợ",
-        "Đã ghi nhận phân bổ tiền vào khoản công nợ và cập nhật Sổ công nợ (ADR-0037)."
-      );
+        Alert.alert(
+          "Đã phân bổ công nợ",
+          "Đã ghi nhận phân bổ tiền vào khoản công nợ và cập nhật Sổ cái chi tiết."
+        );
     } catch (err) {
       Alert.alert(
         "Lỗi phân bổ",

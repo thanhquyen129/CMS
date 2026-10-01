@@ -602,7 +602,7 @@ export default function RatesModuleScreen() {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Loại bảng giá (SoD)</Text>
+                  <Text style={styles.label}>Phân loại Biểu giá</Text>
                   <View style={styles.chipRow}>
                     {canViewCost ? (
                       <TouchableOpacity

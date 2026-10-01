@@ -90,10 +90,10 @@ export default function RevenuesScreen() {
     return (
       <View style={styles.sodBlocked}>
         <Text style={styles.sodTitle}>
-          Phân tách Nhiệm vụ (Chi phí ≠ Doanh thu)
+          Giới hạn Quyền Truy cập Tài chính
         </Text>
         <Text style={styles.sodDesc}>
-          Tài khoản của bạn không được cấp quyền truy cập phân hệ Doanh thu (Revenue).
+          Theo chính sách phân định trách nhiệm nội bộ, tài khoản hiện tại không có quyền truy cập phân hệ Doanh thu &amp; Công nợ Phải thu.
         </Text>
       </View>
     );

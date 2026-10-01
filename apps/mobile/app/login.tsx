@@ -27,17 +27,17 @@ const DEMO_ROLES = [
   {
     role: "Kế toán chi phí (CostAccountant)",
     email: "cost@cms.local",
-    desc: "Chỉ xem Chi phí & Công nợ phải trả (SoD ẩn Doanh thu)",
+    desc: "Quản lý Chi phí vận tải & Công nợ nhà cung cấp (AP)",
   },
   {
     role: "Kế toán doanh thu (RevenueAccountant)",
     email: "revenue@cms.local",
-    desc: "Chỉ xem Doanh thu & Công nợ phải thu (SoD ẩn Chi phí)",
+    desc: "Quản lý Doanh thu bán cước & Công nợ khách hàng (AR)",
   },
   {
     role: "Điều vận hiện trường (Ops)",
     email: "ops.user@cms.local",
-    desc: "Quét mã HAWB/MAWB, xác nhận CW, chụp chứng từ Offline",
+    desc: "Quét mã vận đơn, xác nhận CW & ghi nhận chi phí hiện trường",
   },
   {
     role: "Quản trị danh mục (MasterData)",
@@ -114,14 +114,14 @@ export default function LoginScreen() {
         <View style={styles.logoBadge}>
           <Text style={styles.logoBadgeText}>CMS</Text>
         </View>
-        <Text style={styles.title}>Hệ thống Quản trị Chi phí Logistics</Text>
+        <Text style={styles.title}>Hệ thống Quản trị Tài chính Doanh nghiệp</Text>
         <Text style={styles.subtitle}>
-          Ứng dụng Di động Đa vai trò • Kiểm soát Chi phí ≠ Doanh thu (SoD)
+          Nền tảng Quản trị &amp; Kiểm soát Tài chính Doanh nghiệp Toàn diện
         </Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Mã Thuê bao (Tenant)</Text>
+        <Text style={styles.label}>Mã Đơn vị / Doanh nghiệp</Text>
         <TextInput
           style={styles.input}
           value={tenantCode}
@@ -141,7 +141,7 @@ export default function LoginScreen() {
         />
 
         <View style={styles.passwordLabelRow}>
-          <Text style={styles.label}>Mật khẩu (mặc định Demo: abc123)</Text>
+          <Text style={styles.label}>Mật khẩu</Text>
           <TouchableOpacity onPress={() => setShowPassword((v) => !v)}>
             <Text style={styles.showPassToggle}>
               {showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
@@ -154,7 +154,7 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
-          placeholder="Nhập mật khẩu (VD: abc123)"
+          placeholder="Nhập mật khẩu truy cập"
         />
 
         <TouchableOpacity
@@ -163,14 +163,14 @@ export default function LoginScreen() {
         >
           <Text style={styles.configToggleText}>
             {showServerConfig
-              ? "▲ Ẩn cấu hình máy chủ VPS Contabo"
-              : "⚙️ Cấu hình địa chỉ máy chủ API (VPS Contabo)"}
+              ? "▲ Ẩn cài đặt kết nối máy chủ"
+              : "⚙️ Cài đặt kết nối máy chủ hệ thống"}
           </Text>
         </TouchableOpacity>
 
         {showServerConfig ? (
           <View style={styles.serverConfigBox}>
-            <Text style={styles.label}>Địa chỉ LCMS API (HTTP/HTTPS)</Text>
+            <Text style={styles.label}>Địa chỉ máy chủ trung tâm (Server URL)</Text>
             <TextInput
               style={styles.input}
               value={apiUrl}
@@ -189,7 +189,7 @@ export default function LoginScreen() {
           {submitting ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.loginBtnText}>Đăng nhập & Tải phân quyền</Text>
+            <Text style={styles.loginBtnText}>Đăng nhập an toàn</Text>
           )}
         </TouchableOpacity>
       </View>

@@ -208,7 +208,7 @@ export default function BillDetailScreen() {
         }
       );
       Alert.alert(
-        "Đã xác nhận CW (ADR-0039)",
+        "Đã xác nhận CW",
         "Trọng lượng tính cước (CW) đã được xác nhận và sẵn sàng cho tự động tính cước (Rating)."
       );
       await loadBillWorkspace();
@@ -222,8 +222,8 @@ export default function BillDetailScreen() {
         idempotencyPrefix: "cw",
       });
       Alert.alert(
-        "Đã lưu Ngoại tuyến (Outbox)",
-        "Cập nhật thông số đo lường & CW đã được đưa vào hàng đợi ngoại tuyến để tự động đồng bộ khi có mạng."
+        "Đã lưu Ngoại tuyến",
+        "Cập nhật thông số đo lường & CW đã được lưu vào bộ nhớ máy và sẽ tự động đồng bộ khi có kết nối mạng."
       );
     }
   };
@@ -236,13 +236,13 @@ export default function BillDetailScreen() {
         body: { billId: id },
       });
       Alert.alert(
-        "Đủ điều kiện tính cước (Rating Ready)",
-        "Bill đã đầy đủ thông số vận hành và CW đã xác nhận để tính cước."
+        "Đủ điều kiện tính cước",
+        "Vận đơn đã đầy đủ thông số vận hành và CW đã xác nhận để tính cước tự động."
       );
       await loadBillWorkspace();
     } catch (err) {
       Alert.alert(
-        "Chưa đủ điều kiện tính cước (409 rating_not_ready)",
+        "Chưa đủ điều kiện tính cước",
         err instanceof Error
           ? err.message
           : "Vui lòng kiểm tra xác nhận CW và thông tin tuyến/đối tác."
@@ -334,7 +334,7 @@ export default function BillDetailScreen() {
       <View style={styles.sectionCard}>
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>
-            Đo lường Vận hành & Xác nhận CW (ADR-0039)
+            Thông số Đo lường &amp; Xác nhận Trọng lượng Tính cước (CW)
           </Text>
           <View
             style={[
@@ -387,7 +387,7 @@ export default function BillDetailScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Lý do cập nhật / ghi đè thông số vận hành (Audit)..."
+          placeholder="Nhập lý do cập nhật hoặc điều chỉnh thông số vận hành..."
           value={overrideReason}
           onChangeText={setOverrideReason}
         />

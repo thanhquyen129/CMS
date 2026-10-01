@@ -166,7 +166,7 @@ export default function SettingsAdminModuleScreen() {
       await loadAll();
       Alert.alert(
         "Đã tạo Bản sao lưu",
-        "Hệ thống đã chụp bản sao lưu dữ liệu thuê bao trên máy chủ VPS Contabo."
+        "Hệ thống đã lưu trữ bản sao lưu dữ liệu doanh nghiệp an toàn trên máy chủ."
       );
     } catch (err) {
       Alert.alert(
@@ -196,7 +196,7 @@ export default function SettingsAdminModuleScreen() {
               subTab === "audit" && styles.tabBtnTextActive,
             ]}
           >
-            🛡️ Audit ({auditEvents.length})
+            🛡️ Nhật ký ({auditEvents.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -209,7 +209,7 @@ export default function SettingsAdminModuleScreen() {
               subTab === "tenant" && styles.tabBtnTextActive,
             ]}
           >
-            🏢 Thuê bao
+            🏢 Doanh nghiệp
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -248,7 +248,7 @@ export default function SettingsAdminModuleScreen() {
       ) : subTab === "audit" ? (
         <>
           <Text style={styles.subHeader}>
-            Nhật ký Kiểm toán Bất biến (Immutable AuditLog)
+            Nhật ký Kiểm soát &amp; Tuân thủ Bất biến
           </Text>
           <View style={styles.chipRow}>
             {(
@@ -337,7 +337,7 @@ export default function SettingsAdminModuleScreen() {
             {profile?.dateFormat ?? bootstrap?.tenant.dateFormat ?? "dd/MM/yyyy"}
           </Text>
           <Text style={styles.metaText}>
-            • Lưu trữ chứng từ vật lý: Ổ đĩa máy chủ VPS Contabo (/opt/cms/attachments)
+            • Lưu trữ chứng từ số: Hệ thống lưu trữ bảo mật trên máy chủ chuyên dụng
           </Text>
 
           {readiness ? (
@@ -403,18 +403,18 @@ export default function SettingsAdminModuleScreen() {
         <>
           <View style={styles.card}>
             <Text style={styles.subHeader}>
-              Sức khỏe Hàng đợi Tích hợp (Outbox &amp; Integration Health)
+              Trạng thái Đồng bộ &amp; Tích hợp Dữ liệu
             </Text>
             <Text style={styles.metaText}>
-              • Outbox chờ xử lý: {jobHealth?.outboxPending ?? 0} | Lỗi chờ thử lại:{" "}
-              {jobHealth?.integrationErrorsPending ?? 0} | Dead-letter:{" "}
+              • Hàng đợi đồng bộ: {jobHealth?.outboxPending ?? 0} | Lỗi xử lý:{" "}
+              {jobHealth?.integrationErrorsPending ?? 0} | Tồn đọng:{" "}
               {jobHealth?.integrationErrorsDeadLetter ?? 0}
             </Text>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.formTitle}>
-              Sao lưu Dữ liệu Thuê bao (Tenant Backup trên VPS Contabo)
+              Sao lưu Dữ liệu Doanh nghiệp An toàn
             </Text>
             <TextInput
               style={styles.input}
@@ -428,7 +428,7 @@ export default function SettingsAdminModuleScreen() {
               disabled={submitting}
             >
               <Text style={styles.submitBtnText}>
-                💾 Tạo Bản Sao lưu Ngay (Snapshot Backup)
+                💾 Tạo Bản Sao lưu Ngay
               </Text>
             </TouchableOpacity>
           </View>

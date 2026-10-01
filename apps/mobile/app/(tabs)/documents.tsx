@@ -329,7 +329,7 @@ export default function DocumentsScreen() {
             ))}
           </View>
 
-          <Text style={styles.label}>Chiều công nợ (SoD)</Text>
+          <Text style={styles.label}>Phân loại Nghiệp vụ Công nợ</Text>
           <View style={styles.chipRow}>
             {canViewCost ? (
               <TouchableOpacity

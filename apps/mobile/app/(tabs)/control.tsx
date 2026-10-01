@@ -242,7 +242,7 @@ export default function ControlQueueScreen() {
     if (!resolutionReason.trim()) {
       Alert.alert(
         "Thiếu lý do hiệu chỉnh",
-        "Vui lòng nhập lý do hiệu chỉnh lệch số dư kế toán (ADR-0038)."
+        "Vui lòng nhập lý do giải trình hiệu chỉnh lệch số dư kế toán."
       );
       return;
     }
@@ -254,8 +254,8 @@ export default function ControlQueueScreen() {
     const bio = await verifyBiometricForMoneyAction({
       actionLabelVi:
         side === "ap"
-          ? "Hiệu chỉnh Lệch Số dư AP (ADR-0038)"
-          : "Hiệu chỉnh Lệch Số dư AR (ADR-0038)",
+          ? "Hiệu chỉnh Lệch Số dư Công nợ Phải trả (AP)"
+          : "Hiệu chỉnh Lệch Số dư Công nợ Phải thu (AR)",
       amountSummaryVi: formatMoney(
         item.discrepancyAmount ?? 0,
         item.currencyCode ?? "VND"
@@ -568,7 +568,7 @@ export default function ControlQueueScreen() {
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.typeText}>
-              Đối soát Số dư Công nợ Kế toán (ADR-0038 / FIN-DATA-01)
+              Cân đối &amp; Đối soát Số dư Công nợ Kế toán (AP/AR)
             </Text>
             <View
               style={[
@@ -606,7 +606,7 @@ export default function ControlQueueScreen() {
 
           <TextInput
             style={styles.input}
-            placeholder="Nhập lý do hiệu chỉnh lệch số dư kế toán (ADR-0038)..."
+            placeholder="Nhập lý do giải trình hiệu chỉnh lệch số dư kế toán..."
             value={resolutionReason}
             onChangeText={setResolutionReason}
           />

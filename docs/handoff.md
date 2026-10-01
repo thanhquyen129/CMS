@@ -1,6 +1,10 @@
 # Handoff
 
-## 2026-10-01 — Complete mobile modules (P0), AP/AR ledger & reconciliation (P1), multi-level ops & navigation menu (P2)
+## 2026-10-01 — Role-tailored mobile command center & commercial UX polish
+
+- `apps/mobile/app/(tabs)/dashboard.tsx`: redesigned executive & role-adaptive dashboard with Gross Margin meter, Revenue/Cost balance, data confidence progress, priority action center (FaceID approvals, exceptions, closes), and role perspective switcher (Executive, Ops, AR, AP, Audit).
+- `apps/mobile/app/*`: sanitized technical jargon (ADR-*, SQLite, Contabo VPS, raw SoD tokens) into professional financial and logistics enterprise terminology across all screens.
+
 
 - `apps/mobile/app/modules/*`: implement 6 full mobile module screens (`settlements.tsx`, `rates.tsx`, `closes.tsx`, `reports.tsx`, `master.tsx`, `settings.tsx`) with SoD filtering, `BalanceImpactCard`, biometric confirmation, VCB FX 1-tap sync, and SHA-256 close snapshots.
 - `apps/mobile/app/(tabs)/ap.tsx`, `ar.tsx`, `control.tsx`: add ADR-0037 immutable AP/AR ledger view, write-off reversal, and ADR-0038 balance reconciliation / settlement correction.

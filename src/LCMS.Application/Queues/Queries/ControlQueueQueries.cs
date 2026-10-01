@@ -161,12 +161,15 @@ public sealed class ListPendingApprovalQueueQueryHandler
             query = query.Where(a => a.RequiredLevel == level);
         }
 
-        var list = await query
+        var list = await query.ToListAsync(cancellationToken);
+
+        var ordered = list
             .OrderBy(a => a.RequestedAt)
             .ThenByDescending(a => a.Id)
-            .ToListAsync(cancellationToken);
+            .Select(ListApprovalsQueryHandler.Map)
+            .ToList();
 
-        return await EnrichAsync(list.Select(ListApprovalsQueryHandler.Map).ToList(), cancellationToken);
+        return await EnrichAsync(ordered, cancellationToken);
     }
 
     private async Task<IReadOnlyList<ApprovalDto>> EnrichAsync(

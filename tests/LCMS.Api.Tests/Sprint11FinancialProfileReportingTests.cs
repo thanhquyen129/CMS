@@ -524,7 +524,11 @@ public sealed class Sprint11FinancialProfileReportingTests : IAsyncLifetime
         using var req = new HttpRequestMessage(HttpMethod.Get, "/api/queues/approvals");
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var res = await _client.SendAsync(req);
-        res.EnsureSuccessStatusCode();
+        if (!res.IsSuccessStatusCode)
+        {
+            var body = await res.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"{(int)res.StatusCode} {res.ReasonPhrase}: {body}");
+        }
         return (await res.Content.ReadFromJsonAsync<List<ApprovalQueueItem>>(JsonOptions))!;
     }
 

@@ -43,6 +43,9 @@ public static class DependencyInjection
         services.Configure<OutboxWorkerOptions>(configuration.GetSection(OutboxWorkerOptions.SectionName));
         services.AddHostedService<OutboxProcessorHostedService>();
 
+        services.Configure<VcbFxSyncOptions>(configuration.GetSection(VcbFxSyncOptions.SectionName));
+        services.AddHostedService<VcbFxSyncHostedService>();
+
         return services;
     }
 }

@@ -2,11 +2,22 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { UpsertFxRateForm } from "@/components/UpsertFxRateForm";
+import { SyncVcbFxButton } from "@/components/SyncVcbFxButton";
 import { ListPageHeader } from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listFxRates } from "@/lib/catalog";
 import { formatDateVi } from "@/lib/money";
+
+const STALE_DAYS = 1; // warn when latest rate is older than this
+
+function isStale(rateDate: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(rateDate);
+  d.setHours(0, 0, 0, 0);
+  return (today.getTime() - d.getTime()) / 86_400_000 > STALE_DAYS;
+}
 
 export default async function RateFxPage() {
   const jar = await cookies();
@@ -21,6 +32,9 @@ export default async function RateFxPage() {
     if (!prev || row.rateDate > prev.rateDate) latest.set(key, row);
   }
 
+  const latestCards = [...latest.values()].slice(0, 4);
+  const hasStale = latestCards.some((r) => isStale(r.rateDate));
+
   return (
     <AppShell terms={terms} active="rate-cards">
       <section className="panel panel-wide">
@@ -33,12 +47,24 @@ export default async function RateFxPage() {
           title="Quản lý tỷ giá"
           lede="Quản lý tỷ giá phục vụ Rating và quy đổi báo cáo theo chính sách Tenant"
         />
+        {hasStale && (
+          <div className="alert alert-warning" role="alert" style={{ marginBottom: "1rem" }}>
+            ⚠️ Tỷ giá hiển thị chưa cập nhật hôm nay. Bấm <strong>Cập nhật tỷ giá Vietcombank</strong> để lấy tỷ giá mới nhất.
+          </div>
+        )}
         <div className="stat-grid">
-          {[...latest.values()].slice(0, 4).map((row) => (
+          {latestCards.map((row) => (
             <article key={row.id} className="stat-card">
               <p>{row.fromCurrencyCode} / {row.toCurrencyCode}</p>
               <strong>{row.rate}</strong>
-              <p className="muted">{formatDateVi(row.rateDate)} · {row.source}</p>
+              <p className="muted">
+                {formatDateVi(row.rateDate)} · {row.source}
+                {isStale(row.rateDate) && (
+                  <span style={{ marginLeft: "0.4rem", color: "var(--color-warning, #d97706)", fontWeight: 600 }}>
+                    ⚠ cũ
+                  </span>
+                )}
+              </p>
             </article>
           ))}
         </div>
@@ -78,7 +104,10 @@ export default async function RateFxPage() {
               Rating và báo cáo lưu tỷ giá đã dùng để tái hiện kết quả lịch sử. Không tính lại chứng từ đã ghi.
             </p>
           </div>
-          <UpsertFxRateForm />
+          <div className="stack">
+            <SyncVcbFxButton />
+            <UpsertFxRateForm />
+          </div>
         </div>
       </section>
     </AppShell>

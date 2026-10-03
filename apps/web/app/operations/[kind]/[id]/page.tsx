@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { LinkBillToRefForm } from "@/components/LinkBillToRefForm";
+import { OrderCashFlowMap, type OrderBillFinancialSummary } from "@/components/OrderCashFlowMap";
+import { getFinancialProfile } from "@/lib/bills";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
@@ -96,6 +98,29 @@ export default async function OperationalDetailPage({
           ? `/bff/transport-legs/${id}/bills`
           : `/bff/transport-movements/${id}/bills`;
 
+  // Fetch financial summaries for related bills if viewing an Order
+  let orderBillSummaries: OrderBillFinancialSummary[] = [];
+  if (kind === "orders" && row.relatedBills.length > 0) {
+    const profiles = await Promise.all(
+      row.relatedBills.map(async (b) => {
+        const res = await getFinancialProfile(b.id);
+        if (!res.ok) return null;
+        const bucket = res.data.byCurrency[0];
+        const reporting = res.data.reporting;
+        return {
+          billId: b.id,
+          billNo: b.billNo,
+          operationalStatus: operationalStatusLabel(b.operationalStatus),
+          currencyCode: reporting?.reportingCurrencyCode ?? bucket?.currencyCode ?? "VND",
+          revenue: reporting?.revenueBestAvailable ?? bucket?.revenueBestAvailable ?? 0,
+          cost: reporting?.costBestAvailable ?? bucket?.costBestAvailable ?? 0,
+          profit: reporting?.profitBestAvailable ?? bucket?.profitBestAvailable ?? 0,
+        };
+      })
+    );
+    orderBillSummaries = profiles.filter((p): p is OrderBillFinancialSummary => p !== null);
+  }
+
   return (
     <AppShell terms={terms} active="bills" navChild="operations">
       <section className="panel panel-wide">
@@ -151,6 +176,17 @@ export default async function OperationalDetailPage({
 
         {objectTypeFromKind(kind) ? (
           <OperationalReferenceEditor objectType={objectTypeFromKind(kind)!} objectId={id} />
+        ) : null}
+
+        {kind === "orders" ? (
+          <>
+            <h2 className="section-title">Sơ đồ dòng tiền Đơn hàng</h2>
+            <OrderCashFlowMap
+              orderNo={code}
+              customerName={"customerName" in row ? row.customerName : null}
+              bills={orderBillSummaries}
+            />
+          </>
         ) : null}
 
         <h2 className="section-title">{billLabel} liên kết</h2>

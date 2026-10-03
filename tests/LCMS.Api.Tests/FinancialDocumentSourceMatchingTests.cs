@@ -298,6 +298,149 @@ public sealed class FinancialDocumentSourceMatchingTests : IAsyncLifetime
         Assert.Equal(800_000m, restored.RemainingEligibleAmount);
     }
 
+    [Fact]
+    public async Task BillReference_DoesNotAutoTakeAllLines_AC_FD_004()
+    {
+        // AC-FD-004: Bill reference does not auto-take all lines
+        var tenantId = await CreateTenantAsync("TN-BILL-REF", "Bill Ref Test");
+        var billId = await CreateBillAsync(tenantId, "BL-REF-01");
+        var vendorId = await CreatePartyAsync(tenantId, "VEND-REF", "Vendor Ref", isVendor: true);
+
+        var cost1 = await CreateCostAsync(tenantId, billId, 500_000m, "VND", vendorId);
+        var cost2 = await CreateCostAsync(tenantId, billId, 300_000m, "VND", vendorId);
+
+        // Receive document referencing billId but without selecting source lines
+        using var receiveReq = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
+        receiveReq.Content = JsonContent.Create(new
+        {
+            documentType = "invoice",
+            documentNo = "INV-NO-SEL",
+            direction = "payable",
+            totalAmount = 200_000m,
+            currencyCode = "VND",
+            documentDate = "2026-10-03",
+            counterpartyId = vendorId,
+            billId,
+            mode = "external_received"
+            // selectedSourceLines omitted / empty
+        });
+        var receiveRes = await _client.SendAsync(receiveReq);
+        Assert.Equal(HttpStatusCode.Created, receiveRes.StatusCode);
+        var docBody = await receiveRes.Content.ReadFromJsonAsync<IdBody>(JsonOptions);
+
+        var doc = await GetDocumentAsync(tenantId, docBody!.Id);
+        Assert.Equal(200_000m, doc.TotalAmount);
+        Assert.Empty(doc.Lines); // No lines auto-created
+
+        // Source costs remain completely untouched with full remaining amounts
+        using var eligibleReq = Tenant(HttpMethod.Get, $"/api/financial-documents/eligible-source-lines?direction=payable&billId={billId}", tenantId);
+        var eligibleRes = await _client.SendAsync(eligibleReq);
+        var lines = await eligibleRes.Content.ReadFromJsonAsync<List<EligibleSourceLineDto>>(JsonOptions);
+        Assert.NotNull(lines);
+        Assert.Equal(2, lines.Count);
+        Assert.Equal(500_000m, lines.First(l => l.SourceId == cost1).RemainingEligibleAmount);
+        Assert.Equal(300_000m, lines.First(l => l.SourceId == cost2).RemainingEligibleAmount);
+    }
+
+    [Fact]
+    public async Task MultiBill_Many_To_Many_Matching_AC_FD_008()
+    {
+        // AC-FD-008: Consolidated invoice matching source lines across multiple bills
+        var tenantId = await CreateTenantAsync("TN-MULTI-BILL", "Multi Bill Test");
+        var bill1 = await CreateBillAsync(tenantId, "BL-MULTI-1");
+        var bill2 = await CreateBillAsync(tenantId, "BL-MULTI-2");
+        var vendorId = await CreatePartyAsync(tenantId, "VEND-MULTI", "Vendor Multi", isVendor: true);
+
+        var cost1 = await CreateCostAsync(tenantId, bill1, 400_000m, "VND", vendorId);
+        var cost2 = await CreateCostAsync(tenantId, bill2, 250_000m, "VND", vendorId);
+
+        using var receiveReq = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
+        receiveReq.Content = JsonContent.Create(new
+        {
+            documentType = "invoice",
+            documentNo = "INV-CONSOLIDATED",
+            direction = "payable",
+            totalAmount = 0m,
+            currencyCode = "VND",
+            documentDate = "2026-10-03",
+            counterpartyId = vendorId,
+            mode = "lcms_generated",
+            selectedSourceLines = new[]
+            {
+                new { sourceId = cost1, sourceType = "cost", amount = 400_000m, billId = (Guid?)bill1 },
+                new { sourceId = cost2, sourceType = "cost", amount = 250_000m, billId = (Guid?)bill2 }
+            }
+        });
+
+        var receiveRes = await _client.SendAsync(receiveReq);
+        Assert.Equal(HttpStatusCode.Created, receiveRes.StatusCode);
+        var docBody = await receiveRes.Content.ReadFromJsonAsync<IdBody>(JsonOptions);
+
+        var doc = await GetDocumentAsync(tenantId, docBody!.Id);
+        Assert.Equal(650_000m, doc.TotalAmount);
+        Assert.Equal(2, doc.Lines.Count);
+        Assert.Contains(doc.Lines, l => l.BillId == bill1 && l.Amount == 400_000m);
+        Assert.Contains(doc.Lines, l => l.BillId == bill2 && l.Amount == 250_000m);
+    }
+
+    [Fact]
+    public async Task ModeB_CrossCurrency_Rejects_AC_FD_014()
+    {
+        // AC-FD-014: Mode B cross currency summation rejected
+        var tenantId = await CreateTenantAsync("TN-CROSS-CURR", "Cross Currency Test");
+        var billId = await CreateBillAsync(tenantId, "BL-CC-01");
+        var customerId = await CreatePartyAsync(tenantId, "CUST-CC", "Cust CC", isCustomer: true);
+
+        var revVnd = await CreateRevenueAsync(tenantId, billId, 1_000_000m, "VND", customerId);
+        var revUsd = await CreateRevenueAsync(tenantId, billId, 50m, "USD", customerId);
+
+        using var receiveReq = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
+        receiveReq.Content = JsonContent.Create(new
+        {
+            documentType = "invoice",
+            documentNo = "INV-CROSS-REJECT",
+            direction = "receivable",
+            totalAmount = 0m,
+            currencyCode = "VND",
+            documentDate = "2026-10-03",
+            counterpartyId = customerId,
+            billId,
+            mode = "lcms_generated",
+            selectedSourceLines = new[]
+            {
+                new { sourceId = revVnd, sourceType = "revenue", amount = 1_000_000m, billId },
+                new { sourceId = revUsd, sourceType = "revenue", amount = 50m, billId }
+            }
+        });
+
+        var receiveRes = await _client.SendAsync(receiveReq);
+        Assert.Equal(HttpStatusCode.BadRequest, receiveRes.StatusCode);
+    }
+
+    [Fact]
+    public async Task MissingFxRate_WithoutOverride_Rejects_AC_FD_016()
+    {
+        // AC-FD-016: Missing FX rate for foreign currency document is rejected
+        var tenantId = await CreateTenantAsync("TN-MISSING-FX", "Missing FX Test");
+        var billId = await CreateBillAsync(tenantId, "BL-MFX-01");
+
+        using var receiveReq = Tenant(HttpMethod.Post, "/api/financial-documents", tenantId);
+        receiveReq.Content = JsonContent.Create(new
+        {
+            documentType = "invoice",
+            documentNo = "INV-JPY-NO-FX",
+            direction = "payable",
+            totalAmount = 100_000m,
+            currencyCode = "JPY", // JPY has no seed FX rate against default VND
+            documentDate = "2026-10-03",
+            billId,
+            mode = "external_received"
+        });
+
+        var receiveRes = await _client.SendAsync(receiveReq);
+        Assert.Equal(HttpStatusCode.BadRequest, receiveRes.StatusCode);
+    }
+
     // Helpers
     private async Task<Guid> CreateTenantAsync(string code, string name)
     {

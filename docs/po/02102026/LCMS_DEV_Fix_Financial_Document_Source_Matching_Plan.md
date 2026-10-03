@@ -106,44 +106,44 @@ Màn hình áp dụng: **`apps/web/app/documents/receive/page.tsx`**
 ## 5. Kế hoạch Triển khai Kỹ thuật (Phases & Tasks)
 
 ### Phase 1: Data Model & Database Migration
-- [ ] **Task 1.1:** Mở rộng entity `FinancialDocument`:
+- [x] **Task 1.1:** Mở rộng entity `FinancialDocument`:
   - Thêm property `Mode` (`external_received`, `lcms_generated`).
   - Triển khai interface `IReportingFx`: `BaseAmount`, `ReportingCurrencyCode`, `FxRate`, `FxSourceType`, `FxSourceName`, `FxRateDate`, `FxRateId`, `FxOverrideReason`, `FxAppliedBy`, `FxAppliedAt`, `FxStatus`.
-- [ ] **Task 1.2:** Mở rộng entity `DocumentMatchDetail`:
+- [x] **Task 1.2:** Mở rộng entity `DocumentMatchDetail`:
   - Bổ sung `SourceOriginalAmount`, `MatchedReportingAmount`, `VarianceAmount`, `BillId`.
-- [ ] **Task 1.3:** Tạo EF Core Migration và cập nhật `LcmsDbContextModelSnapshot`.
+- [x] **Task 1.3:** Tạo EF Core Migration và cập nhật `LcmsDbContextModelSnapshot`.
 
 ### Phase 2: Backend Application Layer (Queries, Commands, Rules)
-- [ ] **Task 2.1:** Viết Query `GetEligibleDocumentSourceLinesQuery`:
+- [x] **Task 2.1:** Viết Query `GetEligibleDocumentSourceLinesQuery`:
   - Lấy danh sách Cost (AP) hoặc Revenue (AR) theo đối tác, Bill, tiền tệ.
   - Tính toán `AlreadyDocumentedAmount` và `RemainingEligibleAmount = OriginalAmount - AlreadyDocumentedAmount`.
   - Loại trừ các detail đã bị hủy (`reversed` / `cancelled`).
-- [ ] **Task 2.2:** Cập nhật `ReceiveFinancialDocumentCommand`:
+- [x] **Task 2.2:** Cập nhật `ReceiveFinancialDocumentCommand`:
   - Tiếp nhận `Mode` và danh sách dòng đã chọn (`SelectedSourceLines`).
   - Thực thi kiểm tra Rule FD-R02 (Mode B: validate `TotalAmount` khớp đúng tổng dòng chọn).
   - Thực thi kiểm tra Rule FD-R03 (Mode A: tính và lưu `VarianceAmount`).
   - Thực thi kiểm tra Rule FD-R04 & FD-R07 (chặn over-match, kiểm tra đúng đối tác).
   - Tích hợp `FxSnapshotService` để tạo FX snapshot cho chứng từ.
   - Tự động sinh `DocumentMatch` + `DocumentMatchDetail` tương ứng.
-- [ ] **Task 2.3:** Kiểm tra Rule FD-R10:
+- [x] **Task 2.3:** Kiểm tra Rule FD-R10:
   - Kiểm tra các lệnh reverse matching đảm bảo phục hồi lại `RemainingEligibleAmount`.
 
 ### Phase 3: API & BFF Layer
-- [ ] **Task 3.1:** Thêm API endpoint `GET /api/financial-documents/eligible-source-lines`.
-- [ ] **Task 3.2:** Cập nhật API endpoint `POST /api/financial-documents` nhận `mode` và `selectedLines`.
-- [ ] **Task 3.3:** Cập nhật Next.js BFF routes trong `apps/web/app/bff/financial-documents/`.
+- [x] **Task 3.1:** Thêm API endpoint `GET /api/financial-documents/eligible-source-lines`.
+- [x] **Task 3.2:** Cập nhật API endpoint `POST /api/financial-documents` nhận `mode` và `selectedLines`.
+- [x] **Task 3.3:** Cập nhật Next.js BFF routes trong `apps/web/app/bff/financial-documents/`.
 
 ### Phase 4: Frontend UI Redesign
-- [ ] **Task 4.1:** Thiết kế lại form `ReceiveDocumentForm.tsx` theo luồng 7 bước chuẩn PO.
-- [ ] **Task 4.2:** Tích hợp bảng động "Khoản tài chính liên quan" với checkbox chọn dòng, auto-fill số dư còn lại, cho phép sửa số tiền gán đợt này.
-- [ ] **Task 4.3:** Tự động đồng bộ và tính tổng tiền ở Mode B (Readonly) và hiển thị box đối soát chênh lệch (Variance) ở Mode A.
-- [ ] **Task 4.4:** Tích hợp component preview tỷ giá FX (`FxRateBox` / `CurrencySelect`).
-- [ ] **Task 4.5:** Cập nhật trang chi tiết `/documents/[id]` hiển thị danh sách các khoản kinh tế liên kết (`Linked Economic Lines`) và chênh lệch matching.
+- [x] **Task 4.1:** Thiết kế lại form `ReceiveDocumentForm.tsx` theo luồng 7 bước chuẩn PO.
+- [x] **Task 4.2:** Tích hợp bảng động "Khoản tài chính liên quan" với checkbox chọn dòng, auto-fill số dư còn lại, cho phép sửa số tiền gán đợt này.
+- [x] **Task 4.3:** Tự động đồng bộ và tính tổng tiền ở Mode B (Readonly) và hiển thị box đối soát chênh lệch (Variance) ở Mode A.
+- [x] **Task 4.4:** Tích hợp component preview tỷ giá FX (`FxRateBox` / `CurrencySelect`).
+- [x] **Task 4.5:** Cập nhật trang chi tiết `/documents/[id]` hiển thị danh sách các khoản kinh tế liên kết (`Linked Economic Lines`) và chênh lệch matching.
 
 ### Phase 5: Kiểm thử Tự động & Nghiệm thu AC
-- [ ] **Task 5.1:** Viết bộ test tích hợp `tests/LCMS.Api.Tests/FinancialDocumentSourceMatchingTests.cs` bao phủ toàn bộ 20 Acceptance Criteria (`AC-FD-001` đến `AC-FD-020`).
-- [ ] **Task 5.2:** Chạy UAT Smoke Test (`UAT-FD-01` đến `UAT-FD-08`).
-- [ ] **Task 5.3:** Cập nhật `docs/handoff.md` theo quy định dự án.
+- [x] **Task 5.1:** Viết bộ test tích hợp `tests/LCMS.Api.Tests/FinancialDocumentSourceMatchingTests.cs` bao phủ toàn bộ 20 Acceptance Criteria (`AC-FD-001` đến `AC-FD-020`).
+- [x] **Task 5.2:** Chạy UAT Smoke Test (`UAT-FD-01` đến `UAT-FD-08`).
+- [x] **Task 5.3:** Cập nhật `docs/handoff.md` theo quy định dự án.
 
 ---
 

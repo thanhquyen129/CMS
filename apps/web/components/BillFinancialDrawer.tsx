@@ -25,6 +25,7 @@ import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { maturityLabelKey, type CostListItem } from "@/lib/costs-revenues";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { WaybillProfilePanel } from "./WaybillProfilePanel";
+import { BillCashFlowMap } from "./BillCashFlowMap";
 import { UnlinkRelationButton } from "./UnlinkRelationButton";
 
 type Labels = {
@@ -248,6 +249,7 @@ export function BillFinancialDrawer({
               },
               { id: "rating", label: "Tính giá" },
               { id: "history", label: "Lịch sử" },
+              { id: "cashflow", label: "Dòng tiền" },
               { id: "related", label: "Liên quan" },
             ]}
             activeId={tab}
@@ -553,6 +555,12 @@ export function BillFinancialDrawer({
 
           {tab === "history" ? (
             <BillFinancialHistoryPanel billId={bill.id} layout="list" />
+          ) : null}
+
+          {tab === "cashflow" ? (
+            <div className="stack">
+              <BillCashFlowMap profile={view.profile} />
+            </div>
           ) : null}
 
               {tab === "related" ? (

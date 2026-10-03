@@ -16,6 +16,7 @@ export type FinancialDocumentListItem = {
   acceptanceStatus: string;
   matchingStatus: string;
   documentDate: string;
+  mode?: string;
 };
 
 export type FinancialDocumentLine = {

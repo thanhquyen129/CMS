@@ -9,10 +9,11 @@ import {
   isOutstanding,
   settlementStatusLabel,
 } from "@/lib/ap-ar";
-import type { FinancialDocumentListItem } from "@/lib/documents";
+import type { FinancialDocumentListItem } from "@/lib/documents-shared";
 import {
   directionLabel,
   documentTypeLabel,
+  modeLabel,
 } from "@/lib/documents";
 import { formatMoney } from "@/lib/money";
 import type { TerminologyMap } from "@/lib/terminology";
@@ -120,7 +121,10 @@ export function BillDocumentsApArPanel({
                     <div className="queue-title">{doc.documentNo}</div>
                     <span className="muted small block">{doc.documentDate}</span>
                   </td>
-                  <td>{documentTypeLabel(doc.documentType)}</td>
+                  <td>
+                    <div>{documentTypeLabel(doc.documentType)}</div>
+                    {doc.mode ? <span className="muted small block">{modeLabel(doc.mode)}</span> : null}
+                  </td>
                   <td>{directionLabel(terms, doc.direction)}</td>
                   <td className="num">
                     {formatMoney(doc.totalAmount, doc.currencyCode)}

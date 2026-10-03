@@ -9,6 +9,7 @@ import {
   directionLabel,
   documentTypeLabel,
   type FinancialDocumentListItem,
+  modeLabel,
 } from "@/lib/documents-shared";
 import { formatMoney } from "@/lib/money";
 import type { TerminologyMap } from "@/lib/terminology";
@@ -97,7 +98,10 @@ export function DocumentListWorkspace({
                       {d.documentNo}
                     </button>
                   </td>
-                  <td>{documentTypeLabel(d.documentType)}</td>
+                  <td>
+                    <div>{documentTypeLabel(d.documentType)}</div>
+                    {d.mode ? <div className="muted small">{modeLabel(d.mode)}</div> : null}
+                  </td>
                   <td>{directionLabel(terms, d.direction)}</td>
                   <td className="num">
                     {formatMoney(d.totalAmount, d.currencyCode)}
@@ -150,6 +154,7 @@ export function DocumentListWorkspace({
               {documentTypeLabel(selected.documentType)}
               {" · "}
               {directionLabel(terms, selected.direction)}
+              {selected.mode ? ` · ${modeLabel(selected.mode)}` : ""}
             </>
           ) : null
         }
@@ -201,6 +206,12 @@ export function DocumentListWorkspace({
                   matchingStatus={selected.matchingStatus}
                 />
                 <dl className="metric-grid" style={{ marginTop: "1rem" }}>
+                  {selected.mode ? (
+                    <div>
+                      <dt>Chế độ</dt>
+                      <dd>{modeLabel(selected.mode)}</dd>
+                    </div>
+                  ) : null}
                   <div>
                     <dt>Số tiền</dt>
                     <dd>

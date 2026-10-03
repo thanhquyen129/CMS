@@ -559,7 +559,11 @@ export function BillFinancialDrawer({
 
           {tab === "cashflow" ? (
             <div className="stack">
-              <BillCashFlowMap profile={view.profile} />
+              <BillCashFlowMap
+                profile={view.profile}
+                costs={view.costs}
+                revenues={view.revenues}
+              />
             </div>
           ) : null}
 

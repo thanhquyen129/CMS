@@ -703,7 +703,11 @@ export default async function BillDetailPage({
                 {profileRes.message}
               </div>
             ) : (
-              <BillCashFlowMap profile={profileRes.data} />
+              <BillCashFlowMap
+                profile={profileRes.data}
+                costs={costsRes.ok ? costsRes.data : null}
+                revenues={revenuesRes.ok ? revenuesRes.data : null}
+              />
             )}
           </section>
         ) : null}

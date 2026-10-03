@@ -15,6 +15,7 @@ type Props = {
   disabled?: boolean;
   defaultId?: string | null;
   defaultLabel?: string | null;
+  onSelect?: (item: BillHit | null) => void;
 };
 
 export function BillTypeahead({
@@ -23,6 +24,7 @@ export function BillTypeahead({
   disabled,
   defaultId,
   defaultLabel,
+  onSelect,
 }: Props) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -65,12 +67,14 @@ export function BillTypeahead({
     setSelectedId(item.id);
     setQuery(item.billNo);
     setOpen(false);
+    onSelect?.(item);
   }
 
   function clear() {
     setSelectedId("");
     setQuery("");
     setItems([]);
+    onSelect?.(null);
   }
 
   return (

@@ -40,7 +40,12 @@ public sealed record FinancialDocumentDto(
     DateTimeOffset? AcceptedAt,
     string RecordStatus,
     string? Notes,
-    IReadOnlyList<FinancialDocumentLineDto> Lines);
+    IReadOnlyList<FinancialDocumentLineDto> Lines,
+    string Mode = "external_received",
+    decimal? BaseAmount = null,
+    decimal? FxRate = null,
+    string? FxStatus = null,
+    string? ReportingCurrencyCode = null);
 
 public sealed record FinancialDocumentListItemDto(
     Guid Id,
@@ -54,7 +59,28 @@ public sealed record FinancialDocumentListItemDto(
     string AcceptanceStatus,
     string MatchingStatus,
     DateOnly DocumentDate,
-    string? BillNo = null);
+    string? BillNo = null,
+    string Mode = "external_received",
+    decimal? BaseAmount = null,
+    decimal? FxRate = null,
+    string? FxStatus = null)
+{
+    public FinancialDocumentListItemDto(
+        Guid id,
+        string documentType,
+        string documentNo,
+        string direction,
+        decimal totalAmount,
+        string currencyCode,
+        Guid? billId,
+        string receiptStatus,
+        string acceptanceStatus,
+        string matchingStatus,
+        DateOnly documentDate,
+        string? billNo) : this(id, documentType, documentNo, direction, totalAmount, currencyCode, billId, receiptStatus, acceptanceStatus, matchingStatus, documentDate, billNo, "external_received", null, null, null)
+    {
+    }
+}
 
 public sealed record GetFinancialDocumentByIdQuery(Guid Id) : IRequest<FinancialDocumentDto>;
 
@@ -154,7 +180,12 @@ public sealed class GetFinancialDocumentByIdQueryHandler
             document.AcceptedAt,
             document.RecordStatus,
             document.Notes,
-            lines);
+            lines,
+            document.Mode ?? FinancialDocumentModes.ExternalReceived,
+            document.BaseAmount,
+            document.FxRate,
+            document.FxStatus,
+            document.ReportingCurrencyCode);
     }
 }
 
@@ -287,7 +318,11 @@ public sealed class ListFinancialDocumentsQueryHandler
                 d.AcceptanceStatus,
                 d.MatchingStatus,
                 d.DocumentDate,
-                null))
+                null,
+                d.Mode,
+                d.BaseAmount,
+                d.FxRate,
+                d.FxStatus))
             .ToListAsync(cancellationToken);
 
         var billNos = await DataScopeFilter.LoadBillNosAsync(_db, items.Select(d => d.BillId), cancellationToken);

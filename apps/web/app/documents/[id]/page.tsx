@@ -19,6 +19,7 @@ import {
   documentLineCoverage,
   documentTypeLabel,
   getFinancialDocument,
+  modeLabel,
   recordStatusLabel,
 } from "@/lib/documents";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
@@ -120,6 +121,7 @@ export default async function DocumentDetailPage({
         <p className="lede meta-line">
           {documentTypeLabel(doc.documentType)} ·{" "}
           {directionLabel(terms, doc.direction)} ·{" "}
+          {modeLabel(doc.mode)} ·{" "}
           {formatMoney(doc.totalAmount, doc.currencyCode)} · Ngày{" "}
           {doc.documentDate} · {recordStatusLabel(terms, doc.recordStatus)}
         </p>
@@ -137,6 +139,10 @@ export default async function DocumentDetailPage({
         />
 
         <dl className="metric-grid" style={{ marginTop: "1rem" }}>
+          <div>
+            <dt>Chế độ</dt>
+            <dd>{modeLabel(doc.mode)}</dd>
+          </div>
           <div>
             <dt>Nhận lúc</dt>
             <dd>{doc.receivedAt ? formatDateTimeVi(doc.receivedAt) : "—"}</dd>
@@ -167,6 +173,15 @@ export default async function DocumentDetailPage({
                   : "—"}
             </dd>
           </div>
+          {doc.baseAmount != null ? (
+            <div>
+              <dt>Quy đổi ({doc.reportingCurrencyCode || "VND"})</dt>
+              <dd>
+                {formatMoney(doc.baseAmount, doc.reportingCurrencyCode || "VND")}
+                {doc.fxRate ? ` (Tỷ giá: ${doc.fxRate})` : ""}
+              </dd>
+            </div>
+          ) : null}
         </dl>
 
         {doc.notes ? <p className="note">Ghi chú: {doc.notes}</p> : null}

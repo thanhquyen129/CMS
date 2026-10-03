@@ -1180,11 +1180,14 @@ internal sealed class FinancialDocumentConfiguration : IEntityTypeConfiguration<
         builder.ToTable("financial_documents");
         EntityBaseConfiguration.ConfigureEntityBase(builder);
         builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.Mode).HasMaxLength(32).IsRequired().HasDefaultValue(FinancialDocumentModes.ExternalReceived);
         builder.Property(e => e.DocumentType).HasMaxLength(32).IsRequired();
         builder.Property(e => e.DocumentNo).HasMaxLength(128).IsRequired();
         builder.Property(e => e.Direction).HasMaxLength(32).IsRequired();
         builder.Property(e => e.TotalAmount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+        builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
+        EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.DocumentDate).IsRequired();
         builder.Property(e => e.ReceiptStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.AcceptanceStatus).HasMaxLength(32).IsRequired();
@@ -1265,6 +1268,10 @@ internal sealed class DocumentMatchDetailConfiguration : IEntityTypeConfiguratio
         builder.Property(e => e.MatchId).IsRequired();
         builder.Property(e => e.SourceLineId).IsRequired();
         builder.Property(e => e.MatchedAmount).HasPrecision(18, 4);
+        builder.Property(e => e.SourceOriginalAmount).HasPrecision(18, 4);
+        builder.Property(e => e.MatchedReportingAmount).HasPrecision(18, 4);
+        builder.Property(e => e.VarianceAmount).HasPrecision(18, 4);
+        builder.Property(e => e.SourceType).HasMaxLength(32);
         builder.Property(e => e.OutcomeCode).HasMaxLength(32).IsRequired();
         builder.Property(e => e.AppliedTolerance).HasPrecision(18, 4);
         builder.Property(e => e.DetailStatus).HasMaxLength(32).IsRequired();
@@ -1274,6 +1281,7 @@ internal sealed class DocumentMatchDetailConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(e => new { e.TenantId, e.SourceLineId });
         builder.HasIndex(e => new { e.TenantId, e.TargetLineId });
         builder.HasIndex(e => new { e.TenantId, e.DetailStatus });
+        builder.HasIndex(e => new { e.TenantId, e.BillId });
 
         builder.HasOne(e => e.Match)
             .WithMany()
@@ -1298,6 +1306,11 @@ internal sealed class DocumentMatchDetailConfiguration : IEntityTypeConfiguratio
         builder.HasOne(e => e.TargetRevenue)
             .WithMany()
             .HasForeignKey(e => e.TargetRevenueId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Bill)
+            .WithMany()
+            .HasForeignKey(e => e.BillId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -23,6 +23,21 @@ public sealed class DocumentMatchDetail : TenantEntityBase
 
     public decimal MatchedAmount { get; set; }
 
+    /// <summary>Snapshot of the source original amount before/at matching.</summary>
+    public decimal? SourceOriginalAmount { get; set; }
+
+    /// <summary>Reporting currency amount of the matched value (ADR-0040 FX trace).</summary>
+    public decimal? MatchedReportingAmount { get; set; }
+
+    /// <summary>Document-vs-source variance amount for this detail line.</summary>
+    public decimal? VarianceAmount { get; set; }
+
+    /// <summary>cost | revenue | line (discriminator for source/target link).</summary>
+    public string? SourceType { get; set; }
+
+    /// <summary>Bill reference/drill-down (PO 02/10/2026).</summary>
+    public Guid? BillId { get; set; }
+
     /// <summary>matched | matched_with_tolerance</summary>
     public string OutcomeCode { get; set; } = DocumentMatchOutcomes.Matched;
 
@@ -41,6 +56,7 @@ public sealed class DocumentMatchDetail : TenantEntityBase
     public FinancialDocumentLine? TargetLine { get; set; }
     public Cost? TargetCost { get; set; }
     public Revenue? TargetRevenue { get; set; }
+    public Bill? Bill { get; set; }
 }
 
 public static class DocumentMatchOutcomes

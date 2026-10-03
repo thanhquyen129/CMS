@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-10-03 — Financial document source line matching & two-mode intake (PO 02/10/2026)
+
+- Schema & Domain: Added `Mode` and reporting FX columns to `FinancialDocument`; added `SourceOriginalAmount`, `MatchedReportingAmount`, `VarianceAmount`, `SourceType`, `BillId` to `DocumentMatchDetail`; created migration `20261003001711_FinancialDocumentSourceMatching`.
+- Application & API: Added `GetEligibleDocumentSourceLinesQuery` (`GET /api/financial-documents/eligible-source-lines`) supporting direction, bill, and counterparty filtering; updated `ReceiveFinancialDocumentCommand` (`POST /api/financial-documents`) with Mode A (`external_received`) variance tracking and Mode B (`lcms_generated`) source-derived total amount with automated confirmed matching and over-match validation (Single Economic Fact).
+- Web Frontend: Updated `ReceiveDocumentForm.tsx` to 7-step guided intake with dynamic source-line table, counterparty and Bill filtering, auto-calculated/manual total amount, and variance tracking; enhanced `DocumentDetailPage` with mode and reporting FX presentation.
+
 ## 2026-10-01 — Role-tailored mobile command center & commercial UX polish
 
 - `apps/mobile/app/(tabs)/dashboard.tsx`: redesigned executive & role-adaptive dashboard with Gross Margin meter, Revenue/Cost balance, data confidence progress, priority action center (FaceID approvals, exceptions, closes), and role perspective switcher (Executive, Ops, AR, AP, Audit).

@@ -17,6 +17,18 @@ public static class FinancialDocumentEndpoints
         {
             http.Headers.TryGetValue("Idempotency-Key", out var idempotencyKey);
             var billId = await sender.Send(new ResolveBillReferenceQuery(body.BillId), ct);
+
+            List<SourceLineSelectionDto>? selectedLines = null;
+            if (body.SelectedSourceLines != null && body.SelectedSourceLines.Count > 0)
+            {
+                selectedLines = new List<SourceLineSelectionDto>();
+                foreach (var line in body.SelectedSourceLines)
+                {
+                    var lineBillId = await sender.Send(new ResolveBillReferenceQuery(line.BillId), ct);
+                    selectedLines.Add(new SourceLineSelectionDto(line.SourceId, line.SourceType, line.Amount, lineBillId));
+                }
+            }
+
             var id = await sender.Send(
                 new ReceiveFinancialDocumentCommand(
                     body.DocumentType,
@@ -30,9 +42,27 @@ public static class FinancialDocumentEndpoints
                     body.Notes,
                     body.SourceSystem,
                     body.ExternalId,
-                    idempotencyKey.ToString()),
+                    idempotencyKey.ToString(),
+                    body.Mode,
+                    selectedLines,
+                    body.ManualFxRate,
+                    body.FxOverrideReason),
                 ct);
             return Results.Created($"/api/financial-documents/{id}", new { id });
+        });
+
+        docs.MapGet("/eligible-source-lines", async (
+            string direction,
+            Guid? counterpartyId,
+            Guid? billId,
+            string? currencyCode,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var lines = await sender.Send(
+                new GetEligibleDocumentSourceLinesQuery(direction, counterpartyId, billId, currencyCode),
+                ct);
+            return Results.Ok(lines);
         });
 
         docs.MapGet("/", async (
@@ -275,6 +305,12 @@ public static class FinancialDocumentEndpoints
     }
 }
 
+public sealed record SourceLineSelectionRequest(
+    Guid SourceId,
+    string SourceType,
+    decimal Amount,
+    string? BillId = null);
+
 public sealed record ReceiveFinancialDocumentRequest(
     string DocumentType,
     string DocumentNo,
@@ -286,7 +322,11 @@ public sealed record ReceiveFinancialDocumentRequest(
     string? BillId,
     string? Notes,
     string? SourceSystem,
-    string? ExternalId);
+    string? ExternalId,
+    string? Mode = null,
+    IReadOnlyList<SourceLineSelectionRequest>? SelectedSourceLines = null,
+    decimal? ManualFxRate = null,
+    string? FxOverrideReason = null);
 
 public sealed record AddFinancialDocumentLineRequest(
     decimal Amount,

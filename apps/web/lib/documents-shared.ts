@@ -32,6 +32,30 @@ export type FinancialDocumentLine = {
   revenueTypeCode: string | null;
 };
 
+export type EligibleSourceLine = {
+  sourceId: string;
+  sourceType: "cost" | "revenue";
+  lineCode: string | null;
+  description: string | null;
+  currencyCode: string;
+  originalAmount: number;
+  alreadyDocumentedAmount: number;
+  remainingEligibleAmount: number;
+  billId: string | null;
+  billNo: string | null;
+  counterpartyId: string | null;
+  counterpartyName: string | null;
+  maturity: string;
+  effectiveDate: string;
+};
+
+export type SourceLineSelection = {
+  sourceId: string;
+  sourceType: string;
+  amount: number;
+  billId?: string | null;
+};
+
 export type FinancialDocument = {
   id: string;
   documentType: string;
@@ -51,6 +75,11 @@ export type FinancialDocument = {
   recordStatus: string;
   notes: string | null;
   lines: FinancialDocumentLine[];
+  mode?: string;
+  baseAmount?: number | null;
+  fxRate?: number | null;
+  fxStatus?: string | null;
+  reportingCurrencyCode?: string | null;
 };
 
 export type ReceiveDocumentBody = {
@@ -65,7 +94,21 @@ export type ReceiveDocumentBody = {
   notes?: string | null;
   sourceSystem?: string | null;
   externalId?: string | null;
+  mode?: "external_received" | "lcms_generated" | string;
+  selectedSourceLines?: SourceLineSelection[];
+  manualFxRate?: number | null;
+  fxOverrideReason?: string | null;
 };
+
+export function modeLabel(mode?: string): string {
+  switch (mode?.toLowerCase()) {
+    case "lcms_generated":
+      return "Tạo từ LCMS";
+    case "external_received":
+    default:
+      return "Nhận bên ngoài";
+  }
+}
 
 export function canAcceptDocument(doc: {
   receiptStatus: string;

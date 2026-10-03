@@ -7,8 +7,11 @@ namespace LCMS.Domain.Entities;
 /// State dimensions are independent: Received ≠ Accepted ≠ Matched (AC-005 / H-guardrail).
 /// Receiving a document must not invent Cost/Revenue (C-003 / C-004).
 /// </summary>
-public sealed class FinancialDocument : TenantEntityBase
+public sealed class FinancialDocument : TenantEntityBase, IReportingFx
 {
+    /// <summary>external_received | lcms_generated (PO 02/10/2026)</summary>
+    public string Mode { get; set; } = FinancialDocumentModes.ExternalReceived;
+
     /// <summary>dn | invoice | credit_note | debit_note | other</summary>
     public string DocumentType { get; set; } = FinancialDocumentTypes.Invoice;
 
@@ -21,6 +24,18 @@ public sealed class FinancialDocument : TenantEntityBase
 
     public decimal TotalAmount { get; set; }
     public string CurrencyCode { get; set; } = "VND";
+    public decimal? BaseAmount { get; set; }
+    public Guid? FxRateId { get; set; }
+    public string? ReportingCurrencyCode { get; set; }
+    public decimal? FxRate { get; set; }
+    public string? FxSourceType { get; set; }
+    public string? FxSourceName { get; set; }
+    public DateOnly? FxRateDate { get; set; }
+    public string? FxOverrideReason { get; set; }
+    public Guid? FxAppliedBy { get; set; }
+    public DateTimeOffset? FxAppliedAt { get; set; }
+    public string FxStatus { get; set; } = FxStatuses.Missing;
+
     public DateOnly DocumentDate { get; set; }
 
     /// <summary>not_received | received — independent of acceptance/matching.</summary>
@@ -91,4 +106,16 @@ public static class FinancialDocumentMatchingStatuses
     public const string Unmatched = "unmatched";
     public const string PartiallyMatched = "partially_matched";
     public const string Matched = "matched";
+}
+
+public static class FinancialDocumentModes
+{
+    public const string ExternalReceived = "external_received";
+    public const string LcmsGenerated = "lcms_generated";
+
+    public static readonly HashSet<string> All = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ExternalReceived,
+        LcmsGenerated
+    };
 }

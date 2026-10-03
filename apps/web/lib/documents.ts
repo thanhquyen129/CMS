@@ -9,10 +9,12 @@ import type {
 import { unwrapPaged, type PagedResult } from "./paging";
 
 export type {
+  EligibleSourceLine,
   FinancialDocument,
   FinancialDocumentLine,
   FinancialDocumentListItem,
   ReceiveDocumentBody,
+  SourceLineSelection,
 } from "./documents-shared";
 export {
   acceptanceStatusLabel,
@@ -23,6 +25,7 @@ export {
   documentLineCoverage,
   documentTypeLabel,
   matchingStatusLabel,
+  modeLabel,
   receiptStatusLabel,
   recordStatusLabel,
 } from "./documents-shared";

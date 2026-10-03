@@ -6,6 +6,7 @@ import { BillFinancialHistoryPanel } from "@/components/BillFinancialHistoryPane
 import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
+import { BillCashFlowMap } from "@/components/BillCashFlowMap";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { OperationalReferenceEditor } from "@/components/OperationalReferenceEditor";
@@ -42,7 +43,8 @@ type BillTab =
   | "revenues"
   | "documents"
   | "rating"
-  | "history";
+  | "history"
+  | "cashflow";
 
 function parseTab(raw: string | undefined): BillTab {
   switch (raw) {
@@ -51,6 +53,7 @@ function parseTab(raw: string | undefined): BillTab {
     case "documents":
     case "rating":
     case "history":
+    case "cashflow":
       return raw;
     default:
       return "overview";
@@ -443,6 +446,14 @@ export default async function BillDetailPage({
           >
             Lịch sử
           </Link>
+          <Link
+            className={tab === "cashflow" ? "active" : undefined}
+            href={tabHref("cashflow")}
+            role="tab"
+            aria-selected={tab === "cashflow"}
+          >
+            Dòng tiền
+          </Link>
         </div>
 
         {tab === "overview" ? (
@@ -682,6 +693,19 @@ export default async function BillDetailPage({
 
         {tab === "history" ? (
           <BillFinancialHistoryPanel billId={id} />
+        ) : null}
+
+        {tab === "cashflow" ? (
+          <section aria-label="Sơ đồ dòng tiền">
+            <h2 className="section-title">Sơ đồ dòng tiền</h2>
+            {!profileRes.ok ? (
+              <div className="alert alert-error" role="alert">
+                {profileRes.message}
+              </div>
+            ) : (
+              <BillCashFlowMap profile={profileRes.data} />
+            )}
+          </section>
         ) : null}
       </section>
     </AppShell>

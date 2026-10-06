@@ -98,8 +98,13 @@ services:
     container_name: cms-proxy
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl.conf:/etc/nginx/ssl.conf.available:ro
+      - ./entrypoint-ssl.sh:/docker-entrypoint.d/40-ssl-setup.sh:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       - web
       - api

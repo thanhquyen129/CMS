@@ -1,5 +1,11 @@
 # Handoff
 
+## 2026-10-06 — Production SSL setup & HTTPS reverse proxy for cms.lsslogistics.vn
+
+- Infra: Exposed port 443 on `proxy` service, added ACME challenge webroot and Let's Encrypt certificate mounts.
+- Nginx: Added conditional HTTPS enablement script `entrypoint-ssl.sh` and `ssl.conf` for `cms.lsslogistics.vn` with HTTP-to-HTTPS redirect while preserving HTTP ACME challenge and health endpoints. Configured webroot auto-renewal hook with certbot.
+- Files: `infra/docker-compose.host.yml`, `infra/nginx.conf`, `infra/ssl.conf`, `infra/entrypoint-ssl.sh`.
+
 ## 2026-10-03 — Financial document source line matching & two-mode intake (PO 02/10/2026)
 
 - Schema & Domain: Added `Mode` and reporting FX columns to `FinancialDocument`; added `SourceOriginalAmount`, `MatchedReportingAmount`, `VarianceAmount`, `SourceType`, `BillId` to `DocumentMatchDetail`; created migration `20261003001711_FinancialDocumentSourceMatching`.

@@ -12,8 +12,9 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { formatDateVi } from "@/lib/money";
 import { listSurcharges } from "@/lib/rate-cards-server";
+import { MigrateLegacySurchargesButton } from "@/components/MigrateLegacySurchargesButton";
 
-type SearchParams = Promise<{ q?: string; mode?: string; status?: string }>;
+type SearchParams = Promise<{ q?: string; mode?: string; status?: string; direction?: string }>;
 
 export default async function SurchargesPage({
   searchParams,
@@ -27,6 +28,7 @@ export default async function SurchargesPage({
   const q = (sp.q ?? "").trim().toLowerCase();
   const mode = (sp.mode ?? "").trim().toLowerCase();
   const status = (sp.status ?? "").trim().toLowerCase();
+  const direction = (sp.direction ?? "").trim().toLowerCase();
 
   const rows = await listSurcharges();
   const all = rows.ok ? rows.data : [];
@@ -38,6 +40,7 @@ export default async function SurchargesPage({
     if (mode && (row.transportMode ?? "").toLowerCase() !== mode) return false;
     if (status === "published" && row.versionStatus !== "published") return false;
     if (status === "draft" && row.versionStatus === "published") return false;
+    if (direction && (row.direction ?? "").toLowerCase() !== direction) return false;
     return true;
   });
 
@@ -62,10 +65,10 @@ export default async function SurchargesPage({
             { label: "Quản lý phụ phí" },
           ]}
           title="Quản lý phụ phí"
-          lede="Phụ phí là thành phần quy tắc giá gắn vào phiên bản bảng giá. Published bất biến — sửa bằng phiên bản mới."
+          lede="Phụ phí là bảng giá phụ độc lập. Cước chính nằm trên bảng giá. Rating cộng các phụ phí còn hiệu lực và còn điều kiện phù hợp."
           action={
-            <Link className="btn btn-primary" href="/rate-cards/new">
-              ＋ Tạo trên bảng giá nháp
+            <Link className="btn btn-primary" href="/rate-cards/surcharges/new">
+              ＋ Tạo phụ phí
             </Link>
           }
         />
@@ -74,7 +77,7 @@ export default async function SurchargesPage({
 
         <FilterBar
           action="/rate-cards/surcharges"
-          resetHref={sp.q || sp.mode || sp.status ? "/rate-cards/surcharges" : undefined}
+          resetHref={sp.q || sp.mode || sp.status || sp.direction ? "/rate-cards/surcharges" : undefined}
           fields={[
             {
               kind: "search",
@@ -98,6 +101,18 @@ export default async function SurchargesPage({
             },
             {
               kind: "select",
+              name: "direction",
+              label: "Chiều",
+              defaultValue: sp.direction ?? "",
+              options: [
+                { value: "", label: "Tất cả" },
+                { value: "buy", label: "Mua" },
+                { value: "sell", label: "Bán" },
+                { value: "both", label: "Cả hai" },
+              ],
+            },
+            {
+              kind: "select",
               name: "status",
               label: "Trạng thái",
               defaultValue: sp.status ?? "",
@@ -111,8 +126,9 @@ export default async function SurchargesPage({
         />
 
         <p className="muted">
-          Không có form phụ phí độc lập — thêm thành phần trên phiên bản nháp của bảng giá, rồi phát hành.
+          Để trống bảng giá nghĩa là phụ phí áp theo điều kiện chung. Phiên bản đã phát hành không sửa được — tạo phiên bản mới.
         </p>
+        <MigrateLegacySurchargesButton />
 
         {!rows.ok ? (
           <div className="alert alert-error" role="alert">
@@ -121,7 +137,7 @@ export default async function SurchargesPage({
         ) : filtered.length === 0 ? (
           <div className="empty-state" role="status">
             {all.length === 0
-              ? "Chưa có phụ phí. Tạo bảng giá nháp và thêm thành phần quy tắc."
+              ? "Chưa có phụ phí. Tạo phụ phí mới, không cần chọn bảng giá."
               : "Không khớp bộ lọc hiện tại."}
           </div>
         ) : (
@@ -131,6 +147,7 @@ export default async function SurchargesPage({
                 <tr>
                   <th>Mã</th>
                   <th>Tên phụ phí</th>
+                  <th>Chiều</th>
                   <th>Cách tính</th>
                   <th>Đơn vị</th>
                   <th>Phương thức</th>
@@ -146,6 +163,7 @@ export default async function SurchargesPage({
                       <code>{row.code}</code>
                     </td>
                     <td>{row.name}</td>
+                    <td>{directionLabel(row.direction)}</td>
                     <td>{row.calcMethod || "—"}</td>
                     <td>
                       {row.amount} {row.currencyCode}
@@ -155,13 +173,20 @@ export default async function SurchargesPage({
                       {formatDateVi(row.effectiveFrom)} – {formatDateVi(row.effectiveTo)}
                     </td>
                     <td>
-                      {row.versionStatus === "published" ? "Đang hiệu lực" : "Nháp"} · {row.cardCode}{" "}
-                      v{row.versionNo}
+                      {row.versionStatus === "published" ? "Đang hiệu lực" : "Nháp"}
+                      {row.sourceKind === "legacy" ? " · cũ" : ""} ·{" "}
+                      {row.cardCode ? `${row.cardCode} ` : "Mọi bảng giá "}v{row.versionNo}
                     </td>
                     <td>
-                      <Link className="row-link" href={`/rate-cards?q=${encodeURIComponent(row.cardCode)}`}>
-                        Mở danh sách
-                      </Link>
+                      {row.sourceKind === "legacy" ? (
+                        <Link className="row-link" href={`/rate-cards?q=${encodeURIComponent(row.cardCode)}`}>
+                          Mở bảng giá
+                        </Link>
+                      ) : (
+                        <Link className="row-link" href={`/rate-cards/surcharges/${row.id}`}>
+                          Mở
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -172,4 +197,17 @@ export default async function SurchargesPage({
       </section>
     </AppShell>
   );
+}
+
+function directionLabel(direction?: string): string {
+  switch ((direction ?? "").toLowerCase()) {
+    case "buy":
+      return "Mua";
+    case "sell":
+      return "Bán";
+    case "both":
+      return "Cả hai";
+    default:
+      return "—";
+  }
 }

@@ -45,6 +45,7 @@ export default async function RateHistoryPage({
     formatDateTimeVi(row.ratedAt),
     row.cardCode || "",
     row.versionNo == null ? "" : `v${row.versionNo}`,
+    row.appliedSurcharges || "",
     row.status,
     row.totalAmount,
     row.currencyCode,
@@ -61,7 +62,7 @@ export default async function RateHistoryPage({
             { label: "Lịch sử giá" },
           ]}
           title="Lịch sử giá"
-          lede="Tra cứu thay đổi Rate Card, phiên bản, trạng thái và các lần Rating theo thời gian"
+          lede="Tra cứu phiên bản bảng giá, phiên bản phụ phí đã áp dụng và các lần Rating theo thời gian"
         />
         <p className="muted">
           Rating đã tạo tiếp tục tham chiếu đúng Rate Version và Rating Context Snapshot tại thời điểm tính.
@@ -97,6 +98,7 @@ export default async function RateHistoryPage({
                     "Thời điểm",
                     "Rate Card",
                     "Phiên bản",
+                    "Phụ phí",
                     "Trạng thái",
                     "Thành tiền",
                     "Tiền tệ",
@@ -118,7 +120,8 @@ export default async function RateHistoryPage({
                   <tr>
                     <th>Thời điểm</th>
                     <th>Rate Card</th>
-                    <th>Phiên bản</th>
+                    <th>Phiên bản bảng giá</th>
+                    <th>Phụ phí đã áp dụng</th>
                     <th>Trạng thái</th>
                     <th>Thành tiền</th>
                     <th>Bill</th>
@@ -130,6 +133,7 @@ export default async function RateHistoryPage({
                       <td>{formatDateTimeVi(row.ratedAt)}</td>
                       <td>{row.cardCode || "—"}</td>
                       <td>{row.versionNo == null ? "—" : `v${row.versionNo}`}</td>
+                      <td>{row.appliedSurcharges || "—"}</td>
                       <td>{row.status}</td>
                       <td>{formatMoney(row.totalAmount, row.currencyCode)}</td>
                       <td>

@@ -24,5 +24,17 @@ public sealed class RatingDetail : TenantEntityBase
     public string CurrencyCode { get; set; } = "VND";
     public string? FormulaText { get; set; }
 
+    /// <summary>base_rate | surcharge. Historical rows stay base_rate.</summary>
+    public string SourceType { get; set; } = RatingSourceTypes.BaseRate;
+
+    public Guid? SourceId { get; set; }
+    public Guid? SourceVersionId { get; set; }
+    public decimal? AmountOriginal { get; set; }
+    public string? OriginalCurrency { get; set; }
+    public decimal? ReportingAmount { get; set; }
+    public decimal? LineFxRate { get; set; }
+    public DateOnly? LineFxAsOf { get; set; }
+    public string? LineFxSource { get; set; }
+
     public Rating? Rating { get; set; }
 }

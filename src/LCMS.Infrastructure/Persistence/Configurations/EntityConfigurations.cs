@@ -1162,9 +1162,15 @@ internal sealed class RatingDetailConfiguration : IEntityTypeConfiguration<Ratin
         builder.Property(e => e.FinancialMaturity).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Amount).HasPrecision(18, 4);
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
-        builder.Property(e => e.FormulaText).HasMaxLength(256);
-
+        builder.Property(e => e.FormulaText).HasMaxLength(512);
+        builder.Property(e => e.SourceType).HasMaxLength(32).IsRequired().HasDefaultValue(RatingSourceTypes.BaseRate);
+        builder.Property(e => e.AmountOriginal).HasPrecision(18, 4);
+        builder.Property(e => e.OriginalCurrency).HasMaxLength(3);
+        builder.Property(e => e.ReportingAmount).HasPrecision(18, 4);
+        builder.Property(e => e.LineFxRate).HasPrecision(18, 8);
+        builder.Property(e => e.LineFxSource).HasMaxLength(64);
         builder.HasIndex(e => new { e.TenantId, e.RatingId });
+        builder.HasIndex(e => new { e.TenantId, e.SourceType, e.SourceVersionId });
 
         builder.HasOne(e => e.Rating)
             .WithMany()

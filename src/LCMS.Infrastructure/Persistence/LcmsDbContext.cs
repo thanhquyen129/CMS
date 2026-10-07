@@ -72,6 +72,13 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<ContainerRatePrice> ContainerRatePrices => Set<ContainerRatePrice>();
     public DbSet<Rating> Ratings => Set<Rating>();
     public DbSet<RatingDetail> RatingDetails => Set<RatingDetail>();
+    public DbSet<Surcharge> Surcharges => Set<Surcharge>();
+    public DbSet<SurchargeVersion> SurchargeVersions => Set<SurchargeVersion>();
+    public DbSet<SurchargeRule> SurchargeRules => Set<SurchargeRule>();
+    public DbSet<SurchargeCondition> SurchargeConditions => Set<SurchargeCondition>();
+    public DbSet<SurchargeScope> SurchargeScopes => Set<SurchargeScope>();
+    public DbSet<SurchargeBreak> SurchargeBreaks => Set<SurchargeBreak>();
+    public DbSet<SurchargeMigrationLog> SurchargeMigrationLogs => Set<SurchargeMigrationLog>();
     public DbSet<FinancialDocument> FinancialDocuments => Set<FinancialDocument>();
     public DbSet<FinancialDocumentLine> FinancialDocumentLines => Set<FinancialDocumentLine>();
     public DbSet<DocumentMatch> DocumentMatches => Set<DocumentMatch>();

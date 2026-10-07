@@ -162,6 +162,9 @@ export default async function RateCardDetailPage({
                       ? ` · Phát hành: ${formatDateTimeVi(v.publishedAt)}`
                       : " · Chưa phát hành"}
                   </p>
+                  <p className="muted small">
+                    Quy tắc ở đây là cước chính. Phụ phí dùng chung tạo ở Quản lý phụ phí và không bắt buộc gắn vào bảng giá.
+                  </p>
                   {v.note ? <p className="note">{v.note}</p> : null}
 
                   {ruleBag?.error ? (

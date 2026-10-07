@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +18,9 @@ public sealed record SurchargeDto(
     int VersionNo,
     string VersionStatus,
     DateTimeOffset? EffectiveFrom,
-    DateTimeOffset? EffectiveTo);
+    DateTimeOffset? EffectiveTo,
+    string Direction,
+    string SourceKind);
 
 public sealed record ListSurchargesQuery : IRequest<IReadOnlyList<SurchargeDto>>;
 
@@ -39,7 +42,73 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
             throw new TenantRequiredAppException();
         }
 
+        var independent = await ListIndependentAsync(cancellationToken);
+        var legacy = await ListLegacyAsync(cancellationToken);
+        return independent.Concat(legacy).OrderBy(r => r.Code, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private async Task<IReadOnlyList<SurchargeDto>> ListIndependentAsync(CancellationToken cancellationToken)
+    {
+        var masters = await _db.Surcharges.AsNoTracking().OrderBy(s => s.Code).ToListAsync(cancellationToken);
+        if (masters.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = masters.Select(s => s.Id).ToList();
+        var versions = await _db.SurchargeVersions.AsNoTracking()
+            .Where(v => ids.Contains(v.SurchargeId))
+            .ToListAsync(cancellationToken);
+        var latest = versions
+            .GroupBy(v => v.SurchargeId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(v => v.VersionNo).First());
+        var versionIds = latest.Values.Select(v => v.Id).ToList();
+        var rules = await _db.SurchargeRules.AsNoTracking()
+            .Where(r => versionIds.Contains(r.SurchargeVersionId))
+            .ToListAsync(cancellationToken);
+        var ruleIds = rules.Select(r => r.Id).ToList();
+        var conditions = await _db.SurchargeConditions.AsNoTracking()
+            .Where(c => ruleIds.Contains(c.SurchargeRuleId) && c.Dimension == "transport_mode")
+            .ToListAsync(cancellationToken);
+        var scopes = await _db.SurchargeScopes.AsNoTracking()
+            .Where(s => ruleIds.Contains(s.SurchargeRuleId) && s.RateCardId != null)
+            .ToListAsync(cancellationToken);
+        var cardIds = scopes.Select(s => s.RateCardId!.Value).Distinct().ToList();
+        var cards = await _db.RateCards.AsNoTracking().Where(c => cardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, cancellationToken);
+
+        return masters.Select(master =>
+        {
+            latest.TryGetValue(master.Id, out var version);
+            var rule = rules.Where(r => r.SurchargeVersionId == (version?.Id ?? Guid.Empty)).OrderByDescending(r => r.Priority).FirstOrDefault();
+            var mode = conditions.FirstOrDefault(c => c.SurchargeRuleId == (rule?.Id ?? Guid.Empty))?.ValueText;
+            var cardId = scopes.FirstOrDefault(s => s.SurchargeRuleId == (rule?.Id ?? Guid.Empty))?.RateCardId;
+            cards.TryGetValue(cardId ?? Guid.Empty, out var card);
+            return new SurchargeDto(
+                master.Id,
+                master.Code,
+                master.Name,
+                rule?.CalculationMode,
+                rule?.RateAmountPercent ?? 0m,
+                rule?.CurrencyCode ?? "VND",
+                mode,
+                card?.Code ?? "",
+                version?.VersionNo ?? 0,
+                version?.PublishStatus ?? "",
+                version?.ValidFrom,
+                version?.ValidTo,
+                master.Direction,
+                "independent");
+        }).ToList();
+    }
+
+    private async Task<IReadOnlyList<SurchargeDto>> ListLegacyAsync(CancellationToken cancellationToken)
+    {
+        var copied = await _db.Surcharges.AsNoTracking()
+            .Where(s => s.SourceLegacyComponentId != null)
+            .Select(s => s.SourceLegacyComponentId!.Value)
+            .ToListAsync(cancellationToken);
         var components = await _db.PricingRuleComponents.AsNoTracking().OrderBy(c => c.Code).ToListAsync(cancellationToken);
+        components = components.Where(c => !copied.Contains(c.Id)).ToList();
         if (components.Count == 0)
         {
             return [];
@@ -59,6 +128,9 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
             ruleById.TryGetValue(c.PricingRuleId, out var rule);
             versionById.TryGetValue(rule?.RateVersionId ?? Guid.Empty, out var version);
             cards.TryGetValue(version?.RateCardId ?? Guid.Empty, out var card);
+            var direction = string.Equals(card?.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
+                ? SurchargeDirections.Sell
+                : SurchargeDirections.Buy;
             return new SurchargeDto(
                 c.Id,
                 c.Code,
@@ -71,7 +143,9 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
                 version?.VersionNo ?? 0,
                 version?.Status ?? "",
                 version?.EffectiveFrom,
-                version?.EffectiveTo);
+                version?.EffectiveTo,
+                direction,
+                "legacy");
         }).ToList();
     }
 }
@@ -126,7 +200,8 @@ public sealed record RatingHistoryDto(
     string Status,
     decimal TotalAmount,
     string CurrencyCode,
-    string? ContextJson);
+    string? ContextJson,
+    string? AppliedSurcharges);
 
 public sealed record ListRatingHistoryQuery : IRequest<IReadOnlyList<RatingHistoryDto>>;
 
@@ -154,12 +229,31 @@ public sealed class ListRatingHistoryQueryHandler : IRequestHandler<ListRatingHi
         var cardIds = versions.Select(v => v.RateCardId).Distinct().ToList();
         var cards = await _db.RateCards.AsNoTracking().Where(c => cardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, cancellationToken);
         var versionById = versions.ToDictionary(v => v.Id);
+        var ratingIds = ratings.Select(r => r.Id).ToList();
+        var surchargeLines = await _db.RatingDetails.AsNoTracking()
+            .Where(d => ratingIds.Contains(d.RatingId) && d.SourceType == RatingSourceTypes.Surcharge)
+            .Select(d => new { d.RatingId, d.ComponentCode, d.SourceVersionId })
+            .ToListAsync(cancellationToken);
+        var surchargeVersionIds = surchargeLines.Where(l => l.SourceVersionId != null).Select(l => l.SourceVersionId!.Value).Distinct().ToList();
+        var surchargeVersions = await _db.SurchargeVersions.AsNoTracking()
+            .Where(v => surchargeVersionIds.Contains(v.Id))
+            .ToDictionaryAsync(v => v.Id, v => v.VersionNo, cancellationToken);
+        var traceByRating = surchargeLines
+            .GroupBy(l => l.RatingId)
+            .ToDictionary(
+                g => g.Key,
+                g => string.Join(", ", g.Select(l =>
+                {
+                    var no = l.SourceVersionId is Guid id && surchargeVersions.TryGetValue(id, out var versionNo) ? versionNo : 0;
+                    return no == 0 ? l.ComponentCode : $"{l.ComponentCode} v{no}";
+                })));
         return ratings.Select(r =>
         {
             versionById.TryGetValue(r.RateVersionId, out var version);
             cards.TryGetValue(version?.RateCardId ?? Guid.Empty, out var card);
+            traceByRating.TryGetValue(r.Id, out var applied);
             return new RatingHistoryDto(
-                r.Id, r.RatedAt, r.BillId, card?.Code, version?.VersionNo, r.Status, r.TotalAmount, r.CurrencyCode, r.ContextJson);
+                r.Id, r.RatedAt, r.BillId, card?.Code, version?.VersionNo, r.Status, r.TotalAmount, r.CurrencyCode, r.ContextJson, applied);
         }).ToList();
     }
 }

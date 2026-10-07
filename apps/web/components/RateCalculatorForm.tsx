@@ -10,9 +10,17 @@ type Option = { id: string; label: string };
 
 type Detail = {
   componentName: string;
+  componentCode?: string;
   formulaText?: string | null;
   amount: number;
   currencyCode: string;
+  sourceType?: string | null;
+  sourceVersionId?: string | null;
+  amountOriginal?: number | null;
+  originalCurrency?: string | null;
+  reportingAmount?: number | null;
+  lineFxRate?: number | null;
+  lineFxSource?: string | null;
 };
 
 type RatingResult = {
@@ -93,7 +101,9 @@ export function RateCalculatorForm({
     }
   }
 
-  const base = result?.details?.[0]?.amount ?? result?.totalAmount ?? 0;
+  const baseLines = result?.details.filter((d) => d.sourceType !== "surcharge") ?? [];
+  const surchargeLines = result?.details.filter((d) => d.sourceType === "surcharge") ?? [];
+  const base = baseLines.reduce((sum, line) => sum + line.amount, 0) || result?.totalAmount || 0;
 
   return (
     <div className="layout-cols-2">
@@ -186,20 +196,10 @@ export function RateCalculatorForm({
               <div><dt>Cơ sở tính cước</dt><dd>{basisLabel(result.chargeableBasis)} · {result.chargeableBasis === "not_required" ? "Không cần" : formatChargeable(result.chargeableWeightKg ?? null)}</dd></div>
               <div><dt>Tỷ giá</dt><dd>{result.fxSource || "—"} {result.fxRate ?? ""}</dd></div>
             </dl>
-            <table className="data-table">
-              <thead>
-                <tr><th>Thành phần</th><th>Công thức</th><th>Thành tiền</th></tr>
-              </thead>
-              <tbody>
-                {result.details.map((d, i) => (
-                  <tr key={`${d.componentName}-${i}`}>
-                    <td>{d.componentName}</td>
-                    <td>{d.formulaText || "—"}</td>
-                    <td>{formatMoney(d.amount, d.currencyCode)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <h3>Cước chính</h3>
+            <ChargeTable rows={baseLines} currency={result.currencyCode} />
+            <h3>Phụ phí</h3>
+            {surchargeLines.length === 0 ? <p className="muted">Không có phụ phí phù hợp.</p> : <ChargeTable rows={surchargeLines} currency={result.currencyCode} />}
             <p className="notice">
               Kết quả Rating tạo Expected Cost nếu dùng bảng giá mua, hoặc Expected Revenue nếu dùng bảng giá bán. Không ghi đè Actual/Confirmed.
             </p>
@@ -214,4 +214,28 @@ export function RateCalculatorForm({
 function num(value: FormDataEntryValue | null): number | null {
   const n = Number(String(value ?? "").replace(",", "."));
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function ChargeTable({ rows, currency }: { rows: Detail[]; currency: string }) {
+  return (
+    <table className="data-table">
+      <thead>
+        <tr><th>Thành phần</th><th>Công thức / nguồn</th><th>Thành tiền</th></tr>
+      </thead>
+      <tbody>
+        {rows.map((d, i) => (
+          <tr key={`${d.componentName}-${i}`}>
+            <td>{d.componentName}</td>
+            <td>
+              {d.formulaText || "—"}
+              {d.lineFxRate && d.originalCurrency && d.originalCurrency !== currency
+                ? ` · ${d.amountOriginal} ${d.originalCurrency} × ${d.lineFxRate} ${d.lineFxSource || ""}`
+                : ""}
+            </td>
+            <td>{formatMoney(d.reportingAmount ?? d.amount, d.originalCurrency && d.reportingAmount != null && d.originalCurrency !== currency ? currency : d.currencyCode)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }

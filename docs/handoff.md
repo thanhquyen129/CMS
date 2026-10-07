@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-07 — Independent surcharge beside the rate card
+
+- Rate Card stays the base rate. Surcharge is its own versioned object with applicability and an optional rate-card link. Rating adds applicable published surcharges, stores source/version/FX, and does not rewrite history.
+- Files: `src/LCMS.Domain/Entities/Surcharge.cs`, `src/LCMS.Application/Surcharges/SurchargeRating.cs`, `src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs`, migration `20261007075249_IndependentSurcharge`, `apps/web/app/rate-cards/surcharges`.
+
 ## 2026-10-06 — Production SSL setup & HTTPS reverse proxy for cms.lsslogistics.vn
 
 - Infra: Exposed port 443 on `proxy` service, added ACME challenge webroot and Let's Encrypt certificate mounts.

@@ -120,6 +120,8 @@ export type SurchargeRow = {
   versionStatus: string;
   effectiveFrom: string | null;
   effectiveTo: string | null;
+  direction?: string;
+  sourceKind?: string;
 };
 
 export type AppendixRow = {
@@ -143,10 +145,43 @@ export type RatingHistoryRow = {
   totalAmount: number;
   currencyCode: string;
   contextJson: string | null;
+  appliedSurcharges?: string | null;
 };
 
 export function listSurcharges(): Promise<ApiResult<SurchargeRow[]>> {
   return apiGet<SurchargeRow[]>("/api/surcharges");
+}
+
+export type SurchargeDetail = {
+  id: string;
+  code: string;
+  name: string;
+  direction: string;
+  status: string;
+  sourceLegacyComponentId: string | null;
+  versions: {
+    id: string;
+    versionNo: number;
+    publishStatus: string;
+    validFrom: string | null;
+    validTo: string | null;
+    publishedAt: string | null;
+    rules: {
+      id: string;
+      calculationMode: string;
+      basis: string | null;
+      currencyCode: string;
+      rateAmountPercent: number;
+      transportMode: string | null;
+      routeCode: string | null;
+      dangerousGoods: boolean | null;
+      rateCardId: string | null;
+    }[];
+  }[];
+};
+
+export function getSurcharge(id: string): Promise<ApiResult<SurchargeDetail>> {
+  return apiGet<SurchargeDetail>(`/api/surcharges/${encodeURIComponent(id)}`);
 }
 
 export function listAppendices(): Promise<ApiResult<AppendixRow[]>> {

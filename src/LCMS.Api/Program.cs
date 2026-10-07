@@ -148,6 +148,7 @@ try
     app.MapOperationalReferenceEndpoints();
     app.MapOperationalReferenceEditEndpoints();
     app.MapRatePricingEndpoints();
+    app.MapSurchargeEndpoints();
     app.MapCostEndpoints();
     app.MapRevenueEndpoints();
     app.MapFinancialDocumentEndpoints();

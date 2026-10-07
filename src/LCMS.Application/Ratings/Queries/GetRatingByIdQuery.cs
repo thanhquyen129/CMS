@@ -16,7 +16,16 @@ public sealed record RatingDetailDto(
     string FinancialMaturity,
     decimal Amount,
     string CurrencyCode,
-    string? FormulaText = null);
+    string? FormulaText = null,
+    string? SourceType = null,
+    Guid? SourceId = null,
+    Guid? SourceVersionId = null,
+    decimal? AmountOriginal = null,
+    string? OriginalCurrency = null,
+    decimal? ReportingAmount = null,
+    decimal? LineFxRate = null,
+    DateOnly? LineFxAsOf = null,
+    string? LineFxSource = null);
 
 public sealed record RatingDto(
     Guid Id,
@@ -103,7 +112,16 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
                 d.FinancialMaturity,
                 d.Amount,
                 d.CurrencyCode,
-                d.FormulaText))
+                d.FormulaText,
+                d.SourceType,
+                d.SourceId,
+                d.SourceVersionId,
+                d.AmountOriginal,
+                d.OriginalCurrency,
+                d.ReportingAmount,
+                d.LineFxRate,
+                d.LineFxAsOf,
+                d.LineFxSource))
             .ToListAsync(cancellationToken);
 
         return new RatingDto(

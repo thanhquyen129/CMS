@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Commands;
 using LCMS.Application.Fx;
+using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -294,7 +295,13 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                         FinancialNature = component.FinancialNature,
                         FinancialMaturity = "expected",
                         Amount = amount,
-                        CurrencyCode = component.CurrencyCode
+                        CurrencyCode = component.CurrencyCode,
+                        SourceType = RatingSourceTypes.BaseRate,
+                        SourceId = rule.Id,
+                        SourceVersionId = rule.RateVersionId,
+                        AmountOriginal = amount,
+                        OriginalCurrency = component.CurrencyCode,
+                        ReportingAmount = amount
                     });
                 }
             }
@@ -337,12 +344,45 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                     FinancialMaturity = "expected",
                     Amount = cardAmount,
                     CurrencyCode = cardCcy,
-                    FormulaText = cardFormula
+                    FormulaText = cardFormula,
+                    SourceType = RatingSourceTypes.BaseRate,
+                    SourceId = rule.Id,
+                    SourceVersionId = rule.RateVersionId,
+                    AmountOriginal = amount,
+                    OriginalCurrency = rule.CurrencyCode,
+                    ReportingAmount = cardAmount
                 });
             }
         }
 
         var cardCurrency = card?.CurrencyCode ?? selected[0].CurrencyCode;
+        var reportingCurrency = string.IsNullOrWhiteSpace(request.TargetCurrency)
+            ? bill.PreferredCurrency
+            : request.TargetCurrency.Trim();
+        var surchargeResult = await SurchargeRatingApplier.ApplyAsync(
+            _db,
+            _fx,
+            tenantId,
+            bill,
+            card,
+            version,
+            rateDate,
+            transportMode,
+            serviceType,
+            routeCode,
+            originCode,
+            destinationCode,
+            commodityCode,
+            quantity,
+            request.Weight ?? gross,
+            total,
+            cardCurrency,
+            reportingCurrency,
+            request.Containers,
+            cancellationToken);
+        total += surchargeResult.CardCurrencyTotal;
+        details.AddRange(surchargeResult.Details);
+
         rating.OriginalAmount = total;
         rating.OriginalCurrency = cardCurrency;
         var target = string.IsNullOrWhiteSpace(request.TargetCurrency) ? bill.PreferredCurrency : request.TargetCurrency.Trim();
@@ -391,7 +431,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             chargeableConfirmed = ctx.BillChargeable.IsConfirmed,
             overrideReason = ctx.RequiresOverride ? request.ChargeableOverrideReason?.Trim() : null,
             versionId = version.Id,
-            rules = selected.Select(r => r.Code).ToArray()
+            rules = selected.Select(r => r.Code).ToArray(),
+            surcharges = surchargeResult.Trace
         });
 
         if (prior is not null)
@@ -558,7 +599,13 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             FinancialMaturity = "expected",
             Amount = amount,
             CurrencyCode = currency,
-            FormulaText = formula
+            FormulaText = formula,
+            SourceType = RatingSourceTypes.BaseRate,
+            SourceId = rule.Id,
+            SourceVersionId = rule.RateVersionId,
+            AmountOriginal = amount,
+            OriginalCurrency = currency,
+            ReportingAmount = amount
         };
 
     private static decimal Clamp(decimal value, decimal? min, decimal? max)

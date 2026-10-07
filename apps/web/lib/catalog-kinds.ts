@@ -5,7 +5,7 @@ export const CATALOG_KINDS: { id: string; label: string; group: "core" | "transp
   { id: "transport_route", label: "Tuyến vận chuyển", group: "transport" },
   { id: "transport_mode", label: "Phương thức vận chuyển", group: "transport" },
   { id: "location", label: "Cảng / Sân bay / Cửa khẩu", group: "transport" },
-  { id: "pricing_component", label: "Thành phần giá", group: "other" },
+  { id: "pricing_component", label: "Cấu phần cước chính", group: "other" },
   { id: "document_type", label: "Loại chứng từ", group: "other" },
   { id: "payment_term", label: "Điều khoản thanh toán", group: "other" },
 ];

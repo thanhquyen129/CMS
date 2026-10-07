@@ -43,7 +43,7 @@ export function TariffMatrix({ rules, currencyCode, transportMode }: Props) {
     return null;
   }
 
-  const surcharges = rules.filter((r) => !freight.some((f) => f.id === r.id));
+  const otherBase = rules.filter((r) => !freight.some((f) => f.id === r.id));
   const rowKeys: string[] = [];
   const rowLabel = new Map<string, string>();
   for (const rule of freight) {
@@ -97,9 +97,9 @@ export function TariffMatrix({ rules, currencyCode, transportMode }: Props) {
         </table>
       </div>
 
-      {surcharges.length > 0 ? (
+      {otherBase.length > 0 ? (
         <div>
-          <h4 className="section-title sm">Phụ phí</h4>
+          <h4 className="section-title sm">Cước chính khác</h4>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -112,7 +112,7 @@ export function TariffMatrix({ rules, currencyCode, transportMode }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {surcharges.map((rule) => (
+                {otherBase.map((rule) => (
                   <tr key={rule.id}>
                     <td>{rule.name}</td>
                     <td className="muted small">{surchargeCondition(rule)}</td>

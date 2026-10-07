@@ -576,6 +576,36 @@ public sealed class RatingModeTests : IAsyncLifetime
 
         foreach (var rule in card.Rules)
         {
+            if (string.Equals(rule.ChargeCode, ReferenceTariffCatalog.ChargeRemote, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(rule.ChargeCode, ReferenceTariffCatalog.ChargeDelivery, StringComparison.OrdinalIgnoreCase))
+            {
+                var delivery = string.Equals(rule.ChargeCode, ReferenceTariffCatalog.ChargeDelivery, StringComparison.OrdinalIgnoreCase);
+                var band = rule.Breaks.FirstOrDefault(b => b.UnitAmount > 0);
+                using var surcharge = Tenant(HttpMethod.Post, "/api/surcharges", tenantId);
+                surcharge.Content = JsonContent.Create(new
+                {
+                    code = rule.Code,
+                    name = rule.Name,
+                    direction = "buy",
+                    calculationMode = delivery ? "fixed_rate" : "unit_rate",
+                    currencyCode = rule.CurrencyCode,
+                    rateAmountPercent = delivery ? band?.UnitAmount ?? rule.UnitAmount : rule.UnitAmount,
+                    basis = delivery
+                        ? null
+                        : string.Equals(rule.Applicability, "per_gross_kg", StringComparison.OrdinalIgnoreCase)
+                            ? "gross_weight"
+                            : "chargeable_weight",
+                    destinationCode = rule.DestinationCode,
+                    weightFrom = delivery ? 0m : (decimal?)null,
+                    weightTo = delivery ? band?.MaxQuantity : null,
+                    rateCardId = cardId,
+                    validFrom = card.EffectiveFrom,
+                    publish = true
+                });
+                (await _client.SendAsync(surcharge)).EnsureSuccessStatusCode();
+                continue;
+            }
+
             var ruleId = await AddRuleAsync(tenantId, versionId, new
             {
                 code = rule.Code,

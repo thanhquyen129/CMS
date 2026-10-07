@@ -35,7 +35,7 @@ export function PricingRuleComponentActions({
     const nextAmount = Number(String(fd.get("amount") ?? "").replace(",", "."));
     const nextName = String(fd.get("name") ?? "").trim();
     if (!nextName || !Number.isFinite(nextAmount) || nextAmount < 0) {
-      setError("Tên và số tiền thành phần không hợp lệ.");
+      setError("Tên và số tiền cấu phần cước chính không hợp lệ.");
       return;
     }
     setBusy(true);
@@ -58,7 +58,7 @@ export function PricingRuleComponentActions({
       }
       if (!res.ok && res.status !== 204) {
         const payload = (await res.json().catch(() => ({}))) as { message?: string };
-        setError(payload.message || "Không sửa được thành phần.");
+        setError(payload.message || "Không sửa được cấu phần cước chính.");
         return;
       }
       startTransition(() => router.refresh());
@@ -70,7 +70,7 @@ export function PricingRuleComponentActions({
   }
 
   async function onDelete() {
-    if (!window.confirm("Xóa thành phần này trên phiên bản nháp?")) return;
+    if (!window.confirm("Xóa cấu phần cước chính này trên phiên bản nháp?")) return;
     setError(null);
     setBusy(true);
     try {
@@ -84,7 +84,7 @@ export function PricingRuleComponentActions({
       }
       if (!res.ok && res.status !== 204) {
         const payload = (await res.json().catch(() => ({}))) as { message?: string };
-        setError(payload.message || "Không xóa được thành phần.");
+        setError(payload.message || "Không xóa được cấu phần cước chính.");
         return;
       }
       startTransition(() => router.refresh());
@@ -105,12 +105,12 @@ export function PricingRuleComponentActions({
         </div>
       ) : null}
       <div className="form-grid">
-        <input name="name" defaultValue={name} aria-label="Tên thành phần" disabled={waiting} />
+        <input name="name" defaultValue={name} aria-label="Tên cấu phần cước chính" disabled={waiting} />
         <input
           name="amount"
           defaultValue={String(amount)}
           inputMode="decimal"
-          aria-label="Số tiền thành phần"
+          aria-label="Số tiền cấu phần cước chính"
           disabled={waiting}
         />
         <button type="submit" className="btn btn-sm" disabled={waiting}>

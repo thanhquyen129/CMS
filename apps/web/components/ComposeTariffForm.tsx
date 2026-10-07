@@ -425,7 +425,7 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
         ) : null}
         <div className="field checkbox-field">
           <label>
-            <input type="checkbox" checked={remoteOn} onChange={(ev) => setRemoteOn(ev.target.checked)} /> Phụ phí vùng (đ/kg)
+            <input type="checkbox" checked={remoteOn} onChange={(ev) => setRemoteOn(ev.target.checked)} /> Phụ phí vùng (đ/kg) — tạo ở Quản lý phụ phí, gắn tùy chọn vào bảng giá này
           </label>
         </div>
         {remoteOn ? (

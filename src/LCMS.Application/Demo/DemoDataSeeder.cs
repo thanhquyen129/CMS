@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Ratings;
+using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -1115,6 +1117,42 @@ public sealed class DemoDataSeeder
 
             foreach (var ruleSpec in spec.Rules)
             {
+                if (LegacyComponentClassifier.IsAdditionalCharge(ruleSpec.Code, ruleSpec.Name, ruleSpec.ChargeCode))
+                {
+                    var perGross = string.Equals(ruleSpec.Applicability, RatingEngine.PerGrossKg, StringComparison.OrdinalIgnoreCase);
+                    SurchargeGraph.AddPublished(
+                        _db,
+                        tenantId,
+                        ruleSpec.Code,
+                        ruleSpec.Name,
+                        SurchargeDirections.Buy,
+                        spec.EffectiveFrom,
+                        new SurchargeRuleInput(
+                            SurchargeCalcModes.UnitRate,
+                            perGross ? "gross_weight" : "chargeable_weight",
+                            ruleSpec.CurrencyCode,
+                            ruleSpec.UnitAmount,
+                            ruleSpec.SortOrder,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            ruleSpec.DestinationCode,
+                            null,
+                            null,
+                            null,
+                            null,
+                            card.Id,
+                            null,
+                            null,
+                            null,
+                            null));
+                    continue;
+                }
+
                 var rule = new PricingRule
                 {
                     TenantId = tenantId,

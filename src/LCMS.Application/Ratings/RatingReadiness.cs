@@ -1,6 +1,7 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences.Edit;
+using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -132,11 +133,13 @@ public sealed class RatingContextResolver
                 .FirstOrDefaultAsync(cancellationToken));
         }
 
-        var rules = await _db.PricingRules.AsNoTracking()
+        var rules = (await _db.PricingRules.AsNoTracking()
             .Where(r => r.RateVersionId == version.Id && r.IsActive)
             .OrderBy(r => r.SortOrder)
             .ThenBy(r => r.Code)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Where(r => !LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
+            .ToList();
         var applicable = rules
             .Where(r => RatingEngine.Matches(r, serviceType, partyType, routeCode, transportMode, originCode, destinationCode, commodityCode))
             .ToList();
@@ -162,11 +165,36 @@ public sealed class RatingContextResolver
         }
 
         var ruleIds = selected.Select(r => r.Id).ToList();
-        var components = await _db.PricingRuleComponents.AsNoTracking()
+        var rawComponents = await _db.PricingRuleComponents.AsNoTracking()
             .Where(c => ruleIds.Contains(c.PricingRuleId))
             .OrderBy(c => c.SortOrder)
             .ThenBy(c => c.Code)
             .ToListAsync(cancellationToken);
+        var surchargeOnlyRuleIds = rawComponents
+            .GroupBy(c => c.PricingRuleId)
+            .Where(g => g.All(c => LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null)))
+            .Select(g => g.Key)
+            .ToHashSet();
+        if (surchargeOnlyRuleIds.Count > 0)
+        {
+            selected = selected.Where(r => !surchargeOnlyRuleIds.Contains(r.Id)).ToList();
+            ruleIds = selected.Select(r => r.Id).ToList();
+        }
+
+        if (selected.Count == 0 && !missing.Exists(m => m.Field == "rule_match"))
+        {
+            missing.Add(new RatingMissingFieldDto(
+                "rule_match",
+                "Quy tắc giá phù hợp",
+                [],
+                "NO_APPLICABLE_RATE: Không có quy tắc tính giá phù hợp với điều kiện áp dụng.",
+                RatingReadinessActions.RateCard));
+        }
+
+        var components = rawComponents
+            .Where(c => ruleIds.Contains(c.PricingRuleId)
+                        && !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
+            .ToList();
         var componentsByRule = components.GroupBy(c => c.PricingRuleId).ToDictionary(g => g.Key, g => g.ToList());
         var breaks = await _db.RateBreaks.AsNoTracking()
             .Where(b => ruleIds.Contains(b.PricingRuleId))
@@ -301,7 +329,7 @@ public sealed class RatingContextResolver
                 "rule_config",
                 "Cấu hình quy tắc giá",
                 brokenComposite,
-                "COMPOSITE: Quy tắc thiếu thành phần giá.",
+                "COMPOSITE: Quy tắc thiếu cấu phần cước chính.",
                 RatingReadinessActions.RateCard));
         }
 

@@ -41,7 +41,7 @@ public static class VietnameseUiTerms
         ["RATE_CARD"] = "Bảng giá",
         ["RATE_VERSION"] = "Phiên bản bảng giá",
         ["PRICING_RULE"] = "Quy tắc tính giá",
-        ["PRICING_RULE_COMPONENT"] = "Thành phần giá",
+        ["PRICING_RULE_COMPONENT"] = "Cấu phần cước chính",
         ["RATING"] = "Lần tính giá",
         ["RATING_DETAIL"] = "Chi tiết tính giá",
         ["RATE_PRICING"] = "Bảng giá & Tính giá",

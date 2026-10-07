@@ -102,7 +102,7 @@ export function AddPricingRuleComponentForm({
 
   return (
     <form className="receive-form" onSubmit={onSubmit} noValidate>
-      <h4 className="section-title sm">Thành phần giá</h4>
+      <h4 className="section-title sm">Cấu phần cước chính</h4>
       {error ? (
         <div className="alert alert-error" role="alert">
           {error}

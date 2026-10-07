@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-07 — Rate card version is base pricing only
+
+- Pricing rules and components on a rate version are base rate only. Additional charges are created in Quản lý phụ phí; a rate card is an optional surcharge scope. New ratings skip embedded surcharge lines. Migration copies them without rewriting published rows or historical ratings.
+- Files: `ComposeTariffCommand.cs`, `LegacySurchargeMigration.cs`, `RatingReadiness.cs`, `apps/web/components/TariffMatrix.tsx`.
+
 ## 2026-10-07 — Independent surcharge beside the rate card
 
 - Rate Card stays the base rate. Surcharge is its own versioned object with applicability and an optional rate-card link. Rating adds applicable published surcharges, stores source/version/FX, and does not rewrite history.

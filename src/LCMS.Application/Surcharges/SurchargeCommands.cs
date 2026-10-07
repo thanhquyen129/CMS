@@ -476,6 +476,37 @@ internal static class SurchargeGraph
         return rule;
     }
 
+    public static void AddPublished(
+        ILcmsDbContext db,
+        Guid tenantId,
+        string code,
+        string name,
+        string direction,
+        DateTimeOffset? validFrom,
+        SurchargeRuleInput rule)
+    {
+        var surcharge = new Surcharge
+        {
+            TenantId = tenantId,
+            Code = code.Trim(),
+            Name = name.Trim(),
+            Direction = direction,
+            Status = SurchargeStatuses.Active
+        };
+        var version = new SurchargeVersion
+        {
+            TenantId = tenantId,
+            SurchargeId = surcharge.Id,
+            VersionNo = 1,
+            PublishStatus = SurchargeVersionStatuses.Published,
+            ValidFrom = validFrom,
+            PublishedAt = validFrom ?? DateTimeOffset.UtcNow
+        };
+        db.Surcharges.Add(surcharge);
+        db.SurchargeVersions.Add(version);
+        AddRule(db, tenantId, version.Id, rule);
+    }
+
     public static async Task ReplaceRulesAsync(
         ILcmsDbContext db,
         Guid tenantId,

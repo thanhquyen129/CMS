@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -105,6 +106,12 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
 
         EnsureDraft(version);
 
+        if (LegacyComponentClassifier.IsAdditionalCharge(request.Code, request.Name, request.ChargeCode))
+        {
+            throw new ConflictAppException(
+                "Phụ phí không đặt trên phiên bản bảng giá. Tạo và phát hành tại Quản lý phụ phí.");
+        }
+
         var code = request.Code.Trim();
         if (await _db.PricingRules.AnyAsync(
                 r => r.RateVersionId == version.Id && r.Code == code, cancellationToken))
@@ -180,17 +187,17 @@ public sealed class AddPricingRuleComponentCommandValidator : AbstractValidator<
     {
         RuleFor(x => x.PricingRuleId).NotEmpty().WithMessage("Quy tắc tính giá không hợp lệ.");
         RuleFor(x => x.Code)
-            .NotEmpty().WithMessage("Mã thành phần không được để trống.")
-            .MaximumLength(64).WithMessage("Mã thành phần không được vượt quá 64 ký tự.");
+            .NotEmpty().WithMessage("Mã cấu phần cước chính không được để trống.")
+            .MaximumLength(64).WithMessage("Mã cấu phần cước chính không được vượt quá 64 ký tự.");
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Tên thành phần không được để trống.")
-            .MaximumLength(256).WithMessage("Tên thành phần không được vượt quá 256 ký tự.");
+            .NotEmpty().WithMessage("Tên cấu phần cước chính không được để trống.")
+            .MaximumLength(256).WithMessage("Tên cấu phần cước chính không được vượt quá 256 ký tự.");
         RuleFor(x => x.FinancialNature)
             .NotEmpty().WithMessage("Tính chất tài chính không được để trống.")
             .Must(n => n is "cost" or "revenue")
             .WithMessage("Tính chất tài chính phải là cost hoặc revenue.");
         RuleFor(x => x.Amount)
-            .GreaterThanOrEqualTo(0).WithMessage("Số tiền thành phần không được âm.");
+            .GreaterThanOrEqualTo(0).WithMessage("Số tiền cấu phần cước chính không được âm.");
         RuleFor(x => x.CurrencyCode)
             .NotEmpty().WithMessage("Mã tiền tệ không được để trống.")
             .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.");
@@ -237,6 +244,12 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
 
         AddPricingRuleCommandHandler.EnsureDraft(version);
 
+        if (LegacyComponentClassifier.IsAdditionalCharge(request.Code, request.Name, null))
+        {
+            throw new ConflictAppException(
+                "Phụ phí không đặt trên phiên bản bảng giá. Tạo và phát hành tại Quản lý phụ phí.");
+        }
+
         var nature = request.FinancialNature.Trim().ToLowerInvariant();
         if (nature == "cost")
         {
@@ -264,7 +277,7 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
         if (await _db.PricingRuleComponents.AnyAsync(
                 c => c.PricingRuleId == rule.Id && c.Code == code, cancellationToken))
         {
-            throw new ConflictAppException("Mã thành phần đã tồn tại trên quy tắc này.");
+            throw new ConflictAppException("Mã cấu phần cước chính đã tồn tại trên quy tắc này.");
         }
 
         var component = new PricingRuleComponent
@@ -294,7 +307,7 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
         }
         catch (DbUpdateException)
         {
-            throw new ConflictAppException("Mã thành phần đã tồn tại trên quy tắc này.");
+            throw new ConflictAppException("Mã cấu phần cước chính đã tồn tại trên quy tắc này.");
         }
 
         return component.Id;
@@ -342,13 +355,13 @@ public sealed class UpdatePricingRuleComponentCommandValidator : AbstractValidat
     {
         RuleFor(x => x.ComponentId).NotEmpty().WithMessage("Thành phần không hợp lệ.");
         RuleFor(x => x.Name)
-            .NotEmpty().WithMessage("Tên thành phần không được để trống.")
-            .MaximumLength(256).WithMessage("Tên thành phần không được vượt quá 256 ký tự.");
+            .NotEmpty().WithMessage("Tên cấu phần cước chính không được để trống.")
+            .MaximumLength(256).WithMessage("Tên cấu phần cước chính không được vượt quá 256 ký tự.");
         RuleFor(x => x.FinancialNature)
             .Must(n => n is "cost" or "revenue")
             .WithMessage("Tính chất tài chính phải là cost hoặc revenue.");
         RuleFor(x => x.Amount)
-            .GreaterThanOrEqualTo(0).WithMessage("Số tiền thành phần không được âm.");
+            .GreaterThanOrEqualTo(0).WithMessage("Số tiền cấu phần cước chính không được âm.");
         RuleFor(x => x.CurrencyCode)
             .NotEmpty().WithMessage("Mã tiền tệ không được để trống.")
             .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.");
@@ -375,7 +388,7 @@ public sealed class UpdatePricingRuleComponentCommandHandler : IRequestHandler<U
 
         var component = await _db.PricingRuleComponents
             .FirstOrDefaultAsync(c => c.Id == request.ComponentId, cancellationToken)
-            ?? throw new NotFoundAppException("Không tìm thấy thành phần giá.");
+            ?? throw new NotFoundAppException("Không tìm thấy cấu phần cước chính.");
         var rule = await _db.PricingRules.FirstOrDefaultAsync(r => r.Id == component.PricingRuleId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy quy tắc tính giá.");
         var version = await _db.RateVersions.FirstOrDefaultAsync(v => v.Id == rule.RateVersionId, cancellationToken)
@@ -414,7 +427,7 @@ public sealed class DeletePricingRuleComponentCommandHandler : IRequestHandler<D
 
         var component = await _db.PricingRuleComponents
             .FirstOrDefaultAsync(c => c.Id == request.ComponentId, cancellationToken)
-            ?? throw new NotFoundAppException("Không tìm thấy thành phần giá.");
+            ?? throw new NotFoundAppException("Không tìm thấy cấu phần cước chính.");
         var rule = await _db.PricingRules.FirstOrDefaultAsync(r => r.Id == component.PricingRuleId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy quy tắc tính giá.");
         var version = await _db.RateVersions.FirstOrDefaultAsync(v => v.Id == rule.RateVersionId, cancellationToken)
@@ -509,6 +522,9 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
             .OrderBy(r => r.SortOrder)
             .ThenBy(r => r.Code)
             .ToListAsync(cancellationToken);
+        rules = rules
+            .Where(r => !LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
+            .ToList();
 
         var ruleIds = rules.Select(r => r.Id).ToList();
         var components = await _db.PricingRuleComponents
@@ -517,6 +533,9 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
             .OrderBy(c => c.SortOrder)
             .ThenBy(c => c.Code)
             .ToListAsync(cancellationToken);
+        components = components
+            .Where(c => !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
+            .ToList();
         var byRule = components
             .GroupBy(c => c.PricingRuleId)
             .ToDictionary(g => g.Key, g => g.Select(c => new PricingRuleComponentDto(

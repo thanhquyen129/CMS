@@ -43,8 +43,7 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
         }
 
         var independent = await ListIndependentAsync(cancellationToken);
-        var legacy = await ListLegacyAsync(cancellationToken);
-        return independent.Concat(legacy).OrderBy(r => r.Code, StringComparer.OrdinalIgnoreCase).ToList();
+        return independent.OrderBy(r => r.Code, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
     private async Task<IReadOnlyList<SurchargeDto>> ListIndependentAsync(CancellationToken cancellationToken)
@@ -101,53 +100,6 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
         }).ToList();
     }
 
-    private async Task<IReadOnlyList<SurchargeDto>> ListLegacyAsync(CancellationToken cancellationToken)
-    {
-        var copied = await _db.Surcharges.AsNoTracking()
-            .Where(s => s.SourceLegacyComponentId != null)
-            .Select(s => s.SourceLegacyComponentId!.Value)
-            .ToListAsync(cancellationToken);
-        var components = await _db.PricingRuleComponents.AsNoTracking().OrderBy(c => c.Code).ToListAsync(cancellationToken);
-        components = components.Where(c => !copied.Contains(c.Id)).ToList();
-        if (components.Count == 0)
-        {
-            return [];
-        }
-
-        var ruleIds = components.Select(c => c.PricingRuleId).Distinct().ToList();
-        var rules = await _db.PricingRules.AsNoTracking().Where(r => ruleIds.Contains(r.Id)).ToListAsync(cancellationToken);
-        var versionIds = rules.Select(r => r.RateVersionId).Distinct().ToList();
-        var versions = await _db.RateVersions.AsNoTracking().Where(v => versionIds.Contains(v.Id)).ToListAsync(cancellationToken);
-        var cardIds = versions.Select(v => v.RateCardId).Distinct().ToList();
-        var cards = await _db.RateCards.AsNoTracking().Where(c => cardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, cancellationToken);
-        var ruleById = rules.ToDictionary(r => r.Id);
-        var versionById = versions.ToDictionary(v => v.Id);
-
-        return components.Select(c =>
-        {
-            ruleById.TryGetValue(c.PricingRuleId, out var rule);
-            versionById.TryGetValue(rule?.RateVersionId ?? Guid.Empty, out var version);
-            cards.TryGetValue(version?.RateCardId ?? Guid.Empty, out var card);
-            var direction = string.Equals(card?.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
-                ? SurchargeDirections.Sell
-                : SurchargeDirections.Buy;
-            return new SurchargeDto(
-                c.Id,
-                c.Code,
-                c.Name,
-                c.CalcMethod ?? rule?.CalcMethod,
-                c.Amount,
-                c.CurrencyCode,
-                card?.TransportMode,
-                card?.Code ?? "",
-                version?.VersionNo ?? 0,
-                version?.Status ?? "",
-                version?.EffectiveFrom,
-                version?.EffectiveTo,
-                direction,
-                "legacy");
-        }).ToList();
-    }
 }
 
 public sealed record RateAppendixDto(

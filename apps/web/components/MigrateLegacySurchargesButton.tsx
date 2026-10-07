@@ -26,7 +26,7 @@ export function MigrateLegacySurchargesButton() {
         return;
       }
       setMessage(
-        `Đã sao chép ${payload.migrated ?? 0} phụ phí nháp. Giữ nguyên cước chính ${payload.skippedBase ?? 0}, chưa phân loại ${payload.skippedUnknown ?? 0}, phiên bản đã phát hành ${payload.skippedPublished ?? 0}, đã có mapping ${payload.alreadyMapped ?? 0}.`
+        `Đã chuyển ${payload.migrated ?? 0} phụ phí sang module độc lập. Giữ cước chính ${payload.skippedBase ?? 0}, chưa phân loại ${payload.skippedUnknown ?? 0}, đã có mapping ${payload.alreadyMapped ?? 0}.`
       );
     } catch {
       setError("Không kết nối được máy chủ.");
@@ -38,7 +38,7 @@ export function MigrateLegacySurchargesButton() {
   return (
     <div>
       <button className="btn" type="button" disabled={busy} onClick={run}>
-        {busy ? "Đang chuyển…" : "Chuyển phụ phí nháp cũ"}
+        {busy ? "Đang chuyển…" : "Chuyển phụ phí cũ"}
       </button>
       {message ? <p className="notice">{message}</p> : null}
       {error ? <div className="alert alert-error" role="alert">{error}</div> : null}

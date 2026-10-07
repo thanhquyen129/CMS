@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Ratings;
+using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -222,6 +223,10 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             }
         }
 
+        var direction = string.Equals(card.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
+            ? SurchargeDirections.Sell
+            : SurchargeDirections.Buy;
+
         if (request.Delivery is ComposeDeliveryFee delivery)
         {
             if (delivery.UnderQuantity <= 0 || delivery.Amount < 0)
@@ -229,39 +234,37 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 throw new ConflictAppException("Phí giao hàng không hợp lệ.");
             }
 
-            var rule = new PricingRule
-            {
-                TenantId = tenantId,
-                RateVersionId = version.Id,
-                Code = "DELIVERY",
-                Name = $"Phí giao hàng dưới {delivery.UnderQuantity} đơn vị",
-                CalcMethod = PricingCalcMethods.WeightStep,
-                UnitAmount = 0m,
-                CurrencyCode = currency,
-                ChargeCode = ReferenceCharge.Delivery,
-                SortOrder = 50,
-                IsActive = true
-            };
-            _db.PricingRules.Add(rule);
             var cap = delivery.UnderQuantity - Gap;
-            _db.RateBreaks.Add(new RateBreak
-            {
-                TenantId = tenantId,
-                PricingRuleId = rule.Id,
-                SequenceNo = 1,
-                MinQuantity = 0m,
-                MaxQuantity = cap > 0 ? cap : 0m,
-                UnitAmount = delivery.Amount
-            });
-            _db.RateBreaks.Add(new RateBreak
-            {
-                TenantId = tenantId,
-                PricingRuleId = rule.Id,
-                SequenceNo = 2,
-                MinQuantity = delivery.UnderQuantity,
-                MaxQuantity = null,
-                UnitAmount = 0m
-            });
+            SurchargeGraph.AddPublished(
+                _db,
+                tenantId,
+                FitCode(card.Code + "-DELIVERY"),
+                $"Phí giao hàng dưới {delivery.UnderQuantity} đơn vị",
+                direction,
+                version.EffectiveFrom,
+                new SurchargeRuleInput(
+                    SurchargeCalcModes.FixedRate,
+                    null,
+                    currency,
+                    delivery.Amount,
+                    50,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0m,
+                    cap > 0 ? cap : 0m,
+                    card.Id,
+                    null,
+                    null,
+                    null,
+                    null));
         }
 
         if (request.Remote is ComposeRemoteFee remote)
@@ -287,21 +290,36 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             var sort = 60;
             foreach (var destination in destinations)
             {
-                _db.PricingRules.Add(new PricingRule
-                {
-                    TenantId = tenantId,
-                    RateVersionId = version.Id,
-                    Code = "REMOTE-" + destination,
-                    Name = "Phụ phí vùng " + destination,
-                    CalcMethod = PricingCalcMethods.UnitRate,
-                    UnitAmount = remote.AmountPerKg,
-                    CurrencyCode = remoteCurrency,
-                    ChargeCode = ReferenceCharge.Remote,
-                    DestinationCode = destination,
-                    Applicability = sea ? RatingEngine.PerGrossKg : null,
-                    SortOrder = sort++,
-                    IsActive = true
-                });
+                SurchargeGraph.AddPublished(
+                    _db,
+                    tenantId,
+                    FitCode(card.Code + "-REMOTE-" + destination),
+                    "Phụ phí vùng " + destination,
+                    direction,
+                    version.EffectiveFrom,
+                    new SurchargeRuleInput(
+                        SurchargeCalcModes.UnitRate,
+                        sea ? "gross_weight" : "chargeable_weight",
+                        remoteCurrency,
+                        remote.AmountPerKg,
+                        sort++,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        destination,
+                        null,
+                        null,
+                        null,
+                        null,
+                        card.Id,
+                        null,
+                        null,
+                        null,
+                        null));
             }
         }
 
@@ -389,6 +407,9 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string FitCode(string code) =>
+        code.Length <= 64 ? code : code[..64];
 }
 
 public sealed record ExpandedBand(decimal Min, decimal? Max, decimal?[] Prices);

@@ -447,7 +447,7 @@ public sealed class IndependentSurchargeTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Migration_CopiesDraftSurcharge_KeepsPublishedHistory_AndIsIdempotent()
+    public async Task RateVersion_RejectsSurcharge_RatesBaseOnly_AndMigrationSkipsBase()
     {
         var tenantId = await CreateTenantAsync();
         var billId = await CreateBillAsync(tenantId, "BL-MIG");
@@ -455,12 +455,35 @@ public sealed class IndependentSurchargeTests : IAsyncLifetime
         var draftVersion = await CreateVersionAsync(tenantId, cardId);
         var draftRule = await AddRuleAsync(tenantId, draftVersion, "BASE", "Base freight", "fixed", 100m);
         await AddComponentAsync(tenantId, draftRule, "BASE_FREIGHT", "Base freight", 100m);
-        await AddComponentAsync(tenantId, draftRule, "FSC", "Fuel", 20m);
         await AddComponentAsync(tenantId, draftRule, "MISC", "Other", 5m);
 
-        var publishedVersion = await CreateVersionAsync(tenantId, cardId);
-        var publishedRule = await AddRuleAsync(tenantId, publishedVersion, "LEGACY", "Legacy fuel", "fixed", 40m);
-        await AddComponentAsync(tenantId, publishedRule, "SSC", "Security", 40m);
+        using var fsc = Tenant(HttpMethod.Post, $"/api/pricing-rules/{draftRule}/components", tenantId);
+        fsc.Content = JsonContent.Create(new
+        {
+            code = "FSC",
+            name = "Fuel",
+            financialNature = "cost",
+            amount = 20m,
+            currencyCode = "VND"
+        });
+        var denied = await _client.SendAsync(fsc);
+        Assert.Equal(HttpStatusCode.Conflict, denied.StatusCode);
+
+        using var remote = Tenant(HttpMethod.Post, $"/api/rate-versions/{draftVersion}/rules", tenantId);
+        remote.Content = JsonContent.Create(new
+        {
+            code = "REMOTE-SBH",
+            name = "Phụ phí vùng SBH",
+            calcMethod = "unit_rate",
+            unitAmount = 10m,
+            currencyCode = "VND",
+            chargeCode = "REMOTE"
+        });
+        var deniedRule = await _client.SendAsync(remote);
+        Assert.Equal(HttpStatusCode.Conflict, deniedRule.StatusCode);
+
+        var publishedVersion = await CreateVersionAsync(tenantId, cardId, "2020-01-01T00:00:00Z");
+        await AddRuleAsync(tenantId, publishedVersion, "FREIGHT", "Base freight", "fixed", 100m);
         using (var publish = Tenant(HttpMethod.Post, $"/api/rate-versions/{publishedVersion}/publish", tenantId))
         {
             (await _client.SendAsync(publish)).EnsureSuccessStatusCode();
@@ -468,33 +491,22 @@ public sealed class IndependentSurchargeTests : IAsyncLifetime
 
         var ratingId = await RateAsync(tenantId, new { billId, rateVersionId = publishedVersion, quantity = 1m });
         var before = await GetAsync(tenantId, ratingId);
+        Assert.Equal(100m, before.TotalAmount);
+        Assert.DoesNotContain(before.Details, d => d.SourceType == "surcharge");
 
         var first = await PostAsync(tenantId, "/api/surcharges/migrate-legacy", new { });
         var migrated = await first.Content.ReadFromJsonAsync<MigrateBody>(Json);
-        Assert.Equal(1, migrated!.Migrated);
-        Assert.Equal(1, migrated.SkippedBase);
-        Assert.Equal(1, migrated.SkippedUnknown);
-        Assert.Equal(1, migrated.SkippedPublished);
-
-        var list = await GetJsonAsync(tenantId, "/api/surcharges");
-        Assert.Contains("\"code\":\"FSC\"", list, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("\"sourceKind\":\"independent\"", list, StringComparison.OrdinalIgnoreCase);
-        var rows = JsonSerializer.Deserialize<List<ListRow>>(list, Json)!;
-        var fsc = rows.Single(r => r.Code == "FSC" && r.SourceKind == "independent");
-        var detailJson = await GetJsonAsync(tenantId, $"/api/surcharges/{fsc.Id}");
-        var detail = JsonSerializer.Deserialize<DetailBody>(detailJson, Json);
-        Assert.NotNull(detail!.SourceLegacyComponentId);
+        Assert.Equal(0, migrated!.Migrated);
+        Assert.True(migrated.SkippedBase >= 1);
+        Assert.True(migrated.SkippedUnknown >= 1);
 
         var second = await PostAsync(tenantId, "/api/surcharges/migrate-legacy", new { });
         var again = await second.Content.ReadFromJsonAsync<MigrateBody>(Json);
         Assert.Equal(0, again!.Migrated);
-        Assert.True(again.AlreadyMapped >= 4);
+        Assert.True(again.AlreadyMapped >= 2);
 
         var after = await GetAsync(tenantId, ratingId);
         Assert.Equal(before.TotalAmount, after.TotalAmount);
-        Assert.Contains(after.Details, d => d.ComponentCode == "SSC");
-        var versions = await GetJsonAsync(tenantId, $"/api/rate-cards/{cardId}/versions");
-        Assert.Contains("published", versions, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<(Guid CardId, Guid VersionId)> PublishedCardAsync(

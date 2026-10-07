@@ -153,7 +153,6 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
               tabs={[
                 { id: "overview", label: "Thông tin chung" },
                 { id: "pricing", label: "Chi tiết giá" },
-                { id: "surcharge", label: "Phụ phí" },
                 { id: "terms", label: "Điều kiện áp dụng" },
                 { id: "history", label: "Lịch sử" },
                 { id: "related", label: "Liên quan" },
@@ -199,10 +198,10 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                 </div>
               </dl>
             ) : null}
-            {tab === "pricing" || tab === "surcharge" || tab === "terms" ? (
+            {tab === "pricing" || tab === "terms" ? (
               <p className="muted">
-                Lưới đơn giá (bậc × loại hàng) và phụ phí nằm trên phiên bản đã phát hành.
-                Mở hồ sơ bảng giá để xem; phiên bản đã phát hành không sửa trực tiếp.
+                Lưới đơn giá (bậc × loại hàng) là cước chính trên phiên bản đã phát hành.
+                Phụ phí tạo ở Quản lý phụ phí. Phiên bản đã phát hành không sửa trực tiếp.
               </p>
             ) : null}
             {tab === "history" ? (

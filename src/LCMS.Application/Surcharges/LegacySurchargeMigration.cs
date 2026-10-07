@@ -1,5 +1,6 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Ratings;
 using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -88,11 +89,6 @@ public sealed class MigrateLegacySurchargesCommandHandler
                 outcome = SurchargeMigrationOutcomes.SkippedUnknown;
                 skippedUnknown++;
             }
-            else if (version?.IsPublished == true)
-            {
-                outcome = SurchargeMigrationOutcomes.SkippedPublished;
-                skippedPublished++;
-            }
             else if (!codes.Add(component.Code.Trim()))
             {
                 outcome = SurchargeMigrationOutcomes.AlreadyMapped;
@@ -111,6 +107,66 @@ public sealed class MigrateLegacySurchargesCommandHandler
                 TenantId = tenantId,
                 PricingRuleComponentId = component.Id,
                 Classification = classification,
+                Outcome = outcome,
+                SurchargeId = surchargeId
+            });
+        }
+
+        var componentRuleIds = components.Select(c => c.PricingRuleId).ToHashSet();
+        var embeddedRules = await _db.PricingRules.ToListAsync(cancellationToken);
+        var embeddedVersionIds = embeddedRules.Select(r => r.RateVersionId).Distinct().ToList();
+        var embeddedVersions = await _db.RateVersions.AsNoTracking()
+            .Where(v => embeddedVersionIds.Contains(v.Id))
+            .ToDictionaryAsync(v => v.Id, cancellationToken);
+        var embeddedCardIds = embeddedVersions.Values.Select(v => v.RateCardId).Distinct().ToList();
+        var embeddedCards = await _db.RateCards.AsNoTracking()
+            .Where(c => embeddedCardIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, cancellationToken);
+        var embeddedRuleIds = embeddedRules.Select(r => r.Id).ToList();
+        var embeddedBreaks = await _db.RateBreaks.AsNoTracking()
+            .Where(b => embeddedRuleIds.Contains(b.PricingRuleId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var rule in embeddedRules)
+        {
+            if (!LegacyComponentClassifier.IsAdditionalCharge(rule.Code, rule.Name, rule.ChargeCode))
+            {
+                continue;
+            }
+
+            if (!seen.Add(rule.Id))
+            {
+                already++;
+                continue;
+            }
+
+            if (componentRuleIds.Contains(rule.Id))
+            {
+                continue;
+            }
+
+            embeddedVersions.TryGetValue(rule.RateVersionId, out var ruleVersion);
+            embeddedCards.TryGetValue(ruleVersion?.RateCardId ?? Guid.Empty, out var ruleCard);
+            string outcome;
+            Guid? surchargeId = null;
+            if (!codes.Add(rule.Code.Trim()))
+            {
+                outcome = SurchargeMigrationOutcomes.AlreadyMapped;
+                already++;
+            }
+            else
+            {
+                var created = CopyRule(tenantId, rule, ruleVersion, ruleCard, embeddedBreaks);
+                surchargeId = created.Id;
+                outcome = SurchargeMigrationOutcomes.Migrated;
+                migrated++;
+            }
+
+            _db.SurchargeMigrationLogs.Add(new SurchargeMigrationLog
+            {
+                TenantId = tenantId,
+                PricingRuleComponentId = rule.Id,
+                Classification = LegacyComponentClasses.Surcharge,
                 Outcome = outcome,
                 SurchargeId = surchargeId
             });
@@ -146,9 +202,14 @@ public sealed class MigrateLegacySurchargesCommandHandler
             TenantId = tenantId,
             SurchargeId = surcharge.Id,
             VersionNo = 1,
-            PublishStatus = SurchargeVersionStatuses.Draft,
+            PublishStatus = version?.IsPublished == true
+                ? SurchargeVersionStatuses.Published
+                : SurchargeVersionStatuses.Draft,
             ValidFrom = version?.EffectiveFrom,
-            ValidTo = version?.EffectiveTo
+            ValidTo = version?.EffectiveTo,
+            PublishedAt = version?.IsPublished == true
+                ? version!.PublishedAt ?? version.EffectiveFrom ?? DateTimeOffset.UtcNow
+                : null
         };
         var surchargeRule = new SurchargeRule
         {
@@ -204,6 +265,122 @@ public sealed class MigrateLegacySurchargesCommandHandler
         return surcharge;
     }
 
+    private Surcharge CopyRule(
+        Guid tenantId,
+        PricingRule rule,
+        RateVersion? version,
+        RateCard? card,
+        IReadOnlyList<RateBreak> breaks)
+    {
+        var direction = string.Equals(card?.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
+            ? SurchargeDirections.Sell
+            : SurchargeDirections.Buy;
+        var mode = MapMode(rule.CalcMethod);
+        var perGross = string.Equals(rule.Applicability, RatingEngine.PerGrossKg, StringComparison.OrdinalIgnoreCase);
+        var rate = rule.UnitAmount;
+        decimal? weightTo = null;
+        if (string.Equals(rule.CalcMethod, PricingCalcMethods.WeightStep, StringComparison.OrdinalIgnoreCase))
+        {
+            var band = breaks
+                .Where(b => b.PricingRuleId == rule.Id && b.UnitAmount > 0)
+                .OrderBy(b => b.SequenceNo)
+                .FirstOrDefault();
+            if (band is not null)
+            {
+                mode = SurchargeCalcModes.FixedRate;
+                rate = band.UnitAmount;
+                weightTo = band.MaxQuantity;
+            }
+        }
+        var surcharge = new Surcharge
+        {
+            TenantId = tenantId,
+            Code = rule.Code.Trim(),
+            Name = rule.Name.Trim(),
+            Direction = direction,
+            Status = SurchargeStatuses.Active,
+            SourceLegacyComponentId = rule.Id
+        };
+        var published = version?.IsPublished == true;
+        var surchargeVersion = new SurchargeVersion
+        {
+            TenantId = tenantId,
+            SurchargeId = surcharge.Id,
+            VersionNo = 1,
+            PublishStatus = published ? SurchargeVersionStatuses.Published : SurchargeVersionStatuses.Draft,
+            ValidFrom = version?.EffectiveFrom,
+            ValidTo = version?.EffectiveTo,
+            PublishedAt = published ? version!.PublishedAt ?? version.EffectiveFrom ?? DateTimeOffset.UtcNow : null
+        };
+        var surchargeRule = new SurchargeRule
+        {
+            TenantId = tenantId,
+            SurchargeVersionId = surchargeVersion.Id,
+            CalculationMode = mode,
+            Basis = perGross
+                ? "gross_weight"
+                : mode == SurchargeCalcModes.UnitRate ? "chargeable_weight" : null,
+            CurrencyCode = rule.CurrencyCode,
+            RateAmountPercent = rate,
+            Priority = rule.SortOrder
+        };
+        _db.Surcharges.Add(surcharge);
+        _db.SurchargeVersions.Add(surchargeVersion);
+        _db.SurchargeRules.Add(surchargeRule);
+        if (weightTo is decimal cap)
+        {
+            _db.SurchargeConditions.Add(new SurchargeCondition
+            {
+                TenantId = tenantId,
+                SurchargeRuleId = surchargeRule.Id,
+                Dimension = "chargeable_weight",
+                Operator = "between",
+                ValueFrom = 0m,
+                ValueTo = cap
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.DestinationCode))
+        {
+            _db.SurchargeConditions.Add(new SurchargeCondition
+            {
+                TenantId = tenantId,
+                SurchargeRuleId = surchargeRule.Id,
+                Dimension = "destination",
+                Operator = "eq",
+                ValueText = rule.DestinationCode
+            });
+        }
+
+        if (version is not null)
+        {
+            _db.SurchargeScopes.Add(new SurchargeScope
+            {
+                TenantId = tenantId,
+                SurchargeRuleId = surchargeRule.Id,
+                RateCardId = version.RateCardId
+            });
+        }
+
+        if (mode == SurchargeCalcModes.WeightBreak)
+        {
+            foreach (var band in breaks.Where(b => b.PricingRuleId == rule.Id).OrderBy(b => b.SequenceNo))
+            {
+                _db.SurchargeBreaks.Add(new SurchargeBreak
+                {
+                    TenantId = tenantId,
+                    SurchargeRuleId = surchargeRule.Id,
+                    SequenceNo = band.SequenceNo,
+                    MinQuantity = band.MinQuantity,
+                    MaxQuantity = band.MaxQuantity,
+                    UnitAmount = band.UnitAmount
+                });
+            }
+        }
+
+        return surcharge;
+    }
+
     private static string MapMode(string? calcMethod)
     {
         var mode = CreateSurchargeCommandValidator.NormalizeMode(calcMethod);
@@ -216,8 +393,24 @@ public static class LegacyComponentClassifier
     private static readonly string[] SurchargeTokens =
     [
         "FSC", "SSC", "THC", "BAF", "CAF", "PSS", "AWB", "AMS",
-        "FUEL", "SECURITY", "HANDLING", "PEAK", "SURCHARGE", "DG"
+        "FUEL", "SECURITY", "HANDLING", "PEAK", "SURCHARGE", "DG",
+        "REMOTE", "DELIVERY"
     ];
+
+    public static bool IsAdditionalCharge(string? code, string? name, string? chargeCode)
+    {
+        if (!string.IsNullOrWhiteSpace(chargeCode))
+        {
+            var charge = chargeCode.Trim();
+            if (charge.Equals("REMOTE", StringComparison.OrdinalIgnoreCase)
+                || charge.Equals("DELIVERY", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return Classify(code ?? "", name ?? "") == LegacyComponentClasses.Surcharge;
+    }
 
     public static string Classify(string code, string name)
     {
@@ -225,6 +418,11 @@ public static class LegacyComponentClassifier
         if (IsBase(text))
         {
             return LegacyComponentClasses.Base;
+        }
+
+        if (text.Contains("PHỤ PHÍ", StringComparison.Ordinal))
+        {
+            return LegacyComponentClasses.Surcharge;
         }
 
         if (SurchargeTokens.Any(token => ContainsToken(text, token)))

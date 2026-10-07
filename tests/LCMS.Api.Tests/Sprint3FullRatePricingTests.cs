@@ -120,15 +120,6 @@ public sealed class Sprint3FullRatePricingTests : IAsyncLifetime
         });
         await AddRuleAsync(tenantId, versionId, new
         {
-            code = "FUEL",
-            name = "Phụ phí nhiên liệu 10%",
-            calcMethod = "percent_of_base",
-            unitAmount = 10,
-            currencyCode = "VND",
-            sortOrder = 2
-        });
-        await AddRuleAsync(tenantId, versionId, new
-        {
             code = "CAP",
             name = "Cước có trần",
             calcMethod = "min_max_clamp",
@@ -140,8 +131,24 @@ public sealed class Sprint3FullRatePricingTests : IAsyncLifetime
         });
 
         await PublishAsync(tenantId, versionId);
+        using (var fuel = new HttpRequestMessage(HttpMethod.Post, "/api/surcharges"))
+        {
+            fuel.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            fuel.Content = JsonContent.Create(new
+            {
+                code = "FUEL",
+                name = "Phụ phí nhiên liệu 10%",
+                direction = "buy",
+                calculationMode = "percentage",
+                currencyCode = "VND",
+                rateAmountPercent = 10m,
+                rateVersionId = versionId,
+                publish = true
+            });
+            (await _client.SendAsync(fuel)).EnsureSuccessStatusCode();
+        }
 
-        // qty=2 → BASE 2000; FUEL 10% of running 2000 = 200; CAP raw 4000 clamp max 3000
+        // qty=2 → BASE 2000; CAP clamp 3000; FUEL 10% của cước chính 5000 = 500
         var ratingId = await RateAsync(tenantId, new
         {
             billId,
@@ -152,9 +159,9 @@ public sealed class Sprint3FullRatePricingTests : IAsyncLifetime
         var rating = await GetRatingAsync(tenantId, ratingId);
         Assert.Equal(3, rating.Details.Count);
         Assert.Equal(2000m, rating.Details.Single(d => d.RuleCode == "BASE").Amount);
-        Assert.Equal(200m, rating.Details.Single(d => d.RuleCode == "FUEL").Amount);
+        Assert.Equal(500m, rating.Details.Single(d => d.RuleCode == "FUEL").Amount);
         Assert.Equal(3000m, rating.Details.Single(d => d.RuleCode == "CAP").Amount);
-        Assert.Equal(5200m, rating.TotalAmount);
+        Assert.Equal(5500m, rating.TotalAmount);
 
         // Explicit baseAmount for percent (ignore running): 10% of 10000 = 1000 on FUEL only scenario via separate version
         var v2 = await CreateVersionAsync(tenantId, cardId);

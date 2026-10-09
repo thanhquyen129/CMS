@@ -31,6 +31,12 @@ export type FinancialDocumentLine = {
   billNo?: string | null;
   costTypeCode: string | null;
   revenueTypeCode: string | null;
+  netAmount?: number | null;
+  vatRate?: number | null;
+  vatAmount?: number | null;
+  grossAmount?: number | null;
+  vatVarianceAmount?: number | null;
+  ratingDetailId?: string | null;
 };
 
 export type EligibleSourceLine = {

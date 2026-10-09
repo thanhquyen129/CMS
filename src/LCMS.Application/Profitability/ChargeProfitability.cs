@@ -12,7 +12,10 @@ public sealed record ChargeProfitSlice(
     Guid SourceId,
     string SourceKind,
     Guid? PartnerId,
-    Guid? BillId);
+    Guid? BillId,
+    bool ExpectedFxMissing = false,
+    bool ConfirmedFxMissing = false,
+    bool ActualFxMissing = false);
 
 public sealed record ChargeProfitSourceDto(
     Guid SourceId,
@@ -47,6 +50,36 @@ public static class ChargeProfitability
     public const string Incomplete = "incomplete";
     public const string SameBasis = "same_basis";
     public const string Mixed = "mixed";
+
+    public readonly record struct AllocationLayers(
+        decimal? Expected,
+        decimal? Confirmed,
+        decimal? Actual,
+        bool ExpectedFx,
+        bool ConfirmedFx,
+        bool ActualFx);
+
+    /// <summary>
+    /// A shared-cost share belongs to the parent cost's peak maturity only.
+    /// A missing FX conversion stays incomplete; it is not copied onto other layers.
+    /// </summary>
+    public static AllocationLayers LayersForAllocation(string? peak, decimal? reportingShare)
+    {
+        var maturity = string.IsNullOrWhiteSpace(peak) ? "expected" : peak.Trim().ToLowerInvariant();
+        if (maturity is not ("confirmed" or "actual"))
+        {
+            maturity = "expected";
+        }
+
+        var missing = reportingShare is null;
+        return new AllocationLayers(
+            maturity == "expected" && !missing ? reportingShare : null,
+            maturity == "confirmed" && !missing ? reportingShare : null,
+            maturity == "actual" && !missing ? reportingShare : null,
+            maturity == "expected" && missing,
+            maturity == "confirmed" && missing,
+            maturity == "actual" && missing);
+    }
 
     public static ChargeProfitabilityDto Compose(string view, string? reportingCurrency, IReadOnlyList<ChargeProfitSlice> lines)
     {
@@ -151,6 +184,8 @@ public static class ChargeProfitability
             sources);
     }
 
+    private readonly record struct LayerPick(decimal? Amount, bool FxMissing, bool Absent);
+
     private static decimal? Sum(IReadOnlyList<ChargeProfitSlice> lines, string view)
     {
         if (lines.Count == 0)
@@ -158,39 +193,68 @@ public static class ChargeProfitability
             return null;
         }
 
+        var any = false;
         decimal total = 0m;
         foreach (var line in lines)
         {
-            var amount = Layer(line, view);
-            if (amount is null)
+            var pick = Pick(line, view);
+            if (pick.FxMissing)
             {
                 return null;
             }
 
-            total += amount.Value;
+            if (pick.Absent)
+            {
+                continue;
+            }
+
+            any = true;
+            total += pick.Amount!.Value;
         }
 
-        return decimal.Round(total, 4, MidpointRounding.AwayFromZero);
+        return any ? decimal.Round(total, 4, MidpointRounding.AwayFromZero) : null;
     }
 
-    private static decimal? Layer(ChargeProfitSlice line, string view)
+    private static LayerPick Pick(ChargeProfitSlice line, string view)
     {
         if (view == "expected")
         {
-            return line.ExpectedReporting;
+            return Of(line.ExpectedReporting, line.ExpectedFxMissing);
         }
 
         if (view == "confirmed")
         {
-            return line.ConfirmedReporting;
+            return Of(line.ConfirmedReporting, line.ConfirmedFxMissing);
         }
 
         if (view == "actual")
         {
-            return line.ActualReporting;
+            return Of(line.ActualReporting, line.ActualFxMissing);
         }
 
-        return line.ActualReporting ?? line.ConfirmedReporting ?? line.ExpectedReporting;
+        if (line.ActualReporting is not null || line.ActualFxMissing)
+        {
+            return Of(line.ActualReporting, line.ActualFxMissing);
+        }
+
+        if (line.ConfirmedReporting is not null || line.ConfirmedFxMissing)
+        {
+            return Of(line.ConfirmedReporting, line.ConfirmedFxMissing);
+        }
+
+        return Of(line.ExpectedReporting, line.ExpectedFxMissing);
+    }
+
+    private static LayerPick Of(decimal? amount, bool fxMissing)
+    {
+        if (fxMissing)
+        {
+            return new LayerPick(null, true, false);
+        }
+
+        return amount is null
+            ? new LayerPick(null, false, true)
+            : new LayerPick(amount, false, false);
     }
 
     private static string Maturity(IReadOnlyList<ChargeProfitSlice> lines, string view)

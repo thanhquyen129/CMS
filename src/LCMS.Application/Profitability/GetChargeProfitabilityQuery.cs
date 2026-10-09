@@ -53,36 +53,56 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
         var slices = new List<ChargeProfitSlice>();
         foreach (var cost in costs)
         {
+            var expected = ReportingValue.Of(cost, cost.ExpectedAmount, reporting);
+            var confirmed = cost.ConfirmedAmount is decimal confirmedAmount
+                ? ReportingValue.Of(cost, confirmedAmount, reporting)
+                : null;
+            var actual = cost.ActualAmount is decimal actualAmount
+                ? ReportingValue.Of(cost, actualAmount, reporting)
+                : null;
             slices.Add(Slice(
                 cost.EconomicChargeTypeId,
                 cost.CostTypeCode,
                 names,
                 "cost",
                 cost.FinancialMaturity,
-                ReportingValue.Of(cost, cost.ExpectedAmount, reporting),
-                cost.ConfirmedAmount is decimal confirmed ? ReportingValue.Of(cost, confirmed, reporting) : null,
-                cost.ActualAmount is decimal actual ? ReportingValue.Of(cost, actual, reporting) : null,
+                expected,
+                confirmed,
+                actual,
                 cost.Id,
                 "cost",
                 cost.VendorPartyId,
-                cost.BillId));
+                cost.BillId,
+                expected is null,
+                cost.ConfirmedAmount is not null && confirmed is null,
+                cost.ActualAmount is not null && actual is null));
         }
 
         foreach (var revenue in revenues)
         {
+            var expected = ReportingValue.Of(revenue, revenue.ExpectedAmount, reporting);
+            var confirmed = revenue.ConfirmedAmount is decimal confirmedAmount
+                ? ReportingValue.Of(revenue, confirmedAmount, reporting)
+                : null;
+            var actual = revenue.ActualAmount is decimal actualAmount
+                ? ReportingValue.Of(revenue, actualAmount, reporting)
+                : null;
             slices.Add(Slice(
                 revenue.EconomicChargeTypeId,
                 revenue.RevenueTypeCode,
                 names,
                 "revenue",
                 revenue.FinancialMaturity,
-                ReportingValue.Of(revenue, revenue.ExpectedAmount, reporting),
-                revenue.ConfirmedAmount is decimal confirmed ? ReportingValue.Of(revenue, confirmed, reporting) : null,
-                revenue.ActualAmount is decimal actual ? ReportingValue.Of(revenue, actual, reporting) : null,
+                expected,
+                confirmed,
+                actual,
                 revenue.Id,
                 "revenue",
                 revenue.CustomerPartyId,
-                revenue.BillId));
+                revenue.BillId,
+                expected is null,
+                revenue.ConfirmedAmount is not null && confirmed is null,
+                revenue.ActualAmount is not null && actual is null));
         }
 
         var allocated = await (
@@ -99,19 +119,23 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
         {
             var share = row.detail.ManualOverrideAmount ?? row.detail.AllocatedAmount;
             var reportingShare = ReportingValue.Of(row.cost, share, reporting);
+            var layers = ChargeProfitability.LayersForAllocation(row.cost.FinancialMaturity, reportingShare);
             slices.Add(Slice(
                 row.cost.EconomicChargeTypeId,
                 row.cost.CostTypeCode,
                 names,
                 "cost",
                 row.cost.FinancialMaturity,
-                reportingShare,
-                row.cost.ConfirmedAmount is null ? null : reportingShare,
-                row.cost.ActualAmount is null ? null : reportingShare,
-                row.detail.Id,
+                layers.Expected,
+                layers.Confirmed,
+                layers.Actual,
+                row.cost.Id,
                 "allocation",
                 row.cost.VendorPartyId,
-                row.detail.BillId));
+                row.detail.BillId,
+                layers.ExpectedFx,
+                layers.ConfirmedFx,
+                layers.ActualFx));
         }
 
         return ChargeProfitability.Compose(view, reporting, slices);
@@ -163,7 +187,10 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
         Guid sourceId,
         string sourceKind,
         Guid? partnerId,
-        Guid? billId)
+        Guid? billId,
+        bool expectedFx = false,
+        bool confirmedFx = false,
+        bool actualFx = false)
     {
         var chargeCode = string.IsNullOrWhiteSpace(code) ? "UNMAPPED" : code.Trim();
         var chargeName = chargeTypeId is Guid id && names.TryGetValue(id, out var name) ? name : chargeCode;
@@ -179,6 +206,9 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
             sourceId,
             sourceKind,
             partnerId,
-            billId);
+            billId,
+            expectedFx,
+            confirmedFx,
+            actualFx);
     }
 }

@@ -332,6 +332,22 @@ export default async function DocumentDetailPage({
                       </td>
                       <td className="num">
                         {formatMoney(line.amount, line.currencyCode)}
+                        {line.netAmount != null ? (
+                          <div className="muted small">
+                            Trước VAT {formatMoney(line.netAmount, line.currencyCode)}
+                            {line.vatAmount != null
+                              ? ` · VAT ${formatMoney(line.vatAmount, line.currencyCode)}`
+                              : ""}
+                            {line.grossAmount != null
+                              ? ` · Thanh toán ${formatMoney(line.grossAmount, line.currencyCode)}`
+                              : ""}
+                          </div>
+                        ) : null}
+                        {line.vatVarianceAmount != null ? (
+                          <div className="muted small">
+                            Chênh VAT so với tính giá {formatMoney(line.vatVarianceAmount, line.currencyCode)}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="num">
                         {formatMoney(line.matchedAmount, line.currencyCode)}
@@ -352,6 +368,9 @@ export default async function DocumentDetailPage({
                             billId={line.billId}
                             costTypeCode={line.costTypeCode}
                             revenueTypeCode={line.revenueTypeCode}
+                            netAmount={line.netAmount}
+                            vatRate={line.vatRate}
+                            ratingDetailId={line.ratingDetailId}
                             direction={doc.direction}
                             documentTotal={doc.totalAmount}
                             otherLinesSum={

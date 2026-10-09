@@ -152,6 +152,22 @@ export function listEconomicChargeTypes(): Promise<ApiResult<{ id: string; code:
   return apiGet("/api/economic-charge-types");
 }
 
+export type ChargeVatReadiness = {
+  rateVersionsMissingVat: number;
+  surchargeVersionsMissingVat: number;
+  ratingDetailsMissingVat: number;
+  costsMissingVat: number;
+  revenuesMissingVat: number;
+  costsUnmapped: number;
+  revenuesUnmapped: number;
+  ratingDetailsUnmapped: number;
+  note: string;
+};
+
+export function getChargeVatReadiness(): Promise<ApiResult<ChargeVatReadiness>> {
+  return apiGet<ChargeVatReadiness>("/api/economic-charge-types/readiness");
+}
+
 export function listSurcharges(): Promise<ApiResult<SurchargeRow[]>> {
   return apiGet<SurchargeRow[]>("/api/surcharges");
 }

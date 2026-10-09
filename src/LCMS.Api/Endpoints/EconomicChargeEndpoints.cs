@@ -20,6 +20,8 @@ public static class EconomicChargeEndpoints
             var id = await sender.Send(new MapChargeTypeCommand(body.SourceKind, body.SourceCode, body.EconomicChargeTypeId), ct);
             return Results.Created($"/api/economic-charge-types/mappings/{id}", new { id });
         });
+        group.MapGet("/readiness", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetChargeVatReadinessQuery(), ct)));
         return app;
     }
 }

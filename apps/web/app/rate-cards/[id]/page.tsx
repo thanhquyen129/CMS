@@ -6,6 +6,7 @@ import { AddPricingRuleForm } from "@/components/AddPricingRuleForm";
 import { AddPricingRuleComponentForm } from "@/components/AddPricingRuleComponentForm";
 import { PricingRuleComponentActions } from "@/components/PricingRuleComponentActions";
 import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
+import { DraftRateVersionVatForm } from "@/components/DraftRateVersionVatForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
 import { RetireRateCardButton } from "@/components/RetireRateCardButton";
 import { AUTH_COOKIE } from "@/lib/auth";
@@ -165,6 +166,13 @@ export default async function RateCardDetailPage({
                   <p className="muted small">
                     Quy tắc ở đây là cước chính. Phụ phí dùng chung tạo ở Quản lý phụ phí và không bắt buộc gắn vào bảng giá.
                   </p>
+                  {draft ? (
+                    <DraftRateVersionVatForm versionId={v.id} vatRate={v.vatRate ?? null} />
+                  ) : (
+                    <p className="muted small">
+                      VAT: {v.vatRate == null ? "chưa khai báo" : `${v.vatRate}%`}. Phiên bản đã phát hành không sửa thuế suất.
+                    </p>
+                  )}
                   {v.note ? <p className="note">{v.note}</p> : null}
 
                   {ruleBag?.error ? (

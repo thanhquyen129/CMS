@@ -184,7 +184,11 @@ public static class FinancialDocumentEndpoints
                     body.Description,
                     lineBillId,
                     body.CostTypeCode,
-                    body.RevenueTypeCode),
+                    body.RevenueTypeCode,
+                    body.UpdateVat,
+                    body.NetAmount,
+                    body.VatRate,
+                    body.RatingDetailId),
                 ct);
             return Results.NoContent();
         });
@@ -349,7 +353,11 @@ public sealed record UpdateFinancialDocumentLineRequest(
     string? Description,
     string? BillId,
     string? CostTypeCode,
-    string? RevenueTypeCode);
+    string? RevenueTypeCode,
+    bool UpdateVat = false,
+    decimal? NetAmount = null,
+    decimal? VatRate = null,
+    Guid? RatingDetailId = null);
 
 public sealed record CorrectFinancialDocumentHeaderRequest(
     string Reason,

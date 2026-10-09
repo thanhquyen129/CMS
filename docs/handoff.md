@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-09 — Charge profit drill-down, allocation maturity, VAT readiness
+
+- Shared-cost profit uses only the parent peak maturity. A missing layer is skipped; missing FX stays incomplete. Bill and order screens link each charge line to cost, shared cost, or revenue. Draft rate versions can set VAT; published versions stay unchanged. Surcharge partner scope must match direction. Readiness counts null VAT and unmapped charges without writing them.
+- Files: `ChargeProfitability.cs`, `GetChargeProfitabilityQuery.cs`, `GetChargeVatReadinessQuery.cs`, `SurchargeCommands.cs`, `ChargeProfitTable.tsx`, `DraftRateVersionVatForm.tsx`.
+
 ## 2026-10-09 — Charge profit, pricing partner, declared VAT
 
 - Buy and sell lines pair on an economic charge type. Profit uses net reporting amounts; missing data or mixed maturity is not an actual loss. VAT percent is optional on a draft rate version and surcharge version (null is undeclared, not 0%). Rating snapshots net/VAT/gross without changing the economic amount. Suggested partner is inherited; changing the actual partner is audited and does not rewrite published ratings.

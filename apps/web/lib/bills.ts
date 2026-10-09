@@ -233,6 +233,11 @@ export function getChargeProfitability(id: string, view = "best"): Promise<ApiRe
   return apiGet<ChargeProfitability>(`/api/bills/${id}/charge-profitability?${params.toString()}`);
 }
 
+export function getOrderChargeProfitability(id: string, view = "best"): Promise<ApiResult<ChargeProfitability>> {
+  const params = new URLSearchParams({ view });
+  return apiGet<ChargeProfitability>(`/api/orders/${id}/charge-profitability?${params.toString()}`);
+}
+
 export function getProfitability(
   id: string,
   view = "best",

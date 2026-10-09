@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,11 @@ public sealed record UpdateFinancialDocumentLineCommand(
     string? Description,
     Guid? BillId,
     string? CostTypeCode,
-    string? RevenueTypeCode) : IRequest;
+    string? RevenueTypeCode,
+    bool UpdateVat = false,
+    decimal? NetAmount = null,
+    decimal? VatRate = null,
+    Guid? RatingDetailId = null) : IRequest;
 
 public sealed class UpdateFinancialDocumentLineCommandValidator : AbstractValidator<UpdateFinancialDocumentLineCommand>
 {
@@ -28,6 +33,9 @@ public sealed class UpdateFinancialDocumentLineCommandValidator : AbstractValida
         RuleFor(x => x.Description).MaximumLength(512).When(x => x.Description is not null);
         RuleFor(x => x.CostTypeCode).MaximumLength(64).When(x => x.CostTypeCode is not null);
         RuleFor(x => x.RevenueTypeCode).MaximumLength(64).When(x => x.RevenueTypeCode is not null);
+        RuleFor(x => x.VatRate).Must(DeclaredVat.IsValid).WithMessage("Thuế suất VAT phải từ 0 đến 100, hoặc để trống nếu chưa khai báo.");
+        RuleFor(x => x).Must(x => !x.UpdateVat || x.NetAmount is null == x.VatRate is null)
+            .WithMessage("Khai tiền trước VAT cùng thuế suất, hoặc để trống cả hai.");
     }
 }
 
@@ -118,6 +126,35 @@ public sealed class UpdateFinancialDocumentLineCommandHandler : IRequestHandler<
         line.BillId = request.BillId ?? document.BillId;
         line.CostTypeCode = string.IsNullOrWhiteSpace(request.CostTypeCode) ? null : request.CostTypeCode.Trim();
         line.RevenueTypeCode = string.IsNullOrWhiteSpace(request.RevenueTypeCode) ? null : request.RevenueTypeCode.Trim();
+        if (request.UpdateVat)
+        {
+            if (request.NetAmount is decimal net && request.VatRate is decimal rate)
+            {
+                var split = DeclaredVat.Split(net, rate);
+                line.NetAmount = split.Net;
+                line.VatRate = rate;
+                line.VatAmount = split.Vat;
+                line.GrossAmount = split.Gross;
+                line.RatingDetailId = request.RatingDetailId ?? line.RatingDetailId;
+                if (line.RatingDetailId is Guid ratingDetailId)
+                {
+                    var snapshot = await _db.RatingDetails.AsNoTracking()
+                        .FirstOrDefaultAsync(d => d.Id == ratingDetailId, cancellationToken)
+                        ?? throw new NotFoundAppException("Không tìm thấy dòng tính giá để đối soát VAT.");
+                    line.VatVarianceAmount = split.Vat is decimal documentVat && snapshot.VatAmount is decimal rated
+                        ? decimal.Round(documentVat - rated, 4, MidpointRounding.AwayFromZero)
+                        : null;
+                }
+            }
+            else
+            {
+                line.NetAmount = null;
+                line.VatRate = null;
+                line.VatAmount = null;
+                line.GrossAmount = null;
+                line.VatVarianceAmount = null;
+            }
+        }
 
         _audit.Append(
             AuditActions.FinancialDocumentLineUpdate,

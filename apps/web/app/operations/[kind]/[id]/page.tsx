@@ -4,7 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { LinkBillToRefForm } from "@/components/LinkBillToRefForm";
 import { OrderCashFlowMap, type OrderBillFinancialSummary } from "@/components/OrderCashFlowMap";
-import { getFinancialProfile } from "@/lib/bills";
+import { ChargeProfitTable } from "@/components/ChargeProfitTable";
+import { getFinancialProfile, getOrderChargeProfitability } from "@/lib/bills";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
@@ -186,6 +187,7 @@ export default async function OperationalDetailPage({
               customerName={"customerName" in row ? row.customerName : null}
               bills={orderBillSummaries}
             />
+            <OrderChargeProfit orderId={id} />
           </>
         ) : null}
 
@@ -239,4 +241,16 @@ export default async function OperationalDetailPage({
       </section>
     </AppShell>
   );
+}
+
+async function OrderChargeProfit({ orderId }: { orderId: string }) {
+  const chargeRes = await getOrderChargeProfitability(orderId);
+  if (!chargeRes.ok) {
+    return (
+      <div className="alert alert-error" role="alert">
+        {chargeRes.message}
+      </div>
+    );
+  }
+  return <ChargeProfitTable data={chargeRes.data} />;
 }

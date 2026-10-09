@@ -115,6 +115,42 @@ public sealed class ChargeProfitVatTests
         Assert.Equal(4, row.Sources.Count);
     }
 
+    [Fact]
+    public void Actual_only_allocation_does_not_fill_expected_or_hide_a_real_expected_line()
+    {
+        var layers = ChargeProfitability.LayersForAllocation("actual", 80_000m);
+        Assert.Null(layers.Expected);
+        Assert.Null(layers.Confirmed);
+        Assert.Equal(80_000m, layers.Actual);
+
+        var rows = ChargeProfitability.Compose("expected", "VND",
+        [
+            Line(Packaging, "cost", expected: 100_000m),
+            new ChargeProfitSlice(Packaging, "PACKAGING", "PACKAGING", "cost", "actual", layers.Expected, layers.Confirmed, layers.Actual, Guid.NewGuid(), "allocation", null, null, layers.ExpectedFx, layers.ConfirmedFx, layers.ActualFx),
+            Line(Packaging, "revenue", expected: 90_000m)
+        ]);
+
+        var row = Assert.Single(rows.Rows);
+        Assert.Equal(100_000m, row.CostReporting);
+        Assert.Equal(-10_000m, row.ProfitReporting);
+        Assert.True(row.NegativeFlag);
+    }
+
+    [Fact]
+    public void Missing_fx_keeps_the_side_incomplete()
+    {
+        var rows = ChargeProfitability.Compose("expected", "USD",
+        [
+            new ChargeProfitSlice(Packaging, "PACKAGING", "PACKAGING", "cost", "expected", null, null, null, Guid.NewGuid(), "cost", null, null, true, false, false),
+            Line(Packaging, "revenue", expected: 90_000m)
+        ]);
+
+        var row = Assert.Single(rows.Rows);
+        Assert.Equal(ChargeProfitability.Incomplete, row.DataCompleteness);
+        Assert.Null(row.CostReporting);
+        Assert.False(row.NegativeFlag);
+    }
+
     private static readonly Guid Packaging = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1");
     private static readonly Guid Pickup = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2");
 

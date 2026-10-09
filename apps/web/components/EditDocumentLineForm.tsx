@@ -17,6 +17,9 @@ type Props = {
   billId: string | null;
   costTypeCode: string | null;
   revenueTypeCode: string | null;
+  netAmount?: number | null;
+  vatRate?: number | null;
+  ratingDetailId?: string | null;
   direction?: string;
   documentTotal: number;
   otherLinesSum: number;
@@ -34,6 +37,9 @@ export function EditDocumentLineForm({
   billId,
   costTypeCode,
   revenueTypeCode,
+  netAmount,
+  vatRate,
+  ratingDetailId,
   direction,
   documentTotal,
   otherLinesSum,
@@ -74,12 +80,23 @@ export function EditDocumentLineForm({
       return;
     }
 
+    const netRaw = String(fd.get("netAmount") ?? "").trim().replace(",", ".");
+    const vatRaw = String(fd.get("vatRate") ?? "").trim().replace(",", ".");
+    if ((netRaw === "") !== (vatRaw === "")) {
+      setError("Khai tiền trước VAT cùng thuế suất, hoặc để trống cả hai.");
+      setSubmitting(false);
+      return;
+    }
     const body = {
       amount: nextAmount,
       description: String(fd.get("description") ?? "").trim() || null,
       billId: String(fd.get("billId") ?? "").trim() || null,
       costTypeCode: String(fd.get("costTypeCode") ?? "").trim() || null,
       revenueTypeCode: String(fd.get("revenueTypeCode") ?? "").trim() || null,
+      updateVat: true,
+      netAmount: netRaw ? Number(netRaw) : null,
+      vatRate: vatRaw ? Number(vatRaw) : null,
+      ratingDetailId: ratingDetailId ?? null,
     };
 
     try {
@@ -206,6 +223,28 @@ export function EditDocumentLineForm({
             required
             disabled={busy}
             defaultValue={amount}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`net-${lineId}`}>Tiền trước VAT</label>
+          <input
+            id={`net-${lineId}`}
+            name="netAmount"
+            inputMode="decimal"
+            defaultValue={netAmount ?? ""}
+            placeholder="Để trống nếu chưa tách VAT"
+            disabled={submitting}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor={`vat-${lineId}`}>Thuế suất VAT (%)</label>
+          <input
+            id={`vat-${lineId}`}
+            name="vatRate"
+            inputMode="decimal"
+            defaultValue={vatRate ?? ""}
+            placeholder="Không mặc định 0%"
+            disabled={submitting}
           />
         </div>
         <div className="field field-span">

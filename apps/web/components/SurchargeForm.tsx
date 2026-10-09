@@ -57,10 +57,19 @@ export function SurchargeForm({
       return;
     }
     const dg = String(fd.get("dangerousGoods") ?? "");
+    const direction = String(fd.get("direction") ?? "buy");
+    const vendorPartyId = direction === "sell" ? null : String(fd.get("vendorPartyId") ?? "").trim() || null;
+    const customerPartyId = direction === "buy" ? null : String(fd.get("customerPartyId") ?? "").trim() || null;
+    const customerGroupCode = direction === "buy" ? null : String(fd.get("customerGroupCode") ?? "").trim() || null;
+    if (customerPartyId && customerGroupCode) {
+      setError("Chọn khách hàng hoặc nhóm khách hàng, không cả hai.");
+      setBusy(false);
+      return;
+    }
     const body = {
       code: String(fd.get("code") ?? "").trim(),
       name: String(fd.get("name") ?? "").trim(),
-      direction: String(fd.get("direction") ?? "buy"),
+      direction,
       calculationMode: String(fd.get("calculationMode") ?? "unit_rate"),
       basis: String(fd.get("basis") ?? "").trim() || null,
       currencyCode: String(fd.get("currencyCode") ?? "VND").trim().toUpperCase(),
@@ -73,9 +82,9 @@ export function SurchargeForm({
       validTo: toOffset(fd.get("validTo")),
       publish: fd.get("publish") === "on",
       vatRate: parseVat(fd.get("vatRate")),
-      vendorPartyId: String(fd.get("vendorPartyId") ?? "").trim() || null,
-      customerPartyId: String(fd.get("customerPartyId") ?? "").trim() || null,
-      customerGroupCode: String(fd.get("customerGroupCode") ?? "").trim() || null,
+      vendorPartyId,
+      customerPartyId,
+      customerGroupCode,
     };
     try {
       const url = editing

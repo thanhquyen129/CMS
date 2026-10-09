@@ -147,6 +147,7 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
 
         _db.Surcharges.Add(surcharge);
         _db.SurchargeVersions.Add(version);
+        SurchargePartnerRules.Ensure(direction, request.Rule);
         SurchargeGraph.AddRule(_db, tenantId, version.Id, request.Rule);
         await _db.SaveChangesAsync(cancellationToken);
         return new CreateSurchargeResult(surcharge.Id, version.Id);
@@ -200,6 +201,7 @@ public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<Updat
         version.ValidFrom = request.ValidFrom;
         version.ValidTo = request.ValidTo;
         version.VatRate = request.VatRate;
+        SurchargePartnerRules.Ensure(direction, request.Rule);
         await SurchargeGraph.ReplaceRulesAsync(_db, _tenant.TenantId!.Value, version.Id, request.Rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return version.Id;
@@ -237,6 +239,7 @@ public sealed class AddSurchargeRuleCommandHandler : IRequestHandler<AddSurcharg
 
         var surcharge = await _db.Surcharges.FirstAsync(s => s.Id == version.SurchargeId, cancellationToken);
         await SurchargeWriteGuard.EnsureDirectionAsync(_db, _permissions, surcharge.Direction, write: true, cancellationToken);
+        SurchargePartnerRules.Ensure(surcharge.Direction, request.Rule);
         var rule = SurchargeGraph.AddRule(_db, _tenant.TenantId!.Value, version.Id, request.Rule);
         await _db.SaveChangesAsync(cancellationToken);
         return rule.Id;
@@ -402,6 +405,29 @@ internal static class SurchargeWriteGuard
         catch (JsonException)
         {
             return false;
+        }
+    }
+}
+
+internal static class SurchargePartnerRules
+{
+    public static void Ensure(string direction, SurchargeRuleInput rule)
+    {
+        var normalized = direction.Trim().ToLowerInvariant();
+        var hasGroup = !string.IsNullOrWhiteSpace(rule.CustomerGroupCode);
+        if (normalized == "buy" && (rule.CustomerPartyId is not null || hasGroup))
+        {
+            throw new ConflictAppException("Phụ phí mua chỉ gắn nhà cung cấp.");
+        }
+
+        if (normalized == "sell" && rule.VendorPartyId is not null)
+        {
+            throw new ConflictAppException("Phụ phí bán không gắn nhà cung cấp.");
+        }
+
+        if (rule.CustomerPartyId is not null && hasGroup)
+        {
+            throw new ConflictAppException("Chọn khách hàng hoặc nhóm khách hàng, không cả hai.");
         }
     }
 }

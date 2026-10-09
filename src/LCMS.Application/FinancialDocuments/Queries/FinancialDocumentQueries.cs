@@ -20,7 +20,13 @@ public sealed record FinancialDocumentLineDto(
     Guid? BillId,
     string? CostTypeCode,
     string? RevenueTypeCode,
-    string? BillNo = null);
+    string? BillNo = null,
+    decimal? NetAmount = null,
+    decimal? VatRate = null,
+    decimal? VatAmount = null,
+    decimal? GrossAmount = null,
+    decimal? VatVarianceAmount = null,
+    Guid? RatingDetailId = null);
 
 public sealed record FinancialDocumentDto(
     Guid Id,
@@ -145,7 +151,13 @@ public sealed class GetFinancialDocumentByIdQueryHandler
                 l.BillId,
                 l.CostTypeCode,
                 l.RevenueTypeCode,
-                null))
+                null,
+                l.NetAmount,
+                l.VatRate,
+                l.VatAmount,
+                l.GrossAmount,
+                l.VatVarianceAmount,
+                l.RatingDetailId))
             .ToListAsync(cancellationToken);
 
         var billIds = lines.Select(l => l.BillId).Append(document.BillId);

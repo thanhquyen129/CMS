@@ -7,6 +7,7 @@ import { BillCostRevenuePanel } from "@/components/BillCostRevenuePanel";
 import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
 import { BillCashFlowMap } from "@/components/BillCashFlowMap";
+import { ChargeProfitTable } from "@/components/ChargeProfitTable";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { OperationalReferenceEditor } from "@/components/OperationalReferenceEditor";
@@ -654,44 +655,7 @@ export default async function BillDetailPage({
                     </tbody>
                   </table>
                 </div>
-                {chargeRes.ok && chargeRes.data.rows.length > 0 ? (
-                  <div className="table-wrap">
-                    <h3 className="section-title sm">Lợi nhuận theo khoản mục</h3>
-                    <p className="muted small">
-                      Tiền trước VAT, quy về {chargeRes.data.reportingCurrency || "tiền báo cáo"}.{" "}
-                      {chargeRes.data.view}
-                    </p>
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">Khoản mục</th>
-                          <th scope="col" className="num">Giá mua</th>
-                          <th scope="col" className="num">Giá bán</th>
-                          <th scope="col" className="num">Lợi nhuận</th>
-                          <th scope="col">Trạng thái</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {chargeRes.data.rows.map((row) => (
-                          <tr key={`${row.economicChargeTypeId ?? "x"}-${row.chargeCode}`}>
-                            <td>
-                              {row.chargeName}
-                              <div className="muted small">
-                                {row.sources.map((s) => `${s.side === "cost" ? "Chi phí" : "Doanh thu"} ${s.sourceKind}`).join(" · ") || "Chưa có dòng"}
-                              </div>
-                            </td>
-                            <td className="num">{row.costReporting == null ? "—" : formatMoney(row.costReporting, chargeRes.data.reportingCurrency || "VND")}</td>
-                            <td className="num">{row.revenueReporting == null ? "—" : formatMoney(row.revenueReporting, chargeRes.data.reportingCurrency || "VND")}</td>
-                            <td className={`num ${row.negativeFlag ? "neg" : ""}`}>
-                              {row.profitReporting == null ? "—" : formatMoney(row.profitReporting, chargeRes.data.reportingCurrency || "VND")}
-                            </td>
-                            <td>{row.negativeFlag ? "Cảnh báo bán lỗ" : row.note}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
+                {chargeRes.ok ? <ChargeProfitTable data={chargeRes.data} /> : null}
               </>
             )}
           </>

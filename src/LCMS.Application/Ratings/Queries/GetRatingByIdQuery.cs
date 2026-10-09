@@ -25,7 +25,13 @@ public sealed record RatingDetailDto(
     decimal? ReportingAmount = null,
     decimal? LineFxRate = null,
     DateOnly? LineFxAsOf = null,
-    string? LineFxSource = null);
+    string? LineFxSource = null,
+    Guid? EconomicChargeTypeId = null,
+    Guid? PartnerSuggestedId = null,
+    decimal? NetAmount = null,
+    decimal? VatRate = null,
+    decimal? VatAmount = null,
+    decimal? GrossAmount = null);
 
 public sealed record RatingDto(
     Guid Id,
@@ -121,7 +127,13 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
                 d.ReportingAmount,
                 d.LineFxRate,
                 d.LineFxAsOf,
-                d.LineFxSource))
+                d.LineFxSource,
+                d.EconomicChargeTypeId,
+                d.PartnerSuggestedId,
+                d.NetAmount,
+                d.VatRate,
+                d.VatAmount,
+                d.GrossAmount))
             .ToListAsync(cancellationToken);
 
         return new RatingDto(

@@ -18,7 +18,8 @@ public static class SurchargeEndpoints
                     body.ValidFrom,
                     body.ValidTo,
                     body.Publish,
-                    ToRule(body)),
+                    ToRule(body),
+                    body.VatRate),
                 ct);
             return Results.Created($"/api/surcharges/{result.SurchargeId}", result);
         });
@@ -32,7 +33,7 @@ public static class SurchargeEndpoints
             CancellationToken ct) =>
         {
             await sender.Send(
-                new UpdateSurchargeVersionCommand(id, versionId, body.Name, body.Direction, body.ValidFrom, body.ValidTo, ToRule(body)),
+                new UpdateSurchargeVersionCommand(id, versionId, body.Name, body.Direction, body.ValidFrom, body.ValidTo, ToRule(body), body.VatRate),
                 ct);
             return Results.NoContent();
         });
@@ -87,7 +88,8 @@ public static class SurchargeEndpoints
             body.RateVersionId,
             body.VendorPartyId,
             body.CustomerPartyId,
-            body.Breaks);
+            body.Breaks,
+            body.CustomerGroupCode);
 }
 
 public sealed record SaveSurchargeRequest(
@@ -118,4 +120,6 @@ public sealed record SaveSurchargeRequest(
     DateTimeOffset? ValidFrom = null,
     DateTimeOffset? ValidTo = null,
     bool Publish = false,
-    IReadOnlyList<SurchargeBreakInput>? Breaks = null);
+    IReadOnlyList<SurchargeBreakInput>? Breaks = null,
+    decimal? VatRate = null,
+    string? CustomerGroupCode = null);

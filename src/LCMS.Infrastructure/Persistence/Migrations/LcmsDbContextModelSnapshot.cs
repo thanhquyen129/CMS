@@ -2060,6 +2060,76 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.ToTable("cargo_packages", (string)null);
                 });
 
+            modelBuilder.Entity("LCMS.Domain.Entities.ChargeTypeMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<Guid>("EconomicChargeTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("economic_charge_type_id");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<string>("SourceCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_code");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("source_kind");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_charge_type_mappings");
+
+                    b.HasIndex("EconomicChargeTypeId")
+                        .HasDatabaseName("ix_charge_type_mappings_economic_charge_type_id");
+
+                    b.HasIndex("TenantId", "SourceKind", "SourceCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_charge_type_mappings_tenant_id_source_kind_source_code")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("charge_type_mappings", (string)null);
+                });
+
             modelBuilder.Entity("LCMS.Domain.Entities.Collection", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2640,6 +2710,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("deleted_by");
 
+                    b.Property<Guid?>("EconomicChargeTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("economic_charge_type_id");
+
                     b.Property<DateOnly>("EffectiveDate")
                         .HasColumnType("date")
                         .HasColumnName("effective_date");
@@ -2699,9 +2773,27 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasDefaultValue("missing")
                         .HasColumnName("fx_status");
 
+                    b.Property<decimal?>("GrossAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("gross_amount");
+
+                    b.Property<decimal?>("NetAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("net_amount");
+
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("uuid")
                         .HasColumnName("organization_id");
+
+                    b.Property<bool>("PartnerOverrideRequiresRerate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("partner_override_requires_rerate");
+
+                    b.Property<Guid?>("PartnerSuggestedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("partner_suggested_id");
 
                     b.Property<string>("RecordStatus")
                         .IsRequired()
@@ -2741,6 +2833,16 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
 
+                    b.Property<decimal?>("VatAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("vat_amount");
+
+                    b.Property<decimal?>("VatRate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasColumnName("vat_rate");
+
                     b.Property<Guid?>("VendorPartyId")
                         .HasColumnType("uuid")
                         .HasColumnName("vendor_party_id");
@@ -2750,6 +2852,9 @@ namespace LCMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("BillId")
                         .HasDatabaseName("ix_costs_bill_id");
+
+                    b.HasIndex("TenantId", "EconomicChargeTypeId")
+                        .HasDatabaseName("ix_costs_tenant_id_economic_charge_type_id");
 
                     b.HasIndex("TenantId", "OrganizationId")
                         .HasDatabaseName("ix_costs_tenant_id_organization_id");
@@ -3524,6 +3629,73 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.ToTable("document_match_details", (string)null);
                 });
 
+            modelBuilder.Entity("LCMS.Domain.Entities.EconomicChargeType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_economic_charge_types");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_economic_charge_types_tenant_id_code")
+                        .HasFilter("deleted_at IS NULL");
+
+                    b.ToTable("economic_charge_types", (string)null);
+                });
+
             modelBuilder.Entity("LCMS.Domain.Entities.FieldOwnership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4204,6 +4376,15 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("document_id");
 
+                    b.Property<Guid?>("EconomicChargeTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("economic_charge_type_id");
+
+                    b.Property<decimal?>("GrossAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("gross_amount");
+
                     b.Property<int>("LineNo")
                         .HasColumnType("integer")
                         .HasColumnName("line_no");
@@ -4212,6 +4393,15 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("matched_amount");
+
+                    b.Property<decimal?>("NetAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("net_amount");
+
+                    b.Property<Guid?>("RatingDetailId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rating_detail_id");
 
                     b.Property<string>("RevenueTypeCode")
                         .HasMaxLength(64)
@@ -4235,6 +4425,21 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
+
+                    b.Property<decimal?>("VatAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("vat_amount");
+
+                    b.Property<decimal?>("VatRate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasColumnName("vat_rate");
+
+                    b.Property<decimal?>("VatVarianceAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("vat_variance_amount");
 
                     b.HasKey("Id")
                         .HasName("pk_financial_document_lines");
@@ -7214,6 +7419,15 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("currency_code");
 
+                    b.Property<string>("CustomerGroupCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("customer_group_code");
+
+                    b.Property<Guid?>("CustomerPartyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_party_id");
+
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -7253,6 +7467,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("bytea")
                         .HasColumnName("row_version");
+
+                    b.Property<Guid?>("SupplierPartyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("supplier_party_id");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
@@ -7347,6 +7565,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
+
+                    b.Property<decimal?>("VatRate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasColumnName("vat_rate");
 
                     b.Property<int>("VersionNo")
                         .HasColumnType("integer")
@@ -7601,6 +7824,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("deleted_by");
 
+                    b.Property<Guid?>("EconomicChargeTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("economic_charge_type_id");
+
                     b.Property<string>("FinancialMaturity")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -7618,6 +7845,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(512)")
                         .HasColumnName("formula_text");
 
+                    b.Property<decimal?>("GrossAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("gross_amount");
+
                     b.Property<DateOnly?>("LineFxAsOf")
                         .HasColumnType("date")
                         .HasColumnName("line_fx_as_of");
@@ -7632,10 +7864,19 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("line_fx_source");
 
+                    b.Property<decimal?>("NetAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("net_amount");
+
                     b.Property<string>("OriginalCurrency")
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)")
                         .HasColumnName("original_currency");
+
+                    b.Property<Guid?>("PartnerSuggestedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("partner_suggested_id");
 
                     b.Property<Guid?>("PricingRuleComponentId")
                         .HasColumnType("uuid")
@@ -7693,6 +7934,16 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
+
+                    b.Property<decimal?>("VatAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("vat_amount");
+
+                    b.Property<decimal?>("VatRate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasColumnName("vat_rate");
 
                     b.HasKey("Id")
                         .HasName("pk_rating_details");
@@ -8216,6 +8467,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("deleted_by");
 
+                    b.Property<Guid?>("EconomicChargeTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("economic_charge_type_id");
+
                     b.Property<DateOnly>("EffectiveDate")
                         .HasColumnType("date")
                         .HasColumnName("effective_date");
@@ -8275,6 +8530,24 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasDefaultValue("missing")
                         .HasColumnName("fx_status");
 
+                    b.Property<decimal?>("GrossAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("gross_amount");
+
+                    b.Property<decimal?>("NetAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("net_amount");
+
+                    b.Property<bool>("PartnerOverrideRequiresRerate")
+                        .HasColumnType("boolean")
+                        .HasColumnName("partner_override_requires_rerate");
+
+                    b.Property<Guid?>("PartnerSuggestedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("partner_suggested_id");
+
                     b.Property<string>("RecognitionPolicyVersion")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
@@ -8326,6 +8599,16 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
+
+                    b.Property<decimal?>("VatAmount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("vat_amount");
+
+                    b.Property<decimal?>("VatRate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasColumnName("vat_rate");
 
                     b.HasKey("Id")
                         .HasName("pk_revenues");
@@ -9539,6 +9822,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<string>("CustomerGroupCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("customer_group_code");
+
                     b.Property<Guid?>("CustomerPartyId")
                         .HasColumnType("uuid")
                         .HasColumnName("customer_party_id");
@@ -9676,6 +9964,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ValidTo")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("valid_to");
+
+                    b.Property<decimal?>("VatRate")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("numeric(9,4)")
+                        .HasColumnName("vat_rate");
 
                     b.Property<int>("VersionNo")
                         .HasColumnType("integer")
@@ -10951,6 +11244,18 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_bill_waybills_bills_bill_id");
 
                     b.Navigation("Bill");
+                });
+
+            modelBuilder.Entity("LCMS.Domain.Entities.ChargeTypeMapping", b =>
+                {
+                    b.HasOne("LCMS.Domain.Entities.EconomicChargeType", "EconomicChargeType")
+                        .WithMany()
+                        .HasForeignKey("EconomicChargeTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_charge_type_mappings_economic_charge_types_economic_charge_");
+
+                    b.Navigation("EconomicChargeType");
                 });
 
             modelBuilder.Entity("LCMS.Domain.Entities.Collection", b =>

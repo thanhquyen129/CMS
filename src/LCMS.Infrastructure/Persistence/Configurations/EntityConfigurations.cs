@@ -350,7 +350,14 @@ internal sealed class CostConfiguration : IEntityTypeConfiguration<Cost>
         builder.Property(e => e.ApprovalStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.EffectiveDate).IsRequired();
         builder.Property(e => e.OrganizationId).HasColumnType("uuid");
+        builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
+        builder.Property(e => e.PartnerSuggestedId).HasColumnType("uuid");
+        builder.Property(e => e.NetAmount).HasPrecision(18, 4);
+        builder.Property(e => e.VatRate).HasPrecision(9, 4);
+        builder.Property(e => e.VatAmount).HasPrecision(18, 4);
+        builder.Property(e => e.GrossAmount).HasPrecision(18, 4);
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
+        builder.HasIndex(e => new { e.TenantId, e.EconomicChargeTypeId });
 
         // IDX-003
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity, e.EffectiveDate });
@@ -468,6 +475,12 @@ internal sealed class RevenueConfiguration : IEntityTypeConfiguration<Revenue>
         EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.SourceType).HasMaxLength(64);
         builder.Property(e => e.RecognitionPolicyVersion).HasMaxLength(64);
+        builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
+        builder.Property(e => e.PartnerSuggestedId).HasColumnType("uuid");
+        builder.Property(e => e.NetAmount).HasPrecision(18, 4);
+        builder.Property(e => e.VatRate).HasPrecision(9, 4);
+        builder.Property(e => e.VatAmount).HasPrecision(18, 4);
+        builder.Property(e => e.GrossAmount).HasPrecision(18, 4);
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.ApprovalStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.EffectiveDate).IsRequired();
@@ -963,6 +976,9 @@ internal sealed class RateCardConfiguration : IEntityTypeConfiguration<RateCard>
         builder.Property(e => e.RouteCode).HasMaxLength(64);
         builder.Property(e => e.CarrierName).HasMaxLength(256);
         builder.Property(e => e.IsActive).IsRequired();
+        builder.Property(e => e.SupplierPartyId).HasColumnType("uuid");
+        builder.Property(e => e.CustomerPartyId).HasColumnType("uuid");
+        builder.Property(e => e.CustomerGroupCode).HasMaxLength(64);
 
         builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
     }
@@ -980,6 +996,7 @@ internal sealed class RateVersionConfiguration : IEntityTypeConfiguration<RateVe
         builder.Property(e => e.VersionNo).IsRequired();
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Note).HasMaxLength(1024);
+        builder.Property(e => e.VatRate).HasPrecision(9, 4);
         builder.Ignore(e => e.IsPublished);
 
         builder.HasIndex(e => new { e.TenantId, e.RateCardId, e.VersionNo }).IsUnique();
@@ -1169,6 +1186,12 @@ internal sealed class RatingDetailConfiguration : IEntityTypeConfiguration<Ratin
         builder.Property(e => e.ReportingAmount).HasPrecision(18, 4);
         builder.Property(e => e.LineFxRate).HasPrecision(18, 8);
         builder.Property(e => e.LineFxSource).HasMaxLength(64);
+        builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
+        builder.Property(e => e.PartnerSuggestedId).HasColumnType("uuid");
+        builder.Property(e => e.NetAmount).HasPrecision(18, 4);
+        builder.Property(e => e.VatRate).HasPrecision(9, 4);
+        builder.Property(e => e.VatAmount).HasPrecision(18, 4);
+        builder.Property(e => e.GrossAmount).HasPrecision(18, 4);
         builder.HasIndex(e => new { e.TenantId, e.RatingId });
         builder.HasIndex(e => new { e.TenantId, e.SourceType, e.SourceVersionId });
 
@@ -1230,6 +1253,13 @@ internal sealed class FinancialDocumentLineConfiguration : IEntityTypeConfigurat
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.CostTypeCode).HasMaxLength(64);
         builder.Property(e => e.RevenueTypeCode).HasMaxLength(64);
+        builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
+        builder.Property(e => e.RatingDetailId).HasColumnType("uuid");
+        builder.Property(e => e.NetAmount).HasPrecision(18, 4);
+        builder.Property(e => e.VatRate).HasPrecision(9, 4);
+        builder.Property(e => e.VatAmount).HasPrecision(18, 4);
+        builder.Property(e => e.GrossAmount).HasPrecision(18, 4);
+        builder.Property(e => e.VatVarianceAmount).HasPrecision(18, 4);
 
         builder.HasIndex(e => new { e.TenantId, e.DocumentId, e.LineNo }).IsUnique();
 

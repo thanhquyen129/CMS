@@ -26,7 +26,10 @@ public static class RatePricingEndpoints
                     body.Description,
                     body.TransportMode,
                     body.RouteCode,
-                    body.CarrierName),
+                    body.CarrierName,
+                    body.SupplierPartyId,
+                    body.CustomerPartyId,
+                    body.CustomerGroupCode),
                 ct);
             return Results.Created($"/api/rate-cards/{id}", new { id });
         });
@@ -49,7 +52,11 @@ public static class RatePricingEndpoints
                     body.Columns,
                     body.Bands,
                     body.Delivery,
-                    body.Remote),
+                    body.Remote,
+                    body.SupplierPartyId,
+                    body.CustomerPartyId,
+                    body.CustomerGroupCode,
+                    body.VatRate),
                 ct);
             return Results.Created($"/api/rate-cards/{result.RateCardId}", result);
         });
@@ -114,7 +121,8 @@ public static class RatePricingEndpoints
                     rateCardId,
                     body.EffectiveFrom,
                     body.EffectiveTo,
-                    body.Note),
+                    body.Note,
+                    body.VatRate),
                 ct);
             return Results.Created($"/api/rate-versions/{id}", new { id });
         });
@@ -132,6 +140,16 @@ public static class RatePricingEndpoints
         {
             var version = await sender.Send(new GetRateVersionByIdQuery(id), ct);
             return Results.Ok(version);
+        });
+        versions.MapPut("/{id:guid}/vat", async (Guid id, SetRateVersionVatRequest body, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new SetDraftRateVersionVatCommand(id, body.VatRate), ct);
+            return Results.NoContent();
+        });
+        cards.MapPut("/{id:guid}/partner", async (Guid id, SetRateCardPartnerRequest body, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new SetRateCardPartnerCommand(id, body.SupplierPartyId, body.CustomerPartyId, body.CustomerGroupCode), ct);
+            return Results.NoContent();
         });
         versions.MapPost("/{id:guid}/publish", async (Guid id, ISender sender, CancellationToken ct) =>
         {
@@ -359,7 +377,11 @@ public sealed record ComposeTariffRequest(
     IReadOnlyList<ComposeTariffColumn> Columns,
     IReadOnlyList<ComposeTariffBand> Bands,
     ComposeDeliveryFee? Delivery,
-    ComposeRemoteFee? Remote);
+    ComposeRemoteFee? Remote,
+    Guid? SupplierPartyId = null,
+    Guid? CustomerPartyId = null,
+    string? CustomerGroupCode = null,
+    decimal? VatRate = null);
 
 public sealed record CreateRateCardRequest(
     string Code,
@@ -369,7 +391,10 @@ public sealed record CreateRateCardRequest(
     string? Description,
     string? TransportMode = null,
     string? RouteCode = null,
-    string? CarrierName = null);
+    string? CarrierName = null,
+    Guid? SupplierPartyId = null,
+    Guid? CustomerPartyId = null,
+    string? CustomerGroupCode = null);
 
 public sealed record UpdateRateCardRequest(
     string Name,
@@ -384,7 +409,12 @@ public sealed record UpdateRateCardRequest(
 public sealed record CreateRateVersionRequest(
     DateTimeOffset? EffectiveFrom,
     DateTimeOffset? EffectiveTo,
-    string? Note);
+    string? Note,
+    decimal? VatRate = null);
+
+public sealed record SetRateVersionVatRequest(decimal? VatRate);
+
+public sealed record SetRateCardPartnerRequest(Guid? SupplierPartyId, Guid? CustomerPartyId, string? CustomerGroupCode);
 
 public sealed record AddPricingRuleRequest(
     string Code,

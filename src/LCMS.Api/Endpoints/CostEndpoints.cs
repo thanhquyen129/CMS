@@ -28,9 +28,16 @@ public static class CostEndpoints
                     body.OrganizationId,
                     idempotencyKey.ToString(),
                     body.FxRate,
-                    body.FxOverrideReason),
+                    body.FxOverrideReason,
+                    body.EconomicChargeTypeId,
+                    body.VatRate),
                 ct);
             return Results.Created($"/api/costs/{id}", new { id });
+        });
+        costs.MapPost("/{id:guid}/partner", async (Guid id, ChangePartnerRequest body, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new ChangeCostPartnerCommand(id, body.PartyId, body.Reason), ct);
+            return Results.NoContent();
         });
 
         costs.MapGet("/", async (
@@ -200,7 +207,11 @@ public sealed record CreateCostRequest(
     Guid? SourceId,
     Guid? OrganizationId = null,
     decimal? FxRate = null,
-    string? FxOverrideReason = null);
+    string? FxOverrideReason = null,
+    Guid? EconomicChargeTypeId = null,
+    decimal? VatRate = null);
+
+public sealed record ChangePartnerRequest(Guid? PartyId, string Reason);
 
 public sealed record ConfirmCostRequest(decimal? ConfirmedAmount);
 

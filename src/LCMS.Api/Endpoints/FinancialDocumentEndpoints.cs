@@ -159,7 +159,11 @@ public static class FinancialDocumentEndpoints
                     lineBillId,
                     body.CostTypeCode,
                     body.RevenueTypeCode,
-                    body.CurrencyCode),
+                    body.CurrencyCode,
+                    body.NetAmount,
+                    body.VatRate,
+                    body.EconomicChargeTypeId,
+                    body.RatingDetailId),
                 ct);
             return Results.Created($"/api/financial-documents/{id}/lines/{lineId}", new { id = lineId });
         });
@@ -334,7 +338,11 @@ public sealed record AddFinancialDocumentLineRequest(
     string? BillId,
     string? CostTypeCode,
     string? RevenueTypeCode,
-    string? CurrencyCode);
+    string? CurrencyCode,
+    decimal? NetAmount = null,
+    decimal? VatRate = null,
+    Guid? EconomicChargeTypeId = null,
+    Guid? RatingDetailId = null);
 
 public sealed record UpdateFinancialDocumentLineRequest(
     decimal Amount,

@@ -15,6 +15,13 @@ public sealed class Cost : TenantEntityBase, IReportingFx
     public string? CostTypeCode { get; set; }
     public Guid? CostCategoryId { get; set; }
     public Guid? VendorPartyId { get; set; }
+    public Guid? EconomicChargeTypeId { get; set; }
+    public Guid? PartnerSuggestedId { get; set; }
+    public bool PartnerOverrideRequiresRerate { get; set; }
+    public decimal? NetAmount { get; set; }
+    public decimal? VatRate { get; set; }
+    public decimal? VatAmount { get; set; }
+    public decimal? GrossAmount { get; set; }
 
     /// <summary>expected | confirmed | actual — current peak maturity.</summary>
     public string FinancialMaturity { get; set; } = CostMaturities.Expected;

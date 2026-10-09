@@ -36,6 +36,8 @@ public sealed class AuditEvent : TenantEntityBase
 public static class AuditActions
 {
     public const string CostCreate = "cost.create";
+    public const string CostPartnerChange = "cost.partner_change";
+    public const string RevenuePartnerChange = "revenue.partner_change";
     public const string CostConfirm = "cost.confirm";
     public const string RevenueCreate = "revenue.create";
     public const string RevenueMappingFinalize = "revenue.mapping.finalize";

@@ -36,5 +36,17 @@ public sealed class RatingDetail : TenantEntityBase
     public DateOnly? LineFxAsOf { get; set; }
     public string? LineFxSource { get; set; }
 
+    public Guid? EconomicChargeTypeId { get; set; }
+    public Guid? PartnerSuggestedId { get; set; }
+
+    /// <summary>Before VAT. Equals <see cref="Amount"/> for a new rating. Null on historical rows.</summary>
+    public decimal? NetAmount { get; set; }
+
+    /// <summary>Null means the source version had not declared VAT.</summary>
+    public decimal? VatRate { get; set; }
+
+    public decimal? VatAmount { get; set; }
+    public decimal? GrossAmount { get; set; }
+
     public Rating? Rating { get; set; }
 }

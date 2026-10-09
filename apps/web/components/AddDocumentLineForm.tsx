@@ -93,6 +93,8 @@ export function AddDocumentLineForm({
       costTypeCode: costTypeRaw || null,
       revenueTypeCode: revenueTypeRaw || null,
       currencyCode: currencyCode.toUpperCase(),
+      netAmount: parseOptional(fd.get("netAmount")),
+      vatRate: parseOptional(fd.get("vatRate")),
     };
 
     try {
@@ -202,6 +204,14 @@ export function AddDocumentLineForm({
           ) : null}
         </div>
 
+        <div className="field">
+          <label htmlFor="netAmount">Tiền trước VAT</label>
+          <input id="netAmount" name="netAmount" inputMode="decimal" disabled={busy} placeholder="Để trống nếu chứng từ chưa tách VAT" />
+        </div>
+        <div className="field">
+          <label htmlFor="vatRate">Thuế suất VAT (%)</label>
+          <input id="vatRate" name="vatRate" inputMode="decimal" disabled={busy} placeholder="Không mặc định 0%" />
+        </div>
         <div className="field field-span">
           <label htmlFor="description">Mô tả</label>
           <input
@@ -249,4 +259,11 @@ export function AddDocumentLineForm({
       </div>
     </form>
   );
+}
+
+function parseOptional(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim().replace(",", ".");
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }

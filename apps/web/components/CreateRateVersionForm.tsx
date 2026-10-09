@@ -26,6 +26,10 @@ export function CreateRateVersionForm({ rateCardId }: Props) {
       effectiveFrom: fromRaw ? new Date(fromRaw).toISOString() : null,
       effectiveTo: toRaw ? new Date(toRaw).toISOString() : null,
       note: String(fd.get("note") ?? "").trim() || null,
+      vatRate: (() => {
+        const raw = String(fd.get("vatRate") ?? "").trim().replace(",", ".");
+        return raw ? Number(raw) : null;
+      })(),
     };
 
     try {
@@ -83,6 +87,10 @@ export function CreateRateVersionForm({ rateCardId }: Props) {
         <div className="field">
           <label htmlFor="effectiveTo">Hiệu lực đến (tuỳ chọn)</label>
           <input id="effectiveTo" name="effectiveTo" type="date" />
+        </div>
+        <div className="field">
+          <label htmlFor="vatRate">Thuế suất VAT (%)</label>
+          <input id="vatRate" name="vatRate" inputMode="decimal" placeholder="Để trống nếu chưa khai báo" />
         </div>
         <div className="field field-span">
           <label htmlFor="note">Ghi chú</label>

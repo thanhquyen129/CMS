@@ -79,6 +79,8 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<SurchargeScope> SurchargeScopes => Set<SurchargeScope>();
     public DbSet<SurchargeBreak> SurchargeBreaks => Set<SurchargeBreak>();
     public DbSet<SurchargeMigrationLog> SurchargeMigrationLogs => Set<SurchargeMigrationLog>();
+    public DbSet<EconomicChargeType> EconomicChargeTypes => Set<EconomicChargeType>();
+    public DbSet<ChargeTypeMapping> ChargeTypeMappings => Set<ChargeTypeMapping>();
     public DbSet<FinancialDocument> FinancialDocuments => Set<FinancialDocument>();
     public DbSet<FinancialDocumentLine> FinancialDocumentLines => Set<FinancialDocumentLine>();
     public DbSet<DocumentMatch> DocumentMatches => Set<DocumentMatch>();

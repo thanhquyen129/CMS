@@ -22,6 +22,15 @@ public sealed class FinancialDocumentLine : TenantEntityBase
     public Guid? BillId { get; set; }
     public string? CostTypeCode { get; set; }
     public string? RevenueTypeCode { get; set; }
+    public Guid? EconomicChargeTypeId { get; set; }
+    public Guid? RatingDetailId { get; set; }
+    public decimal? NetAmount { get; set; }
+    public decimal? VatRate { get; set; }
+    public decimal? VatAmount { get; set; }
+    public decimal? GrossAmount { get; set; }
+
+    /// <summary>Document VAT minus the rating snapshot. The rating row is not rewritten.</summary>
+    public decimal? VatVarianceAmount { get; set; }
 
     public FinancialDocument? Document { get; set; }
 }

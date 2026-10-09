@@ -67,9 +67,10 @@ export default async function SurchargesPage({
           title="Quản lý phụ phí"
           lede="Phụ phí là bảng giá phụ độc lập. Cước chính nằm trên bảng giá. Rating cộng các phụ phí còn hiệu lực và còn điều kiện phù hợp."
           action={
-            <Link className="btn btn-primary" href="/rate-cards/surcharges/new">
-              ＋ Tạo phụ phí
-            </Link>
+            <span className="cta-row">
+              <Link className="btn" href="/rate-cards/charge-types">Khoản mục</Link>
+              <Link className="btn btn-primary" href="/rate-cards/surcharges/new">＋ Tạo phụ phí</Link>
+            </span>
           }
         />
 

@@ -21,6 +21,7 @@ public sealed record SurchargeMatchContext(
     bool DangerousGoods,
     Guid? VendorPartyId,
     Guid? CustomerPartyId,
+    string? CustomerGroupCode,
     decimal ChargeableQuantity,
     decimal? GrossWeight,
     decimal Quantity,
@@ -47,7 +48,8 @@ public sealed record SurchargeCandidate(
     string? ContainerType,
     IReadOnlyList<SurchargeCondition> Conditions,
     IReadOnlyList<SurchargeScope> Scopes,
-    IReadOnlyList<SurchargeBreak> Breaks);
+    IReadOnlyList<SurchargeBreak> Breaks,
+    decimal? VatRate = null);
 
 public sealed record SurchargeCharge(
     SurchargeCandidate Rule,
@@ -305,6 +307,12 @@ public static class SurchargeRating
             return false;
         }
 
+        if (!string.IsNullOrWhiteSpace(scope.CustomerGroupCode)
+            && !string.Equals(scope.CustomerGroupCode.Trim(), ctx.CustomerGroupCode?.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         if (!Eq(scope.ServiceTypeCode, ctx.ServiceTypeCode)
             || !Eq(scope.RouteCode, ctx.RouteCode)
             || !Eq(scope.TransportMode, ctx.TransportMode))
@@ -321,6 +329,7 @@ public static class SurchargeRating
         if (scope.RateVersionId is not null) score += 2;
         if (scope.RateCardId is not null) score += 2;
         if (scope.VendorPartyId is not null) score += 1;
+        if (scope.CustomerGroupCode is not null) score += 1;
         if (scope.CustomerPartyId is not null) score += 1;
         if (!string.IsNullOrWhiteSpace(scope.ServiceTypeCode)) score += 1;
         if (!string.IsNullOrWhiteSpace(scope.RouteCode)) score += 1;
@@ -443,6 +452,14 @@ public static class SurchargeRatingApplier
             : await db.SurchargeBreaks.AsNoTracking().Where(b => ruleIds.Contains(b.SurchargeRuleId)).ToListAsync(cancellationToken);
 
         var dangerous = await IsDangerousAsync(db, bill, commodityCode, cancellationToken);
+        string? customerGroup = null;
+        if (bill.CustomerPartyId is Guid customerId)
+        {
+            customerGroup = await db.BusinessParties.AsNoTracking()
+                .Where(p => p.Id == customerId)
+                .Select(p => p.GroupCode)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
         var direction = string.Equals(card?.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
             ? SurchargeDirections.Sell
             : SurchargeDirections.Buy;
@@ -472,7 +489,8 @@ public static class SurchargeRatingApplier
                 rule.ContainerType,
                 conditions.Where(c => c.SurchargeRuleId == rule.Id).ToList(),
                 scopes.Where(s => s.SurchargeRuleId == rule.Id).ToList(),
-                breaks.Where(b => b.SurchargeRuleId == rule.Id).ToList());
+                breaks.Where(b => b.SurchargeRuleId == rule.Id).ToList(),
+                surchargeVersion.VatRate);
         }).ToList();
 
         var ctx = new SurchargeMatchContext(
@@ -489,6 +507,7 @@ public static class SurchargeRatingApplier
             dangerous,
             bill.VendorPartyId,
             bill.CustomerPartyId,
+            customerGroup,
             quantity,
             grossWeight,
             quantity,
@@ -511,6 +530,10 @@ public static class SurchargeRatingApplier
                 : await ConvertAsync(fx, original, originalCcy, reporting, rateDate, cancellationToken);
             cardTotal += cardAmount;
             trace.Add($"{charge.Rule.Code} v{charge.Rule.VersionNo}");
+            var scope = charge.Rule.Scopes.FirstOrDefault(s => s.VendorPartyId is not null || s.CustomerPartyId is not null);
+            Guid? suggested = nature == "revenue"
+                ? scope?.CustomerPartyId ?? card?.CustomerPartyId ?? bill.CustomerPartyId
+                : scope?.VendorPartyId ?? card?.SupplierPartyId;
             details.Add(new RatingDetail
             {
                 TenantId = tenantId,
@@ -530,7 +553,9 @@ public static class SurchargeRatingApplier
                 ReportingAmount = reportingAmount,
                 LineFxRate = reportingFx.Rate,
                 LineFxAsOf = reportingFx.AsOf,
-                LineFxSource = reportingFx.Source
+                LineFxSource = reportingFx.Source,
+                VatRate = charge.Rule.VatRate,
+                PartnerSuggestedId = suggested
             });
         }
 

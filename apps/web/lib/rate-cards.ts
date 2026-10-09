@@ -10,6 +10,9 @@ export type RateCard = {
   transportMode?: string | null;
   routeCode?: string | null;
   carrierName?: string | null;
+  supplierPartyId?: string | null;
+  customerPartyId?: string | null;
+  customerGroupCode?: string | null;
 };
 
 export type RateVersion = {
@@ -22,6 +25,7 @@ export type RateVersion = {
   publishedAt: string | null;
   note: string | null;
   createdAt: string;
+  vatRate?: number | null;
 };
 
 export type PricingRuleComponent = {

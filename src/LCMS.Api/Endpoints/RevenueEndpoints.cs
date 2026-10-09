@@ -1,4 +1,5 @@
 using LCMS.Application.Bills.Queries;
+using LCMS.Application.Profitability;
 using LCMS.Application.Revenues.Commands;
 using LCMS.Application.Revenues.Queries;
 using MediatR;
@@ -28,9 +29,16 @@ public static class RevenueEndpoints
                     body.ActualRevenueOwner,
                     idempotencyKey.ToString(),
                     body.FxRate,
-                    body.FxOverrideReason),
+                    body.FxOverrideReason,
+                    body.EconomicChargeTypeId,
+                    body.VatRate),
                 ct);
             return Results.Created($"/api/revenues/{id}", new { id });
+        });
+        revenues.MapPost("/{id:guid}/partner", async (Guid id, ChangeRevenuePartnerRequest body, ISender sender, CancellationToken ct) =>
+        {
+            await sender.Send(new ChangeRevenuePartnerCommand(id, body.PartyId, body.Reason), ct);
+            return Results.NoContent();
         });
 
         revenues.MapGet("/", async (
@@ -137,6 +145,10 @@ public static class RevenueEndpoints
                 ct);
             return Results.Ok(profitability);
         });
+        bills.MapGet("/{id:guid}/charge-profitability", async (Guid id, string? view, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetChargeProfitabilityQuery(id, null, string.IsNullOrWhiteSpace(view) ? "best" : view), ct)));
+        app.MapGet("/api/orders/{id:guid}/charge-profitability", async (Guid id, string? view, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetChargeProfitabilityQuery(null, id, string.IsNullOrWhiteSpace(view) ? "best" : view), ct)));
 
         revenues.MapPost("/{id:guid}/mappings", async (Guid id, CreateRevenueMappingRequest body, ISender sender, CancellationToken ct) =>
         {
@@ -200,7 +212,11 @@ public sealed record CreateRevenueRequest(
     string? RecognitionPolicyVersion,
     string? ActualRevenueOwner = null,
     decimal? FxRate = null,
-    string? FxOverrideReason = null);
+    string? FxOverrideReason = null,
+    Guid? EconomicChargeTypeId = null,
+    decimal? VatRate = null);
+
+public sealed record ChangeRevenuePartnerRequest(Guid? PartyId, string Reason);
 
 public sealed record ConfirmRevenueRequest(decimal? ConfirmedAmount);
 

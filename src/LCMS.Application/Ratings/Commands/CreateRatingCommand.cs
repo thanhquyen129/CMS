@@ -3,8 +3,10 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Commands;
 using LCMS.Application.Fx;
+using LCMS.Application.Pricing;
 using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -441,6 +443,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             prior.Status = RatingStatuses.Superseded;
         }
 
+        await StampChargeSnapshotAsync(card, version, bill, ruleNature, details, cancellationToken);
+
         _db.Ratings.Add(rating);
         await _db.SaveChangesAsync(cancellationToken);
 
@@ -570,6 +574,66 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             ? $"{amount} {amountCurrency} × {fx.Rate}"
             : $"{formula} · {amount} {amountCurrency} × {fx.Rate}";
         return (converted, cardCurrency, text);
+    }
+
+    private async Task StampChargeSnapshotAsync(
+        RateCard? card,
+        RateVersion version,
+        Bill bill,
+        string ruleNature,
+        List<RatingDetail> details,
+        CancellationToken cancellationToken)
+    {
+        if (!DeclaredVat.IsValid(version.VatRate))
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["VatRate"] = ["Thuế suất VAT trên bảng giá phải từ 0 đến 100."]
+            });
+        }
+
+        var types = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => t.IsActive)
+            .ToListAsync(cancellationToken);
+        var maps = await _db.ChargeTypeMappings.AsNoTracking().ToListAsync(cancellationToken);
+        var catalog = types.ToDictionary(t => t.Code.ToUpperInvariant(), t => t.Id);
+        var mapping = maps.ToDictionary(m => ChargeLineSnapshot.MapKey(m.SourceKind, m.SourceCode), m => m.EconomicChargeTypeId);
+        foreach (var detail in details)
+        {
+            if (!string.Equals(detail.SourceType, RatingSourceTypes.Surcharge, StringComparison.OrdinalIgnoreCase))
+            {
+                detail.VatRate = version.VatRate;
+                detail.PartnerSuggestedId ??= string.Equals(ruleNature, "revenue", StringComparison.OrdinalIgnoreCase)
+                    ? card?.CustomerPartyId ?? bill.CustomerPartyId
+                    : card?.SupplierPartyId;
+            }
+
+            if (!DeclaredVat.IsValid(detail.VatRate))
+            {
+                throw new ValidationAppException(new Dictionary<string, string[]>
+                {
+                    ["VatRate"] = ["Thuế suất VAT trên phụ phí phải từ 0 đến 100."]
+                });
+            }
+
+            ChargeLineSnapshot.ApplyMoney(detail);
+            var code = detail.ComponentCode;
+            var kind = string.Equals(detail.FinancialNature, "revenue", StringComparison.OrdinalIgnoreCase)
+                ? ChargeTypeMappingKinds.RevenueType
+                : ChargeTypeMappingKinds.CostType;
+            if (mapping.TryGetValue(ChargeLineSnapshot.MapKey(ChargeTypeMappingKinds.Component, code), out var byComponent))
+            {
+                detail.EconomicChargeTypeId = byComponent;
+            }
+            else if (mapping.TryGetValue(ChargeLineSnapshot.MapKey(kind, code), out var byType))
+            {
+                detail.EconomicChargeTypeId = byType;
+            }
+            else if (!string.IsNullOrWhiteSpace(code) && catalog.TryGetValue(code.Trim().ToUpperInvariant(), out var byCatalog))
+            {
+                detail.EconomicChargeTypeId = byCatalog;
+            }
+        }
     }
 
     private static IReadOnlyList<RateBreak> Breaks(

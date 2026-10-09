@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,8 @@ public sealed record CreateRateVersionCommand(
     Guid RateCardId,
     DateTimeOffset? EffectiveFrom,
     DateTimeOffset? EffectiveTo,
-    string? Note) : IRequest<Guid>;
+    string? Note,
+    decimal? VatRate = null) : IRequest<Guid>;
 
 public sealed class CreateRateVersionCommandValidator : AbstractValidator<CreateRateVersionCommand>
 {
@@ -25,6 +27,9 @@ public sealed class CreateRateVersionCommandValidator : AbstractValidator<Create
         RuleFor(x => x)
             .Must(x => x.EffectiveTo is null || x.EffectiveFrom is null || x.EffectiveTo >= x.EffectiveFrom)
             .WithMessage("Ngày hiệu lực đến phải sau hoặc bằng ngày hiệu lực từ.");
+        RuleFor(x => x.VatRate)
+            .Must(DeclaredVat.IsValid)
+            .WithMessage("Thuế suất VAT phải từ 0 đến 100, hoặc để trống nếu chưa khai báo.");
     }
 }
 
@@ -67,12 +72,56 @@ public sealed class CreateRateVersionCommandHandler : IRequestHandler<CreateRate
             Status = RateVersionStatuses.Draft,
             EffectiveFrom = request.EffectiveFrom,
             EffectiveTo = request.EffectiveTo,
-            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim()
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
+            VatRate = request.VatRate
         };
 
         _db.RateVersions.Add(version);
         await _db.SaveChangesAsync(cancellationToken);
         return version.Id;
+    }
+}
+
+public sealed record SetDraftRateVersionVatCommand(Guid Id, decimal? VatRate) : IRequest;
+
+public sealed class SetDraftRateVersionVatCommandValidator : AbstractValidator<SetDraftRateVersionVatCommand>
+{
+    public SetDraftRateVersionVatCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.VatRate)
+            .Must(DeclaredVat.IsValid)
+            .WithMessage("Thuế suất VAT phải từ 0 đến 100, hoặc để trống nếu chưa khai báo.");
+    }
+}
+
+public sealed class SetDraftRateVersionVatCommandHandler : IRequestHandler<SetDraftRateVersionVatCommand>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public SetDraftRateVersionVatCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task Handle(SetDraftRateVersionVatCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var version = await _db.RateVersions.FirstOrDefaultAsync(v => v.Id == request.Id, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy phiên bản bảng giá.");
+        if (version.IsPublished)
+        {
+            throw new ConflictAppException("Phiên bản đã phát hành bất biến. Hãy tạo phiên bản mới để khai thuế suất VAT.");
+        }
+
+        version.VatRate = request.VatRate;
+        await _db.SaveChangesAsync(cancellationToken);
     }
 }
 

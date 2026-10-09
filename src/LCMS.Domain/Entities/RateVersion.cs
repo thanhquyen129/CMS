@@ -19,6 +19,9 @@ public sealed class RateVersion : TenantEntityBase
     public DateTimeOffset? PublishedAt { get; set; }
     public string? Note { get; set; }
 
+    /// <summary>Declared VAT percent. Null means undeclared, not 0%.</summary>
+    public decimal? VatRate { get; set; }
+
     public RateCard? RateCard { get; set; }
 
     public bool IsPublished =>

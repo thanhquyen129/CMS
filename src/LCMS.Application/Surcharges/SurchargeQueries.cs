@@ -18,7 +18,10 @@ public sealed record SurchargeRuleDto(
     string? RouteCode,
     bool? DangerousGoods,
     Guid? RateCardId,
-    Guid? RateVersionId);
+    Guid? RateVersionId,
+    Guid? VendorPartyId = null,
+    Guid? CustomerPartyId = null,
+    string? CustomerGroupCode = null);
 
 public sealed record SurchargeVersionDto(
     Guid Id,
@@ -27,7 +30,8 @@ public sealed record SurchargeVersionDto(
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo,
     DateTimeOffset? PublishedAt,
-    IReadOnlyList<SurchargeRuleDto> Rules);
+    IReadOnlyList<SurchargeRuleDto> Rules,
+    decimal? VatRate = null);
 
 public sealed record SurchargeDetailDto(
     Guid Id,
@@ -96,7 +100,10 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
                     Text("route"),
                     dg is null ? null : string.Equals(dg, "true", StringComparison.OrdinalIgnoreCase),
                     scope?.RateCardId,
-                    scope?.RateVersionId);
+                    scope?.RateVersionId,
+                    scope?.VendorPartyId,
+                    scope?.CustomerPartyId,
+                    scope?.CustomerGroupCode);
             }).ToList();
             return new SurchargeVersionDto(
                 version.Id,
@@ -105,7 +112,8 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
                 version.ValidFrom,
                 version.ValidTo,
                 version.PublishedAt,
-                ruleDtos);
+                ruleDtos,
+                version.VatRate);
         }).ToList();
 
         return new SurchargeDetailDto(

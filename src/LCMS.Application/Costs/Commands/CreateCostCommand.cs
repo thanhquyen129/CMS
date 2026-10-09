@@ -5,8 +5,10 @@ using LCMS.Application.BusinessParties;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
+using LCMS.Application.Pricing;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +27,9 @@ public sealed record CreateCostCommand(
     Guid? OrganizationId,
     string? IdempotencyKey = null,
     decimal? FxRate = null,
-    string? FxOverrideReason = null) : IRequest<Guid>;
+    string? FxOverrideReason = null,
+    Guid? EconomicChargeTypeId = null,
+    decimal? VatRate = null) : IRequest<Guid>;
 
 public sealed class CreateCostCommandValidator : AbstractValidator<CreateCostCommand>
 {
@@ -49,6 +53,7 @@ public sealed class CreateCostCommandValidator : AbstractValidator<CreateCostCom
             .When(x => string.Equals(x.AttributionType, CostAttributionTypes.Shared, StringComparison.OrdinalIgnoreCase));
         RuleFor(x => x.CostTypeCode).MaximumLength(64).When(x => x.CostTypeCode is not null);
         RuleFor(x => x.SourceType).MaximumLength(64).When(x => x.SourceType is not null);
+        RuleFor(x => x.VatRate).Must(DeclaredVat.IsValid).WithMessage("Thuế suất VAT phải từ 0 đến 100, hoặc để trống nếu chưa khai báo.");
     }
 }
 
@@ -195,8 +200,24 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
             RecordStatus = "active",
             ApprovalStatus = "not_required",
             EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
-            OrganizationId = organizationId
+            OrganizationId = organizationId,
+            EconomicChargeTypeId = request.EconomicChargeTypeId,
+            PartnerSuggestedId = request.VendorPartyId
         };
+        if (cost.EconomicChargeTypeId is null && cost.CostTypeCode is not null)
+        {
+            var code = cost.CostTypeCode.Trim().ToUpperInvariant();
+            cost.EconomicChargeTypeId = await _db.ChargeTypeMappings.AsNoTracking()
+                .Where(m => m.SourceKind == ChargeTypeMappingKinds.CostType && m.SourceCode == code)
+                .Select(m => (Guid?)m.EconomicChargeTypeId)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? await _db.EconomicChargeTypes.AsNoTracking()
+                    .Where(t => t.IsActive && t.Code == code)
+                    .Select(t => (Guid?)t.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        ChargeLineSnapshot.ApplyMoney(cost, amount, request.VatRate);
 
         // Shared vs Direct invariant (defense in depth).
         if (attribution == CostAttributionTypes.Direct && cost.BillId is null)

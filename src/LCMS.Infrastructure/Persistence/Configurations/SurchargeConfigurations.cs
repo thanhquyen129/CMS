@@ -33,6 +33,7 @@ internal sealed class SurchargeVersionConfiguration : IEntityTypeConfiguration<S
         builder.Property(e => e.SurchargeId).IsRequired();
         builder.Property(e => e.VersionNo).IsRequired();
         builder.Property(e => e.PublishStatus).HasMaxLength(32).IsRequired();
+        builder.Property(e => e.VatRate).HasPrecision(9, 4);
         builder.HasIndex(e => new { e.TenantId, e.SurchargeId, e.VersionNo }).IsUnique().HasFilter("deleted_at IS NULL");
         builder.HasIndex(e => new { e.TenantId, e.PublishStatus, e.ValidFrom });
         builder.HasOne(e => e.Surcharge).WithMany().HasForeignKey(e => e.SurchargeId).OnDelete(DeleteBehavior.Restrict);
@@ -88,6 +89,7 @@ internal sealed class SurchargeScopeConfiguration : IEntityTypeConfiguration<Sur
         builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
         builder.Property(e => e.RouteCode).HasMaxLength(64);
         builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.CustomerGroupCode).HasMaxLength(64);
         builder.HasIndex(e => new { e.TenantId, e.SurchargeRuleId });
         builder.HasIndex(e => new { e.TenantId, e.RateCardId });
         builder.HasOne(e => e.SurchargeRule).WithMany().HasForeignKey(e => e.SurchargeRuleId).OnDelete(DeleteBehavior.Restrict);

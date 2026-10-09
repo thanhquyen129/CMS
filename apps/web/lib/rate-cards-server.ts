@@ -148,6 +148,10 @@ export type RatingHistoryRow = {
   appliedSurcharges?: string | null;
 };
 
+export function listEconomicChargeTypes(): Promise<ApiResult<{ id: string; code: string; name: string; isActive: boolean }[]>> {
+  return apiGet("/api/economic-charge-types");
+}
+
 export function listSurcharges(): Promise<ApiResult<SurchargeRow[]>> {
   return apiGet<SurchargeRow[]>("/api/surcharges");
 }
@@ -166,6 +170,7 @@ export type SurchargeDetail = {
     validFrom: string | null;
     validTo: string | null;
     publishedAt: string | null;
+    vatRate?: number | null;
     rules: {
       id: string;
       calculationMode: string;
@@ -176,6 +181,9 @@ export type SurchargeDetail = {
       routeCode: string | null;
       dangerousGoods: boolean | null;
       rateCardId: string | null;
+      vendorPartyId?: string | null;
+      customerPartyId?: string | null;
+      customerGroupCode?: string | null;
     }[];
   }[];
 };

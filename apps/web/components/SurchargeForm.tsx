@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 
 type CardOption = { id: string; label: string };
 
@@ -20,6 +21,10 @@ export type SurchargeFormValues = {
   rateCardId?: string | null;
   validFrom?: string | null;
   validTo?: string | null;
+  vatRate?: number | null;
+  vendorPartyId?: string | null;
+  customerPartyId?: string | null;
+  customerGroupCode?: string | null;
 };
 
 export function SurchargeForm({
@@ -67,6 +72,10 @@ export function SurchargeForm({
       validFrom: toOffset(fd.get("validFrom")),
       validTo: toOffset(fd.get("validTo")),
       publish: fd.get("publish") === "on",
+      vatRate: parseVat(fd.get("vatRate")),
+      vendorPartyId: String(fd.get("vendorPartyId") ?? "").trim() || null,
+      customerPartyId: String(fd.get("customerPartyId") ?? "").trim() || null,
+      customerGroupCode: String(fd.get("customerGroupCode") ?? "").trim() || null,
     };
     try {
       const url = editing
@@ -173,6 +182,20 @@ export function SurchargeForm({
           </select>
         </div>
         <div className="field">
+          <label htmlFor="vatRate">Thuế suất VAT (%)</label>
+          <input id="vatRate" name="vatRate" inputMode="decimal" placeholder="Để trống nếu chưa khai báo" defaultValue={initial?.vatRate ?? ""} />
+        </div>
+        <div className="field">
+          <PartyTypeahead name="vendorPartyId" label="Nhà cung cấp (mua)" roleCode="vendor" defaultId={initial?.vendorPartyId} hint="Chỉ dùng cho chiều mua. Để trống nếu giá chung." />
+        </div>
+        <div className="field">
+          <PartyTypeahead name="customerPartyId" label="Khách hàng (bán)" roleCode="customer" defaultId={initial?.customerPartyId} hint="Chỉ dùng cho chiều bán. Không chọn cùng nhóm khách hàng." />
+        </div>
+        <div className="field">
+          <label htmlFor="customerGroupCode">Nhóm khách hàng</label>
+          <input id="customerGroupCode" name="customerGroupCode" maxLength={64} defaultValue={initial?.customerGroupCode ?? ""} placeholder="Mã nhóm trên đối tác" />
+        </div>
+        <div className="field">
           <label htmlFor="validFrom">Hiệu lực từ</label>
           <input id="validFrom" name="validFrom" type="date" defaultValue={dateInput(initial?.validFrom)} />
         </div>
@@ -194,6 +217,13 @@ export function SurchargeForm({
       </div>
     </form>
   );
+}
+
+function parseVat(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim().replace(",", ".");
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
 }
 
 function dateInput(value?: string | null): string {

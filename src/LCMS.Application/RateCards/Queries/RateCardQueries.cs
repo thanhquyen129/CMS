@@ -18,7 +18,10 @@ public sealed record RateCardDto(
     DateTimeOffset CreatedAt,
     string? TransportMode = null,
     string? RouteCode = null,
-    string? CarrierName = null);
+    string? CarrierName = null,
+    Guid? SupplierPartyId = null,
+    Guid? CustomerPartyId = null,
+    string? CustomerGroupCode = null);
 
 public sealed record GetRateCardByIdQuery(Guid Id) : IRequest<RateCardDto>;
 
@@ -53,7 +56,7 @@ public sealed class GetRateCardByIdQueryHandler : IRequestHandler<GetRateCardByI
     }
 
     internal static RateCardDto ToDto(Domain.Entities.RateCard card) =>
-        new(card.Id, card.Code, card.Name, card.PartyType, card.CurrencyCode, card.Description, card.IsActive, card.CreatedAt, card.TransportMode, card.RouteCode, card.CarrierName);
+        new(card.Id, card.Code, card.Name, card.PartyType, card.CurrencyCode, card.Description, card.IsActive, card.CreatedAt, card.TransportMode, card.RouteCode, card.CarrierName, card.SupplierPartyId, card.CustomerPartyId, card.CustomerGroupCode);
 }
 
 public sealed record ListRateCardsQuery(
@@ -143,7 +146,7 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
 
         var items = await pageQuery
             .Select(r => new RateCardDto(
-                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt, r.TransportMode, r.RouteCode, r.CarrierName))
+                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt, r.TransportMode, r.RouteCode, r.CarrierName, r.SupplierPartyId, r.CustomerPartyId, r.CustomerGroupCode))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<RateCardDto>(

@@ -99,6 +99,10 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
                 rateCardId: rule.rateCardId,
                 validFrom: current.validFrom,
                 validTo: current.validTo,
+                vatRate: current.vatRate,
+                vendorPartyId: rule.vendorPartyId,
+                customerPartyId: rule.customerPartyId,
+                customerGroupCode: rule.customerGroupCode,
               }}
             />
           </>

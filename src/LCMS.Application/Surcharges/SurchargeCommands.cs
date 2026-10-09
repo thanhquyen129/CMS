@@ -5,6 +5,7 @@ using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Common;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,7 +35,8 @@ public sealed record SurchargeRuleInput(
     Guid? RateVersionId,
     Guid? VendorPartyId,
     Guid? CustomerPartyId,
-    IReadOnlyList<SurchargeBreakInput>? Breaks);
+    IReadOnlyList<SurchargeBreakInput>? Breaks,
+    string? CustomerGroupCode = null);
 
 public sealed record CreateSurchargeCommand(
     string Code,
@@ -43,7 +45,8 @@ public sealed record CreateSurchargeCommand(
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo,
     bool Publish,
-    SurchargeRuleInput Rule) : IRequest<CreateSurchargeResult>;
+    SurchargeRuleInput Rule,
+    decimal? VatRate = null) : IRequest<CreateSurchargeResult>;
 
 public sealed record CreateSurchargeResult(Guid SurchargeId, Guid VersionId);
 
@@ -62,6 +65,10 @@ public sealed class CreateSurchargeCommandValidator : AbstractValidator<CreateSu
             .WithMessage("Cách tính phụ phí không được hỗ trợ.");
         RuleFor(x => x.Rule.CurrencyCode).NotEmpty().Length(3);
         RuleFor(x => x.Rule.RateAmountPercent).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.VatRate)
+            .Must(DeclaredVat.IsValid)
+            .WithMessage("Thuế suất VAT phải từ 0 đến 100, hoặc để trống nếu chưa khai báo.");
+        RuleFor(x => x.Rule.CustomerGroupCode).MaximumLength(64).When(x => x.Rule.CustomerGroupCode is not null);
     }
 
     internal static string NormalizeMode(string? mode)
@@ -128,7 +135,8 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
             VersionNo = 1,
             PublishStatus = SurchargeVersionStatuses.Draft,
             ValidFrom = request.ValidFrom,
-            ValidTo = request.ValidTo
+            ValidTo = request.ValidTo,
+            VatRate = request.VatRate
         };
         if (request.Publish)
         {
@@ -152,7 +160,8 @@ public sealed record UpdateSurchargeVersionCommand(
     string Direction,
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo,
-    SurchargeRuleInput Rule) : IRequest<Guid>;
+    SurchargeRuleInput Rule,
+    decimal? VatRate = null) : IRequest<Guid>;
 
 public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<UpdateSurchargeVersionCommand, Guid>
 {
@@ -190,6 +199,7 @@ public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<Updat
         surcharge.Direction = direction;
         version.ValidFrom = request.ValidFrom;
         version.ValidTo = request.ValidTo;
+        version.VatRate = request.VatRate;
         await SurchargeGraph.ReplaceRulesAsync(_db, _tenant.TenantId!.Value, version.Id, request.Rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return version.Id;
@@ -319,7 +329,8 @@ public sealed class CreateSurchargeVersionCommandHandler : IRequestHandler<Creat
             VersionNo = latest.VersionNo + 1,
             PublishStatus = SurchargeVersionStatuses.Draft,
             ValidFrom = latest.ValidFrom,
-            ValidTo = latest.ValidTo
+            ValidTo = latest.ValidTo,
+            VatRate = latest.VatRate
         };
         _db.SurchargeVersions.Add(next);
         await SurchargeGraph.CloneRulesAsync(_db, tenantId, latest.Id, next.Id, cancellationToken);
@@ -445,7 +456,8 @@ internal static class SurchargeGraph
         }
 
         if (input.RateCardId is not null || input.RateVersionId is not null
-            || input.VendorPartyId is not null || input.CustomerPartyId is not null)
+            || input.VendorPartyId is not null || input.CustomerPartyId is not null
+            || !string.IsNullOrWhiteSpace(input.CustomerGroupCode))
         {
             db.SurchargeScopes.Add(new SurchargeScope
             {
@@ -454,7 +466,8 @@ internal static class SurchargeGraph
                 RateCardId = input.RateCardId,
                 RateVersionId = input.RateVersionId,
                 VendorPartyId = input.VendorPartyId,
-                CustomerPartyId = input.CustomerPartyId
+                CustomerPartyId = input.CustomerPartyId,
+                CustomerGroupCode = string.IsNullOrWhiteSpace(input.CustomerGroupCode) ? null : input.CustomerGroupCode.Trim()
             });
         }
 
@@ -584,6 +597,7 @@ internal static class SurchargeGraph
                     RateVersionId = scope.RateVersionId,
                     VendorPartyId = scope.VendorPartyId,
                     CustomerPartyId = scope.CustomerPartyId,
+                    CustomerGroupCode = scope.CustomerGroupCode,
                     ServiceTypeCode = scope.ServiceTypeCode,
                     RouteCode = scope.RouteCode,
                     TransportMode = scope.TransportMode

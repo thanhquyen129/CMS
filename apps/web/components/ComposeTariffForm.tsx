@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 
 type Col = { key: string; name: string; code: string };
 type Row = { key: string; min: string; max: string };
@@ -194,6 +195,11 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
       const from = String(fd.get("effectiveFrom") ?? "").trim();
       body.effectiveFrom = from ? new Date(from).toISOString() : null;
       body.note = String(fd.get("note") ?? "").trim() || null;
+      body.supplierPartyId = String(fd.get("supplierPartyId") ?? "").trim() || null;
+      body.customerPartyId = String(fd.get("customerPartyId") ?? "").trim() || null;
+      body.customerGroupCode = String(fd.get("customerGroupCode") ?? "").trim() || null;
+      const vatRaw = String(fd.get("vatRate") ?? "").trim().replace(",", ".");
+      body.vatRate = vatRaw ? Number(vatRaw) : null;
       if (!body.code || !body.name) {
         setError("Nhập mã và tên bảng giá.");
         return;
@@ -270,6 +276,20 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
           <div className="field">
             <label htmlFor="routeCode">Tuyến</label>
             <input id="routeCode" name="routeCode" maxLength={64} placeholder="VN-MY" />
+          </div>
+          <div className="field">
+            <label htmlFor="vatRate">Thuế suất VAT (%)</label>
+            <input id="vatRate" name="vatRate" inputMode="decimal" placeholder="Để trống nếu chưa khai báo" />
+          </div>
+          <div className="field">
+            <PartyTypeahead name="supplierPartyId" label="Nhà cung cấp" roleCode="vendor" hint="Chỉ bảng giá mua. Để trống nếu giá chung." />
+          </div>
+          <div className="field">
+            <PartyTypeahead name="customerPartyId" label="Khách hàng" roleCode="customer" hint="Chỉ bảng giá bán." />
+          </div>
+          <div className="field">
+            <label htmlFor="customerGroupCode">Nhóm khách hàng</label>
+            <input id="customerGroupCode" name="customerGroupCode" maxLength={64} placeholder="Mã nhóm, không chọn cùng khách hàng" />
           </div>
           <div className="field">
             <label htmlFor="effectiveFrom">Hiệu lực từ</label>

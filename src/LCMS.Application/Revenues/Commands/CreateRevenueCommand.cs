@@ -4,9 +4,11 @@ using LCMS.Application.Audit;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Pricing;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,7 +27,9 @@ public sealed record CreateRevenueCommand(
     string? ActualRevenueOwner = null,
     string? IdempotencyKey = null,
     decimal? FxRate = null,
-    string? FxOverrideReason = null) : IRequest<Guid>;
+    string? FxOverrideReason = null,
+    Guid? EconomicChargeTypeId = null,
+    decimal? VatRate = null) : IRequest<Guid>;
 
 public sealed class CreateRevenueCommandValidator : AbstractValidator<CreateRevenueCommand>
 {
@@ -41,6 +45,7 @@ public sealed class CreateRevenueCommandValidator : AbstractValidator<CreateReve
             .Matches(@"^[A-Za-z]{3}$").WithMessage("Mã tiền tệ phải là 3 chữ cái ISO 4217.");
         RuleFor(x => x.RevenueTypeCode).MaximumLength(64).When(x => x.RevenueTypeCode is not null);
         RuleFor(x => x.SourceType).MaximumLength(64).When(x => x.SourceType is not null);
+        RuleFor(x => x.VatRate).Must(DeclaredVat.IsValid).WithMessage("Thuế suất VAT phải từ 0 đến 100, hoặc để trống nếu chưa khai báo.");
         RuleFor(x => x.RecognitionPolicyVersion).MaximumLength(64).When(x => x.RecognitionPolicyVersion is not null);
         // C-004: document/AR must not invent a second economic revenue row.
         RuleFor(x => x.SourceType)
@@ -193,8 +198,24 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
                 : request.RecognitionPolicyVersion.Trim(),
             RecordStatus = "active",
             ApprovalStatus = "not_required",
-            EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow)
+            EffectiveDate = request.EffectiveDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
+            EconomicChargeTypeId = request.EconomicChargeTypeId,
+            PartnerSuggestedId = request.CustomerPartyId
         };
+        if (revenue.EconomicChargeTypeId is null && revenue.RevenueTypeCode is not null)
+        {
+            var code = revenue.RevenueTypeCode.Trim().ToUpperInvariant();
+            revenue.EconomicChargeTypeId = await _db.ChargeTypeMappings.AsNoTracking()
+                .Where(m => m.SourceKind == ChargeTypeMappingKinds.RevenueType && m.SourceCode == code)
+                .Select(m => (Guid?)m.EconomicChargeTypeId)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? await _db.EconomicChargeTypes.AsNoTracking()
+                    .Where(t => t.IsActive && t.Code == code)
+                    .Select(t => (Guid?)t.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        ChargeLineSnapshot.ApplyMoney(revenue, amount, request.VatRate);
 
         await _fx.ApplyToRevenueAsync(revenue, amount, new Fx.FxManualInput(request.FxRate, request.FxOverrideReason), cancellationToken);
         _approvalGate.RefreshPendingFlag(revenue);

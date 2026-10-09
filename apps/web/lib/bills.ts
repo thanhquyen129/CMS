@@ -198,6 +198,41 @@ export function getFinancialProfile(
   return apiGet<BillFinancialProfile>(`/api/bills/${id}/financial-profile${qs}`);
 }
 
+export type ChargeProfitSource = {
+  sourceId: string;
+  sourceKind: string;
+  side: string;
+  billId: string | null;
+  partnerId: string | null;
+  peakMaturity: string;
+};
+
+export type ChargeProfitRow = {
+  economicChargeTypeId: string | null;
+  chargeCode: string;
+  chargeName: string;
+  costReporting: number | null;
+  revenueReporting: number | null;
+  profitReporting: number | null;
+  marginPercent: number | null;
+  comparisonKind: string;
+  dataCompleteness: string;
+  negativeFlag: boolean;
+  note: string;
+  sources: ChargeProfitSource[];
+};
+
+export type ChargeProfitability = {
+  view: string;
+  reportingCurrency: string | null;
+  rows: ChargeProfitRow[];
+};
+
+export function getChargeProfitability(id: string, view = "best"): Promise<ApiResult<ChargeProfitability>> {
+  const params = new URLSearchParams({ view });
+  return apiGet<ChargeProfitability>(`/api/bills/${id}/charge-profitability?${params.toString()}`);
+}
+
 export function getProfitability(
   id: string,
   view = "best",

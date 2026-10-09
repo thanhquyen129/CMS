@@ -64,6 +64,8 @@ public interface ILcmsDbContext
     DbSet<SurchargeScope> SurchargeScopes { get; }
     DbSet<SurchargeBreak> SurchargeBreaks { get; }
     DbSet<SurchargeMigrationLog> SurchargeMigrationLogs { get; }
+    DbSet<EconomicChargeType> EconomicChargeTypes { get; }
+    DbSet<ChargeTypeMapping> ChargeTypeMappings { get; }
     DbSet<FinancialDocument> FinancialDocuments { get; }
     DbSet<FinancialDocumentLine> FinancialDocumentLines { get; }
     DbSet<DocumentMatch> DocumentMatches { get; }

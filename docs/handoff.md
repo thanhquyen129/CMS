@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-09 — Charge profit, pricing partner, declared VAT
+
+- Buy and sell lines pair on an economic charge type. Profit uses net reporting amounts; missing data or mixed maturity is not an actual loss. VAT percent is optional on a draft rate version and surcharge version (null is undeclared, not 0%). Rating snapshots net/VAT/gross without changing the economic amount. Suggested partner is inherited; changing the actual partner is audited and does not rewrite published ratings.
+- Files: `ADR-0042-charge-profit-partner-declared-vat.md`, `DeclaredVat.cs`, `ChargeProfitability.cs`, `20261009030140_ChargeProfitPartnerDeclaredVat.cs`, rate card and surcharge forms.
+
 ## 2026-10-07 — Rate card version is base pricing only
 
 - Pricing rules and components on a rate version are base rate only. Additional charges are created in Quản lý phụ phí; a rate card is an optional surcharge scope. New ratings skip embedded surcharge lines. Migration copies them without rewriting published rows or historical ratings.

@@ -16,7 +16,10 @@ public sealed record CreateRateCardCommand(
     string? Description,
     string? TransportMode = null,
     string? RouteCode = null,
-    string? CarrierName = null) : IRequest<Guid>;
+    string? CarrierName = null,
+    Guid? SupplierPartyId = null,
+    Guid? CustomerPartyId = null,
+    string? CustomerGroupCode = null) : IRequest<Guid>;
 
 public sealed class CreateRateCardCommandValidator : AbstractValidator<CreateRateCardCommand>
 {
@@ -38,7 +41,33 @@ public sealed class CreateRateCardCommandValidator : AbstractValidator<CreateRat
         RuleFor(x => x.Description)
             .MaximumLength(1024)
             .When(x => x.Description is not null);
+        RuleFor(x => x.CustomerGroupCode).MaximumLength(64).When(x => x.CustomerGroupCode is not null);
+        RuleFor(x => x).Must(PricingPartnerRules.MatchesDirection)
+            .WithMessage("Giá mua chỉ gắn nhà cung cấp. Giá bán gắn khách hàng hoặc nhóm khách hàng, không cả hai.");
     }
+}
+
+public static class PricingPartnerRules
+{
+    public static bool MatchesDirection(string partyType, Guid? supplierPartyId, Guid? customerPartyId, string? customerGroupCode)
+    {
+        var sell = string.Equals(partyType, "customer", StringComparison.OrdinalIgnoreCase);
+        var group = !string.IsNullOrWhiteSpace(customerGroupCode);
+        if (!sell && (customerPartyId is not null || group))
+        {
+            return false;
+        }
+
+        if (sell && supplierPartyId is not null)
+        {
+            return false;
+        }
+
+        return !(sell && customerPartyId is not null && group);
+    }
+
+    public static bool MatchesDirection(CreateRateCardCommand command) =>
+        MatchesDirection(command.PartyType, command.SupplierPartyId, command.CustomerPartyId, command.CustomerGroupCode);
 }
 
 public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCardCommand, Guid>
@@ -83,6 +112,9 @@ public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCar
             TransportMode = RateCardText.Clean(request.TransportMode),
             RouteCode = RateCardText.Clean(request.RouteCode),
             CarrierName = RateCardText.Clean(request.CarrierName),
+            SupplierPartyId = request.SupplierPartyId,
+            CustomerPartyId = request.CustomerPartyId,
+            CustomerGroupCode = RateCardText.Clean(request.CustomerGroupCode),
             IsActive = true
         };
 
@@ -211,6 +243,58 @@ public sealed class SoftDeleteRateCardCommandHandler : IRequestHandler<SoftDelet
 
         card.SoftDelete(null);
         _audit.Append(AuditActions.RateCardDelete, AuditObjectTypes.RateCard, card.Id, "active", "deleted", null);
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed record SetRateCardPartnerCommand(
+    Guid Id,
+    Guid? SupplierPartyId,
+    Guid? CustomerPartyId,
+    string? CustomerGroupCode) : IRequest;
+
+public sealed class SetRateCardPartnerCommandHandler : IRequestHandler<SetRateCardPartnerCommand>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
+
+    public SetRateCardPartnerCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+        _permissions = permissions;
+    }
+
+    public async Task Handle(SetRateCardPartnerCommand request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var card = await _db.RateCards.FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy bảng giá.");
+        var writeCode = card.PartyType == "customer" ? PermissionCodes.RateSellWrite : PermissionCodes.RateBuyWrite;
+        await _permissions.EnsureAsync(writeCode, "Bạn không có quyền gắn đối tác bảng giá.", cancellationToken);
+        if (!PricingPartnerRules.MatchesDirection(card.PartyType, request.SupplierPartyId, request.CustomerPartyId, request.CustomerGroupCode))
+        {
+            throw new ConflictAppException("Giá mua chỉ gắn nhà cung cấp. Giá bán gắn khách hàng hoặc nhóm khách hàng, không cả hai.");
+        }
+
+        if (request.SupplierPartyId is Guid supplier && !await _db.BusinessParties.AnyAsync(p => p.Id == supplier, cancellationToken))
+        {
+            throw new NotFoundAppException("Không tìm thấy nhà cung cấp.");
+        }
+
+        if (request.CustomerPartyId is Guid customer && !await _db.BusinessParties.AnyAsync(p => p.Id == customer, cancellationToken))
+        {
+            throw new NotFoundAppException("Không tìm thấy khách hàng.");
+        }
+
+        card.SupplierPartyId = request.SupplierPartyId;
+        card.CustomerPartyId = request.CustomerPartyId;
+        card.CustomerGroupCode = RateCardText.Clean(request.CustomerGroupCode);
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

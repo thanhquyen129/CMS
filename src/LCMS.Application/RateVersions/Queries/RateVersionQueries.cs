@@ -14,7 +14,8 @@ public sealed record RateVersionDto(
     DateTimeOffset? EffectiveTo,
     DateTimeOffset? PublishedAt,
     string? Note,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    decimal? VatRate = null);
 
 public sealed record GetRateVersionByIdQuery(Guid Id) : IRequest<RateVersionDto>;
 
@@ -49,7 +50,7 @@ public sealed class GetRateVersionByIdQueryHandler : IRequestHandler<GetRateVers
     }
 
     internal static RateVersionDto ToDto(Domain.Entities.RateVersion v) =>
-        new(v.Id, v.RateCardId, v.VersionNo, v.Status, v.EffectiveFrom, v.EffectiveTo, v.PublishedAt, v.Note, v.CreatedAt);
+        new(v.Id, v.RateCardId, v.VersionNo, v.Status, v.EffectiveFrom, v.EffectiveTo, v.PublishedAt, v.Note, v.CreatedAt, v.VatRate);
 }
 
 public sealed record ListRateVersionsQuery(Guid RateCardId) : IRequest<IReadOnlyList<RateVersionDto>>;
@@ -86,7 +87,7 @@ public sealed class ListRateVersionsQueryHandler : IRequestHandler<ListRateVersi
             .OrderByDescending(v => v.VersionNo)
             .Select(v => new RateVersionDto(
                 v.Id, v.RateCardId, v.VersionNo, v.Status,
-                v.EffectiveFrom, v.EffectiveTo, v.PublishedAt, v.Note, v.CreatedAt))
+                v.EffectiveFrom, v.EffectiveTo, v.PublishedAt, v.Note, v.CreatedAt, v.VatRate))
             .ToListAsync(cancellationToken);
     }
 }

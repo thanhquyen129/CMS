@@ -30,6 +30,9 @@ public sealed class SurchargeVersion : TenantEntityBase
     public DateTimeOffset? ValidTo { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
 
+    /// <summary>Declared VAT percent. Null means undeclared, not 0%.</summary>
+    public decimal? VatRate { get; set; }
+
     public Surcharge? Surcharge { get; set; }
 
     public bool IsPublished =>
@@ -70,6 +73,10 @@ public sealed class SurchargeScope : TenantEntityBase
     public Guid? RateVersionId { get; set; }
     public Guid? VendorPartyId { get; set; }
     public Guid? CustomerPartyId { get; set; }
+
+    /// <summary>Optional SELL group scope. Empty does not filter.</summary>
+    public string? CustomerGroupCode { get; set; }
+
     public string? ServiceTypeCode { get; set; }
     public string? RouteCode { get; set; }
     public string? TransportMode { get; set; }

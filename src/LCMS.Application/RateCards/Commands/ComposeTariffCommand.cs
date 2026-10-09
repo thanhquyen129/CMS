@@ -5,6 +5,7 @@ using LCMS.Application.Ratings;
 using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +41,11 @@ public sealed record ComposeTariffCommand(
     IReadOnlyList<ComposeTariffColumn> Columns,
     IReadOnlyList<ComposeTariffBand> Bands,
     ComposeDeliveryFee? Delivery,
-    ComposeRemoteFee? Remote) : IRequest<ComposeTariffResult>;
+    ComposeRemoteFee? Remote,
+    Guid? SupplierPartyId = null,
+    Guid? CustomerPartyId = null,
+    string? CustomerGroupCode = null,
+    decimal? VatRate = null) : IRequest<ComposeTariffResult>;
 
 public sealed class ComposeTariffCommandValidator : AbstractValidator<ComposeTariffCommand>
 {
@@ -62,6 +67,10 @@ public sealed class ComposeTariffCommandValidator : AbstractValidator<ComposeTar
             .GreaterThan(0)
             .When(x => x.MinimumQuantity.HasValue)
             .WithMessage("Số lượng tối thiểu phải lớn hơn 0.");
+        RuleFor(x => x.VatRate)
+            .Must(DeclaredVat.IsValid)
+            .WithMessage("Thuế suất VAT phải từ 0 đến 100, hoặc để trống nếu chưa khai báo.");
+        RuleFor(x => x.CustomerGroupCode).MaximumLength(64).When(x => x.CustomerGroupCode is not null);
         RuleForEach(x => x.Columns).ChildRules(col =>
         {
             col.RuleFor(c => c.Code).NotEmpty().MaximumLength(64).WithMessage("Mã loại hàng không hợp lệ.");
@@ -157,8 +166,15 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 TransportMode = Clean(request.TransportMode)?.ToLowerInvariant(),
                 RouteCode = Clean(request.RouteCode),
                 CarrierName = Clean(request.CarrierName),
+                SupplierPartyId = request.SupplierPartyId,
+                CustomerPartyId = request.CustomerPartyId,
+                CustomerGroupCode = Clean(request.CustomerGroupCode),
                 IsActive = true
             };
+            if (!PricingPartnerRules.MatchesDirection(partyType, card.SupplierPartyId, card.CustomerPartyId, card.CustomerGroupCode))
+            {
+                throw new ConflictAppException("Giá mua chỉ gắn nhà cung cấp. Giá bán gắn khách hàng hoặc nhóm khách hàng, không cả hai.");
+            }
             version = new RateVersion
             {
                 TenantId = tenantId,
@@ -166,7 +182,8 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 VersionNo = 1,
                 Status = RateVersionStatuses.Draft,
                 EffectiveFrom = request.EffectiveFrom,
-                Note = Clean(request.Note)
+                Note = Clean(request.Note),
+                VatRate = request.VatRate
             };
             _db.RateCards.Add(card);
             _db.RateVersions.Add(version);

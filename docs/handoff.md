@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-10 — Surcharge version stores economic charge type
+
+- New surcharge versions require an active tenant economic charge type. Published versions stay immutable; a new draft copies the snapshot. Rating copies that id onto the surcharge line and does not infer it from the surcharge code. Rate-card components can store the same id. Legacy nulls stay unmapped and are counted on the readiness report.
+- Files: `Surcharge.cs`, `SurchargeCommands.cs`, `SurchargeRating.cs`, `CreateRatingCommand.cs`, `PricingRuleComponent.cs`, `20261010120545_SurchargeVersionEconomicChargeType.cs`, `SurchargeForm.tsx`.
+
 ## 2026-10-09 — Charge profit drill-down, allocation maturity, VAT readiness
 
 - Shared-cost profit uses only the parent peak maturity. A missing layer is skipped; missing FX stays incomplete. Bill and order screens link each charge line to cost, shared cost, or revenue. Draft rate versions can set VAT; published versions stay unchanged. Surcharge partner scope must match direction. Readiness counts null VAT and unmapped charges without writing them.

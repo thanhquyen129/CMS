@@ -263,7 +263,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                         runningBase += amount;
                     }
 
-                    details.Add(Line(tenantId, rule, component.Id, component.Code, component.Name, component.FinancialNature, amount, component.CurrencyCode, component.CalcMethod));
+                    details.Add(Line(tenantId, rule, component.Id, component.Code, component.Name, component.FinancialNature, amount, component.CurrencyCode, component.CalcMethod, component.EconomicChargeTypeId));
                 }
 
                 continue;
@@ -303,7 +303,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                         SourceVersionId = rule.RateVersionId,
                         AmountOriginal = amount,
                         OriginalCurrency = component.CurrencyCode,
-                        ReportingAmount = amount
+                        ReportingAmount = amount,
+                        EconomicChargeTypeId = component.EconomicChargeTypeId
                     });
                 }
             }
@@ -600,7 +601,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         var mapping = maps.ToDictionary(m => ChargeLineSnapshot.MapKey(m.SourceKind, m.SourceCode), m => m.EconomicChargeTypeId);
         foreach (var detail in details)
         {
-            if (!string.Equals(detail.SourceType, RatingSourceTypes.Surcharge, StringComparison.OrdinalIgnoreCase))
+            var fromSurcharge = string.Equals(detail.SourceType, RatingSourceTypes.Surcharge, StringComparison.OrdinalIgnoreCase);
+            if (!fromSurcharge)
             {
                 detail.VatRate = version.VatRate;
                 detail.PartnerSuggestedId ??= string.Equals(ruleNature, "revenue", StringComparison.OrdinalIgnoreCase)
@@ -617,6 +619,11 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             }
 
             ChargeLineSnapshot.ApplyMoney(detail);
+            if (fromSurcharge || detail.EconomicChargeTypeId is not null)
+            {
+                continue;
+            }
+
             var code = detail.ComponentCode;
             var kind = string.Equals(detail.FinancialNature, "revenue", StringComparison.OrdinalIgnoreCase)
                 ? ChargeTypeMappingKinds.RevenueType
@@ -650,7 +657,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         string nature,
         decimal amount,
         string currency,
-        string? formula) =>
+        string? formula,
+        Guid? economicChargeTypeId = null) =>
         new()
         {
             TenantId = tenantId,
@@ -669,7 +677,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             SourceVersionId = rule.RateVersionId,
             AmountOriginal = amount,
             OriginalCurrency = currency,
-            ReportingAmount = amount
+            ReportingAmount = amount,
+            EconomicChargeTypeId = economicChargeTypeId
         };
 
     private static decimal Clamp(decimal value, decimal? min, decimal? max)

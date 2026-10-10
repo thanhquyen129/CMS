@@ -1067,7 +1067,9 @@ internal sealed class PricingRuleComponentConfiguration : IEntityTypeConfigurati
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.CalcMethod).HasMaxLength(32);
         builder.Property(e => e.DependsOnCode).HasMaxLength(64);
+        builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
         builder.Property(e => e.SortOrder).IsRequired();
+        builder.HasIndex(e => new { e.TenantId, e.EconomicChargeTypeId });
 
         builder.HasIndex(e => new { e.TenantId, e.PricingRuleId, e.Code }).IsUnique();
 

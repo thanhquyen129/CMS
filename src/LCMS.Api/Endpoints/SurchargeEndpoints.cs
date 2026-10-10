@@ -19,7 +19,8 @@ public static class SurchargeEndpoints
                     body.ValidTo,
                     body.Publish,
                     ToRule(body),
-                    body.VatRate),
+                    body.VatRate,
+                    body.EconomicChargeTypeId),
                 ct);
             return Results.Created($"/api/surcharges/{result.SurchargeId}", result);
         });
@@ -33,7 +34,7 @@ public static class SurchargeEndpoints
             CancellationToken ct) =>
         {
             await sender.Send(
-                new UpdateSurchargeVersionCommand(id, versionId, body.Name, body.Direction, body.ValidFrom, body.ValidTo, ToRule(body), body.VatRate),
+                new UpdateSurchargeVersionCommand(id, versionId, body.Name, body.Direction, body.ValidFrom, body.ValidTo, ToRule(body), body.VatRate, body.EconomicChargeTypeId),
                 ct);
             return Results.NoContent();
         });
@@ -122,4 +123,5 @@ public sealed record SaveSurchargeRequest(
     bool Publish = false,
     IReadOnlyList<SurchargeBreakInput>? Breaks = null,
     decimal? VatRate = null,
-    string? CustomerGroupCode = null);
+    string? CustomerGroupCode = null,
+    Guid? EconomicChargeTypeId = null);

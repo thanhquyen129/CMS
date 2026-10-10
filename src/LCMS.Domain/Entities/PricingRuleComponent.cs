@@ -27,5 +27,8 @@ public sealed class PricingRuleComponent : TenantEntityBase
     /// <summary>Component code this line waits for. A cycle is rejected.</summary>
     public string? DependsOnCode { get; set; }
 
+    /// <summary>Explicit economic charge. Null legacy rows stay unmapped until a reviewed mapping is stored.</summary>
+    public Guid? EconomicChargeTypeId { get; set; }
+
     public PricingRule? PricingRule { get; set; }
 }

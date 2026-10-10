@@ -215,7 +215,8 @@ public static class RatePricingEndpoints
                     body.CurrencyCode,
                     body.SortOrder ?? 0,
                     body.CalcMethod,
-                    body.DependsOnCode),
+                    body.DependsOnCode,
+                    body.EconomicChargeTypeId),
                 ct);
             return Results.Created($"/api/pricing-rules/{ruleId}/components/{id}", new { id });
         });
@@ -447,7 +448,8 @@ public sealed record AddPricingRuleComponentRequest(
     string CurrencyCode,
     int? SortOrder,
     string? CalcMethod = null,
-    string? DependsOnCode = null);
+    string? DependsOnCode = null,
+    Guid? EconomicChargeTypeId = null);
 
 public sealed record UpdatePricingRuleComponentRequest(
     string Name,

@@ -573,6 +573,11 @@ public sealed class RatingModeTests : IAsyncLifetime
         var versionRes = await _client.SendAsync(versionReq);
         versionRes.EnsureSuccessStatusCode();
         var versionId = (await versionRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+        using var chargeTypeReq = Tenant(HttpMethod.Post, "/api/economic-charge-types", tenantId);
+        chargeTypeReq.Content = JsonContent.Create(new { code = "DONGGO", name = "Đóng gói" });
+        var chargeTypeRes = await _client.SendAsync(chargeTypeReq);
+        chargeTypeRes.EnsureSuccessStatusCode();
+        var chargeTypeId = (await chargeTypeRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
 
         foreach (var rule in card.Rules)
         {
@@ -600,7 +605,8 @@ public sealed class RatingModeTests : IAsyncLifetime
                     weightTo = delivery ? band?.MaxQuantity : null,
                     rateCardId = cardId,
                     validFrom = card.EffectiveFrom,
-                    publish = true
+                    publish = true,
+                    economicChargeTypeId = chargeTypeId
                 });
                 (await _client.SendAsync(surcharge)).EnsureSuccessStatusCode();
                 continue;

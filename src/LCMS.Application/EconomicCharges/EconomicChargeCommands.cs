@@ -174,3 +174,32 @@ public sealed class MapChargeTypeCommandHandler : IRequestHandler<MapChargeTypeC
         return row.Id;
     }
 }
+
+internal static class EconomicChargeTypeRules
+{
+    public static async Task<Guid> RequireActiveAsync(
+        ILcmsDbContext db,
+        Guid? id,
+        CancellationToken cancellationToken)
+    {
+        if (id is null || id == Guid.Empty)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["economicChargeTypeId"] = ["Chọn khoản mục kinh tế."]
+            });
+        }
+
+        var row = await db.EconomicChargeTypes.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == id.Value, cancellationToken);
+        if (row is null || !row.IsActive)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["economicChargeTypeId"] = ["Khoản mục kinh tế không thuộc thuê bao này hoặc đã ngừng dùng."]
+            });
+        }
+
+        return row.Id;
+    }
+}

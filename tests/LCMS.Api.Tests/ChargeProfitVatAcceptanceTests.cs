@@ -33,7 +33,7 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
         var supplierB = await CreatePartyAsync(tenantId, "NCC-B", "vendor");
         var customer = await CreatePartyAsync(tenantId, "KH-A", "customer");
         await PostOk(tenantId, "/api/economic-charge-types", new { code = "PACKAGING", name = "Đóng gói" });
-        await PostOk(tenantId, "/api/economic-charge-types", new { code = "PICKUP", name = "Lấy hàng" });
+        var pickupType = await PostOk(tenantId, "/api/economic-charge-types", new { code = "PICKUP", name = "Lấy hàng" });
 
         var billId = await CreateBillAsync(tenantId, "BL-CP-1");
         var buyCard = await CreateCardAsync(tenantId, "RC-BUY", "vendor");
@@ -86,7 +86,8 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
             calculationMode = "fixed_rate",
             currencyCode = "VND",
             rateAmountPercent = 1_000m,
-            customerPartyId = customer
+            customerPartyId = customer,
+            economicChargeTypeId = pickupType.Id
         });
         Assert.Equal(HttpStatusCode.Conflict, wrongWay.StatusCode);
 
@@ -99,11 +100,12 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
             currencyCode = "VND",
             rateAmountPercent = 5_000m,
             publish = true,
-            vatRate = 10m
+            vatRate = 10m,
+            economicChargeTypeId = pickupType.Id
         });
         var secondBuy = await RateAsync(tenantId, new { billId, rateVersionId = buyVersion, quantity = 1m });
         var withSurcharge = await GetRatingAsync(tenantId, secondBuy);
-        Assert.Contains(withSurcharge.Details, d => d.SourceType == "surcharge" && d.Amount == 5_000m);
+        Assert.Contains(withSurcharge.Details, d => d.SourceType == "surcharge" && d.Amount == 5_000m && d.EconomicChargeTypeId == pickupType.Id);
         var history = await GetRatingAsync(tenantId, buyRating);
         Assert.DoesNotContain(history.Details, d => d.SourceType == "surcharge");
         Assert.Equal(buy.TotalAmount, history.TotalAmount);
@@ -193,6 +195,103 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
         Assert.Equal(10m, after.Details.Single().VatRate);
     }
 
+    [Fact]
+    public async Task Donggo_surcharge_keeps_version_snapshot_and_rejects_another_tenant()
+    {
+        var tenantId = await CreateTenantAsync();
+        var otherTenant = await CreateTenantAsync();
+        var donggo = await PostOk(tenantId, "/api/economic-charge-types", new { code = "DONGGO", name = "Đóng gói" });
+        var otherType = await PostOk(otherTenant, "/api/economic-charge-types", new { code = "DONGGO", name = "Đóng gói thuê bao khác" });
+
+        var foreign = await SendAsync(tenantId, HttpMethod.Post, "/api/surcharges", new
+        {
+            code = "DG-FOREIGN",
+            name = "Sai thuê bao",
+            direction = "buy",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 1_000m,
+            economicChargeTypeId = otherType.Id
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, foreign.StatusCode);
+
+        var missing = await SendAsync(tenantId, HttpMethod.Post, "/api/surcharges", new
+        {
+            code = "DG-NONE",
+            name = "Thiếu khoản mục",
+            direction = "buy",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 1_000m
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+
+        var buy = await PostSurchargeAsync(tenantId, new
+        {
+            code = "DG-BUY",
+            name = "Đóng gói mua",
+            direction = "buy",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 150_000m,
+            publish = true,
+            economicChargeTypeId = donggo.Id
+        });
+        var sell = await PostSurchargeAsync(tenantId, new
+        {
+            code = "DG-SELL",
+            name = "Đóng gói bán",
+            direction = "sell",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 100_000m,
+            publish = true,
+            economicChargeTypeId = donggo.Id
+        });
+
+        var buyDetail = await GetAsync<SurchargeBody>(tenantId, $"/api/surcharges/{buy.SurchargeId}");
+        var sellDetail = await GetAsync<SurchargeBody>(tenantId, $"/api/surcharges/{sell.SurchargeId}");
+        Assert.Equal(donggo.Id, buyDetail.Versions.Single().EconomicChargeTypeId);
+        Assert.Equal("DONGGO", buyDetail.Versions.Single().EconomicChargeTypeCode);
+        Assert.Equal(donggo.Id, sellDetail.Versions.Single().EconomicChargeTypeId);
+        Assert.NotEqual(buy.SurchargeId, sell.SurchargeId);
+
+        var billId = await CreateBillAsync(tenantId, "BL-DG");
+        var buyCard = await CreateCardAsync(tenantId, "RC-DG-BUY", "vendor");
+        var buyVersion = await CreateVersionAsync(tenantId, buyCard, null);
+        await AddRuleAsync(tenantId, buyVersion, "FREIGHT", 1_000m);
+        await PublishAsync(tenantId, buyVersion);
+        var sellCard = await CreateCardAsync(tenantId, "RC-DG-SELL", "customer");
+        var sellVersion = await CreateVersionAsync(tenantId, sellCard, null);
+        await AddRuleAsync(tenantId, sellVersion, "FREIGHT", 1_000m);
+        await PublishAsync(tenantId, sellVersion);
+
+        var buyRating = await GetRatingAsync(tenantId, await RateAsync(tenantId, new { billId, rateVersionId = buyVersion, quantity = 1m, seedExpectedCosts = true }));
+        var sellRating = await GetRatingAsync(tenantId, await RateAsync(tenantId, new { billId, rateVersionId = sellVersion, quantity = 1m, seedExpectedRevenues = true }));
+        Assert.Equal(donggo.Id, buyRating.Details.Single(d => d.ComponentCode == "DG-BUY").EconomicChargeTypeId);
+        Assert.Equal(donggo.Id, sellRating.Details.Single(d => d.ComponentCode == "DG-SELL").EconomicChargeTypeId);
+
+        var profit = await GetProfitAsync(tenantId, $"/api/bills/{billId}/charge-profitability?view=expected");
+        var row = profit.Rows.Single(r => r.ProfitReporting == -50_000m);
+        Assert.True(row.NegativeFlag);
+
+        var next = await PostId(tenantId, $"/api/surcharges/{buy.SurchargeId}/versions", new { });
+        var blocked = await SendAsync(tenantId, HttpMethod.Put, $"/api/surcharges/{buy.SurchargeId}/versions/{buyDetail.Versions.Single().Id}", new
+        {
+            code = "DG-BUY",
+            name = "Đóng gói mua",
+            direction = "buy",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 1m,
+            economicChargeTypeId = donggo.Id
+        });
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        var still = await GetAsync<SurchargeBody>(tenantId, $"/api/surcharges/{buy.SurchargeId}");
+        Assert.Equal(donggo.Id, still.Versions.Single(v => v.Id == buyDetail.Versions.Single().Id).EconomicChargeTypeId);
+        Assert.Contains(still.Versions, v => v.Id == next && v.EconomicChargeTypeId == donggo.Id);
+    }
+
     private async Task<Guid> CreateTenantAsync()
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code = "TN-" + Guid.NewGuid().ToString("N")[..8], name = "Charge" });
@@ -254,6 +353,17 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
 
     private async Task<ProfitBody> GetProfitAsync(Guid tenantId, string url) =>
         await GetAsync<ProfitBody>(tenantId, url);
+
+    private async Task<CreatedSurchargeBody> PostSurchargeAsync(Guid tenantId, object body)
+    {
+        var res = await SendAsync(tenantId, HttpMethod.Post, "/api/surcharges", body);
+        if (!res.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException($"{(int)res.StatusCode} surcharge {await res.Content.ReadAsStringAsync()}");
+        }
+
+        return (await res.Content.ReadFromJsonAsync<CreatedSurchargeBody>(Json))!;
+    }
 
     private async Task<IdBody> PostOk(Guid tenantId, string url, object body)
     {
@@ -320,7 +430,10 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
     private sealed record CostBody(Guid? VendorPartyId);
     private sealed record ReadinessBody(int RateVersionsMissingVat, string Note);
     private sealed record RatingBody(decimal TotalAmount, List<DetailBody> Details);
-    private sealed record DetailBody(Guid Id, string ComponentCode, string? SourceType, decimal Amount, decimal? VatRate, decimal? VatAmount, decimal? GrossAmount);
+    private sealed record DetailBody(Guid Id, string ComponentCode, string? SourceType, decimal Amount, decimal? VatRate, decimal? VatAmount, decimal? GrossAmount, Guid? EconomicChargeTypeId = null);
+    private sealed record CreatedSurchargeBody(Guid SurchargeId, Guid VersionId);
+    private sealed record SurchargeBody(Guid Id, List<SurchargeVersionBody> Versions);
+    private sealed record SurchargeVersionBody(Guid Id, Guid? EconomicChargeTypeId, string? EconomicChargeTypeCode);
     private sealed record ProfitBody(List<ProfitRow> Rows);
     private sealed record ProfitRow(string ChargeCode, decimal? CostReporting, decimal? RevenueReporting, decimal? ProfitReporting, bool NegativeFlag, List<SourceBody> Sources);
     private sealed record SourceBody(Guid? PartnerId, string SourceKind);

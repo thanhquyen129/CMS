@@ -31,7 +31,10 @@ public sealed record SurchargeVersionDto(
     DateTimeOffset? ValidTo,
     DateTimeOffset? PublishedAt,
     IReadOnlyList<SurchargeRuleDto> Rules,
-    decimal? VatRate = null);
+    decimal? VatRate = null,
+    Guid? EconomicChargeTypeId = null,
+    string? EconomicChargeTypeCode = null,
+    string? EconomicChargeTypeName = null);
 
 public sealed record SurchargeDetailDto(
     Guid Id,
@@ -79,6 +82,14 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
         var scopes = await _db.SurchargeScopes.AsNoTracking()
             .Where(s => ruleIds.Contains(s.SurchargeRuleId))
             .ToListAsync(cancellationToken);
+        var chargeTypeIds = versions
+            .Where(v => v.EconomicChargeTypeId != null)
+            .Select(v => v.EconomicChargeTypeId!.Value)
+            .Distinct()
+            .ToList();
+        var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => chargeTypeIds.Contains(t.Id))
+            .ToDictionaryAsync(t => t.Id, cancellationToken);
 
         var versionDtos = versions.Select(version =>
         {
@@ -105,6 +116,7 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
                     scope?.CustomerPartyId,
                     scope?.CustomerGroupCode);
             }).ToList();
+            chargeTypes.TryGetValue(version.EconomicChargeTypeId ?? Guid.Empty, out var chargeType);
             return new SurchargeVersionDto(
                 version.Id,
                 version.VersionNo,
@@ -113,7 +125,10 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
                 version.ValidTo,
                 version.PublishedAt,
                 ruleDtos,
-                version.VatRate);
+                version.VatRate,
+                version.EconomicChargeTypeId,
+                chargeType?.Code,
+                chargeType?.Name);
         }).ToList();
 
         return new SurchargeDetailDto(

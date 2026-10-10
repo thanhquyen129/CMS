@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 
 type CardOption = { id: string; label: string };
+type ChargeTypeOption = { id: string; code: string; name: string };
 
 export type SurchargeFormValues = {
   code?: string;
@@ -22,6 +23,7 @@ export type SurchargeFormValues = {
   validFrom?: string | null;
   validTo?: string | null;
   vatRate?: number | null;
+  economicChargeTypeId?: string | null;
   vendorPartyId?: string | null;
   customerPartyId?: string | null;
   customerGroupCode?: string | null;
@@ -29,12 +31,14 @@ export type SurchargeFormValues = {
 
 export function SurchargeForm({
   cards,
+  chargeTypes,
   initial,
   surchargeId,
   versionId,
   lockCode,
 }: {
   cards: CardOption[];
+  chargeTypes: ChargeTypeOption[];
   initial?: SurchargeFormValues;
   surchargeId?: string;
   versionId?: string;
@@ -57,6 +61,12 @@ export function SurchargeForm({
       return;
     }
     const dg = String(fd.get("dangerousGoods") ?? "");
+    const economicChargeTypeId = String(fd.get("economicChargeTypeId") ?? "").trim();
+    if (!economicChargeTypeId) {
+      setError("Chọn khoản mục kinh tế.");
+      setBusy(false);
+      return;
+    }
     const direction = String(fd.get("direction") ?? "buy");
     const vendorPartyId = direction === "sell" ? null : String(fd.get("vendorPartyId") ?? "").trim() || null;
     const customerPartyId = direction === "buy" ? null : String(fd.get("customerPartyId") ?? "").trim() || null;
@@ -82,6 +92,7 @@ export function SurchargeForm({
       validTo: toOffset(fd.get("validTo")),
       publish: fd.get("publish") === "on",
       vatRate: parseVat(fd.get("vatRate")),
+      economicChargeTypeId,
       vendorPartyId,
       customerPartyId,
       customerGroupCode,
@@ -121,6 +132,15 @@ export function SurchargeForm({
         <div className="field">
           <label htmlFor="name">Tên <span className="req">*</span></label>
           <input id="name" name="name" required maxLength={256} defaultValue={initial?.name ?? ""} />
+        </div>
+        <div className="field">
+          <label htmlFor="economicChargeTypeId">Khoản mục kinh tế <span className="req">*</span></label>
+          <select id="economicChargeTypeId" name="economicChargeTypeId" required defaultValue={initial?.economicChargeTypeId ?? ""}>
+            <option value="">Chọn khoản mục</option>
+            {chargeTypes.map((type) => (
+              <option key={type.id} value={type.id}>{type.code} — {type.name}</option>
+            ))}
+          </select>
         </div>
         <div className="field">
           <label htmlFor="direction">Chiều <span className="req">*</span></label>

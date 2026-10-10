@@ -7,7 +7,7 @@ import { SurchargeVersionActions } from "@/components/SurchargeVersionActions";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { formatDateTimeVi, formatDateVi } from "@/lib/money";
-import { listRateCards, getSurcharge } from "@/lib/rate-cards-server";
+import { listEconomicChargeTypes, listRateCards, getSurcharge } from "@/lib/rate-cards-server";
 import { unwrapPaged } from "@/lib/paging";
 
 type Params = Promise<{ id: string }>;
@@ -33,6 +33,8 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
   const options = cards.ok
     ? unwrapPaged(cards.data).items.map((card) => ({ id: card.id, label: `${card.code} — ${card.name}` }))
     : [];
+  const chargeTypes = await listEconomicChargeTypes();
+  const activeTypes = chargeTypes.ok ? chargeTypes.data.filter((row) => row.isActive) : [];
   const row = detail.data;
   const current = row.versions[0];
   const rule = current?.rules[0];
@@ -56,6 +58,7 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
           <thead>
             <tr>
               <th>Phiên bản</th>
+              <th>Khoản mục kinh tế</th>
               <th>Trạng thái</th>
               <th>Hiệu lực</th>
               <th>Cách tính</th>
@@ -66,6 +69,7 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
             {row.versions.map((version) => (
               <tr key={version.id}>
                 <td>v{version.versionNo}</td>
+                <td>{version.economicChargeTypeCode ? `${version.economicChargeTypeCode} — ${version.economicChargeTypeName}` : "Chưa gắn"}</td>
                 <td>{version.publishStatus === "published" ? "Đã phát hành" : "Nháp"}</td>
                 <td>
                   {formatDateVi(version.validFrom)} – {formatDateVi(version.validTo)}
@@ -82,6 +86,7 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
             <h2>Sửa phiên bản nháp</h2>
             <SurchargeForm
               cards={options}
+              chargeTypes={activeTypes}
               lockCode
               surchargeId={row.id}
               versionId={current.id}
@@ -100,6 +105,7 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
                 validFrom: current.validFrom,
                 validTo: current.validTo,
                 vatRate: current.vatRate,
+                economicChargeTypeId: current.economicChargeTypeId,
                 vendorPartyId: rule.vendorPartyId,
                 customerPartyId: rule.customerPartyId,
                 customerGroupCode: rule.customerGroupCode,

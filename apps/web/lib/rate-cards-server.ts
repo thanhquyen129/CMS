@@ -122,6 +122,9 @@ export type SurchargeRow = {
   effectiveTo: string | null;
   direction?: string;
   sourceKind?: string;
+  economicChargeTypeId?: string | null;
+  economicChargeTypeCode?: string | null;
+  economicChargeTypeName?: string | null;
 };
 
 export type AppendixRow = {
@@ -161,6 +164,7 @@ export type ChargeVatReadiness = {
   costsUnmapped: number;
   revenuesUnmapped: number;
   ratingDetailsUnmapped: number;
+  surchargeVersionsUnmapped: number;
   note: string;
 };
 
@@ -187,6 +191,9 @@ export type SurchargeDetail = {
     validTo: string | null;
     publishedAt: string | null;
     vatRate?: number | null;
+    economicChargeTypeId?: string | null;
+    economicChargeTypeCode?: string | null;
+    economicChargeTypeName?: string | null;
     rules: {
       id: string;
       calculationMode: string;

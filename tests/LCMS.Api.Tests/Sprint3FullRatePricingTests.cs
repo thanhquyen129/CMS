@@ -131,6 +131,15 @@ public sealed class Sprint3FullRatePricingTests : IAsyncLifetime
         });
 
         await PublishAsync(tenantId, versionId);
+        Guid fuelChargeTypeId;
+        using (var chargeType = new HttpRequestMessage(HttpMethod.Post, "/api/economic-charge-types"))
+        {
+            chargeType.Headers.Add("X-Tenant-Id", tenantId.ToString());
+            chargeType.Content = JsonContent.Create(new { code = "FUEL", name = "Nhiên liệu" });
+            var createdType = await _client.SendAsync(chargeType);
+            createdType.EnsureSuccessStatusCode();
+            fuelChargeTypeId = (await createdType.Content.ReadFromJsonAsync<IdResponse>(JsonOptions))!.Id;
+        }
         using (var fuel = new HttpRequestMessage(HttpMethod.Post, "/api/surcharges"))
         {
             fuel.Headers.Add("X-Tenant-Id", tenantId.ToString());
@@ -143,7 +152,8 @@ public sealed class Sprint3FullRatePricingTests : IAsyncLifetime
                 currencyCode = "VND",
                 rateAmountPercent = 10m,
                 rateVersionId = versionId,
-                publish = true
+                publish = true,
+                economicChargeTypeId = fuelChargeTypeId
             });
             (await _client.SendAsync(fuel)).EnsureSuccessStatusCode();
         }

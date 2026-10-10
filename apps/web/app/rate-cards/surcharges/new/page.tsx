@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { SurchargeForm } from "@/components/SurchargeForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
-import { listRateCards } from "@/lib/rate-cards-server";
+import { listEconomicChargeTypes, listRateCards } from "@/lib/rate-cards-server";
 import { unwrapPaged } from "@/lib/paging";
 
 export default async function NewSurchargePage() {
@@ -16,6 +16,8 @@ export default async function NewSurchargePage() {
   const options = cards.ok
     ? unwrapPaged(cards.data).items.map((card) => ({ id: card.id, label: `${card.code} — ${card.name}` }))
     : [];
+  const chargeTypes = await listEconomicChargeTypes();
+  const activeTypes = chargeTypes.ok ? chargeTypes.data.filter((row) => row.isActive) : [];
 
   return (
     <AppShell terms={terms} active="rate-cards">
@@ -25,7 +27,7 @@ export default async function NewSurchargePage() {
         </p>
         <h1>Tạo phụ phí</h1>
         <p className="muted">Không cần chọn bảng giá. Bỏ trống các điều kiện nếu phụ phí áp dụng chung.</p>
-        <SurchargeForm cards={options} />
+        <SurchargeForm cards={options} chargeTypes={activeTypes} />
       </section>
     </AppShell>
   );

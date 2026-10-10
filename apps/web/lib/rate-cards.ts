@@ -39,6 +39,8 @@ export type PricingRuleComponent = {
   amount: number;
   currencyCode: string;
   sortOrder: number;
+  economicChargeTypeId?: string | null;
+  economicChargeTypeCode?: string | null;
 };
 
 export type RateBreak = {

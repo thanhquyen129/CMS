@@ -15,6 +15,7 @@ public sealed record ChargeVatReadinessDto(
     int CostsUnmapped,
     int RevenuesUnmapped,
     int RatingDetailsUnmapped,
+    int SurchargeVersionsUnmapped,
     string Note);
 
 public sealed record GetChargeVatReadinessQuery : IRequest<ChargeVatReadinessDto>;
@@ -54,6 +55,7 @@ public sealed class GetChargeVatReadinessQueryHandler : IRequestHandler<GetCharg
             await _db.Costs.AsNoTracking().CountAsync(c => c.RecordStatus == "active" && c.EconomicChargeTypeId == null, cancellationToken),
             await _db.Revenues.AsNoTracking().CountAsync(r => r.RecordStatus == "active" && r.EconomicChargeTypeId == null, cancellationToken),
             await _db.RatingDetails.AsNoTracking().CountAsync(d => d.EconomicChargeTypeId == null, cancellationToken),
-            "VAT để trống là chưa khai báo, không phải 0%. Báo cáo chỉ đọc, không sửa phiên bản đã phát hành hay chứng từ cũ. Giá lịch sử đã gồm VAT hay chưa phải đối soát trên dữ liệu thật trước khi coi giá niêm yết là trước VAT.");
+            await _db.SurchargeVersions.AsNoTracking().CountAsync(v => v.EconomicChargeTypeId == null, cancellationToken),
+            "VAT để trống là chưa khai báo, không phải 0%. Phụ phí cũ chưa gắn khoản mục được báo unmapped, không đoán từ mã. Báo cáo chỉ đọc, không sửa phiên bản đã phát hành hay chứng từ cũ. Giá lịch sử đã gồm VAT hay chưa phải đối soát trên dữ liệu thật trước khi coi giá niêm yết là trước VAT.");
     }
 }

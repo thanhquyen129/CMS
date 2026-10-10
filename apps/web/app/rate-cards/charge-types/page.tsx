@@ -33,7 +33,7 @@ export default async function ChargeTypesPage() {
               VAT chưa khai báo: bảng giá {readiness.data.rateVersionsMissingVat}, phụ phí {readiness.data.surchargeVersionsMissingVat}, tính giá {readiness.data.ratingDetailsMissingVat}, chi phí {readiness.data.costsMissingVat}, doanh thu {readiness.data.revenuesMissingVat}.
             </p>
             <p>
-              Chưa gắn khoản mục: chi phí {readiness.data.costsUnmapped}, doanh thu {readiness.data.revenuesUnmapped}, tính giá {readiness.data.ratingDetailsUnmapped}.
+              Chưa gắn khoản mục: phụ phí {readiness.data.surchargeVersionsUnmapped}, chi phí {readiness.data.costsUnmapped}, doanh thu {readiness.data.revenuesUnmapped}, tính giá {readiness.data.ratingDetailsUnmapped}.
             </p>
             <p className="muted small">{readiness.data.note}</p>
           </div>

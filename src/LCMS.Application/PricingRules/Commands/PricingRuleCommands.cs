@@ -1,6 +1,7 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.EconomicCharges;
 using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -179,7 +180,8 @@ public sealed record AddPricingRuleComponentCommand(
     string CurrencyCode,
     int SortOrder,
     string? CalcMethod = null,
-    string? DependsOnCode = null) : IRequest<Guid>;
+    string? DependsOnCode = null,
+    Guid? EconomicChargeTypeId = null) : IRequest<Guid>;
 
 public sealed class AddPricingRuleComponentCommandValidator : AbstractValidator<AddPricingRuleComponentCommand>
 {
@@ -297,7 +299,10 @@ public sealed class AddPricingRuleComponentCommandHandler : IRequestHandler<AddP
             CurrencyCode = currency,
             SortOrder = request.SortOrder,
             CalcMethod = string.IsNullOrWhiteSpace(request.CalcMethod) ? null : request.CalcMethod.Trim().ToLowerInvariant(),
-            DependsOnCode = string.IsNullOrWhiteSpace(request.DependsOnCode) ? null : request.DependsOnCode.Trim()
+            DependsOnCode = string.IsNullOrWhiteSpace(request.DependsOnCode) ? null : request.DependsOnCode.Trim(),
+            EconomicChargeTypeId = request.EconomicChargeTypeId is null
+                ? null
+                : await EconomicChargeTypeRules.RequireActiveAsync(_db, request.EconomicChargeTypeId, cancellationToken)
         };
 
         _db.PricingRuleComponents.Add(component);
@@ -449,7 +454,9 @@ public sealed record PricingRuleComponentDto(
     string? RevenueTypeCode,
     decimal Amount,
     string CurrencyCode,
-    int SortOrder);
+    int SortOrder,
+    Guid? EconomicChargeTypeId = null,
+    string? EconomicChargeTypeCode = null);
 
 public sealed record RateBreakDto(
     Guid Id,
@@ -536,11 +543,21 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
         components = components
             .Where(c => !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
             .ToList();
+        var chargeTypeIds = components
+            .Where(c => c.EconomicChargeTypeId != null)
+            .Select(c => c.EconomicChargeTypeId!.Value)
+            .Distinct()
+            .ToList();
+        var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => chargeTypeIds.Contains(t.Id))
+            .ToDictionaryAsync(t => t.Id, t => t.Code, cancellationToken);
         var byRule = components
             .GroupBy(c => c.PricingRuleId)
             .ToDictionary(g => g.Key, g => g.Select(c => new PricingRuleComponentDto(
                 c.Id, c.PricingRuleId, c.Code, c.Name, c.FinancialNature,
-                c.CostTypeCode, c.RevenueTypeCode, c.Amount, c.CurrencyCode, c.SortOrder))
+                c.CostTypeCode, c.RevenueTypeCode, c.Amount, c.CurrencyCode, c.SortOrder,
+                c.EconomicChargeTypeId,
+                c.EconomicChargeTypeId is Guid typeId && chargeTypes.TryGetValue(typeId, out var typeCode) ? typeCode : null))
                 .ToList());
 
         var breaks = ruleIds.Count == 0

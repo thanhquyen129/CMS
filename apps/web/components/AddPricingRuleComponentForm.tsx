@@ -7,15 +7,19 @@ import { CatalogCodeSelect } from "@/components/CatalogCodeSelect";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { formatApiErrorMessage } from "@/lib/api-error";
 
+type ChargeTypeOption = { id: string; code: string; name: string };
+
 type Props = {
   ruleId: string;
   defaultCurrency: string;
+  chargeTypes?: ChargeTypeOption[];
 };
 
 /** Adds a Cost/Revenue component on a draft pricing rule (UI-03). */
 export function AddPricingRuleComponentForm({
   ruleId,
   defaultCurrency,
+  chargeTypes = [],
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +56,7 @@ export function AddPricingRuleComponentForm({
         .trim()
         .toUpperCase(),
       sortOrder: 0,
+      economicChargeTypeId: String(fd.get("economicChargeTypeId") ?? "").trim() || null,
     };
 
     if (!body.code || !body.name) {
@@ -128,6 +133,15 @@ export function AddPricingRuleComponentForm({
             maxLength={256}
             disabled={busy}
           />
+        </div>
+        <div className="field">
+          <label htmlFor={`comp-charge-${ruleId}`}>Khoản mục kinh tế</label>
+          <select id={`comp-charge-${ruleId}`} name="economicChargeTypeId" defaultValue="" disabled={busy}>
+            <option value="">Chưa gắn — không đoán từ mã</option>
+            {chargeTypes.map((type) => (
+              <option key={type.id} value={type.id}>{type.code} — {type.name}</option>
+            ))}
+          </select>
         </div>
         <div className="field">
           <label htmlFor={`comp-nature-${ruleId}`}>Tính chất</label>

@@ -20,7 +20,10 @@ public sealed record SurchargeDto(
     DateTimeOffset? EffectiveFrom,
     DateTimeOffset? EffectiveTo,
     string Direction,
-    string SourceKind);
+    string SourceKind,
+    Guid? EconomicChargeTypeId = null,
+    string? EconomicChargeTypeCode = null,
+    string? EconomicChargeTypeName = null);
 
 public sealed record ListSurchargesQuery : IRequest<IReadOnlyList<SurchargeDto>>;
 
@@ -74,6 +77,14 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
             .ToListAsync(cancellationToken);
         var cardIds = scopes.Select(s => s.RateCardId!.Value).Distinct().ToList();
         var cards = await _db.RateCards.AsNoTracking().Where(c => cardIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, cancellationToken);
+        var chargeTypeIds = latest.Values
+            .Where(v => v.EconomicChargeTypeId != null)
+            .Select(v => v.EconomicChargeTypeId!.Value)
+            .Distinct()
+            .ToList();
+        var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => chargeTypeIds.Contains(t.Id))
+            .ToDictionaryAsync(t => t.Id, cancellationToken);
 
         return masters.Select(master =>
         {
@@ -82,6 +93,7 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
             var mode = conditions.FirstOrDefault(c => c.SurchargeRuleId == (rule?.Id ?? Guid.Empty))?.ValueText;
             var cardId = scopes.FirstOrDefault(s => s.SurchargeRuleId == (rule?.Id ?? Guid.Empty))?.RateCardId;
             cards.TryGetValue(cardId ?? Guid.Empty, out var card);
+            chargeTypes.TryGetValue(version?.EconomicChargeTypeId ?? Guid.Empty, out var chargeType);
             return new SurchargeDto(
                 master.Id,
                 master.Code,
@@ -96,7 +108,10 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
                 version?.ValidFrom,
                 version?.ValidTo,
                 master.Direction,
-                "independent");
+                "independent",
+                version?.EconomicChargeTypeId,
+                chargeType?.Code,
+                chargeType?.Name);
         }).ToList();
     }
 

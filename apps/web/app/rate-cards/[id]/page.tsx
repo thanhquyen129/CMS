@@ -27,6 +27,7 @@ import {
 } from "@/lib/rate-cards";
 import {
   getRateCard,
+  listEconomicChargeTypes,
   listPricingRules,
   listRateVersions,
 } from "@/lib/rate-cards-server";
@@ -61,10 +62,12 @@ export default async function RateCardDetailPage({
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
 
-  const [cardRes, versionsRes] = await Promise.all([
+  const [cardRes, versionsRes, chargeTypesRes] = await Promise.all([
     getRateCard(id),
     listRateVersions(id),
+    listEconomicChargeTypes(),
   ]);
+  const chargeTypes = chargeTypesRes.ok ? chargeTypesRes.data.filter((row) => row.isActive) : [];
 
   if (!cardRes.ok && cardRes.status === 404) {
     return (
@@ -244,7 +247,9 @@ export default async function RateCardDetailPage({
                                     <div>
                                       {(r.components ?? []).map((c) => (
                                         <div key={c.id}>
-                                          {c.code} ·{" "}
+                                          {c.code}
+                                          {c.economicChargeTypeCode ? ` · ${c.economicChargeTypeCode}` : " · chưa gắn khoản mục"}
+                                          {" · "}
                                           {c.financialNature === "revenue"
                                             ? "Doanh thu"
                                             : "Chi phí"}{" "}
@@ -333,6 +338,7 @@ export default async function RateCardDetailPage({
                           key={r.id}
                           ruleId={r.id}
                           defaultCurrency={r.currencyCode || card.currencyCode}
+                          chargeTypes={chargeTypes}
                         />
                       ))}
                       {rules.length > 0 ? (

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace LCMS.Api.Tests;
 
@@ -9,6 +10,7 @@ public sealed class IndependentSurchargeTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
     private readonly LcmsApiFactory _factory;
+    private readonly Dictionary<Guid, Guid> _chargeTypes = new();
     private HttpClient _client = null!;
 
     public IndependentSurchargeTests(LcmsApiFactory factory) => _factory = factory;
@@ -522,9 +524,28 @@ public sealed class IndependentSurchargeTests : IAsyncLifetime
 
     private async Task<CreatedSurcharge> CreateSurchargeAsync(Guid tenantId, object body)
     {
-        var res = await PostAsync(tenantId, "/api/surcharges", body);
+        var typeId = await EnsureChargeTypeAsync(tenantId);
+        var node = JsonSerializer.SerializeToNode(body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })!.AsObject();
+        if (!node.ContainsKey("economicChargeTypeId"))
+        {
+            node["economicChargeTypeId"] = typeId.ToString();
+        }
+
+        var res = await PostAsync(tenantId, "/api/surcharges", node);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<CreatedSurcharge>(Json))!;
+    }
+
+    private async Task<Guid> EnsureChargeTypeAsync(Guid tenantId)
+    {
+        if (_chargeTypes.TryGetValue(tenantId, out var existing))
+        {
+            return existing;
+        }
+
+        var created = await PostIdAsync(tenantId, "/api/economic-charge-types", new { code = "DONGGO", name = "Đóng gói" });
+        _chargeTypes[tenantId] = created;
+        return created;
     }
 
     private async Task<Guid> PostIdAsync(Guid tenantId, string url, object body)

@@ -14,7 +14,7 @@ import { formatDateVi } from "@/lib/money";
 import { listSurcharges } from "@/lib/rate-cards-server";
 import { MigrateLegacySurchargesButton } from "@/components/MigrateLegacySurchargesButton";
 
-type SearchParams = Promise<{ q?: string; mode?: string; status?: string; direction?: string }>;
+type SearchParams = Promise<{ q?: string; mode?: string; status?: string; direction?: string; charge?: string }>;
 
 export default async function SurchargesPage({
   searchParams,
@@ -29,6 +29,7 @@ export default async function SurchargesPage({
   const mode = (sp.mode ?? "").trim().toLowerCase();
   const status = (sp.status ?? "").trim().toLowerCase();
   const direction = (sp.direction ?? "").trim().toLowerCase();
+  const charge = (sp.charge ?? "").trim().toLowerCase();
 
   const rows = await listSurcharges();
   const all = rows.ok ? rows.data : [];
@@ -41,6 +42,8 @@ export default async function SurchargesPage({
     if (status === "published" && row.versionStatus !== "published") return false;
     if (status === "draft" && row.versionStatus === "published") return false;
     if (direction && (row.direction ?? "").toLowerCase() !== direction) return false;
+    if (charge === "unmapped" && row.economicChargeTypeCode) return false;
+    if (charge && charge !== "unmapped" && (row.economicChargeTypeCode ?? "").toLowerCase() !== charge) return false;
     return true;
   });
 
@@ -78,7 +81,7 @@ export default async function SurchargesPage({
 
         <FilterBar
           action="/rate-cards/surcharges"
-          resetHref={sp.q || sp.mode || sp.status || sp.direction ? "/rate-cards/surcharges" : undefined}
+          resetHref={sp.q || sp.mode || sp.status || sp.direction || sp.charge ? "/rate-cards/surcharges" : undefined}
           fields={[
             {
               kind: "search",
@@ -110,6 +113,19 @@ export default async function SurchargesPage({
                 { value: "buy", label: "Mua" },
                 { value: "sell", label: "Bán" },
                 { value: "both", label: "Cả hai" },
+              ],
+            },
+            {
+              kind: "select",
+              name: "charge",
+              label: "Khoản mục",
+              defaultValue: sp.charge ?? "",
+              options: [
+                { value: "", label: "Tất cả" },
+                { value: "unmapped", label: "Chưa gắn" },
+                ...Array.from(new Set(all.map((row) => row.economicChargeTypeCode).filter((code): code is string => Boolean(code))))
+                  .sort()
+                  .map((code) => ({ value: code, label: code })),
               ],
             },
             {
@@ -148,6 +164,7 @@ export default async function SurchargesPage({
                 <tr>
                   <th>Mã</th>
                   <th>Tên phụ phí</th>
+                  <th>Khoản mục kinh tế</th>
                   <th>Chiều</th>
                   <th>Cách tính</th>
                   <th>Đơn vị</th>
@@ -164,6 +181,7 @@ export default async function SurchargesPage({
                       <code>{row.code}</code>
                     </td>
                     <td>{row.name}</td>
+                    <td>{row.economicChargeTypeCode ? `${row.economicChargeTypeCode} — ${row.economicChargeTypeName}` : "Chưa gắn"}</td>
                     <td>{directionLabel(row.direction)}</td>
                     <td>{row.calcMethod || "—"}</td>
                     <td>

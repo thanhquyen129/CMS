@@ -34,7 +34,9 @@ internal sealed class SurchargeVersionConfiguration : IEntityTypeConfiguration<S
         builder.Property(e => e.VersionNo).IsRequired();
         builder.Property(e => e.PublishStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.VatRate).HasPrecision(9, 4);
+        builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.SurchargeId, e.VersionNo }).IsUnique().HasFilter("deleted_at IS NULL");
+        builder.HasIndex(e => new { e.TenantId, e.EconomicChargeTypeId });
         builder.HasIndex(e => new { e.TenantId, e.PublishStatus, e.ValidFrom });
         builder.HasOne(e => e.Surcharge).WithMany().HasForeignKey(e => e.SurchargeId).OnDelete(DeleteBehavior.Restrict);
     }

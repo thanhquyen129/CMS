@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.EconomicCharges;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Common;
 using LCMS.Domain.Entities;
@@ -46,7 +47,8 @@ public sealed record CreateSurchargeCommand(
     DateTimeOffset? ValidTo,
     bool Publish,
     SurchargeRuleInput Rule,
-    decimal? VatRate = null) : IRequest<CreateSurchargeResult>;
+    decimal? VatRate = null,
+    Guid? EconomicChargeTypeId = null) : IRequest<CreateSurchargeResult>;
 
 public sealed record CreateSurchargeResult(Guid SurchargeId, Guid VersionId);
 
@@ -128,6 +130,8 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
             Direction = direction,
             Status = SurchargeStatuses.Active
         };
+        var chargeTypeId = await EconomicChargeTypeRules.RequireActiveAsync(
+            _db, request.EconomicChargeTypeId, cancellationToken);
         var version = new SurchargeVersion
         {
             TenantId = tenantId,
@@ -136,7 +140,8 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
             PublishStatus = SurchargeVersionStatuses.Draft,
             ValidFrom = request.ValidFrom,
             ValidTo = request.ValidTo,
-            VatRate = request.VatRate
+            VatRate = request.VatRate,
+            EconomicChargeTypeId = chargeTypeId
         };
         if (request.Publish)
         {
@@ -162,7 +167,8 @@ public sealed record UpdateSurchargeVersionCommand(
     DateTimeOffset? ValidFrom,
     DateTimeOffset? ValidTo,
     SurchargeRuleInput Rule,
-    decimal? VatRate = null) : IRequest<Guid>;
+    decimal? VatRate = null,
+    Guid? EconomicChargeTypeId = null) : IRequest<Guid>;
 
 public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<UpdateSurchargeVersionCommand, Guid>
 {
@@ -201,6 +207,13 @@ public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<Updat
         version.ValidFrom = request.ValidFrom;
         version.ValidTo = request.ValidTo;
         version.VatRate = request.VatRate;
+        version.EconomicChargeTypeId = request.EconomicChargeTypeId is null
+            ? version.EconomicChargeTypeId
+            : await EconomicChargeTypeRules.RequireActiveAsync(_db, request.EconomicChargeTypeId, cancellationToken);
+        if (version.EconomicChargeTypeId is null)
+        {
+            await EconomicChargeTypeRules.RequireActiveAsync(_db, null, cancellationToken);
+        }
         SurchargePartnerRules.Ensure(direction, request.Rule);
         await SurchargeGraph.ReplaceRulesAsync(_db, _tenant.TenantId!.Value, version.Id, request.Rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -285,6 +298,11 @@ public sealed class PublishSurchargeVersionCommandHandler : IRequestHandler<Publ
             throw new ConflictAppException("Phiên bản phụ phí chưa có công thức.");
         }
 
+        if (version.EconomicChargeTypeId is null)
+        {
+            throw new ConflictAppException("Chọn khoản mục kinh tế trước khi phát hành. Dữ liệu cũ chưa gắn khoản mục không được đoán.");
+        }
+
         version.PublishStatus = SurchargeVersionStatuses.Published;
         version.PublishedAt = DateTimeOffset.UtcNow;
         version.ValidFrom ??= version.PublishedAt;
@@ -333,7 +351,8 @@ public sealed class CreateSurchargeVersionCommandHandler : IRequestHandler<Creat
             PublishStatus = SurchargeVersionStatuses.Draft,
             ValidFrom = latest.ValidFrom,
             ValidTo = latest.ValidTo,
-            VatRate = latest.VatRate
+            VatRate = latest.VatRate,
+            EconomicChargeTypeId = latest.EconomicChargeTypeId
         };
         _db.SurchargeVersions.Add(next);
         await SurchargeGraph.CloneRulesAsync(_db, tenantId, latest.Id, next.Id, cancellationToken);

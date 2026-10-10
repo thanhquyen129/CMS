@@ -49,7 +49,8 @@ public sealed record SurchargeCandidate(
     IReadOnlyList<SurchargeCondition> Conditions,
     IReadOnlyList<SurchargeScope> Scopes,
     IReadOnlyList<SurchargeBreak> Breaks,
-    decimal? VatRate = null);
+    decimal? VatRate = null,
+    Guid? EconomicChargeTypeId = null);
 
 public sealed record SurchargeCharge(
     SurchargeCandidate Rule,
@@ -490,7 +491,8 @@ public static class SurchargeRatingApplier
                 conditions.Where(c => c.SurchargeRuleId == rule.Id).ToList(),
                 scopes.Where(s => s.SurchargeRuleId == rule.Id).ToList(),
                 breaks.Where(b => b.SurchargeRuleId == rule.Id).ToList(),
-                surchargeVersion.VatRate);
+                surchargeVersion.VatRate,
+                surchargeVersion.EconomicChargeTypeId);
         }).ToList();
 
         var ctx = new SurchargeMatchContext(
@@ -555,7 +557,8 @@ public static class SurchargeRatingApplier
                 LineFxAsOf = reportingFx.AsOf,
                 LineFxSource = reportingFx.Source,
                 VatRate = charge.Rule.VatRate,
-                PartnerSuggestedId = suggested
+                PartnerSuggestedId = suggested,
+                EconomicChargeTypeId = charge.Rule.EconomicChargeTypeId
             });
         }
 

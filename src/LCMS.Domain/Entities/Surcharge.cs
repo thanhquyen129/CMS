@@ -33,6 +33,9 @@ public sealed class SurchargeVersion : TenantEntityBase
     /// <summary>Declared VAT percent. Null means undeclared, not 0%.</summary>
     public decimal? VatRate { get; set; }
 
+    /// <summary>Snapshot of the economic charge. Null on legacy rows means unmapped, not a guess from the surcharge code.</summary>
+    public Guid? EconomicChargeTypeId { get; set; }
+
     public Surcharge? Surcharge { get; set; }
 
     public bool IsPublished =>

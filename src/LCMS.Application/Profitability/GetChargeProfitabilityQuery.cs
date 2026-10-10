@@ -39,6 +39,13 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
         }
 
         var billIds = await ResolveBillsAsync(request, cancellationToken);
+        var orderLinks = request.OrderId is null
+            ? new Dictionary<Guid, int>()
+            : await _db.OrderBillLinks.AsNoTracking()
+                .Where(l => billIds.Contains(l.BillId))
+                .GroupBy(l => l.BillId)
+                .Select(g => new { g.Key, Count = g.Select(x => x.OrderId).Distinct().Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken);
         var reporting = await _reporting.GetAsync(cancellationToken);
         var names = await _db.EconomicChargeTypes.AsNoTracking()
             .ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
@@ -60,22 +67,24 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
             var actual = cost.ActualAmount is decimal actualAmount
                 ? ReportingValue.Of(cost, actualAmount, reporting)
                 : null;
+            var costFactor = OrderFactor(request.OrderId, cost.BillId, orderLinks);
             slices.Add(Slice(
                 cost.EconomicChargeTypeId,
                 cost.CostTypeCode,
                 names,
                 "cost",
                 cost.FinancialMaturity,
-                expected,
-                confirmed,
-                actual,
+                Scale(expected, costFactor),
+                Scale(confirmed, costFactor),
+                Scale(actual, costFactor),
                 cost.Id,
                 "cost",
                 cost.VendorPartyId,
                 cost.BillId,
                 expected is null,
                 cost.ConfirmedAmount is not null && confirmed is null,
-                cost.ActualAmount is not null && actual is null));
+                cost.ActualAmount is not null && actual is null,
+                costFactor));
         }
 
         foreach (var revenue in revenues)
@@ -87,22 +96,24 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
             var actual = revenue.ActualAmount is decimal actualAmount
                 ? ReportingValue.Of(revenue, actualAmount, reporting)
                 : null;
+            var revenueFactor = OrderFactor(request.OrderId, revenue.BillId, orderLinks);
             slices.Add(Slice(
                 revenue.EconomicChargeTypeId,
                 revenue.RevenueTypeCode,
                 names,
                 "revenue",
                 revenue.FinancialMaturity,
-                expected,
-                confirmed,
-                actual,
+                Scale(expected, revenueFactor),
+                Scale(confirmed, revenueFactor),
+                Scale(actual, revenueFactor),
                 revenue.Id,
                 "revenue",
                 revenue.CustomerPartyId,
                 revenue.BillId,
                 expected is null,
                 revenue.ConfirmedAmount is not null && confirmed is null,
-                revenue.ActualAmount is not null && actual is null));
+                revenue.ActualAmount is not null && actual is null,
+                revenueFactor));
         }
 
         var allocated = await (
@@ -120,22 +131,24 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
             var share = row.detail.ManualOverrideAmount ?? row.detail.AllocatedAmount;
             var reportingShare = ReportingValue.Of(row.cost, share, reporting);
             var layers = ChargeProfitability.LayersForAllocation(row.cost.FinancialMaturity, reportingShare);
+            var allocationFactor = OrderFactor(request.OrderId, row.detail.BillId, orderLinks);
             slices.Add(Slice(
                 row.cost.EconomicChargeTypeId,
                 row.cost.CostTypeCode,
                 names,
                 "cost",
                 row.cost.FinancialMaturity,
-                layers.Expected,
-                layers.Confirmed,
-                layers.Actual,
+                Scale(layers.Expected, allocationFactor),
+                Scale(layers.Confirmed, allocationFactor),
+                Scale(layers.Actual, allocationFactor),
                 row.cost.Id,
                 "allocation",
                 row.cost.VendorPartyId,
                 row.detail.BillId,
                 layers.ExpectedFx,
                 layers.ConfirmedFx,
-                layers.ActualFx));
+                layers.ActualFx,
+                allocationFactor));
         }
 
         return ChargeProfitability.Compose(view, reporting, slices);
@@ -190,7 +203,8 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
         Guid? billId,
         bool expectedFx = false,
         bool confirmedFx = false,
-        bool actualFx = false)
+        bool actualFx = false,
+        decimal attributionFactor = 1m)
     {
         var chargeCode = string.IsNullOrWhiteSpace(code) ? "UNMAPPED" : code.Trim();
         var chargeName = chargeTypeId is Guid id && names.TryGetValue(id, out var name) ? name : chargeCode;
@@ -209,6 +223,22 @@ public sealed class GetChargeProfitabilityQueryHandler : IRequestHandler<GetChar
             billId,
             expectedFx,
             confirmedFx,
-            actualFx);
+            actualFx,
+            attributionFactor);
     }
+
+    private static decimal OrderFactor(Guid? orderId, Guid? billId, IReadOnlyDictionary<Guid, int> orderLinks)
+    {
+        if (orderId is null || billId is not Guid id)
+        {
+            return 1m;
+        }
+
+        return orderLinks.TryGetValue(id, out var links) && links > 1 ? 1m / links : 1m;
+    }
+
+    private static decimal? Scale(decimal? amount, decimal factor) =>
+        amount is null || factor == 1m
+            ? amount
+            : decimal.Round(amount.Value * factor, 4, MidpointRounding.AwayFromZero);
 }

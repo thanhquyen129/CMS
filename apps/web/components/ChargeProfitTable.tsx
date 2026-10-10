@@ -51,6 +51,9 @@ export function ChargeProfitTable({ data }: { data: ChargeProfitability }) {
                           {index > 0 ? " · " : null}
                           <Link className="row-link" href={sourceHref(source)}>
                             {sourceLabel(source)}
+                            {source.attributionFactor != null && source.attributionFactor < 1
+                              ? ` (${source.attributionFactor} Bill)`
+                              : ""}
                           </Link>
                         </span>
                       ))}

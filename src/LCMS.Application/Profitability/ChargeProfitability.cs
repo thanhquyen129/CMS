@@ -15,7 +15,8 @@ public sealed record ChargeProfitSlice(
     Guid? BillId,
     bool ExpectedFxMissing = false,
     bool ConfirmedFxMissing = false,
-    bool ActualFxMissing = false);
+    bool ActualFxMissing = false,
+    decimal AttributionFactor = 1m);
 
 public sealed record ChargeProfitSourceDto(
     Guid SourceId,
@@ -23,7 +24,8 @@ public sealed record ChargeProfitSourceDto(
     string Side,
     Guid? BillId,
     Guid? PartnerId,
-    string PeakMaturity);
+    string PeakMaturity,
+    decimal AttributionFactor = 1m);
 
 public sealed record ChargeProfitRowDto(
     Guid? EconomicChargeTypeId,
@@ -81,6 +83,12 @@ public static class ChargeProfitability
             maturity == "actual" && missing);
     }
 
+    /// <summary>One bill linked to several orders contributes an equal share to each order. The bill view stays whole.</summary>
+    public static decimal OrderShare(decimal amount, int linkedOrders) =>
+        linkedOrders <= 1
+            ? amount
+            : decimal.Round(amount / linkedOrders, 4, MidpointRounding.AwayFromZero);
+
     public static ChargeProfitabilityDto Compose(string view, string? reportingCurrency, IReadOnlyList<ChargeProfitSlice> lines)
     {
         var normalized = view.Trim().ToLowerInvariant();
@@ -130,7 +138,7 @@ public static class ChargeProfitability
         var cost = Sum(costs, view);
         var revenue = Sum(revenues, view);
         var sources = lines.Select(l => new ChargeProfitSourceDto(
-            l.SourceId, l.SourceKind, l.Side, l.BillId, l.PartnerId, l.PeakMaturity)).ToList();
+            l.SourceId, l.SourceKind, l.Side, l.BillId, l.PartnerId, l.PeakMaturity, l.AttributionFactor)).ToList();
 
         if (chargeTypeId is null || costs.Count == 0 || revenues.Count == 0 || cost is null || revenue is null)
         {

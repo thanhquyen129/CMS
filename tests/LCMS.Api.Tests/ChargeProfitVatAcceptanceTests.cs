@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using LCMS.Domain.Entities;
+using LCMS.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LCMS.Api.Tests;
 
@@ -292,6 +295,206 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
         Assert.Contains(still.Versions, v => v.Id == next && v.EconomicChargeTypeId == donggo.Id);
     }
 
+    [Fact]
+    public async Task Explicit_zero_vat_stays_zero_and_null_legacy_is_not_rewritten()
+    {
+        var tenantId = await CreateTenantAsync();
+        var charge = await PostOk(tenantId, "/api/economic-charge-types", new { code = "FREIGHT", name = "Cước chính" });
+        var billId = await CreateBillAsync(tenantId, "BL-VAT0");
+        var card = await CreateCardAsync(tenantId, "RC-VAT0", "customer");
+        var zeroVersion = await CreateVersionAsync(tenantId, card, 0m);
+        await AddRuleAsync(tenantId, zeroVersion, "FREIGHT", 150_000m);
+        await PublishAsync(tenantId, zeroVersion);
+        var rated = await GetRatingAsync(tenantId, await RateAsync(tenantId, new { billId, rateVersionId = zeroVersion, quantity = 1m }));
+        var line = rated.Details.Single(d => d.ComponentCode == "FREIGHT");
+        Assert.Equal(0m, line.VatRate);
+        Assert.Equal(0m, line.VatAmount);
+        Assert.Equal(150_000m, line.GrossAmount);
+
+        var blankVersion = await CreateVersionAsync(tenantId, card, null);
+        await AddRuleAsync(tenantId, blankVersion, "FREIGHT", 150_000m);
+        await PublishAsync(tenantId, blankVersion);
+        var blankId = await RateAsync(tenantId, new { billId, rateVersionId = blankVersion, quantity = 1m });
+        var blank = await GetRatingAsync(tenantId, blankId);
+        Assert.Null(blank.Details.Single(d => d.ComponentCode == "FREIGHT").VatRate);
+        var reread = await GetRatingAsync(tenantId, blankId);
+        Assert.Null(reread.Details.Single().VatRate);
+        _ = charge;
+    }
+
+    [Fact]
+    public async Task Bill_can_profit_while_one_charge_stays_a_loss()
+    {
+        var tenantId = await CreateTenantAsync();
+        var donggo = await PostOk(tenantId, "/api/economic-charge-types", new { code = "DONGGO", name = "Đóng gói" });
+        var freight = await PostOk(tenantId, "/api/economic-charge-types", new { code = "FREIGHT", name = "Cước chính" });
+        var billId = await CreateBillAsync(tenantId, "BL-MIX");
+        await PostOk(tenantId, "/api/costs", new { billId, attributionType = "direct", amount = 150_000m, currencyCode = "VND", economicChargeTypeId = donggo.Id, costTypeCode = "DONGGO" });
+        await PostOk(tenantId, "/api/revenues", new { billId, amount = 100_000m, currencyCode = "VND", economicChargeTypeId = donggo.Id, revenueTypeCode = "DONGGO" });
+        await PostOk(tenantId, "/api/costs", new { billId, attributionType = "direct", amount = 10_000m, currencyCode = "VND", economicChargeTypeId = freight.Id, costTypeCode = "FREIGHT" });
+        await PostOk(tenantId, "/api/revenues", new { billId, amount = 200_000m, currencyCode = "VND", economicChargeTypeId = freight.Id, revenueTypeCode = "FREIGHT" });
+
+        var profit = await GetProfitAsync(tenantId, $"/api/bills/{billId}/charge-profitability?view=expected");
+        var loss = profit.Rows.Single(r => r.ChargeCode == "DONGGO");
+        var gain = profit.Rows.Single(r => r.ChargeCode == "FREIGHT");
+        Assert.Equal(-50_000m, loss.ProfitReporting);
+        Assert.True(loss.NegativeFlag);
+        Assert.Equal(190_000m, gain.ProfitReporting);
+        Assert.False(gain.NegativeFlag);
+        Assert.True(profit.Rows.Sum(r => r.ProfitReporting ?? 0m) > 0m);
+    }
+
+    [Fact]
+    public async Task Shared_bill_is_split_across_orders_and_draft_charge_type_can_change()
+    {
+        var tenantId = await CreateTenantAsync();
+        var donggo = await PostOk(tenantId, "/api/economic-charge-types", new { code = "DONGGO", name = "Đóng gói" });
+        var pickup = await PostOk(tenantId, "/api/economic-charge-types", new { code = "PICKUP", name = "Lấy hàng" });
+        var billId = await CreateBillAsync(tenantId, "BL-NN");
+        await PostOk(tenantId, "/api/costs", new { billId, attributionType = "direct", amount = 40_000m, currencyCode = "VND", economicChargeTypeId = donggo.Id, costTypeCode = "DONGGO" });
+        await PostOk(tenantId, "/api/revenues", new { billId, amount = 100_000m, currencyCode = "VND", economicChargeTypeId = donggo.Id, revenueTypeCode = "DONGGO" });
+        var orderA = await PutId(tenantId, "/api/orders", new { orderNo = "OR-NN-A", sourceSystem = "lcms_manual", externalId = "or-nn-a", isActive = true });
+        var orderB = await PutId(tenantId, "/api/orders", new { orderNo = "OR-NN-B", sourceSystem = "lcms_manual", externalId = "or-nn-b", isActive = true });
+        (await SendAsync(tenantId, HttpMethod.Post, $"/api/orders/{orderA}/bills/{billId}", new { })).EnsureSuccessStatusCode();
+        (await SendAsync(tenantId, HttpMethod.Post, $"/api/orders/{orderB}/bills/{billId}", new { })).EnsureSuccessStatusCode();
+
+        var whole = await GetProfitAsync(tenantId, $"/api/bills/{billId}/charge-profitability?view=expected");
+        var left = await GetProfitAsync(tenantId, $"/api/orders/{orderA}/charge-profitability?view=expected");
+        var right = await GetProfitAsync(tenantId, $"/api/orders/{orderB}/charge-profitability?view=expected");
+        Assert.Equal(60_000m, Assert.Single(whole.Rows).ProfitReporting);
+        Assert.Equal(30_000m, Assert.Single(left.Rows).ProfitReporting);
+        Assert.Equal(30_000m, Assert.Single(right.Rows).ProfitReporting);
+        Assert.Equal(0.5m, Assert.Single(left.Rows).Sources[0].AttributionFactor);
+        Assert.Equal(whole.Rows[0].ProfitReporting, left.Rows[0].ProfitReporting + right.Rows[0].ProfitReporting);
+
+        var created = await PostSurchargeAsync(tenantId, new
+        {
+            code = "DG-DRAFT",
+            name = "Đóng gói",
+            direction = "buy",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 1_000m,
+            publish = true,
+            economicChargeTypeId = donggo.Id
+        });
+        var draftId = await PostId(tenantId, $"/api/surcharges/{created.SurchargeId}/versions", new { });
+        var updated = await SendAsync(tenantId, HttpMethod.Put, $"/api/surcharges/{created.SurchargeId}/versions/{draftId}", new
+        {
+            code = "DG-DRAFT",
+            name = "Đóng gói",
+            direction = "buy",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 1_100m,
+            economicChargeTypeId = pickup.Id
+        });
+        updated.EnsureSuccessStatusCode();
+        var detail = await GetAsync<SurchargeBody>(tenantId, $"/api/surcharges/{created.SurchargeId}");
+        Assert.Equal(donggo.Id, detail.Versions.Single(v => v.Id == created.VersionId).EconomicChargeTypeId);
+        Assert.Equal(pickup.Id, detail.Versions.Single(v => v.Id == draftId).EconomicChargeTypeId);
+    }
+
+    [Fact]
+    public async Task Component_charge_type_wins_and_legacy_surcharge_is_excluded_once()
+    {
+        var tenantId = await CreateTenantAsync();
+        var thung = await PostOk(tenantId, "/api/economic-charge-types", new { code = "THUNG", name = "Thùng" });
+        await PostOk(tenantId, "/api/economic-charge-types", new { code = "PACKLINE", name = "Mã trùng cấu phần" });
+        var fuelType = await PostOk(tenantId, "/api/economic-charge-types", new { code = "FUEL", name = "Nhiên liệu" });
+        var billId = await CreateBillAsync(tenantId, "BL-COMP");
+        var card = await CreateCardAsync(tenantId, "RC-COMP", "vendor");
+        var version = await CreateVersionAsync(tenantId, card, null);
+        var ruleId = (await PostOk(tenantId, $"/api/rate-versions/{version}/rules", new { code = "BASE", name = "Cước chính", calcMethod = "fixed", unitAmount = 100m, currencyCode = "VND", sortOrder = 1 })).Id;
+        await PostOk(tenantId, $"/api/pricing-rules/{ruleId}/components", new
+        {
+            code = "PACKLINE",
+            name = "Dòng thùng",
+            financialNature = "cost",
+            amount = 80m,
+            currencyCode = "VND",
+            economicChargeTypeId = thung.Id
+        });
+        await PublishAsync(tenantId, version);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
+            db.PricingRules.Add(new PricingRule
+            {
+                TenantId = tenantId,
+                RateVersionId = version,
+                Code = "FSC",
+                Name = "Fuel surcharge",
+                CalcMethod = "fixed",
+                UnitAmount = 20m,
+                CurrencyCode = "VND",
+                SortOrder = 9,
+                IsActive = true
+            });
+            await db.SaveChangesAsync();
+        }
+
+        await PostSurchargeAsync(tenantId, new
+        {
+            code = "FSC",
+            name = "Phụ phí nhiên liệu",
+            direction = "buy",
+            calculationMode = "fixed_rate",
+            currencyCode = "VND",
+            rateAmountPercent = 7m,
+            publish = true,
+            economicChargeTypeId = fuelType.Id
+        });
+
+        var rating = await GetRatingAsync(tenantId, await RateAsync(tenantId, new { billId, rateVersionId = version, quantity = 1m }));
+        Assert.Equal(thung.Id, rating.Details.Single(d => d.ComponentCode == "PACKLINE").EconomicChargeTypeId);
+        Assert.Equal(7m, rating.Details.Single(d => d.SourceType == "surcharge").Amount);
+        Assert.DoesNotContain(rating.Details, d => d.Amount == 20m);
+        Assert.Contains("FSC", rating.ContextJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(87m, rating.TotalAmount);
+    }
+
+    [Fact]
+    public async Task Partner_change_is_audited_and_document_vat_lines_reconcile()
+    {
+        var tenantId = await CreateTenantAsync();
+        var supplierA = await CreatePartyAsync(tenantId, "NCC-1", "vendor");
+        var supplierB = await CreatePartyAsync(tenantId, "NCC-2", "vendor");
+        await PostOk(tenantId, "/api/economic-charge-types", new { code = "FREIGHT", name = "Cước chính" });
+        var billId = await CreateBillAsync(tenantId, "BL-PAR");
+        var card = await CreateCardAsync(tenantId, "RC-PAR", "vendor");
+        await PutOk(tenantId, $"/api/rate-cards/{card}/partner", new { supplierPartyId = supplierA });
+        var version = await CreateVersionAsync(tenantId, card, null);
+        await AddRuleAsync(tenantId, version, "FREIGHT", 100_000m);
+        await PublishAsync(tenantId, version);
+        await RateAsync(tenantId, new { billId, rateVersionId = version, quantity = 1m, seedExpectedCosts = true });
+        var costs = await GetAsync<List<CostDetailBody>>(tenantId, $"/api/costs?billId={billId}");
+        var cost = Assert.Single(costs);
+        var changed = await SendAsync(tenantId, HttpMethod.Post, $"/api/costs/{cost.Id}/partner", new { partyId = supplierB, reason = "Nhà cung cấp thực tế khác giá" });
+        changed.EnsureSuccessStatusCode();
+        var after = await GetAsync<CostDetailBody>(tenantId, $"/api/costs/{cost.Id}");
+        Assert.Equal(supplierB, after.VendorPartyId);
+        Assert.Equal(supplierA, after.PartnerSuggestedId);
+        Assert.True(after.PartnerOverrideRequiresRerate);
+        var audit = await GetAsync<List<AuditBody>>(tenantId, $"/api/audit-events?objectId={cost.Id}");
+        Assert.Contains(audit, e => e.Reason == "Nhà cung cấp thực tế khác giá" && e.BeforeJson != null && e.BeforeJson.Contains(supplierA.ToString(), StringComparison.OrdinalIgnoreCase));
+
+        var documentId = await PostId(tenantId, "/api/financial-documents", new
+        {
+            documentType = "invoice",
+            documentNo = "INV-RND",
+            direction = "payable",
+            totalAmount = 22.7332m,
+            currencyCode = "VND",
+            billId
+        });
+        await PostOk(tenantId, $"/api/financial-documents/{documentId}/lines", new { amount = 11.3666m, description = "Dòng 1", netAmount = 10.3333m, vatRate = 10m });
+        await PostOk(tenantId, $"/api/financial-documents/{documentId}/lines", new { amount = 11.3666m, description = "Dòng 2", netAmount = 10.3333m, vatRate = 10m });
+        var document = await GetAsync<DocumentBody>(tenantId, $"/api/financial-documents/{documentId}");
+        Assert.Equal(2.0666m, document.Lines.Sum(l => l.VatAmount ?? 0m));
+        Assert.Equal(22.7332m, document.Lines.Sum(l => l.Amount));
+    }
+
     private async Task<Guid> CreateTenantAsync()
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code = "TN-" + Guid.NewGuid().ToString("N")[..8], name = "Charge" });
@@ -429,14 +632,16 @@ public sealed class ChargeProfitVatAcceptanceTests : IAsyncLifetime
     private sealed record VersionBody(decimal? VatRate);
     private sealed record CostBody(Guid? VendorPartyId);
     private sealed record ReadinessBody(int RateVersionsMissingVat, string Note);
-    private sealed record RatingBody(decimal TotalAmount, List<DetailBody> Details);
+    private sealed record RatingBody(decimal TotalAmount, List<DetailBody> Details, string? ContextJson = null);
     private sealed record DetailBody(Guid Id, string ComponentCode, string? SourceType, decimal Amount, decimal? VatRate, decimal? VatAmount, decimal? GrossAmount, Guid? EconomicChargeTypeId = null);
     private sealed record CreatedSurchargeBody(Guid SurchargeId, Guid VersionId);
     private sealed record SurchargeBody(Guid Id, List<SurchargeVersionBody> Versions);
     private sealed record SurchargeVersionBody(Guid Id, Guid? EconomicChargeTypeId, string? EconomicChargeTypeCode);
     private sealed record ProfitBody(List<ProfitRow> Rows);
     private sealed record ProfitRow(string ChargeCode, decimal? CostReporting, decimal? RevenueReporting, decimal? ProfitReporting, bool NegativeFlag, List<SourceBody> Sources);
-    private sealed record SourceBody(Guid? PartnerId, string SourceKind);
+    private sealed record SourceBody(Guid? PartnerId, string SourceKind, decimal AttributionFactor = 1m);
+    private sealed record CostDetailBody(Guid Id, Guid? VendorPartyId, Guid? PartnerSuggestedId, bool PartnerOverrideRequiresRerate);
+    private sealed record AuditBody(string? Reason, string? BeforeJson);
     private sealed record DocumentBody(List<LineBody> Lines);
     private sealed record LineBody(decimal Amount, decimal? VatAmount, decimal? VatVarianceAmount);
 }

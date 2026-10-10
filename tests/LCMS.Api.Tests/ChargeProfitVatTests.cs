@@ -137,6 +137,13 @@ public sealed class ChargeProfitVatTests
     }
 
     [Fact]
+    public void Two_orders_each_take_half_of_a_shared_bill()
+    {
+        Assert.Equal(50_000m, ChargeProfitability.OrderShare(100_000m, 2));
+        Assert.Equal(100_000m, ChargeProfitability.OrderShare(100_000m, 1));
+    }
+
+    [Fact]
     public void Missing_fx_keeps_the_side_incomplete()
     {
         var rows = ChargeProfitability.Compose("expected", "USD",

@@ -81,6 +81,7 @@ public sealed class ResolvedRatingContext
     public string Basis { get; init; } = "missing";
     public string? QuantityRuleCode { get; init; }
     public bool RequiresOverride { get; init; }
+    public IReadOnlyList<string> ExcludedLegacySurchargeCodes { get; init; } = [];
     public List<RatingMissingFieldDto> Missing { get; } = [];
 }
 
@@ -133,11 +134,16 @@ public sealed class RatingContextResolver
                 .FirstOrDefaultAsync(cancellationToken));
         }
 
-        var rules = (await _db.PricingRules.AsNoTracking()
+        var storedRules = await _db.PricingRules.AsNoTracking()
             .Where(r => r.RateVersionId == version.Id && r.IsActive)
             .OrderBy(r => r.SortOrder)
             .ThenBy(r => r.Code)
-            .ToListAsync(cancellationToken))
+            .ToListAsync(cancellationToken);
+        var excludedLegacy = storedRules
+            .Where(r => LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
+            .Select(r => r.Code)
+            .ToList();
+        var rules = storedRules
             .Where(r => !LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
             .ToList();
         var applicable = rules
@@ -191,6 +197,9 @@ public sealed class RatingContextResolver
                 RatingReadinessActions.RateCard));
         }
 
+        excludedLegacy.AddRange(rawComponents
+            .Where(c => LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
+            .Select(c => c.Code));
         var components = rawComponents
             .Where(c => ruleIds.Contains(c.PricingRuleId)
                         && !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
@@ -356,7 +365,10 @@ public sealed class RatingContextResolver
             Quantity = quantity,
             Basis = basis,
             QuantityRuleCode = quantityRule,
-            RequiresOverride = requiresOverride
+            RequiresOverride = requiresOverride,
+            ExcludedLegacySurchargeCodes = excludedLegacy
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray()
         };
         ctx.Missing.AddRange(missing);
         return ctx;

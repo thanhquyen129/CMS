@@ -70,7 +70,9 @@ public sealed record CostDto(
     DateTimeOffset? ActualizedAt,
     IReadOnlyList<CostAdjustmentDto> Adjustments,
     IReadOnlyList<CostAllocationDto> Allocations,
-    byte[] RowVersion);
+    byte[] RowVersion,
+    Guid? PartnerSuggestedId = null,
+    bool PartnerOverrideRequiresRerate = false);
 
 public sealed record CostListItemDto(
     Guid Id,
@@ -231,7 +233,9 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             cost.ActualizedAt,
             adjustments,
             allocationDtos,
-            cost.RowVersion);
+            cost.RowVersion,
+            cost.PartnerSuggestedId,
+            cost.PartnerOverrideRequiresRerate);
     }
 }
 

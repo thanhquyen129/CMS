@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-10 — Order share, legacy surcharge exclusion, VAT 0
+
+- An order view splits a bill that is linked to several orders into equal shares and shows the factor. The bill view stays whole. Rating drops a legacy surcharge rule that also exists as an independent surcharge and records the excluded code. Explicit VAT 0% stays 0; a blank rate stays blank. A draft surcharge version can change its economic charge; the published version cannot.
+- Files: `GetChargeProfitabilityQuery.cs`, `RatingReadiness.cs`, `CreateRatingCommand.cs`, `ChargeProfitTable.tsx`, `ChargeProfitVatAcceptanceTests.cs`.
+
 ## 2026-10-10 — Surcharge version stores economic charge type
 
 - New surcharge versions require an active tenant economic charge type. Published versions stay immutable; a new draft copies the snapshot. Rating copies that id onto the surcharge line and does not infer it from the surcharge code. Rate-card components can store the same id. Legacy nulls stay unmapped and are counted on the readiness report.

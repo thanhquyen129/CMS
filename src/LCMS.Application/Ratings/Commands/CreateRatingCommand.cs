@@ -435,7 +435,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             overrideReason = ctx.RequiresOverride ? request.ChargeableOverrideReason?.Trim() : null,
             versionId = version.Id,
             rules = selected.Select(r => r.Code).ToArray(),
-            surcharges = surchargeResult.Trace
+            surcharges = surchargeResult.Trace,
+            excludedLegacySurcharges = ctx.ExcludedLegacySurchargeCodes
         });
 
         if (prior is not null)

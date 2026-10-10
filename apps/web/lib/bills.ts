@@ -205,6 +205,7 @@ export type ChargeProfitSource = {
   billId: string | null;
   partnerId: string | null;
   peakMaturity: string;
+  attributionFactor?: number;
 };
 
 export type ChargeProfitRow = {

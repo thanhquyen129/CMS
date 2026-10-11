@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-11 — HTTPS for cms.a1lplatform.com
+
+- Nginx turns on a Let's Encrypt vhost for cms.a1lplatform.com only when that certificate is on the host. cms.lsslogistics.vn is unchanged. Port 80 keeps the ACME challenge and health checks, then redirects that name to HTTPS. Renewal reloads the proxy.
+- Files: `infra/ssl-a1lplatform.conf`, `infra/entrypoint-ssl.sh`, `infra/docker-compose.host.yml`, `infra/renew-cert.sh`.
+
 ## 2026-10-10 — Order share, legacy surcharge exclusion, VAT 0
 
 - An order view splits a bill that is linked to several orders into equal shares and shows the factor. The bill view stays whole. Rating drops a legacy surcharge rule that also exists as an independent surcharge and records the excluded code. Explicit VAT 0% stays 0; a blank rate stays blank. A draft surcharge version can change its economic charge; the published version cannot.

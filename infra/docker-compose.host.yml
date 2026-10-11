@@ -102,6 +102,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl.conf:/etc/nginx/ssl.conf.available:ro
+      - ./ssl-a1lplatform.conf:/etc/nginx/ssl-a1lplatform.conf:ro
       - ./entrypoint-ssl.sh:/docker-entrypoint.d/40-ssl-setup.sh:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro

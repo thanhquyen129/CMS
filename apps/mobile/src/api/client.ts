@@ -111,7 +111,7 @@ export async function getApiBaseUrl(): Promise<string> {
   if (envUrl) {
     return envUrl.replace(/\/+$/, "");
   }
-  return "http://194.233.89.26";
+  return "https://cms.lsslogistics.vn";
 }
 
 export async function setApiBaseUrl(url: string): Promise<void> {

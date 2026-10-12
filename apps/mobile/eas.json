@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://194.233.89.26",
+        "EXPO_PUBLIC_API_URL": "https://cms.lsslogistics.vn",
         "EXPO_PUBLIC_DEFAULT_TENANT": "ops",
         "EXPO_PUBLIC_SHOW_DEMO_PERSONAS": "true"
       }
@@ -19,7 +19,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://194.233.89.26",
+        "EXPO_PUBLIC_API_URL": "https://cms.lsslogistics.vn",
         "EXPO_PUBLIC_DEFAULT_TENANT": "ops",
         "EXPO_PUBLIC_SHOW_DEMO_PERSONAS": "true"
       }
@@ -27,7 +27,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://194.233.89.26",
+        "EXPO_PUBLIC_API_URL": "https://cms.lsslogistics.vn",
         "EXPO_PUBLIC_DEFAULT_TENANT": "ops",
         "EXPO_PUBLIC_SHOW_DEMO_PERSONAS": "false"
       }

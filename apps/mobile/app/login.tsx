@@ -61,7 +61,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("abc123");
   const [showPassword, setShowPassword] = useState(false);
   const [apiUrl, setApiUrl] = useState(
-    process.env.EXPO_PUBLIC_API_URL ?? "http://194.233.89.26"
+    process.env.EXPO_PUBLIC_API_URL ?? "https://cms.lsslogistics.vn"
   );
   const [showServerConfig, setShowServerConfig] = useState(
     process.env.EXPO_PUBLIC_SHOW_DEMO_PERSONAS !== "false"

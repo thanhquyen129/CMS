@@ -1,28 +1,42 @@
 {
   "expo": {
-    "name": "LCMS Mobile",
+    "name": "LSS LCMS Mobile",
     "slug": "lcms-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "scheme": "lcms",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "vn.lcms.mobile",
+      "bundleIdentifier": "lss.lcms.mobile",
       "infoPlist": {
         "NSCameraUsageDescription": "Ứng dụng cần quyền Camera để quét mã vận đơn (HAWB/MAWB) và chụp ảnh chứng từ tại hiện trường.",
         "NSFaceIDUsageDescription": "Ứng dụng sử dụng Face ID để xác thực bảo mật trước khi phê duyệt hoặc thực hiện thao tác tài chính."
       }
     },
     "android": {
-      "package": "vn.lcms.mobile",
+      "package": "lss.lcms.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F172A"
+      },
       "permissions": [
         "CAMERA",
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
       ]
     },
     "plugins": [
@@ -41,7 +55,12 @@
           "faceIDPermission": "Cho phép LCMS sử dụng Face ID / Sinh trắc học để xác nhận thao tác tài chính."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "4b8658c7-10a1-4969-afb2-b2a585f78c21"
+      }
+    }
   }
 }
-

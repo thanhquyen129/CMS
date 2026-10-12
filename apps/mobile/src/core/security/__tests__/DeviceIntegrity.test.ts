@@ -59,4 +59,15 @@ describe('DeviceIntegrity Security Suite', () => {
       'CẢNH BÁO BẢO MẬT DOANH NGHIỆP'
     );
   });
+
+  it('bypasses blocking in __DEV__ mode so developers on debug cables are not falsely blocked', async () => {
+    (global as any).__frida = true;
+    (global as any).__DEV__ = true;
+
+    // In __DEV__ mode, assertDeviceIntegrityForFinancialAction should resolve without throwing
+    await expect(assertDeviceIntegrityForFinancialAction('Thao tác debug')).resolves.not.toThrow();
+
+    delete (global as any).__DEV__;
+  });
 });
+

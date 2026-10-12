@@ -49,27 +49,30 @@ const DEMO_ROLES = [
     email: "viewer@cms.local",
     desc: "Chỉ xem thông tin vận đơn cơ bản",
   },
+  {
+    role: "Apple Reviewer (Auditor)",
+    email: "reviewer@lsslogistics.vn",
+    desc: "Tài khoản kiểm duyệt App Store: Vận đơn mẫu, chi phí thực địa & e-PoD",
+  },
 ];
 
 export default function LoginScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading, loginWithCredentials } = useAuth();
+  const isDemoEnabled = process.env.EXPO_PUBLIC_SHOW_DEMO_PERSONAS !== "false";
   const [tenantCode, setTenantCode] = useState(
     process.env.EXPO_PUBLIC_DEFAULT_TENANT ?? "ops"
   );
-  const [email, setEmail] = useState("admin@cms.local");
-  const [password, setPassword] = useState("abc123");
+  const [email, setEmail] = useState(isDemoEnabled ? "admin@cms.local" : "");
+  const [password, setPassword] = useState(isDemoEnabled ? "abc123" : "");
   const [showPassword, setShowPassword] = useState(false);
   const [apiUrl, setApiUrl] = useState(
     process.env.EXPO_PUBLIC_API_URL ?? "https://cms.lsslogistics.vn"
   );
-  const [showServerConfig, setShowServerConfig] = useState(
-    process.env.EXPO_PUBLIC_SHOW_DEMO_PERSONAS !== "false"
-  );
-  const [showDemoPersonas, setShowDemoPersonas] = useState(
-    process.env.EXPO_PUBLIC_SHOW_DEMO_PERSONAS !== "false"
-  );
+  const [showServerConfig, setShowServerConfig] = useState(isDemoEnabled);
+  const [showDemoPersonas, setShowDemoPersonas] = useState(isDemoEnabled);
   const [submitting, setSubmitting] = useState(false);
+
 
   useEffect(() => {
     void getApiBaseUrl().then(setApiUrl);

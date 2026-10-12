@@ -175,9 +175,14 @@ export async function checkDeviceIntegrity(): Promise<DeviceIntegrityResult> {
   };
 }
 
+declare const __DEV__: boolean | undefined;
+
 /**
  * Strictly verifies device integrity before executing any financial mutation.
  * Blocks execution immediately if Root, Jailbreak, or Frida is detected.
+ * 
+ * In development mode (__DEV__), this check is bypassed to prevent blocking
+ * developer machines connected via USB debugging cables or running Expo Go / Dev Clients.
  * 
  * @param actionNameVi Vietnamese descriptive name of the financial operation
  * @throws DeviceSecurityCompromisedException when device is compromised
@@ -185,6 +190,12 @@ export async function checkDeviceIntegrity(): Promise<DeviceIntegrityResult> {
 export async function assertDeviceIntegrityForFinancialAction(
   actionNameVi: string = 'Thao tác tài chính'
 ): Promise<void> {
+  // Chỉ kích hoạt khóa chặn can thiệp Root/Frida trên môi trường Release/Production (!__DEV__)
+  // Cho phép thiết bị máy dev cắm cáp debug, máy ảo simulator hoặc Expo Go / Dev Client không bị chặn nhầm
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return;
+  }
+
   const result = await checkDeviceIntegrity();
 
   if (result.isCompromised) {

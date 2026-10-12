@@ -103,6 +103,15 @@ function resolveFallbackRoleAndPersona(emailRaw: string): {
       canViewMargin: false,
     };
   }
+  if (email.startsWith("reviewer@")) {
+    return {
+      roleCode: "ReviewerAuditor",
+      persona: "executive_control",
+      canViewCost: true,
+      canViewRevenue: true,
+      canViewMargin: true,
+    };
+  }
   return {
     roleCode: "Admin",
     persona: "executive_control",

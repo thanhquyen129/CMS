@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-12 — Mobile End-to-End Field Wiring & Sprint 7 Release Pipeline
+
+- Mobile integrates e-PoD signature modal and DriverQuickExpenseSheet onto BillDetailScreen and adds 'Lộ trình của tôi (My Trips)' tab with direct PoD/expense action buttons in BillsScreen. ScannerScreen gains Torch flash toggle and batch scanning mode for dark warehouse/continuous scanning. DeviceIntegrity adds __DEV__ bypass for debug cables/simulators, app.json blocks RECORD_AUDIO, and eas.json defines preview (APK/internal) and production (AAB/TestFlight) profiles with Apple Reviewer auditor persona.
+- Files: `bills/[id].tsx`, `bills.tsx`, `scanner.tsx`, `DeviceIntegrity.ts`, `app.json`, `eas.json`, `login.tsx`, `AuthContext.tsx`.
+
 ## 2026-10-12 — Mobile Enterprise Security & Outdoor High-Contrast Mode
 
 - Mobile enforces native and runtime SSL Pinning for `cms.lsslogistics.vn` (primary & DR backup SPKI pins), detects rooted/jailbroken/Frida devices to lock financial mutations in `verifyBiometricForMoneyAction`, and introduces `HighContrastTheme` (OLED black / yellow, >=48dp touch targets) with `FinancialNumpad` (64x64dp keys, +50k/+100k/+500k/+1M quick-adds, VND dot formatting).

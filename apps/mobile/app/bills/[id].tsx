@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +21,8 @@ import { apiRequest } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { AttachmentGallery } from "../../src/components/AttachmentGallery";
 import { enqueueOfflineMutation } from "../../src/offline/outbox";
+import { PoDSignatureScreen } from "../../src/presentation/screens/PoDSignatureScreen";
+import { DriverQuickExpenseSheet } from "../../src/presentation/components/DriverQuickExpenseSheet";
 
 interface BillFinancialProfileResponse {
   billId: string;
@@ -73,6 +76,10 @@ export default function BillDetailScreen() {
   const [graph, setGraph] = useState<BillGraphResponseDto | null>(null);
   const [finHistory, setFinHistory] = useState<FinancialHistoryEventDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Field Ops Action States (e-PoD & Quick Expense)
+  const [showPoDModal, setShowPoDModal] = useState<boolean>(false);
+  const [showExpenseSheet, setShowExpenseSheet] = useState<boolean>(false);
 
   // CW & Measurement Edit State (ADR-0039)
   const [gwInput, setGwInput] = useState<string>("");
@@ -277,6 +284,33 @@ export default function BillDetailScreen() {
         ) : null}
       </View>
 
+      {/* Field Ops Action Buttons (e-PoD & Driver Quick Expense) */}
+      <View style={styles.fieldActionBar}>
+        <TouchableOpacity
+          style={styles.podActionBtn}
+          onPress={() => setShowPoDModal(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionBtnIcon}>✍️</Text>
+          <View style={styles.actionBtnTextWrap}>
+            <Text style={styles.podActionBtnText}>Ký nhận Bàn giao (e-PoD)</Text>
+            <Text style={styles.actionBtnSubText}>Chữ ký số SVG &amp; Geostamp GPS</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.expenseActionBtn}
+          onPress={() => setShowExpenseSheet(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionBtnIcon}>⚡</Text>
+          <View style={styles.actionBtnTextWrap}>
+            <Text style={styles.expenseActionBtnText}>+ Chi phí Dọc đường</Text>
+            <Text style={styles.actionBtnSubText}>Xăng dầu, BOT, bến bãi nhanh</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* SoD-Aware Financial Profile */}
       {(vis.canViewCost || vis.canViewRevenue) && (
         <View style={styles.sectionCard}>
@@ -467,6 +501,32 @@ export default function BillDetailScreen() {
         canWrite={true}
       />
 
+      {/* e-PoD Signature Fullscreen Modal */}
+      <Modal
+        visible={showPoDModal}
+        animationType="slide"
+        onRequestClose={() => setShowPoDModal(false)}
+      >
+        <PoDSignatureScreen
+          billId={bill.id}
+          billNo={bill.billNo}
+          customerName={bill.customerReference ?? undefined}
+          onSuccess={() => {
+            setShowPoDModal(false);
+            void loadBillWorkspace();
+          }}
+          onCancel={() => setShowPoDModal(false)}
+        />
+      </Modal>
+
+      {/* Driver Quick Expense 1-Hand Sheet */}
+      <DriverQuickExpenseSheet
+        visible={showExpenseSheet}
+        onClose={() => setShowExpenseSheet(false)}
+        availableBills={bill ? [bill] : []}
+        defaultBillId={bill?.id}
+      />
+
       <View style={{ height: 36 }} />
     </ScrollView>
   );
@@ -628,4 +688,61 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  fieldActionBar: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  podActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1E3A8A",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  expenseActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#065F46",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  actionBtnIcon: {
+    fontSize: 20,
+  },
+  actionBtnTextWrap: {
+    flex: 1,
+  },
+  podActionBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  expenseActionBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  actionBtnSubText: {
+    color: "#E2E8F0",
+    fontSize: 10,
+    marginTop: 2,
+  },
 });
+

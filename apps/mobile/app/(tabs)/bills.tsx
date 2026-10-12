@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,8 @@ import { BillListItemDto } from "@lcms/shared";
 import { apiRequest } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
 import { enqueueOfflineMutation } from "../../src/offline/outbox";
+import { PoDSignatureScreen } from "../../src/presentation/screens/PoDSignatureScreen";
+import { DriverQuickExpenseSheet } from "../../src/presentation/components/DriverQuickExpenseSheet";
 
 interface OrderItemDto {
   id: string;
@@ -45,9 +48,9 @@ interface MovementItemDto {
 
 export default function BillsScreen() {
   const router = useRouter();
-  const { t } = useAuth();
+  const { t, bootstrap } = useAuth();
   const [opTab, setOpTab] = useState<
-    "bills" | "orders" | "shipments" | "movements"
+    "bills" | "my_trips" | "orders" | "shipments" | "movements"
   >("bills");
   const [bills, setBills] = useState<BillListItemDto[]>([]);
   const [orders, setOrders] = useState<OrderItemDto[]>([]);
@@ -55,6 +58,11 @@ export default function BillsScreen() {
   const [movements, setMovements] = useState<MovementItemDto[]>([]);
   const [search, setSearch] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
+
+  // Field Action Modal State cho Lộ trình của tôi
+  const [selectedPoDBill, setSelectedPoDBill] = useState<BillListItemDto | null>(null);
+  const [selectedExpenseBill, setSelectedExpenseBill] = useState<BillListItemDto | null>(null);
+
 
   // Create Bill / Waybill / Order / Shipment / Movement state
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
@@ -317,6 +325,25 @@ export default function BillsScreen() {
     }
   };
 
+  const currentUserEmail = bootstrap?.user?.email?.toLowerCase() ?? "";
+  const currentUserName = bootstrap?.user?.displayName?.toLowerCase() ?? "";
+  const isDriverOrOps =
+    currentUserEmail.includes("ops") ||
+    currentUserEmail.includes("driver");
+
+  const myTripsBills = bills.filter((b) => {
+    const ref = (b.customerReference ?? "").toLowerCase();
+    const matchedUser =
+      (currentUserEmail && ref.includes(currentUserEmail)) ||
+      (currentUserName && ref.includes(currentUserName));
+
+    if (matchedUser) return true;
+    if (isDriverOrOps) {
+      return (b.transportMode ?? b.billType).toUpperCase() === "ROAD" || b.operationalStatus !== "cancelled";
+    }
+    return (b.transportMode ?? b.billType).toUpperCase() === "ROAD";
+  });
+
   const filtered = bills.filter((b) => {
     if (!search.trim()) return true;
     const q = search.trim().toLowerCase();
@@ -346,6 +373,19 @@ export default function BillsScreen() {
             ]}
           >
             📦 Bill ({bills.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.opTabBtn, opTab === "my_trips" && styles.opTabBtnActive]}
+          onPress={() => setOpTab("my_trips")}
+        >
+          <Text
+            style={[
+              styles.opTabText,
+              opTab === "my_trips" && styles.opTabTextActive,
+            ]}
+          >
+            🛣️ Lộ trình ({myTripsBills.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -422,7 +462,7 @@ export default function BillsScreen() {
         </TouchableOpacity>
       </View>
 
-      {showCreateForm && opTab !== "bills" ? (
+      {showCreateForm && (opTab === "orders" || opTab === "shipments" || opTab === "movements") ? (
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>
             {opTab === "orders"
@@ -469,7 +509,7 @@ export default function BillsScreen() {
 
           <TouchableOpacity
             style={[styles.primaryBtn, { marginTop: 8 }]}
-            onPress={() => void handleCreateUpperLevelRef(opTab)}
+            onPress={() => void handleCreateUpperLevelRef(opTab as "orders" | "shipments" | "movements")}
             disabled={submitting}
           >
             <Text style={styles.primaryBtnText}>
@@ -722,6 +762,83 @@ export default function BillsScreen() {
             ))
           )}
         </>
+      ) : opTab === "my_trips" ? (
+        <>
+          <View style={styles.driverBannerCard}>
+            <View style={styles.rowBetween}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.driverBannerTitle}>🛣️ Lộ trình Vận chuyển của Tôi</Text>
+                <Text style={styles.driverBannerSub}>
+                  Tài xế / Hiện trường: {bootstrap?.user?.displayName ?? bootstrap?.user?.email ?? "Điều vận"}
+                </Text>
+              </View>
+              <View style={styles.tripBadge}>
+                <Text style={styles.tripBadgeText}>{myTripsBills.length} Chuyến</Text>
+              </View>
+            </View>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator size="large" color="#0F172A" style={{ marginTop: 28 }} />
+          ) : myTripsBills.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>Chưa có lộ trình vận chuyển được phân công</Text>
+              <Text style={styles.emptySubText}>
+                Các vận đơn đường bộ (ROAD) hoặc vận đơn gán cho tài xế sẽ hiển thị tại đây.
+              </Text>
+            </View>
+          ) : (
+            myTripsBills.map((b) => (
+              <View key={b.id} style={styles.tripCard}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.billNo}>{b.billNo}</Text>
+                  <View style={styles.statusBadge}>
+                    <Text style={styles.statusText}>
+                      {t(`bill.${b.operationalStatus}`, b.operationalStatus)}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.routeText}>
+                  📍 Tuyến: {b.originCode ?? "SGN"} → {b.destinationCode ?? "HAN"} • {b.transportMode ?? "Đường bộ (ROAD)"}
+                </Text>
+
+                <Text style={styles.metaText}>
+                  Khách hàng: {b.customerReference ?? "Khách hàng hợp đồng"}
+                </Text>
+
+                {/* Quick Action Buttons for Driver */}
+                <View style={styles.tripActionRow}>
+                  <TouchableOpacity
+                    style={styles.tripPodBtn}
+                    onPress={() => setSelectedPoDBill(b)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.tripBtnIcon}>✍️</Text>
+                    <Text style={styles.tripPodBtnText}>Ký e-PoD</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.tripExpenseBtn}
+                    onPress={() => setSelectedExpenseBill(b)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.tripBtnIcon}>⚡</Text>
+                    <Text style={styles.tripExpenseBtnText}>+ Chi phí</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.tripDetailBtn}
+                    onPress={() => router.push(`/bills/${b.id}`)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.tripDetailBtnText}>Chi tiết →</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+        </>
       ) : opTab === "orders" ? (
         orders.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -793,6 +910,35 @@ export default function BillsScreen() {
           </View>
         ))
       )}
+
+      {/* e-PoD Signature Modal for My Trips */}
+      <Modal
+        visible={Boolean(selectedPoDBill)}
+        animationType="slide"
+        onRequestClose={() => setSelectedPoDBill(null)}
+      >
+        {selectedPoDBill && (
+          <PoDSignatureScreen
+            billId={selectedPoDBill.id}
+            billNo={selectedPoDBill.billNo}
+            customerName={selectedPoDBill.customerReference ?? undefined}
+            onSuccess={() => {
+              setSelectedPoDBill(null);
+              void loadBills();
+            }}
+            onCancel={() => setSelectedPoDBill(null)}
+          />
+        )}
+      </Modal>
+
+      {/* Driver Quick Expense Sheet for My Trips */}
+      <DriverQuickExpenseSheet
+        visible={Boolean(selectedExpenseBill)}
+        onClose={() => setSelectedExpenseBill(null)}
+        availableBills={selectedExpenseBill ? [selectedExpenseBill] : bills}
+        defaultBillId={selectedExpenseBill?.id}
+      />
+
       <View style={{ height: 32 }} />
     </ScrollView>
   );
@@ -1016,4 +1162,106 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 4,
   },
+  driverBannerCard: {
+    backgroundColor: "#1E3A8A",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  driverBannerTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  driverBannerSub: {
+    fontSize: 12,
+    color: "#BFDBFE",
+    marginTop: 3,
+  },
+  tripBadge: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  tripBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  emptySubText: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 6,
+    textAlign: "center",
+  },
+  tripCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  tripActionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  tripPodBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1E3A8A",
+    borderRadius: 8,
+    paddingVertical: 9,
+    gap: 5,
+  },
+  tripPodBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  tripExpenseBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#065F46",
+    borderRadius: 8,
+    paddingVertical: 9,
+    gap: 5,
+  },
+  tripExpenseBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  tripDetailBtn: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+  },
+  tripDetailBtnText: {
+    color: "#334155",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  tripBtnIcon: {
+    fontSize: 13,
+  },
 });
+

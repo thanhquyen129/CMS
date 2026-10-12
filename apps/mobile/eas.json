@@ -18,14 +18,37 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "simulator": false
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://cms.lsslogistics.vn",
         "EXPO_PUBLIC_DEFAULT_TENANT": "ops",
         "EXPO_PUBLIC_SHOW_DEMO_PERSONAS": "true"
       }
     },
+    "internal": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://cms.lsslogistics.vn",
+        "EXPO_PUBLIC_DEFAULT_TENANT": "ops",
+        "EXPO_PUBLIC_SHOW_DEMO_PERSONAS": "false"
+      }
+    },
     "production": {
       "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "simulator": false
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://cms.lsslogistics.vn",
         "EXPO_PUBLIC_DEFAULT_TENANT": "ops",

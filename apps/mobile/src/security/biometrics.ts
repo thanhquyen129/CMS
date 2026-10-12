@@ -1,5 +1,9 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import { Platform } from "react-native";
+import {
+  assertDeviceIntegrityForFinancialAction,
+  DeviceSecurityCompromisedException,
+} from "../core/security/DeviceIntegrity";
 
 export interface BiometricPromptOptions {
   actionLabelVi: string;
@@ -26,6 +30,20 @@ export async function verifyBiometricForMoneyAction(
 ): Promise<BiometricVerificationResult> {
   if (Platform.OS === "web") {
     return { verified: true, method: "fallback_confirmed" };
+  }
+
+  // Lớp phòng thủ 1: Phát hiện can thiệp hệ điều hành (Root, Jailbreak, Frida)
+  try {
+    await assertDeviceIntegrityForFinancialAction(options.actionLabelVi);
+  } catch (secErr) {
+    if (secErr instanceof DeviceSecurityCompromisedException) {
+      return {
+        verified: false,
+        method: "biometric",
+        errorVi: secErr.message,
+      };
+    }
+    throw secErr;
   }
 
   try {

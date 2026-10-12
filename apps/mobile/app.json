@@ -34,7 +34,6 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
       ]
@@ -54,7 +53,8 @@
         {
           "faceIDPermission": "Cho phép LCMS sử dụng Face ID / Sinh trắc học để xác nhận thao tác tài chính."
         }
-      ]
+      ],
+      "./plugins/withSslPinning"
     ],
     "extra": {
       "router": {},

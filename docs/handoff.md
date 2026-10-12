@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-12 — Mobile Enterprise Security & Outdoor High-Contrast Mode
+
+- Mobile enforces native and runtime SSL Pinning for `cms.lsslogistics.vn` (primary & DR backup SPKI pins), detects rooted/jailbroken/Frida devices to lock financial mutations in `verifyBiometricForMoneyAction`, and introduces `HighContrastTheme` (OLED black / yellow, >=48dp touch targets) with `FinancialNumpad` (64x64dp keys, +50k/+100k/+500k/+1M quick-adds, VND dot formatting).
+- Files: `SslPinning.ts`, `withSslPinning.js`, `DeviceIntegrity.ts`, `biometrics.ts`, `HighContrastTheme.ts`, `FinancialNumpad.tsx`, `client.ts`.
+
 ## 2026-10-12 — Mobile Electronic Proof of Delivery (PoD) & Signature Capture
 
 - Mobile adds vector SVG digital signature canvas, GPS geostamping with GPS_UNAVAILABLE fallback, cargo photo capture, and PoDAdapter mapping to existing `/api/operational-references/bill/{id}` and `/api/attachments` endpoints with offline Outbox queue support.

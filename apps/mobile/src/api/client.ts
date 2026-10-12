@@ -7,6 +7,7 @@ import {
   parseApiError,
   ParsedApiError,
 } from "@lcms/shared";
+import { validateTransportSecurity } from "../core/security/SslPinning";
 
 const STORAGE_KEYS = {
   ACCESS_TOKEN: "lcms.auth.access_token",
@@ -115,6 +116,14 @@ export async function getApiBaseUrl(): Promise<string> {
 }
 
 export async function setApiBaseUrl(url: string): Promise<void> {
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.EXPO_PUBLIC_SHOW_DEMO_PERSONAS === "false"
+  ) {
+    throw new Error(
+      "Không được phép thay đổi API Base URL trong môi trường Store Production thương mại."
+    );
+  }
   await setSecureItem(STORAGE_KEYS.API_BASE_URL, url.trim().replace(/\/+$/, ""));
 }
 
@@ -193,6 +202,7 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {}
 ): Promise<T> {
   const baseUrl = await getApiBaseUrl();
+  validateTransportSecurity(baseUrl, process.env.NODE_ENV === "production");
   const session = await getStoredSessionTokens();
   const method = options.method ?? "GET";
 

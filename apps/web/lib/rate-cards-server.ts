@@ -107,6 +107,17 @@ export function getRating(id: string): Promise<ApiResult<Rating>> {
   return apiGet<Rating>(`/api/ratings/${encodeURIComponent(id)}`);
 }
 
+export type BillRatingMargin = {
+  reportingCurrency: string;
+  reportingProfit: number | null;
+  fxMissing: boolean;
+  notice: string;
+};
+
+export function getBillRatingMargin(billId: string): Promise<ApiResult<BillRatingMargin>> {
+  return apiGet<BillRatingMargin>(`/api/bills/${encodeURIComponent(billId)}/rating-margin`);
+}
+
 export type SurchargeRow = {
   id: string;
   code: string;

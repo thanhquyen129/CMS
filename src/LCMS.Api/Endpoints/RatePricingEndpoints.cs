@@ -325,6 +325,11 @@ public static class RatePricingEndpoints
             var suggestion = await sender.Send(new SuggestBillRatesQuery(billId), ct);
             return Results.Ok(suggestion);
         });
+        bills.MapGet("/{billId:guid}/rating-margin", async (Guid billId, ISender sender, CancellationToken ct) =>
+        {
+            var margin = await sender.Send(new GetBillRatingMarginQuery(billId), ct);
+            return Results.Ok(margin);
+        });
 
         ratings.MapPost("/compare", async (CompareRatesRequest body, ISender sender, CancellationToken ct) =>
         {

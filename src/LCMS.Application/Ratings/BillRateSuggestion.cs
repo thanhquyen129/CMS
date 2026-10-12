@@ -34,6 +34,27 @@ public sealed record RateSuggestionVersion(
     DateTimeOffset? EffectiveFrom,
     DateTimeOffset? EffectiveTo);
 
+public sealed record RateSuggestionRule(
+    Guid RateVersionId,
+    string Code,
+    string Name,
+    string? ChargeCode,
+    string? ServiceTypeCode,
+    string? PartyTypeCode,
+    string? RouteCode,
+    string? TransportMode,
+    string? OriginCode,
+    string? DestinationCode,
+    string? CommodityCode);
+
+public sealed record BillRateMatchContext(
+    string? RouteCode,
+    string? TransportMode,
+    string? ServiceTypeCode,
+    string? OriginCode,
+    string? DestinationCode,
+    string? CommodityCode);
+
 public sealed record BillRateOptionDto(
     Guid RateCardId,
     string Code,
@@ -61,10 +82,11 @@ public static class BillRateSuggestion
     public static BillRateSideDto Classify(
         IEnumerable<RateSuggestionCard> cards,
         IEnumerable<RateSuggestionVersion> versions,
-        string? billRoute,
-        string? billMode,
+        IEnumerable<RateSuggestionRule> rules,
+        BillRateMatchContext bill,
         DateTimeOffset rateDate)
     {
+        var ruleList = rules.ToList();
         var versionList = versions.ToList();
         var published = versionList.Where(v =>
             string.Equals(v.Status, "published", StringComparison.OrdinalIgnoreCase)).ToList();
@@ -73,7 +95,8 @@ public static class BillRateSuggestion
         {
             foreach (var version in published.Where(v => v.RateCardId == card.Id).OrderByDescending(v => v.VersionNo))
             {
-                var reason = BlockReason(card, version, billRoute, billMode, rateDate);
+                var versionRules = ruleList.Where(r => r.RateVersionId == version.Id).ToList();
+                var reason = BlockReason(card, version, versionRules, bill, rateDate);
                 options.Add(new BillRateOptionDto(
                     card.Id,
                     card.Code,
@@ -135,8 +158,8 @@ public static class BillRateSuggestion
     public static string? BlockReason(
         RateSuggestionCard card,
         RateSuggestionVersion version,
-        string? billRoute,
-        string? billMode,
+        IReadOnlyList<RateSuggestionRule> rules,
+        BillRateMatchContext bill,
         DateTimeOffset rateDate)
     {
         if (!card.IsActive)
@@ -154,28 +177,107 @@ public static class BillRateSuggestion
             return BillRateNotices.OutsideDate;
         }
 
-        if (!string.IsNullOrWhiteSpace(card.RouteCode) && string.IsNullOrWhiteSpace(billRoute))
+        if (!string.IsNullOrWhiteSpace(card.RouteCode) && string.IsNullOrWhiteSpace(bill.RouteCode))
         {
             return BillRateNotices.MissingBillNotice;
         }
 
-        if (!string.IsNullOrWhiteSpace(card.TransportMode) && string.IsNullOrWhiteSpace(billMode))
+        if (!string.IsNullOrWhiteSpace(card.TransportMode) && string.IsNullOrWhiteSpace(bill.TransportMode))
         {
             return BillRateNotices.MissingBillNotice;
         }
 
         if (!string.IsNullOrWhiteSpace(card.RouteCode)
-            && !string.Equals(card.RouteCode.Trim(), billRoute?.Trim(), StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(card.RouteCode.Trim(), bill.RouteCode?.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return BillRateNotices.RouteMismatch;
         }
 
         if (!string.IsNullOrWhiteSpace(card.TransportMode)
-            && !string.Equals(card.TransportMode.Trim(), billMode?.Trim(), StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(card.TransportMode.Trim(), bill.TransportMode?.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return BillRateNotices.ModeMismatch;
         }
 
-        return null;
+        return RuleReason(card.PartyType, rules, bill);
     }
+
+    public static string? RuleReason(string partyType, IReadOnlyList<RateSuggestionRule> rules, BillRateMatchContext bill)
+    {
+        if (rules.Count == 0)
+        {
+            return "Không có quy tắc giá phù hợp";
+        }
+
+        if (rules.Any(r => Matches(r, partyType, bill)))
+        {
+            return null;
+        }
+
+        var viable = rules.Where(r => !HasHardConflict(r, partyType, bill)).ToList();
+        if (viable.Count > 0 && viable.All(r => HasMissingBillField(r, bill)))
+        {
+            return BillRateNotices.MissingBillNotice;
+        }
+
+        if (rules.Any(r => Hard(r.RouteCode, bill.RouteCode)))
+        {
+            return BillRateNotices.RouteMismatch;
+        }
+
+        if (rules.Any(r => Hard(r.TransportMode, bill.TransportMode)))
+        {
+            return BillRateNotices.ModeMismatch;
+        }
+
+        return "Không khớp điều kiện";
+    }
+
+    private static bool Matches(RateSuggestionRule rule, string partyType, BillRateMatchContext bill)
+    {
+        var probe = new LCMS.Domain.Entities.PricingRule
+        {
+            ServiceTypeCode = rule.ServiceTypeCode,
+            PartyTypeCode = rule.PartyTypeCode,
+            RouteCode = rule.RouteCode,
+            TransportMode = rule.TransportMode,
+            OriginCode = rule.OriginCode,
+            DestinationCode = rule.DestinationCode,
+            CommodityCode = rule.CommodityCode
+        };
+        return RatingEngine.Matches(
+            probe,
+            bill.ServiceTypeCode,
+            partyType,
+            bill.RouteCode,
+            bill.TransportMode,
+            bill.OriginCode,
+            bill.DestinationCode,
+            bill.CommodityCode);
+    }
+
+    private static bool HasHardConflict(RateSuggestionRule rule, string partyType, BillRateMatchContext bill) =>
+        Hard(rule.ServiceTypeCode, bill.ServiceTypeCode)
+        || Hard(rule.PartyTypeCode, partyType)
+        || Hard(rule.RouteCode, bill.RouteCode)
+        || Hard(rule.TransportMode, bill.TransportMode)
+        || Hard(rule.OriginCode, bill.OriginCode)
+        || Hard(rule.DestinationCode, bill.DestinationCode)
+        || Hard(rule.CommodityCode, bill.CommodityCode);
+
+    private static bool HasMissingBillField(RateSuggestionRule rule, BillRateMatchContext bill) =>
+        Missing(rule.ServiceTypeCode, bill.ServiceTypeCode)
+        || Missing(rule.RouteCode, bill.RouteCode)
+        || Missing(rule.TransportMode, bill.TransportMode)
+        || Missing(rule.OriginCode, bill.OriginCode)
+        || Missing(rule.DestinationCode, bill.DestinationCode)
+        || Missing(rule.CommodityCode, bill.CommodityCode);
+
+    private static bool Hard(string? filter, string? value) =>
+        !string.IsNullOrWhiteSpace(filter)
+        && !string.IsNullOrWhiteSpace(value)
+        && !string.Equals(filter.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static bool Missing(string? filter, string? value) =>
+        !string.IsNullOrWhiteSpace(filter) && string.IsNullOrWhiteSpace(value);
 }

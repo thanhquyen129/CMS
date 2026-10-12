@@ -51,18 +51,32 @@ function num(raw: string): number | null {
 
 function SideBlock({
   title,
+  sideId,
   side,
   versionId,
   onVersion,
+  quantity,
+  weight,
+  reason,
+  onQuantity,
+  onWeight,
+  onReason,
   readiness,
   readinessError,
   checking,
   editAnchor,
 }: {
   title: string;
+  sideId: string;
   side: RateSide;
   versionId: string;
   onVersion: (id: string) => void;
+  quantity: string;
+  weight: string;
+  reason: string;
+  onQuantity: (value: string) => void;
+  onWeight: (value: string) => void;
+  onReason: (value: string) => void;
   readiness: RatingReadiness | null;
   readinessError: string | null;
   checking: boolean;
@@ -83,8 +97,8 @@ function SideBlock({
         </div>
       ) : null}
       <div className="field">
-        <label htmlFor={`version-${title}`}>Bảng giá / phiên bản đã phát hành</label>
-        <select id={`version-${title}`} value={versionId} onChange={(ev) => onVersion(ev.target.value)}>
+        <label htmlFor={`version-${sideId}`}>Bảng giá / phiên bản đã phát hành</label>
+        <select id={`version-${sideId}`} value={versionId} onChange={(ev) => onVersion(ev.target.value)}>
           <option value="">{selectable.length === 0 ? "— Không chọn được —" : "Chọn bảng giá"}</option>
           {selectable.map((o) => (
             <option key={o.versionId} value={o.versionId}>
@@ -102,6 +116,22 @@ function SideBlock({
           ))}
         </ul>
       ) : null}
+      <div className="form-grid">
+        <div className="field">
+          <label htmlFor={`qty-${sideId}`}>Khối tính cước ghi đè</label>
+          <input id={`qty-${sideId}`} inputMode="decimal" placeholder="Theo Bill" value={quantity} onChange={(ev) => onQuantity(ev.target.value)} />
+        </div>
+        <div className="field">
+          <label htmlFor={`weight-${sideId}`}>Trọng lượng thực (kg)</label>
+          <input id={`weight-${sideId}`} inputMode="decimal" placeholder="Theo Bill" value={weight} onChange={(ev) => onWeight(ev.target.value)} />
+        </div>
+        {quantity.trim() ? (
+          <div className="field">
+            <label htmlFor={`reason-${sideId}`}>Lý do ghi đè</label>
+            <input id={`reason-${sideId}`} value={reason} maxLength={500} onChange={(ev) => onReason(ev.target.value)} />
+          </div>
+        ) : null}
+      </div>
       <RatingReadinessBox readiness={readiness} error={readinessError} checking={checking} editAnchor={editAnchor} />
     </section>
   );
@@ -117,9 +147,12 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
   const [sellVersion, setSellVersion] = useState("");
   const [buyTouched, setBuyTouched] = useState(false);
   const [sellTouched, setSellTouched] = useState(false);
-  const [quantity, setQuantity] = useState("");
-  const [weight, setWeight] = useState("");
-  const [overrideReason, setOverrideReason] = useState("");
+  const [buyQuantity, setBuyQuantity] = useState("");
+  const [sellQuantity, setSellQuantity] = useState("");
+  const [buyWeight, setBuyWeight] = useState("");
+  const [sellWeight, setSellWeight] = useState("");
+  const [buyReason, setBuyReason] = useState("");
+  const [sellReason, setSellReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [buyReadiness, setBuyReadiness] = useState<RatingReadiness | null>(null);
@@ -169,33 +202,34 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
   }, [suggestion, sellTouched]);
 
   const bodyFor = useMemo(() => {
-    return (versionId: string) => {
-      const q = num(quantity);
-      const w = num(weight);
+    return (side: "buy" | "sell", versionId: string) => {
+      const q = num(side === "buy" ? buyQuantity : sellQuantity);
+      const w = num(side === "buy" ? buyWeight : sellWeight);
+      const reason = side === "buy" ? buyReason : sellReason;
       return {
         billId,
         rateVersionId: versionId,
         quantity: q === null || Number.isNaN(q) ? null : q,
         weight: w === null || Number.isNaN(w) ? null : w,
-        chargeableOverrideReason: overrideReason.trim() || null,
+        chargeableOverrideReason: reason.trim() || null,
       };
     };
-  }, [billId, quantity, weight, overrideReason]);
+  }, [billId, buyQuantity, sellQuantity, buyWeight, sellWeight, buyReason, sellReason]);
 
   useEffect(() => {
-    return watchReadiness(bodyFor(buyVersion), setBuyReadiness, setBuyReadinessError, setBuyChecking);
+    return watchReadiness(bodyFor("buy", buyVersion), setBuyReadiness, setBuyReadinessError, setBuyChecking);
   }, [bodyFor, buyVersion]);
 
   useEffect(() => {
-    return watchReadiness(bodyFor(sellVersion), setSellReadiness, setSellReadinessError, setSellChecking);
+    return watchReadiness(bodyFor("sell", sellVersion), setSellReadiness, setSellReadinessError, setSellChecking);
   }, [bodyFor, sellVersion]);
 
-  async function rateSide(versionId: string, seed: "cost" | "revenue") {
+  async function rateSide(side: "buy" | "sell", versionId: string, seed: "cost" | "revenue") {
     const res = await fetch("/bff/ratings", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
-        ...bodyFor(versionId),
+        ...bodyFor(side, versionId),
         supersedesRatingId: null,
         seedExpectedCosts: seed === "cost",
         seedExpectedRevenues: seed === "revenue",
@@ -216,25 +250,28 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    const q = num(quantity);
-    if (q !== null && (Number.isNaN(q) || q <= 0)) {
-      setError("Khối tính cước ghi đè phải > 0.");
-      return;
-    }
-    const w = num(weight);
-    if (w !== null && (Number.isNaN(w) || w <= 0)) {
-      setError("Trọng lượng thực phải > 0. Không dùng 0.");
-      return;
+    const sides: Array<"buy" | "sell"> = which === "both" ? ["buy", "sell"] : [which];
+    for (const side of sides) {
+      const q = num(side === "buy" ? buyQuantity : sellQuantity);
+      const w = num(side === "buy" ? buyWeight : sellWeight);
+      if (q !== null && (Number.isNaN(q) || q <= 0)) {
+        setError(side === "buy" ? "Khối tính cước giá mua phải > 0." : "Khối tính cước giá bán phải > 0.");
+        return;
+      }
+      if (w !== null && (Number.isNaN(w) || w <= 0)) {
+        setError(side === "buy" ? "Trọng lượng giá mua phải > 0. Không dùng 0." : "Trọng lượng giá bán phải > 0. Không dùng 0.");
+        return;
+      }
     }
 
-    const jobs: { versionId: string; seed: "cost" | "revenue"; label: string }[] = [];
+    const jobs: { side: "buy" | "sell"; versionId: string; seed: "cost" | "revenue"; label: string }[] = [];
     const notes: string[] = [];
     if (which === "buy" || which === "both") {
-      if (buyVersion) jobs.push({ versionId: buyVersion, seed: "cost", label: "Giá mua" });
+      if (buyVersion) jobs.push({ side: "buy", versionId: buyVersion, seed: "cost", label: "Giá mua" });
       else notes.push(suggestion?.buy.notice || "Chưa chọn giá mua.");
     }
     if (which === "sell" || which === "both") {
-      if (sellVersion) jobs.push({ versionId: sellVersion, seed: "revenue", label: "Giá bán" });
+      if (sellVersion) jobs.push({ side: "sell", versionId: sellVersion, seed: "revenue", label: "Giá bán" });
       else notes.push(suggestion?.sell.notice || "Chưa chọn giá bán.");
     }
     if (jobs.length === 0) {
@@ -253,7 +290,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       const failures: string[] = [];
       const done: string[] = [];
       for (const job of jobs) {
-        const message = await rateSide(job.versionId, job.seed);
+        const message = await rateSide(job.side, job.versionId, job.seed);
         if (message) failures.push(`${job.label}: ${message}`);
         else done.push(job.label);
       }
@@ -290,7 +327,8 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
     <form className="receive-form" onSubmit={(e) => onSubmit(e, "both")} noValidate>
       <p className="note">
         Giá mua tạo {costLabel.toLowerCase()} {expected.toLowerCase()}. Giá bán tạo {revenueLabel.toLowerCase()}{" "}
-        {expected.toLowerCase()}. Không tạo Thực tế, chứng từ hay công nợ. Thiếu một chiều vẫn tính chiều còn lại.
+        {expected.toLowerCase()}. Không tạo Thực tế, chứng từ hay công nợ. Mỗi chiều có khối lượng riêng.
+        Nút từng chiều không bị khóa khi chiều kia chưa có bảng giá. Tính cả hai chỉ chạy khi cả hai đã chọn.
         Nhiều bảng giá cùng phù hợp thì phải chọn, hệ thống không tự chọn.
       </p>
       {error ? (
@@ -306,12 +344,19 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       <div className="layout-cols-2">
         <SideBlock
           title="Giá mua — Chi phí dự kiến"
+          sideId="buy"
           side={suggestion.buy}
           versionId={buyVersion}
           onVersion={(id) => {
             setBuyTouched(true);
             setBuyVersion(id);
           }}
+          quantity={buyQuantity}
+          weight={buyWeight}
+          reason={buyReason}
+          onQuantity={setBuyQuantity}
+          onWeight={setBuyWeight}
+          onReason={setBuyReason}
           readiness={buyReadiness}
           readinessError={buyReadinessError}
           checking={buyChecking}
@@ -319,37 +364,25 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
         />
         <SideBlock
           title="Giá bán — Doanh thu dự kiến"
+          sideId="sell"
           side={suggestion.sell}
           versionId={sellVersion}
           onVersion={(id) => {
             setSellTouched(true);
             setSellVersion(id);
           }}
+          quantity={sellQuantity}
+          weight={sellWeight}
+          reason={sellReason}
+          onQuantity={setSellQuantity}
+          onWeight={setSellWeight}
+          onReason={setSellReason}
           readiness={sellReadiness}
           readinessError={sellReadinessError}
           checking={sellChecking}
           editAnchor={editAnchor}
         />
       </div>
-      <details className="stack">
-        <summary className="muted">Ghi đè khi tính giá (tuỳ chọn, dùng chung cho lần bấm này)</summary>
-        <div className="form-grid">
-          <div className="field">
-            <label htmlFor="quantity">Khối tính cước ghi đè</label>
-            <input id="quantity" inputMode="decimal" placeholder="Theo Bill" value={quantity} onChange={(ev) => setQuantity(ev.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="weight">Trọng lượng thực (kg)</label>
-            <input id="weight" inputMode="decimal" placeholder="Theo Bill" value={weight} onChange={(ev) => setWeight(ev.target.value)} />
-          </div>
-          {quantity.trim() ? (
-            <div className="field">
-              <label htmlFor="chargeableOverrideReason">Lý do ghi đè</label>
-              <input id="chargeableOverrideReason" value={overrideReason} maxLength={500} onChange={(ev) => setOverrideReason(ev.target.value)} />
-            </div>
-          ) : null}
-        </div>
-      </details>
       <div className="cta-row">
         <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !buyVersion || buyBlocked} onClick={(e) => onSubmit(e, "buy")}>
           {busy ? "Đang tính…" : "Tính giá mua"}

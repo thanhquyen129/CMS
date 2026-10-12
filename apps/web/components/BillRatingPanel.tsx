@@ -4,11 +4,10 @@ import { RerateRatingButton } from "@/components/RerateRatingButton";
 import { basisLabel, formatChargeable, ratingStatusView } from "@/lib/opref-edit";
 import { SeedExpectedCostsButton } from "@/components/SeedExpectedCostsButton";
 import { SeedExpectedRevenuesButton } from "@/components/SeedExpectedRevenuesButton";
-import { getProfitability } from "@/lib/bills";
-import { expectedProfitView } from "@/lib/expected-profit";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { partyTypeLabel, type Rating } from "@/lib/rate-cards";
 import {
+  getBillRatingMargin,
   getRating,
   listRatingsByBill as fetchRatingsByBill,
 } from "@/lib/rate-cards-server";
@@ -23,9 +22,9 @@ export async function BillRatingPanel({ terms, billId }: Props) {
   const billLabel = term(terms, "BILL", "Bill");
   const expected = term(terms, "EXPECTED", "Dự kiến");
 
-  const [ratingsRes, profitRes] = await Promise.all([
+  const [ratingsRes, marginRes] = await Promise.all([
     fetchRatingsByBill(billId),
-    getProfitability(billId, "expected"),
+    getBillRatingMargin(billId),
   ]);
 
   const ratings = ratingsRes.ok ? ratingsRes.data : [];
@@ -36,9 +35,7 @@ export async function BillRatingPanel({ terms, billId }: Props) {
   const breakdowns = (
     await Promise.all(breakdownIds.map(async (id) => getRating(id)))
   ).flatMap((res) => (res.ok ? [res.data] : []));
-  const profit = profitRes.ok
-    ? expectedProfitView(profitRes.data)
-    : { kind: "empty" as const, text: profitRes.message };
+  const margin = marginRes.ok ? marginRes.data : null;
 
   const staleCount = ratings.filter(
     (r) => r.staleAt && r.status?.toLowerCase() !== "superseded"
@@ -64,16 +61,19 @@ export async function BillRatingPanel({ terms, billId }: Props) {
       <RateBillForm terms={terms} billId={billId} />
 
       <h3 className="section-title sm">Lợi nhuận dự kiến</h3>
-      {profit.kind === "profit" ? (
-        <p>
-          {profit.text}: <strong>{formatMoney(profit.amount, profit.currency)}</strong>
-        </p>
-      ) : profit.kind === "fx-missing" ? (
+      {!margin ? (
+        <p className="note">{marginRes.ok ? "" : marginRes.message}</p>
+      ) : margin.fxMissing ? (
         <div className="alert alert-warning" role="status">
-          {profit.text}
+          {margin.notice}
         </div>
+      ) : margin.reportingProfit == null ? (
+        <p className="note">{margin.notice}</p>
       ) : (
-        <p className="note">{profit.text}</p>
+        <p>
+          {margin.notice}{" "}
+          <strong>{formatMoney(margin.reportingProfit, margin.reportingCurrency)}</strong>
+        </p>
       )}
 
       {breakdowns.map((rating) => (

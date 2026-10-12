@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-12 — Rating suggestion matches rules; margin is the two latest ratings
+
+- Đề xuất bảng giá chặn theo tuyến của quy tắc giá. Lợi nhuận dự kiến chỉ lấy lần tính BUY và SELL mới nhất; thiếu tỷ giá thì không có số. Mỗi chiều có khối lượng riêng. `GET /api/bills/{id}/rating-margin`.
+- Files: `BillRateSuggestion.cs`, `GetBillRatingMarginQuery.cs`, `RateBillForm.tsx`, `BillRatingPanel.tsx`.
+
 ## 2026-10-12 — RATE-UI-01, RATE-UI-02, UI-DATETIME-01
 
 - Tách trạng thái bảng giá và phiên bản; đề xuất BUY/SELL theo Bill và không tự chọn khi nhiều bảng giá cùng phù hợp. Ngừng sử dụng chặn tính giá mới. Ngày hiệu lực giữ date-only; giờ phát hành hiển thị Asia/Ho_Chi_Minh. BILL-PKG-01 giữ HOLD.

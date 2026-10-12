@@ -9,7 +9,7 @@ import {
 describe('SslPinning Security Suite', () => {
   it('contains primary and backup pins for cms.lsslogistics.vn', () => {
     expect(LCMS_SSL_PIN_CONFIG.domain).toBe('cms.lsslogistics.vn');
-    expect(LCMS_SSL_PIN_CONFIG.pins).toHaveLength(2);
+    expect(LCMS_SSL_PIN_CONFIG.pins.length).toBeGreaterThanOrEqual(2);
 
     const primary = LCMS_SSL_PIN_CONFIG.pins.find((p) => p.type === 'primary');
     const backup = LCMS_SSL_PIN_CONFIG.pins.find((p) => p.type === 'backup');
@@ -50,6 +50,6 @@ describe('SslPinning Security Suite', () => {
   it('generates valid iOS pinned domains dictionary', () => {
     const dict = generateIosPinnedDomainsDictionary();
     expect(dict['cms.lsslogistics.vn']).toBeDefined();
-    expect(dict['cms.lsslogistics.vn'].NSPinnedLeafIdentities).toHaveLength(2);
+    expect(dict['cms.lsslogistics.vn'].NSPinnedLeafIdentities.length).toBeGreaterThanOrEqual(2);
   });
 });

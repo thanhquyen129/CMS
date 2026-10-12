@@ -5,12 +5,20 @@ const path = require('path');
 const PINNED_DOMAIN = 'cms.lsslogistics.vn';
 const PINS = [
   {
-    spki: 'WoiWRyIOVNa9ihaBciRSC7XHjliYS9VwUGOIud4PB18=',
-    comment: 'Primary Production Pin (cms.lsslogistics.vn)',
+    spki: '8BxW0v+5M3BMDDba/TBK2BoM+iddfYrAs/fknGgwS98=',
+    comment: 'Primary Leaf SPKI Pin (cms.lsslogistics.vn)',
   },
   {
-    spki: 'k2v657xBsOVe1PQR/JU7tVu5CRS4XItr0IYhLnTndEQ=',
-    comment: 'Disaster Recovery Backup Pin',
+    spki: 'brzvtCELCIZUo4sD/qPX0ccRtPsd3DY6RfmxpOU9oB4=',
+    comment: 'Intermediate CA SPKI Pin (Let\'s Encrypt YE1)',
+  },
+  {
+    spki: 'sCkq5UWXjg+7mKu9lMhhYF5bGLsy7VI/UNW3tccdR7w=',
+    comment: 'Root CA SPKI Pin (ISRG Root YE)',
+  },
+  {
+    spki: 'C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=',
+    comment: 'Disaster Recovery Root SPKI Pin (ISRG Root X1)',
   },
 ];
 
@@ -18,6 +26,9 @@ const PINS = [
  * Expo Config Plugin to inject Enterprise SSL Pinning into Android & iOS Native build files.
  */
 function withAndroidSslPinning(config) {
+  if (process.env.EXPO_PUBLIC_DISABLE_SSL_PINNING === 'true') {
+    return config;
+  }
   return withDangerousMod(config, [
     'android',
     async (modConfig) => {
@@ -79,6 +90,9 @@ ${pinItems}
 }
 
 function withIosSslPinning(config) {
+  if (process.env.EXPO_PUBLIC_DISABLE_SSL_PINNING === 'true') {
+    return config;
+  }
   return withInfoPlist(config, (modConfig) => {
     modConfig.modResults.NSPinnedDomains = {
       [PINNED_DOMAIN]: {

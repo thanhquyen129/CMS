@@ -39,14 +39,26 @@ export const LCMS_SSL_PIN_CONFIG: SslPinConfig = {
     {
       type: 'primary',
       digestAlgorithm: 'SHA-256',
-      spkiBase64: 'WoiWRyIOVNa9ihaBciRSC7XHjliYS9VwUGOIud4PB18=',
-      description: 'Primary Production Leaf/Intermediate SPKI Pin (cms.lsslogistics.vn)',
+      spkiBase64: '8BxW0v+5M3BMDDba/TBK2BoM+iddfYrAs/fknGgwS98=',
+      description: 'Primary Production Leaf SPKI Pin (cms.lsslogistics.vn)',
     },
     {
       type: 'backup',
       digestAlgorithm: 'SHA-256',
-      spkiBase64: 'k2v657xBsOVe1PQR/JU7tVu5CRS4XItr0IYhLnTndEQ=',
-      description: 'Pre-rotated Disaster Recovery Backup Pin (Rotated 30-day overlap)',
+      spkiBase64: 'brzvtCELCIZUo4sD/qPX0ccRtPsd3DY6RfmxpOU9oB4=',
+      description: 'Intermediate CA SPKI Pin (Let\'s Encrypt YE1)',
+    },
+    {
+      type: 'backup',
+      digestAlgorithm: 'SHA-256',
+      spkiBase64: 'sCkq5UWXjg+7mKu9lMhhYF5bGLsy7VI/UNW3tccdR7w=',
+      description: 'Root CA SPKI Pin (ISRG Root YE)',
+    },
+    {
+      type: 'backup',
+      digestAlgorithm: 'SHA-256',
+      spkiBase64: 'C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=',
+      description: 'Disaster Recovery Root SPKI Pin (ISRG Root X1)',
     },
   ],
 };

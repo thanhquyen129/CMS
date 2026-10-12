@@ -22,3 +22,4 @@ export interface ICostRepository {
   adjustCost(input: AdjustCostInput): Promise<void>;
   allocateCost(input: AllocateCostInput): Promise<{ allocationId?: string }>;
 }
+

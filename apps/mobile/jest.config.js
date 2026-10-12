@@ -21,3 +21,4 @@ module.exports = {
     "^@lcms/shared$": "<rootDir>/../../packages/shared/src/index.ts",
   },
 };
+

@@ -31,3 +31,4 @@ export class AllocateCostUseCase {
     return await this.costRepository.allocateCost(input);
   }
 }
+

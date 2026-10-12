@@ -532,3 +532,4 @@ const styles = StyleSheet.create({
     color: "#1D4ED8",
   },
 });
+

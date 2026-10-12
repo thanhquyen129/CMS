@@ -109,3 +109,4 @@ export class CostRepositoryImpl implements ICostRepository {
     return await this.remoteDataSource.allocateCost(input);
   }
 }
+

@@ -110,3 +110,4 @@ export class CreateCostUseCase {
     return await this.costRepository.createCost(input, isOffline);
   }
 }
+

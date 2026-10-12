@@ -49,3 +49,4 @@ export async function replayOfflineOutbox(): Promise<SyncResult> {
 export function startAutoBackgroundSync(): () => void {
   return defaultSync.startAutoBackgroundSync();
 }
+

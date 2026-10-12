@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-12 — Mobile Electronic Proof of Delivery (PoD) & Signature Capture
+
+- Mobile adds vector SVG digital signature canvas, GPS geostamping with GPS_UNAVAILABLE fallback, cargo photo capture, and PoDAdapter mapping to existing `/api/operational-references/bill/{id}` and `/api/attachments` endpoints with offline Outbox queue support.
+- Files: `PoDAdapter.ts`, `PoDSignatureScreen.tsx`, `SignatureCanvas.tsx`, `PoDAdapter.test.ts`.
+
 ## 2026-10-11 — HTTPS for cms.a1lplatform.com
 
 - Nginx turns on a Let's Encrypt vhost for cms.a1lplatform.com only when that certificate is on the host. cms.lsslogistics.vn is unchanged. Port 80 keeps the ACME challenge and health checks, then redirects that name to HTTPS. Renewal reloads the proxy.

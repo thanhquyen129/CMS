@@ -71,3 +71,4 @@ export async function runOutboxDatabaseMigrations(db: SQLite.SQLiteDatabase): Pr
   // 4. Lưu version vào PRAGMA user_version
   await db.execAsync(`PRAGMA user_version = ${CURRENT_DATABASE_VERSION};`);
 }
+

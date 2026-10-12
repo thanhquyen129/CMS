@@ -31,3 +31,4 @@ export class AdjustCostUseCase {
     await this.costRepository.adjustCost(input);
   }
 }
+

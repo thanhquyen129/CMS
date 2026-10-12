@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kế hoạch thương mại hóa LCMS Mobile</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --accent: #0f172a;
+      --warn: #9a3412;
+      --ok: #14532d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.55 "Segoe UI", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    header.hero {
+      background: #0f172a;
+      color: #fff;
+      padding: 40px 24px 28px;
+    }
+    header.hero h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; }
+    header.hero p { margin: 0; color: #cbd5e1; max-width: 820px; }
+    main { max-width: 980px; margin: 0 auto; padding: 24px 20px 64px; }
+    nav.toc {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    nav.toc a { color: #1d4ed8; text-decoration: none; }
+    nav.toc ol { margin: 8px 0 0; padding-left: 20px; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+    }
+    h2 { font-size: 20px; margin: 0 0 12px; }
+    h3 { font-size: 16px; margin: 18px 0 8px; }
+    p { margin: 8px 0; }
+    ul { margin: 8px 0; padding-left: 20px; }
+    li { margin: 4px 0; }
+    code, .mono {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.92em;
+      background: #f1f5f9;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; }
+    th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; }
+    .meta { color: var(--muted); font-size: 14px; }
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: #f8fafc;
+      padding: 10px 14px;
+      margin: 12px 0;
+    }
+    .week { border-top: 1px solid var(--line); padding-top: 12px; margin-top: 12px; }
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+    @media print {
+      body { background: #fff; }
+      header.hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      section, nav.toc { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <h1>Kế hoạch thương mại hóa LCMS Mobile</h1>
+    <p>iOS và Android. Bám codebase hiện có. Sẵn sàng App Store và Google Play. Ngày 2026-10-07.</p>
+  </header>
+  <main>
+    <nav class="toc">
+      <strong>Mục lục</strong>
+      <ol>
+        <li><a href="#hien-trang">Hiện trạng trong repo</a></li>
+        <li><a href="#cp1">Cấu phần 1 — Codebase và phương án</a></li>
+        <li><a href="#cp2">Cấu phần 2 — Kết nối và bảo mật</a></li>
+        <li><a href="#cp3">Cấu phần 3 — UI/UX mobile</a></li>
+        <li><a href="#cp4">Cấu phần 4 — Lộ trình 8 tuần</a></li>
+        <li><a href="#cp5">Cấu phần 5 — Checklist store và thanh toán</a></li>
+        <li><a href="#rui-ro">Rủi ro còn lại</a></li>
+      </ol>
+    </nav>
+
+    <section id="hien-trang">
+      <p class="tag">Bối cảnh</p>
+      <h2>Hiện trạng đã có trong repo</h2>
+      <p class="meta">Sản phẩm: kiểm soát tài chính quanh Bill (chi phí, doanh thu, chứng từ, AP/AR, thanh toán, đối soát, chốt kỳ). Không phải TMS. Không bán hàng số trong app.</p>
+      <ul>
+        <li>Backend: ASP.NET Core modular monolith — <code>src/LCMS.Api</code>, <code>src/LCMS.Application</code>, <code>src/LCMS.Domain</code>, <code>src/LCMS.Infrastructure</code>, PostgreSQL (<code>LcmsDbContext</code>).</li>
+        <li>Web: Next.js App Router <code>apps/web</code> (khoảng 95 <code>page.tsx</code>), BFF cookie dưới <code>apps/web/app/bff/**</code>, vỏ desktop <code>ShellChrome</code>.</li>
+        <li>Mobile đã scaffold: Expo SDK 57, React Native 0.86, Expo Router, gói <code>lss.lcms.mobile</code>, scheme <code>lcms</code>.</li>
+        <li>Xác thực API: JWT Bearer HMAC (<code>JwtTokenIssuer</code>) + refresh opaque xoay vòng (<code>AuthTokenService</code>, bảng <code>refresh_tokens</code>).</li>
+        <li>Bootstrap: <code>GET /api/mobile/bootstrap</code> → <code>GetMobileBootstrapQueryHandler</code>.</li>
+        <li>Push: bảng <code>user_push_devices</code>, <code>POST/DELETE /api/notifications/devices</code>.</li>
+        <li>Offline: SQLite <code>lcms_mobile_offline.db</code>, bảng <code>offline_outbox</code> trong <code>apps/mobile/src/offline/outbox.ts</code>.</li>
+        <li>Sinh trắc học bước 2: <code>verifyBiometricForMoneyAction</code> trong <code>apps/mobile/src/security/biometrics.ts</code>.</li>
+      </ul>
+      <div class="callout">Phần còn lại là đưa các mảnh này lên chuẩn duyệt store và vận hành tiền an toàn. Tiếp tục app Expo hiện có. Không bọc web bằng WebView.</div>
+    </section>
+
+    <section id="cp1">
+      <p class="tag">Cấu phần 1</p>
+      <h2>Đánh giá codebase và chọn phương án</h2>
+      <h3>Phương án chọn</h3>
+      <div class="callout"><strong>App độc lập React Native (Expo) gọi thẳng LCMS.Api qua HTTPS + Bearer JWT.</strong> Thư mục <code>apps/mobile</code>.</div>
+      <ul>
+        <li>Web đăng nhập qua BFF cookie (<code>apps/web/app/bff/auth/</code>). Mobile đã gọi <code>POST /api/auth/login</code> và lưu token bằng <code>saveSessionTokens</code> + <code>expo-secure-store</code>. WebView kéo session cookie, sidebar <code>ShellChrome</code>, và mất Face ID, camera, SQLite, push.</li>
+        <li>Server đã có hợp đồng mobile: <code>MobileAndAttachmentEndpoints</code>, <code>MobileBootstrapDto</code>, <code>BuildRoleAdaptiveBottomTabs</code>.</li>
+        <li>Quyền xem tiền tách khỏi tên vai trò: <code>MobileFinancialVisibilityDto</code> (<code>CanViewCost</code>, <code>CanViewRevenue</code>, <code>CanViewMargin</code>). Margin chỉ khi có cả <code>PermissionCodes.CostRead</code> và <code>PermissionCodes.RevenueRead</code>.</li>
+        <li>Native đã cài: <code>expo-camera</code>, <code>expo-local-authentication</code>, <code>expo-secure-store</code>, <code>expo-sqlite</code>, <code>expo-notifications</code>.</li>
+      </ul>
+
+      <h3>API tái sử dụng ngay</h3>
+      <table>
+        <thead>
+          <tr><th>Nhóm</th><th>Prefix</th><th>File</th><th>Việc mobile dùng</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Auth</td><td><code>/api/auth/login|refresh|logout</code></td><td><code>AuthEndpoints.cs</code></td><td>Đăng nhập, tự đăng nhập, thu hồi</td></tr>
+          <tr><td>Bootstrap</td><td><code>GET /api/mobile/bootstrap</code></td><td><code>MobileAndAttachmentEndpoints.cs</code></td><td>Persona, tab, module, badge, thuật ngữ</td></tr>
+          <tr><td>Thuật ngữ</td><td><code>GET /api/terminology</code></td><td><code>TerminologyEndpoints.cs</code></td><td>Nhãn tiếng Việt khi bootstrap 404</td></tr>
+          <tr><td>Bill / vận hành</td><td><code>/api/bills</code>, <code>/api/orders</code>, <code>/api/shipments</code>, <code>/api/transport-legs</code>, <code>/api/transport-movements</code>, <code>/api/search</code></td><td><code>TenantBillEndpoints.cs</code>, <code>OperationalReferenceEndpoints.cs</code></td><td>Danh sách, chi tiết, quét mã</td></tr>
+          <tr><td>Chi phí</td><td><code>/api/costs</code>, <code>/api/cost-allocations</code></td><td><code>CostEndpoints.cs</code></td><td>Expected / Confirmed / Actual, phân bổ</td></tr>
+          <tr><td>Doanh thu</td><td><code>/api/revenues</code>, <code>/api/profitability/bills</code></td><td><code>RevenueEndpoints.cs</code></td><td>DT và lãi gộp khi được xem margin</td></tr>
+          <tr><td>Chứng từ</td><td><code>/api/financial-documents</code>, <code>/api/document-matches</code></td><td><code>FinancialDocumentEndpoints.cs</code></td><td>Tiếp nhận, khớp N:N</td></tr>
+          <tr><td>Đính kèm</td><td><code>/api/attachments</code></td><td><code>MobileAndAttachmentEndpoints.cs</code></td><td>Ảnh/PDF hiện trường</td></tr>
+          <tr><td>AP / AR</td><td><code>/api/payable-exposures</code>, <code>/api/receivable-exposures</code>, <code>/api/accounts-payable</code>, <code>/api/accounts-receivable</code></td><td><code>ExposureApArEndpoints.cs</code></td><td>Exposure, sổ, xóa nợ, hoàn tác</td></tr>
+          <tr><td>Thanh toán</td><td><code>/api/payments</code>, <code>/api/collections</code> và allocations</td><td><code>SettlementEndpoints.cs</code></td><td>Phiếu chi, phiếu thu, gạch nợ</td></tr>
+          <tr><td>Sao kê</td><td><code>/api/bank-feed/lines</code></td><td><code>BankFeedEndpoints.cs</code></td><td>Đọc dòng sao kê</td></tr>
+          <tr><td>Kiểm soát</td><td><code>/api/approvals</code>, <code>/api/exceptions</code>, <code>/api/variances</code>, <code>/api/reconciliations</code></td><td><code>FinancialControlEndpoints.cs</code></td><td>Duyệt, ngoại lệ, chênh lệch</td></tr>
+          <tr><td>Chốt kỳ</td><td><code>/api/financial-closes</code>, snapshots</td><td><code>FinancialCloseEndpoints.cs</code></td><td>Eligibility, snapshot, reopen</td></tr>
+          <tr><td>Báo cáo</td><td><code>/api/dashboard</code>, <code>/api/aging</code>, <code>/api/queues</code>, <code>/api/reports</code></td><td><code>DashboardReportingEndpoints.cs</code></td><td>KPI, tuổi nợ</td></tr>
+          <tr><td>Giá / danh mục</td><td><code>/api/rate-cards</code>, <code>/api/ratings</code>, <code>/api/fx-rates</code>, <code>/api/business-parties</code>, locations, routes</td><td><code>RatePricingEndpoints.cs</code>, <code>MasterDataEndpoints.cs</code></td><td>Tra giá, đối tác, điểm, tuyến</td></tr>
+          <tr><td>Thông báo</td><td><code>/api/notifications</code>, <code>/api/notifications/devices</code></td><td><code>TenantAdminEndpoints.cs</code>, mobile endpoints</td><td>Hộp thư + đăng ký máy</td></tr>
+          <tr><td>Audit</td><td><code>/api/audit-events</code>, <code>/api/outbox</code></td><td><code>AuditIntegrationEndpoints.cs</code></td><td>Chỉ Admin, màn settings</td></tr>
+        </tbody>
+      </table>
+      <p>Header mọi mutation tiền: <code>Authorization</code>, <code>Idempotency-Key</code>, <code>If-Match</code> (row version). Client: <code>apiRequest</code> trong <code>apps/mobile/src/api/client.ts</code>. Server đọc tại <code>CreatePaymentCommand</code>, <code>AllocatePaymentCommand</code>, cost, revenue, financial close.</p>
+
+      <h3>Backend và database cần sửa</h3>
+      <ul>
+        <li><strong>Logout chưa thu hồi refresh.</strong> <code>AuthContext.logout</code> gọi <code>POST /api/auth/logout</code> không body. <code>RevokeAsync</code> thoát khi token rỗng. Gửi refresh đang nằm trong SecureStore.</li>
+        <li><strong>Login xuyên tenant.</strong> <code>POST /api/auth/login</code> dùng <code>IgnoreQueryFilters()</code> và lấy email khớp mật khẩu đầu tiên. Body mobile không gửi tenant. Resolve <code>Tenant.Code</code> rồi chỉ verify user trong tenant đó.</li>
+        <li><strong>Phân trang.</strong> <code>ListBillsQuery</code> và các list tương tự trả full khi thiếu <code>page</code>/<code>pageSize</code>. Thêm <code>GET /api/mobile/feed/{resource}</code>: id, mã, đối tác, số tiền, tiền tệ, trạng thái, <code>rowVersion</code>. Không trả <code>TariffMatrix</code> trên list.</li>
+        <li><strong>Upload multipart.</strong> <code>attachments.MapPost</code> đã nhận form. <code>uploadAttachmentBase64</code> tốn ~33% băng thông. Scanner chuyển <code>FormData</code>.</li>
+        <li><strong>Worker push.</strong> <code>NotificationPublisher</code> chỉ ghi <code>OutboxMessage.Topic = "notification.push"</code>. Thêm consumer gọi Expo Push API. Không gọi FCM trong request HTTP.</li>
+        <li><strong>Xóa tài khoản.</strong> Chưa có route. <code>User</code> có <code>IsActive</code> và <code>EntityBase.SoftDelete</code>. Thêm <code>POST /api/auth/account-deletion</code>. Không xóa Bill, sổ, snapshot.</li>
+        <li><strong>Bootstrap quyền tối đa.</strong> Khi user chưa có role, handler gán <code>PermissionCodes.CoreActionCodes</code> + <code>DataScopes.All</code> nếu có <code>BillRead</code>. Chỉ giữ ở Dev. Production trả 403.</li>
+        <li><strong>Dev header.</strong> Production giữ <code>RequireJwt=true</code>, <code>AllowHeaderBootstrap=false</code>. Tắt <code>/api/dev</code>.</li>
+      </ul>
+    </section>
+
+    <section id="cp2">
+      <p class="tag">Cấu phần 2</p>
+      <h2>Kết nối và bảo mật thương mại</h2>
+      <h3>JWT sang auto-login</h3>
+      <ol>
+        <li><code>POST /api/auth/login</code> → <code>AuthTokenService.IssuePairAsync</code>.</li>
+        <li>Access JWT: <code>sub</code>, <code>tenant_id</code>, <code>jti</code>. HMAC-SHA256. Hạn <code>Auth:Jwt:ExpiryMinutes</code> (mặc định 60). Issuer/audience <code>lcms-api</code>.</li>
+        <li>Refresh: 48 byte ngẫu nhiên. DB lưu SHA-256 hex (<code>RefreshToken.TokenHash</code>). Hạn <code>RefreshExpiryDays</code> (1–90). <code>RefreshAsync</code> thu hồi bản cũ, phát cặp mới, ghi <code>ReplacedByTokenHash</code>.</li>
+        <li><code>TenantResolutionMiddleware</code> lấy tenant và actor từ JWT. <code>X-Tenant-Id</code> chỉ là fallback Dev.</li>
+        <li>Production: <code>FallbackPolicy</code> yêu cầu user đã xác thực. <code>RateLimitingMiddleware</code> tách bucket <code>money</code> và <code>api</code>.</li>
+      </ol>
+      <ul>
+        <li>Cold start: <code>AuthProvider</code> đọc SecureStore (<code>lcms.auth.access_token</code>, <code>lcms.auth.refresh_token</code>, <code>lcms.auth.tenant_id</code>) rồi <code>GET /api/mobile/bootstrap</code>.</li>
+        <li>401: <code>tryRefreshAccessToken</code> gọi <code>/api/auth/refresh</code> một lần (chặn refresh song song). Hỏng thì xóa token và về <code>app/login.tsx</code>.</li>
+        <li>Khóa máy: Face ID / vân tay lúc mở app và khi quay lại sau 5 phút. Đây là khóa thiết bị, không thay JWT.</li>
+        <li>Logout gửi refresh, <code>DELETE /api/notifications/devices</code>, rồi xóa SecureStore.</li>
+        <li>Đổi mật khẩu và khóa user gọi <code>RevokeAllForUserAsync</code>.</li>
+      </ul>
+      <p>Cookie web và JWT mobile chạy song song. Không chia cookie BFF sang app.</p>
+
+      <h3>Ba lớp trên thiết bị</h3>
+      <ul>
+        <li><strong>Secure storage.</strong> Keychain iOS (<code>WhenUnlockedThisDeviceOnly</code>) và Android Keystore qua <code>expo-secure-store</code>. Bản store không được rơi về <code>memoryStore</code> khi SecureStore lỗi — xóa phiên và bắt đăng nhập lại. Không log token.</li>
+        <li><strong>SSL pinning.</strong> Pin SPKI của <code>cms.lsslogistics.vn</code> cộng một pin dự phòng, ở native config plugin. Xoay cert: hai pin chồng 30 ngày, phát hành app trước ngày hết hạn. Sự cố: bản EAS khẩn. Không tắt pin bằng cờ remote không ký. Production cấm <code>setApiBaseUrl</code>.</li>
+        <li><strong>Làm rối mã.</strong> Hermes bytecode (RN 0.86). Android: AAB + R8 trong profile <code>production</code> của <code>eas.json</code>. iOS: strip symbol. Binary không chứa <code>Auth__Jwt__SigningKey</code> hay mật khẩu demo. <code>EXPO_PUBLIC_*</code> chỉ URL công khai và cờ build.</li>
+      </ul>
+      <p>Pinning và R8 nâng chi phí dịch ngược. Quyền thật vẫn ở server: permission, data scope, <code>If-Match</code>, idempotency, tách cost/revenue.</p>
+      <p>Step-up <code>verifyBiometricForMoneyAction</code> trước: duyệt, actualize/adjust, phân bổ phiếu, write-off, reverse, khóa/mở kỳ. Không có vân tay thì passcode thiết bị. Không ship target web lên store.</p>
+    </section>
+
+    <section id="cp3">
+      <p class="tag">Cấu phần 3</p>
+      <h2>UI/UX mobile</h2>
+      <p>Web là sidebar + bảng (<code>ShellChrome</code>, hamburger dưới 900px). Mobile là tối đa 5 tab từ <code>BuildRoleAdaptiveBottomTabs</code> / <code>RoleAdaptiveTabsLayout</code>.</p>
+      <table>
+        <thead>
+          <tr><th>Web</th><th>Mobile</th><th>Bắt buộc</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>/dashboard</code></td><td><code>(tabs)/dashboard.tsx</code></td><td>KPI một cột, skeleton, kéo để tải lại</td></tr>
+          <tr><td><code>/bills</code>, orders, shipments</td><td><code>bills.tsx</code>, <code>bills/[id].tsx</code></td><td><code>CompactTxnCard</code>, <code>FlatList</code>, <code>pageSize=20</code>. Một việc: mở Bill</td></tr>
+          <tr><td><code>/costs</code></td><td><code>costs.tsx</code></td><td>Form một cột. Expected / Confirmed / Actual tách riêng</td></tr>
+          <tr><td><code>/revenues</code></td><td><code>revenues.tsx</code></td><td>Ẩn khi <code>canViewRevenue=false</code>. Margin chỉ khi <code>canViewMargin</code></td></tr>
+          <tr><td><code>/ap-ar</code></td><td><code>ap.tsx</code>, <code>ar.tsx</code></td><td>Tách theo persona. Không một màn vừa AP vừa AR</td></tr>
+          <tr><td><code>/documents</code></td><td><code>documents.tsx</code>, <code>AttachmentGallery</code></td><td>Nút chụp ≥ 48dp. Khớp N:N từng bước</td></tr>
+          <tr><td><code>/queues/approvals</code></td><td><code>approvals.tsx</code></td><td>Before → After, Face ID, rồi <code>POST /api/approvals/{id}/approve</code></td></tr>
+          <tr><td><code>/control</code></td><td><code>control.tsx</code></td><td>Hàng đợi thẻ, một quyết định mỗi thẻ</td></tr>
+          <tr><td><code>/settlements</code></td><td><code>modules/settlements.tsx</code></td><td>Ngoài bottom tab mặc định. Nút “Ghi phiếu” dính trên bàn phím</td></tr>
+          <tr><td><code>/financial-closes</code></td><td><code>modules/closes.tsx</code></td><td>Khóa kỳ có biometric. Snapshot chỉ đọc</td></tr>
+          <tr><td><code>/reports</code></td><td><code>modules/reports.tsx</code></td><td>Tóm tắt. Bảng tuổi nợ rộng để trên web</td></tr>
+          <tr><td><code>/rate-cards</code>, <code>TariffMatrix</code></td><td><code>modules/rates.tsx</code></td><td>Tra cứu, so sánh. Sửa ma trận trên web</td></tr>
+          <tr><td>Catalog, settings hub</td><td><code>master.tsx</code>, <code>settings.tsx</code></td><td>Tra cứu. Tạo user, backup, import CSV, sổ chính sách: web</td></tr>
+          <tr><td>Login</td><td><code>app/login.tsx</code></td><td>Xóa <code>abc123</code> và <code>DEMO_ROLES</code> khỏi binary production</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>Vùng bấm ≥ 44pt iOS / 48dp Android. Tab bar <code>56 + insets.bottom</code> giữ nguyên. Nút header <code>paddingVertical: 6</code> nâng lên hoặc bỏ.</li>
+        <li>Một trục cuộn. <code>FlatList</code>, không nhét cả bảng vào <code>ScrollView</code>.</li>
+        <li>Persona <code>executive_control</code>: Tổng quan, Phê duyệt, Kiểm soát, Bill, Phân hệ. <code>cost_accountant</code> không có tab doanh thu/AR. <code>field_ops</code>: Vận hành, Quét, CP dự kiến, Đồng bộ, Phân hệ.</li>
+        <li>Một hành động chính mỗi màn. Hủy/xóa là nút phụ, có xác nhận.</li>
+        <li>Loading, rỗng, lỗi <code>LcmsApiException.parsed.messageVi</code>. Ngày <code>dd/MM/yyyy</code>, múi <code>Asia/Ho_Chi_Minh</code> từ <code>MobileTenantDto</code>. Lưu UTC trên server.</li>
+      </ul>
+      <h3>Push, sinh trắc, mất mạng</h3>
+      <ul>
+        <li><strong>Push.</strong> Xin quyền sau home. <code>registerPushTokenBestEffort</code> đã <code>POST /api/notifications/devices</code>. Token Expo (FCM/APNs phía dưới). Consumer outbox gọi <code>https://exp.host/--/api/v2/push/send</code>. Payload: title, body, objectType, objectId. Tap thì refetch API. Token <code>DeviceNotRegistered</code> thì tắt <code>UserPushDevice.IsActive</code>.</li>
+        <li><strong>Face ID / vân tay.</strong> Mức 1: khóa phiên. Mức 2: step-up tiền. <code>NSFaceIDUsageDescription</code> đã có. Không gửi template sinh trắc lên server.</li>
+        <li><strong>Offline được phép:</strong> CP dự kiến, ảnh chứng từ, ghi chú hiện trường. <code>enqueueOfflineMutation</code> đã sinh <code>idempotencyKey</code> và giữ <code>ifMatch</code>.</li>
+        <li><strong>Offline bị cấm:</strong> approve, write-off, phân bổ phiếu, recognize, chốt kỳ, reverse. Cần online + biometric + <code>If-Match</code>.</li>
+        <li>Tab Đồng bộ hiện pending / syncing / conflict / failed. Lệch row version → conflict, user tải lại rồi mới ghi.</li>
+      </ul>
+    </section>
+
+    <section id="cp4">
+      <p class="tag">Cấu phần 4</p>
+      <h2>Lộ trình 8 tuần</h2>
+      <p class="meta">Mỗi tuần nghiệm thu trên build EAS <code>preview</code> trỏ <code>https://cms.lsslogistics.vn</code>. Tiền và auth có test server.</p>
+
+      <div class="week">
+        <h3>Tuần 1 — Khóa phiên và bỏ demo</h3>
+        <ul>
+          <li>Backend: logout revoke refresh; login theo tenant; production không nâng quyền bootstrap.</li>
+          <li>Mobile: logout gửi <code>{ refreshToken }</code>; Face ID lúc mở app; xóa demo khi <code>EXPO_PUBLIC_SHOW_DEMO_PERSONAS=false</code>; cấm sửa API URL.</li>
+          <li>File: <code>AuthEndpoints.cs</code>, <code>AuthTokenService.cs</code>, <code>GetMobileBootstrapQuery.cs</code>, <code>AuthContext.tsx</code>, <code>client.ts</code>, <code>login.tsx</code>, <code>eas.json</code>.</li>
+          <li>Nghiệm thu: refresh cũ sau logout → 401. Email tenant A không vào tenant B. Binary production không chứa <code>abc123</code>. Cold start qua Face ID vào home.</li>
+        </ul>
+      </div>
+      <div class="week">
+        <h3>Tuần 2 — Danh sách gọn</h3>
+        <ul>
+          <li>Backend: <code>GET /api/mobile/feed/bills|costs|revenues|payables|receivables|documents</code>, trang 20 field + <code>rowVersion</code>.</li>
+          <li>Mobile: <code>FlatList</code>, tải thêm, ảnh multipart <code>/api/attachments</code>.</li>
+          <li>File: <code>MobileAndAttachmentEndpoints.cs</code>, query cạnh bootstrap, các tab list, <code>CompactTxnCard.tsx</code>, <code>client.ts</code>.</li>
+          <li>Nghiệm thu: 20 Bill trên 3G &lt; 80KB JSON. Ảnh không đi base64. Persona cost không thấy field doanh thu trong feed.</li>
+        </ul>
+      </div>
+      <div class="week">
+        <h3>Tuần 3 — Push thật</h3>
+        <ul>
+          <li>Consumer outbox <code>notification.push</code> → Expo Push API. Tắt device khi token chết. Sửa fan-out <code>Take(200)</code> mọi user active trong <code>NotificationPublisher</code>.</li>
+          <li>Mobile: xin quyền sau home; tap mở đúng object; vào app thì đọc inbox.</li>
+          <li>File: <code>NotificationPublisher.cs</code>, worker outbox, <code>PushDeviceCommandsAndQueries.cs</code>, <code>AuthContext.tsx</code>, plugin <code>expo-notifications</code>.</li>
+          <li>Nghiệm thu: approval trên web → máy nhận push &lt; 30s → tap đúng hàng đợi. Sau logout không còn push.</li>
+        </ul>
+      </div>
+      <div class="week">
+        <h3>Tuần 4 — Chạm và tách cost/revenue</h3>
+        <ul>
+          <li>Nút ≥ 44/48. Một CTA. Empty/error/skeleton. Ẩn module trái <code>financialVisibility</code> và <code>TenantLicenseModules</code>.</li>
+          <li>File: <code>(tabs)/_layout.tsx</code>, màn tab, <code>app/modules/*.tsx</code>.</li>
+          <li>Nghiệm thu: <code>cost@</code> không mở deep link doanh thu/AR/lợi nhuận. <code>revenue@</code> không thấy chi phí. Không nút nào bấm mà im lặng.</li>
+        </ul>
+      </div>
+      <div class="week">
+        <h3>Tuần 5 — Offline đúng biên</h3>
+        <ul>
+          <li>Whitelist endpoint được vào <code>enqueueOfflineMutation</code>. Lệnh tiền khi offline bị từ chối, không vào hàng đợi.</li>
+          <li>Test hai lần cùng <code>Idempotency-Key</code> không nhân đôi phiếu chi.</li>
+          <li>File: <code>outbox.ts</code>, <code>offline.tsx</code>, <code>scanner.tsx</code>.</li>
+          <li>Nghiệm thu: tắt mạng, chụp chứng từ, bật mạng, một attachment. Tắt mạng bấm Duyệt không đổi approval. Double-tap Ghi phiếu tạo một <code>Payment</code>.</li>
+        </ul>
+      </div>
+      <div class="week">
+        <h3>Tuần 6 — Pinning, R8, quyền máy</h3>
+        <ul>
+          <li>Plugin pin SPKI + pin dự phòng. <code>eas.json</code> production AAB + R8. Gỡ <code>RECORD_AUDIO</code> khỏi <code>app.json</code>.</li>
+          <li>Giữ <code>NSCameraUsageDescription</code> và <code>NSFaceIDUsageDescription</code>.</li>
+          <li>File: <code>app.json</code>, <code>eas.json</code>, <code>apps/mobile/plugins/</code>.</li>
+          <li>Nghiệm thu: host lệch cert bị chặn. AAB không xin micro. Release không public sourcemap.</li>
+        </ul>
+      </div>
+      <div class="week">
+        <h3>Tuần 7 — Xóa tài khoản, privacy, phiếu chi/thu</h3>
+        <ul>
+          <li><code>POST /api/auth/account-deletion</code>: mật khẩu hiện tại, <code>IsActive=false</code>, <code>SoftDelete</code>, <code>RevokeAllForUserAsync</code>, tắt push device, ghi audit. Sổ và snapshot giữ nguyên.</li>
+          <li>Trang <code>/privacy</code> public trên web. Settings: xóa tài khoản, link chính sách, giải thích quyền Camera/Face ID.</li>
+          <li>Phiếu chi/thu gọi <code>/api/payments</code> và <code>/api/collections</code> sau biometric.</li>
+          <li>Nghiệm thu: sau xóa, login và refresh → 401. Bill cũ còn trên web. Privacy URL mở không cần đăng nhập.</li>
+        </ul>
+      </div>
+      <div class="week">
+        <h3>Tuần 8 — Store</h3>
+        <ul>
+          <li>EAS production, <code>autoIncrement</code>, tắt demo persona. TestFlight + Internal testing với controller, cost, revenue, ops.</li>
+          <li>App Privacy và Data safety khớp dữ liệu thật: email, tên, mã thuê bao, dữ liệu tài chính doanh nghiệp, ảnh chứng từ, định danh thiết bị cho push.</li>
+          <li>File: <code>eas.json</code>, <code>app.json</code>, metadata <code>apps/mobile/store/</code>.</li>
+          <li>Nghiệm thu: UAT nội bộ không crash luồng tiền. Reviewer dùng tài khoản cấp riêng, không có đăng ký công khai.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="cp5">
+      <p class="tag">Cấu phần 5</p>
+      <h2>Checklist store và thanh toán</h2>
+      <h3>Apple</h3>
+      <ul>
+        <li>Xóa tài khoản trong app (5.1.1(v)). Màn hình nói rõ: khóa đăng nhập; chứng từ kế toán giữ theo luật vì <code>SoftDelete</code> không đụng sổ.</li>
+        <li>Privacy Policy URL trên App Store Connect và trong app, cùng một URL.</li>
+        <li>Quyền: Camera (HAWB/MAWB, chứng từ), Face ID (thao tác tài chính). Không xin danh bạ, vị trí, micro, thư viện ảnh nếu chưa dùng.</li>
+        <li><code>PrivacyInfo.xcprivacy</code> qua plugin Expo 57.</li>
+        <li>Khai báo mã hóa: HTTPS + OS, không crypto tự viết. Pháp chế xác nhận <code>ITSAppUsesNonExemptEncryption=false</code> trước khi nộp.</li>
+        <li>Không đăng nhập demo công khai. Review notes cấp tài khoản tenant riêng, hết hạn sau review.</li>
+        <li>Không Sign in with Apple: app không có login mạng xã hội. Không màn tự đăng ký — user do <code>POST /api/users</code>.</li>
+      </ul>
+      <h3>Google Play</h3>
+      <ul>
+        <li>Data safety trùng privacy policy.</li>
+        <li>Target API level theo yêu cầu Play lúc nộp, image EAS mới của Expo 57.</li>
+        <li>Quyền: <code>CAMERA</code>, <code>USE_BIOMETRIC</code>, <code>POST_NOTIFICATIONS</code>, <code>INTERNET</code>, <code>VIBRATE</code>. Xóa <code>RECORD_AUDIO</code> đang khai trong <code>app.json</code>.</li>
+        <li>AAB, Play App Signing. Internal testing rồi rollout 10% → 50% → 100%.</li>
+        <li>Cùng luồng xóa tài khoản tuần 7.</li>
+      </ul>
+      <h3>Thanh toán — không In-App Purchase</h3>
+      <p>Tiền trong app là nghiệp vụ doanh nghiệp, không phải hàng số:</p>
+      <ul>
+        <li>Chi nhà cung cấp: <code>CreatePaymentCommand</code> qua <code>POST /api/payments</code>, <code>AllocatePaymentCommand</code>, <code>FinalizePaymentAllocationCommand</code>.</li>
+        <li>Thu khách: <code>POST /api/collections</code> và collection allocations.</li>
+        <li>Công nợ: recognize, write-off, reverse trên <code>/api/accounts-payable</code> và <code>/api/accounts-receivable</code>.</li>
+        <li>License công ty: <code>/api/tenant-license</code>, hợp đồng ngoài store.</li>
+      </ul>
+      <p>Đưa phiếu chi, phiếu thu, gạch nợ qua StoreKit/Play Billing tính phí store trên tiền logistics và làm lệch sổ (Expected / Confirmed / Actual, Received khác Settled).</p>
+      <p>Cách nối: mobile là client của <code>SettlementEndpoints</code>. Trước khi ghi: biometric + permission server + <code>Idempotency-Key</code> + <code>If-Match</code>. Nếu sau này bán gói phần mềm trên store, IAP chỉ cập nhật <code>TenantLicense</code> / <code>TenantLicenseModules</code> qua webhook. Webhook đó không tạo <code>Payment</code> và không đụng Bill. Việc đó không nằm trong v1.</p>
+      <p>Nhân viên nội bộ có thể nhận thêm bản Custom app qua Apple Business Manager và Managed Google Play, cùng binary, cùng API.</p>
+    </section>
+
+    <section id="rui-ro">
+      <p class="tag">Rủi ro</p>
+      <h2>Rủi ro còn lại</h2>
+      <ul>
+        <li>Consumer push chưa có. Tuần 3 là đường critical.</li>
+        <li>Login xuyên tenant phải chặn ở tuần 1, trước mọi bản store.</li>
+        <li>Fallback <code>DataScopes.All</code> khi user chưa có role không được bật trên production.</li>
+        <li>Pinning làm gãy app nếu xoay cert mà chưa có pin dự phòng và bản app mới.</li>
+        <li>Ảnh chứng từ là dữ liệu nhạy cảm. Form privacy khai “ảnh”, không khai “không thu thập”.</li>
+      </ul>
+      <p class="meta">Bản Markdown cùng nội dung: <code>docs/mobile-commercial-plan.md</code></p>
+    </section>
+  </main>
+</body>
+</html>

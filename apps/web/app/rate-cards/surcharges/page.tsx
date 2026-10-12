@@ -10,7 +10,7 @@ import {
 } from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
-import { formatDateVi } from "@/lib/money";
+import { formatDateOnlyVi, formatDateTimeVi } from "@/lib/money";
 import { listSurcharges } from "@/lib/rate-cards-server";
 import { MigrateLegacySurchargesButton } from "@/components/MigrateLegacySurchargesButton";
 
@@ -169,7 +169,9 @@ export default async function SurchargesPage({
                   <th>Cách tính</th>
                   <th>Đơn vị</th>
                   <th>Phương thức</th>
-                  <th>Hiệu lực</th>
+                  <th>Hiệu lực từ</th>
+                  <th>Hiệu lực đến</th>
+                  <th>Phát hành lúc</th>
                   <th>Trạng thái</th>
                   <th></th>
                 </tr>
@@ -188,9 +190,9 @@ export default async function SurchargesPage({
                       {row.amount} {row.currencyCode}
                     </td>
                     <td>{row.transportMode || "—"}</td>
-                    <td>
-                      {formatDateVi(row.effectiveFrom)} – {formatDateVi(row.effectiveTo)}
-                    </td>
+                    <td>{formatDateOnlyVi(row.effectiveFrom)}</td>
+                    <td>{formatDateOnlyVi(row.effectiveTo)}</td>
+                    <td>{row.publishedAt ? formatDateTimeVi(row.publishedAt) : "—"}</td>
                     <td>
                       {row.versionStatus === "published" ? "Đang hiệu lực" : "Nháp"}
                       {row.sourceKind === "legacy" ? " · cũ" : ""} ·{" "}

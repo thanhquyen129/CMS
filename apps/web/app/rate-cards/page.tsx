@@ -110,7 +110,7 @@ export default async function RateCardsPage({
               },
               {
                 key: "active",
-                label: "Đang hiệu lực",
+                label: "Đang sử dụng",
                 value: activeCount,
                 tone: "primary",
               },

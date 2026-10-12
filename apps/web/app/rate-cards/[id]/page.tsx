@@ -9,18 +9,22 @@ import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
 import { DraftRateVersionVatForm } from "@/components/DraftRateVersionVatForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
 import { RetireRateCardButton } from "@/components/RetireRateCardButton";
+import { SetRateCardActiveButton } from "@/components/SetRateCardActiveButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { ComposeTariffForm } from "@/components/ComposeTariffForm";
 import { TariffMatrix } from "@/components/TariffMatrix";
-import { formatDateTimeVi, formatDateVi, formatMoney } from "@/lib/money";
+import { formatDateOnlyVi, formatDateTimeVi, formatMoney } from "@/lib/money";
 import {
   calcMethodLabel,
+  cardStatusLabel,
   isContainerRateMethod,
   isDraftVersion,
   isPublishedVersion,
   isWeightBreakMethod,
   partyTypeLabel,
+  publicationLabel,
+  publicationListHint,
   versionStatusLabel,
   type PricingRule,
   type RateVersion,
@@ -118,7 +122,8 @@ export default async function RateCardDetailPage({
           {card.carrierName ? ` · ${card.carrierName}` : ""}
           {card.transportMode ? ` · ${card.transportMode}` : ""}
           {card.routeCode ? ` · ${card.routeCode}` : ""}
-          {card.isActive ? "" : " · Ngưng dùng"}
+          {` · ${cardStatusLabel(card.isActive)}`}
+          {` · ${publicationLabel(versions.some((v) => isPublishedVersion(v.status)))}`}
           {card.description ? ` · ${card.description}` : ""}
         </p>
 
@@ -127,13 +132,12 @@ export default async function RateCardDetailPage({
             Tính giá trên {billLabel}
           </Link>
         </p>
+        <p className="note" title={publicationListHint}>
+          Trạng thái bảng giá và trạng thái phiên bản là hai việc khác nhau. Danh sách không kết luận sẵn sàng tính giá khi chưa có Bill.
+        </p>
+        <SetRateCardActiveButton card={card} />
         {versionsRes.ok && !versions.some((v) => isPublishedVersion(v.status)) ? (
           <RetireRateCardButton rateCardId={card.id} code={card.code} />
-        ) : null}
-        {versions.some((v) => isPublishedVersion(v.status)) ? (
-          <p className="note">
-            Đã có phiên bản phát hành — không ngừng bảng giá. Lập phiên bản mới.
-          </p>
         ) : null}
 
         <h2 className="section-title">Phiên bản</h2>
@@ -156,16 +160,26 @@ export default async function RateCardDetailPage({
               return (
                 <div key={v.id} className="panel" style={{ margin: 0 }}>
                   <h3 className="section-title sm">
-                    v{v.versionNo} — {versionStatusLabel(v.status)}
+                    v{v.versionNo} · {versionStatusLabel(v.status)}
                   </h3>
-                  <p className="muted small">
-                    {v.effectiveFrom
-                      ? `Hiệu lực: ${formatDateVi(v.effectiveFrom)}`
-                      : "Chưa ghi ngày hiệu lực"}
-                    {v.publishedAt
-                      ? ` · Phát hành: ${formatDateTimeVi(v.publishedAt)}`
-                      : " · Chưa phát hành"}
-                  </p>
+                  <div className="table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Hiệu lực từ</th>
+                          <th>Hiệu lực đến</th>
+                          <th>Phát hành lúc</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{formatDateOnlyVi(v.effectiveFrom)}</td>
+                          <td>{formatDateOnlyVi(v.effectiveTo)}</td>
+                          <td>{v.publishedAt ? formatDateTimeVi(v.publishedAt) : "—"}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                   <p className="muted small">
                     Quy tắc ở đây là cước chính. Phụ phí dùng chung tạo ở Quản lý phụ phí và không bắt buộc gắn vào bảng giá.
                   </p>

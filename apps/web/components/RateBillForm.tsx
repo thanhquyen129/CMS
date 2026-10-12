@@ -1,28 +1,44 @@
 "use client";
 
-import type { FormEvent } from "react";
+import type { FormEvent, MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import type { RateCard, RateVersion } from "@/lib/rate-cards";
-import {
-  isPublishedVersion,
-  partyTypeLabel,
-  tariffCommodityOptions,
-} from "@/lib/rate-cards";
-import { term, type TerminologyMap } from "@/lib/terminology";
 import { RatingReadinessBox } from "@/components/RatingReadinessBox";
 import type { ApiError, RatingReadiness } from "@/lib/opref-edit";
+import { term, type TerminologyMap } from "@/lib/terminology";
 
-type CardWithVersions = {
-  card: RateCard;
-  versions: RateVersion[];
+type RateOption = {
+  rateCardId: string;
+  code: string;
+  name: string;
+  currencyCode: string;
+  transportMode: string | null;
+  versionId: string;
+  versionNo: number;
+  selectable: boolean;
+  reason: string | null;
+};
+
+type RateSide = {
+  publicationLabel: string;
+  readyLabel: string | null;
+  notice: string;
+  ambiguous: boolean;
+  selectedVersionId: string | null;
+  options: RateOption[];
+};
+
+type Suggestion = {
+  billId: string;
+  routeCode: string | null;
+  transportMode: string | null;
+  buy: RateSide;
+  sell: RateSide;
 };
 
 type Props = {
   terms: TerminologyMap;
   billId: string;
-  cardsWithVersions: CardWithVersions[];
-  /** Anchor of the Bill edit section on the same page. */
   editAnchor?: string;
 };
 
@@ -33,115 +49,173 @@ function num(raw: string): number | null {
   return Number.isFinite(n) ? n : NaN;
 }
 
-export function RateBillForm({ terms, billId, cardsWithVersions, editAnchor = "bill-edit" }: Props) {
-  const router = useRouter();
-  const cardsWithPublished = cardsWithVersions.filter((c) =>
-    c.versions.some((v) => isPublishedVersion(v.status))
+function SideBlock({
+  title,
+  side,
+  versionId,
+  onVersion,
+  readiness,
+  readinessError,
+  checking,
+  editAnchor,
+}: {
+  title: string;
+  side: RateSide;
+  versionId: string;
+  onVersion: (id: string) => void;
+  readiness: RatingReadiness | null;
+  readinessError: string | null;
+  checking: boolean;
+  editAnchor: string;
+}) {
+  const selectable = side.options.filter((o) => o.selectable);
+  const blocked = side.options.filter((o) => !o.selectable);
+  return (
+    <section className="panel" style={{ margin: 0 }}>
+      <h3 className="section-title sm">{title}</h3>
+      <p className="muted small">
+        {side.publicationLabel}
+        {side.readyLabel ? ` · ${side.readyLabel}` : ""}
+      </p>
+      {side.notice ? (
+        <div className="alert alert-warning" role="status">
+          {side.notice}
+        </div>
+      ) : null}
+      <div className="field">
+        <label htmlFor={`version-${title}`}>Bảng giá / phiên bản đã phát hành</label>
+        <select id={`version-${title}`} value={versionId} onChange={(ev) => onVersion(ev.target.value)}>
+          <option value="">{selectable.length === 0 ? "— Không chọn được —" : "Chọn bảng giá"}</option>
+          {selectable.map((o) => (
+            <option key={o.versionId} value={o.versionId}>
+              {o.code} — {o.name} · v{o.versionNo} · {o.currencyCode}
+            </option>
+          ))}
+        </select>
+      </div>
+      {blocked.length > 0 ? (
+        <ul className="readiness-list">
+          {blocked.map((o) => (
+            <li key={o.versionId}>
+              <code>{o.code}</code> v{o.versionNo}: {o.reason}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <RatingReadinessBox readiness={readiness} error={readinessError} checking={checking} editAnchor={editAnchor} />
+    </section>
   );
+}
 
+export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props) {
+  const router = useRouter();
+  const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [buyVersion, setBuyVersion] = useState("");
+  const [sellVersion, setSellVersion] = useState("");
+  const [buyTouched, setBuyTouched] = useState(false);
+  const [sellTouched, setSellTouched] = useState(false);
+  const [quantity, setQuantity] = useState("");
+  const [weight, setWeight] = useState("");
+  const [overrideReason, setOverrideReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [cardId, setCardId] = useState(cardsWithPublished[0]?.card.id ?? "");
-  const [versionId, setVersionId] = useState("");
-  const [quantity, setQuantity] = useState("");
-  const [overrideReason, setOverrideReason] = useState("");
-  const [commodityCode, setCommodityCode] = useState("");
-  const [destinationCode, setDestinationCode] = useState("");
-  const [weight, setWeight] = useState("");
-  const [serviceTypeCode, setServiceTypeCode] = useState("");
-  const [partyTypeCode, setPartyTypeCode] = useState("");
-  const [routeCode, setRouteCode] = useState("");
-  const [baseAmount, setBaseAmount] = useState("");
-  const [readiness, setReadiness] = useState<RatingReadiness | null>(null);
-  const [readinessError, setReadinessError] = useState<string | null>(null);
-  const [checking, setChecking] = useState(false);
+  const [buyReadiness, setBuyReadiness] = useState<RatingReadiness | null>(null);
+  const [sellReadiness, setSellReadiness] = useState<RatingReadiness | null>(null);
+  const [buyReadinessError, setBuyReadinessError] = useState<string | null>(null);
+  const [sellReadinessError, setSellReadinessError] = useState<string | null>(null);
+  const [buyChecking, setBuyChecking] = useState(false);
+  const [sellChecking, setSellChecking] = useState(false);
 
   const expected = term(terms, "EXPECTED", "Dự kiến");
   const costLabel = term(terms, "COST", "Chi phí");
-
-  const publishedVersions = useMemo(() => {
-    const entry = cardsWithPublished.find((c) => c.card.id === cardId);
-    if (!entry) return [];
-    return entry.versions.filter((v) => isPublishedVersion(v.status));
-  }, [cardId, cardsWithPublished]);
-
-  const selectedCard =
-    cardsWithPublished.find((c) => c.card.id === cardId) ?? cardsWithPublished[0];
-  const effectiveVersionId = versionId || publishedVersions[0]?.id || "";
-  const mode = selectedCard?.card.transportMode?.toLowerCase();
-
-  const body = useMemo(() => {
-    const q = num(quantity);
-    const w = num(weight);
-    return {
-      billId,
-      rateVersionId: effectiveVersionId,
-      quantity: q === null || Number.isNaN(q) ? null : q,
-      weight: w === null || Number.isNaN(w) ? null : w,
-      commodityCode: commodityCode || null,
-      destinationCode: destinationCode || null,
-      serviceTypeCode: serviceTypeCode.trim() || null,
-      partyTypeCode: partyTypeCode.trim() || null,
-      routeCode: routeCode.trim() || null,
-      chargeableOverrideReason: overrideReason.trim() || null,
-    };
-  }, [billId, effectiveVersionId, quantity, weight, commodityCode, destinationCode, serviceTypeCode, partyTypeCode, routeCode, overrideReason]);
+  const revenueLabel = term(terms, "REVENUE", "Doanh thu");
 
   useEffect(() => {
-    if (!body.rateVersionId) {
-      setReadiness(null);
-      return;
-    }
     let cancelled = false;
-    const timer = window.setTimeout(async () => {
-      setChecking(true);
-      setReadinessError(null);
+    (async () => {
       try {
-        const res = await fetch("/bff/ratings/readiness", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify(body),
-        });
+        const res = await fetch(`/bff/bills/${billId}/rate-suggestions`, { headers: { Accept: "application/json" } });
         if (res.status === 401) {
           window.location.href = "/login";
           return;
         }
-        const payload = (await res.json().catch(() => ({}))) as RatingReadiness & ApiError;
+        const payload = (await res.json().catch(() => ({}))) as Suggestion & ApiError;
         if (cancelled) return;
         if (!res.ok) {
-          setReadiness(null);
-          setReadinessError(payload.message ?? "Không kiểm tra được dữ liệu tính giá.");
+          setLoadError(payload.message ?? "Không tải được bảng giá đề xuất.");
           return;
         }
-        setReadiness(payload);
+        setSuggestion(payload);
       } catch {
-        if (!cancelled) setReadinessError("Không kết nối được máy chủ. Thử lại sau.");
-      } finally {
-        if (!cancelled) setChecking(false);
+        if (!cancelled) setLoadError("Không kết nối được máy chủ. Thử lại sau.");
       }
-    }, 350);
+    })();
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
     };
-  }, [body]);
+  }, [billId]);
 
-  if (cardsWithPublished.length === 0) {
-    return (
-      <div className="empty-state" role="status">
-        Chưa có phiên bản bảng giá đã phát hành. Tạo bảng giá → quy tắc → phát
-        hành trước khi tính giá.
-      </div>
-    );
+  useEffect(() => {
+    if (!suggestion || buyTouched) return;
+    setBuyVersion(suggestion.buy.ambiguous ? "" : suggestion.buy.selectedVersionId ?? "");
+  }, [suggestion, buyTouched]);
+
+  useEffect(() => {
+    if (!suggestion || sellTouched) return;
+    setSellVersion(suggestion.sell.ambiguous ? "" : suggestion.sell.selectedVersionId ?? "");
+  }, [suggestion, sellTouched]);
+
+  const bodyFor = useMemo(() => {
+    return (versionId: string) => {
+      const q = num(quantity);
+      const w = num(weight);
+      return {
+        billId,
+        rateVersionId: versionId,
+        quantity: q === null || Number.isNaN(q) ? null : q,
+        weight: w === null || Number.isNaN(w) ? null : w,
+        chargeableOverrideReason: overrideReason.trim() || null,
+      };
+    };
+  }, [billId, quantity, weight, overrideReason]);
+
+  useEffect(() => {
+    return watchReadiness(bodyFor(buyVersion), setBuyReadiness, setBuyReadinessError, setBuyChecking);
+  }, [bodyFor, buyVersion]);
+
+  useEffect(() => {
+    return watchReadiness(bodyFor(sellVersion), setSellReadiness, setSellReadinessError, setSellChecking);
+  }, [bodyFor, sellVersion]);
+
+  async function rateSide(versionId: string, seed: "cost" | "revenue") {
+    const res = await fetch("/bff/ratings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        ...bodyFor(versionId),
+        supersedesRatingId: null,
+        seedExpectedCosts: seed === "cost",
+        seedExpectedRevenues: seed === "revenue",
+      }),
+    });
+    if (res.status === 401) {
+      window.location.href = "/login";
+      return "Phiên đăng nhập đã hết.";
+    }
+    if (!res.ok) {
+      const payload = (await res.json().catch(() => ({}))) as ApiError;
+      return payload.message || "Tính giá thất bại.";
+    }
+    return null;
   }
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement> | MouseEvent<HTMLButtonElement>, which: "buy" | "sell" | "both") {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-
     const q = num(quantity);
     if (q !== null && (Number.isNaN(q) || q <= 0)) {
       setError("Khối tính cước ghi đè phải > 0.");
@@ -149,50 +223,47 @@ export function RateBillForm({ terms, billId, cardsWithVersions, editAnchor = "b
     }
     const w = num(weight);
     if (w !== null && (Number.isNaN(w) || w <= 0)) {
-      setError("Trọng lượng thực phải > 0.");
-      return;
-    }
-    if (!body.rateVersionId) {
-      setError("Chọn phiên bản đã phát hành.");
+      setError("Trọng lượng thực phải > 0. Không dùng 0.");
       return;
     }
 
-    const base = num(baseAmount);
-    if (base !== null && Number.isNaN(base)) {
-      setError("Số cơ sở không hợp lệ.");
+    const jobs: { versionId: string; seed: "cost" | "revenue"; label: string }[] = [];
+    const notes: string[] = [];
+    if (which === "buy" || which === "both") {
+      if (buyVersion) jobs.push({ versionId: buyVersion, seed: "cost", label: "Giá mua" });
+      else notes.push(suggestion?.buy.notice || "Chưa chọn giá mua.");
+    }
+    if (which === "sell" || which === "both") {
+      if (sellVersion) jobs.push({ versionId: sellVersion, seed: "revenue", label: "Giá bán" });
+      else notes.push(suggestion?.sell.notice || "Chưa chọn giá bán.");
+    }
+    if (jobs.length === 0) {
+      setError(notes.join(" ") || "Chưa có chiều nào tính được.");
       return;
     }
+    if (which === "buy" && buyReadiness && !buyReadiness.ready) return;
+    if (which === "sell" && sellReadiness && !sellReadiness.ready) return;
+    if (which === "both") {
+      if (buyVersion && buyReadiness && !buyReadiness.ready) return;
+      if (sellVersion && sellReadiness && !sellReadiness.ready) return;
+    }
 
-    const fd = new FormData(e.currentTarget);
-    const seedExpectedCosts = fd.get("seedExpectedCosts") === "on";
     setSubmitting(true);
     try {
-      const res = await fetch("/bff/ratings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ ...body, baseAmount: base, supersedesRatingId: null, seedExpectedCosts }),
-      });
-      if (res.status === 401) {
-        window.location.href = "/login";
-        return;
+      const failures: string[] = [];
+      const done: string[] = [];
+      for (const job of jobs) {
+        const message = await rateSide(job.versionId, job.seed);
+        if (message) failures.push(`${job.label}: ${message}`);
+        else done.push(job.label);
       }
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => ({}))) as ApiError;
-        if (payload.code === "rating_not_ready" && payload.missing && readiness) {
-          setReadiness({ ...readiness, ready: false, missing: payload.missing });
-        }
-        setError(
-          payload.message ||
-            (res.status === 403 ? "Bạn không có quyền tính giá." : "Tính giá thất bại.")
-        );
-        return;
-      }
-      setSuccess(
-        seedExpectedCosts
-          ? `Đã tính giá và seed ${costLabel.toLowerCase()} ${expected.toLowerCase()}.`
-          : "Đã tính giá. Có thể seed chi phí Dự kiến từ lịch sử bên dưới."
-      );
-      startTransition(() => router.refresh());
+      if (failures.length > 0) setError(failures.join(" "));
+      const parts = [
+        done.length > 0 ? `Đã tính ${done.join(" và ")} (${expected.toLowerCase()}).` : "",
+        notes.length > 0 ? notes.join(" ") : "",
+      ].filter(Boolean);
+      if (parts.length > 0) setSuccess(parts.join(" "));
+      if (done.length > 0) startTransition(() => router.refresh());
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
@@ -200,18 +271,28 @@ export function RateBillForm({ terms, billId, cardsWithVersions, editAnchor = "b
     }
   }
 
+  if (loadError) {
+    return (
+      <div className="alert alert-error" role="alert">
+        {loadError}
+      </div>
+    );
+  }
+  if (!suggestion) {
+    return <p className="muted">Đang đối chiếu bảng giá với Bill…</p>;
+  }
+
   const busy = submitting || isPending;
-  const blocked = readiness !== null && !readiness.ready;
-  const hasQuantity = quantity.trim() !== "";
+  const buyBlocked = Boolean(buyVersion && buyReadiness && !buyReadiness.ready);
+  const sellBlocked = Boolean(sellVersion && sellReadiness && !sellReadiness.ready);
 
   return (
-    <form className="receive-form" onSubmit={onSubmit} noValidate>
+    <form className="receive-form" onSubmit={(e) => onSubmit(e, "both")} noValidate>
       <p className="note">
-        Dữ liệu tính giá lấy từ Bill (phương thức, tuyến, loại hàng, trọng lượng, thể tích, Trọng lượng tính cước).
-        Thiếu gì hệ thống sẽ liệt kê bên dưới — bổ sung trên Bill rồi tính giá. Chỉ nhập các ô bên dưới khi cần
-        khác với Bill.
+        Giá mua tạo {costLabel.toLowerCase()} {expected.toLowerCase()}. Giá bán tạo {revenueLabel.toLowerCase()}{" "}
+        {expected.toLowerCase()}. Không tạo Thực tế, chứng từ hay công nợ. Thiếu một chiều vẫn tính chiều còn lại.
+        Nhiều bảng giá cùng phù hợp thì phải chọn, hệ thống không tự chọn.
       </p>
-
       {error ? (
         <div className="alert alert-error" role="alert">
           {error}
@@ -222,145 +303,109 @@ export function RateBillForm({ terms, billId, cardsWithVersions, editAnchor = "b
           {success}
         </div>
       ) : null}
-
-      <div className="form-grid">
-        <div className="field">
-          <label htmlFor="rateCardId">Bảng giá</label>
-          <select
-            id="rateCardId"
-            value={selectedCard?.card.id ?? ""}
-            onChange={(ev) => {
-              setCardId(ev.target.value);
-              setVersionId("");
-              setCommodityCode("");
-            }}
-          >
-            {cardsWithPublished.map(({ card }) => (
-              <option key={card.id} value={card.id}>
-                {card.code} — {card.name} ({partyTypeLabel(card.partyType)})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="rateVersionId">Phiên bản đã phát hành</label>
-          <select
-            id="rateVersionId"
-            value={effectiveVersionId}
-            onChange={(ev) => setVersionId(ev.target.value)}
-          >
-            {publishedVersions.length === 0 ? (
-              <option value="">— Không có —</option>
-            ) : (
-              publishedVersions.map((v) => (
-                <option key={v.id} value={v.id}>
-                  v{v.versionNo}
-                  {v.note ? ` — ${v.note}` : ""}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="commodityCode">Loại hàng</label>
-          <select id="commodityCode" value={commodityCode} onChange={(ev) => setCommodityCode(ev.target.value)}>
-            <option value="">Theo Bill</option>
-            {tariffCommodityOptions
-              .filter((opt) => {
-                if (mode !== "air" && mode !== "sea") return true;
-                return (opt.modes as readonly string[]).includes(mode);
-              })
-              .map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="destinationCode">Điểm đến (phụ phí vùng)</label>
-          <select id="destinationCode" value={destinationCode} onChange={(ev) => setDestinationCode(ev.target.value)}>
-            <option value="">Theo Bill</option>
-            <option value="SBH">Sabah (SBH)</option>
-            <option value="SWK">Sarawak (SWK)</option>
-          </select>
-        </div>
+      <div className="layout-cols-2">
+        <SideBlock
+          title="Giá mua — Chi phí dự kiến"
+          side={suggestion.buy}
+          versionId={buyVersion}
+          onVersion={(id) => {
+            setBuyTouched(true);
+            setBuyVersion(id);
+          }}
+          readiness={buyReadiness}
+          readinessError={buyReadinessError}
+          checking={buyChecking}
+          editAnchor={editAnchor}
+        />
+        <SideBlock
+          title="Giá bán — Doanh thu dự kiến"
+          side={suggestion.sell}
+          versionId={sellVersion}
+          onVersion={(id) => {
+            setSellTouched(true);
+            setSellVersion(id);
+          }}
+          readiness={sellReadiness}
+          readinessError={sellReadinessError}
+          checking={sellChecking}
+          editAnchor={editAnchor}
+        />
       </div>
-
       <details className="stack">
-        <summary className="muted">Ghi đè khi tính giá (tuỳ chọn)</summary>
+        <summary className="muted">Ghi đè khi tính giá (tuỳ chọn, dùng chung cho lần bấm này)</summary>
         <div className="form-grid">
           <div className="field">
-            <label htmlFor="quantity">{mode === "sea" ? "Khối tính cước ghi đè (W/M)" : "Trọng lượng tính cước ghi đè (kg)"}</label>
-            <input
-              id="quantity"
-              inputMode="decimal"
-              placeholder="Theo Bill"
-              value={quantity}
-              onChange={(ev) => setQuantity(ev.target.value)}
-            />
+            <label htmlFor="quantity">Khối tính cước ghi đè</label>
+            <input id="quantity" inputMode="decimal" placeholder="Theo Bill" value={quantity} onChange={(ev) => setQuantity(ev.target.value)} />
           </div>
-          {hasQuantity ? (
-            <div className="field">
-              <label htmlFor="chargeableOverrideReason">Lý do ghi đè</label>
-              <input
-                id="chargeableOverrideReason"
-                value={overrideReason}
-                maxLength={500}
-                placeholder="Bắt buộc khi Bill đã có Trọng lượng tính cước"
-                onChange={(ev) => setOverrideReason(ev.target.value)}
-              />
-            </div>
-          ) : null}
           <div className="field">
             <label htmlFor="weight">Trọng lượng thực (kg)</label>
             <input id="weight" inputMode="decimal" placeholder="Theo Bill" value={weight} onChange={(ev) => setWeight(ev.target.value)} />
           </div>
-          <div className="field">
-            <label htmlFor="serviceTypeCode">Loại dịch vụ</label>
-            <input id="serviceTypeCode" placeholder="Theo Bill" value={serviceTypeCode} onChange={(ev) => setServiceTypeCode(ev.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="partyTypeCode">Mã loại đối tác</label>
-            <input id="partyTypeCode" placeholder="Theo bảng giá" value={partyTypeCode} onChange={(ev) => setPartyTypeCode(ev.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="routeCode">Mã tuyến</label>
-            <input id="routeCode" placeholder="Theo Bill" value={routeCode} onChange={(ev) => setRouteCode(ev.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="baseAmount">Số cơ sở (cho % — tuỳ chọn)</label>
-            <input id="baseAmount" inputMode="decimal" value={baseAmount} onChange={(ev) => setBaseAmount(ev.target.value)} />
-          </div>
+          {quantity.trim() ? (
+            <div className="field">
+              <label htmlFor="chargeableOverrideReason">Lý do ghi đè</label>
+              <input id="chargeableOverrideReason" value={overrideReason} maxLength={500} onChange={(ev) => setOverrideReason(ev.target.value)} />
+            </div>
+          ) : null}
         </div>
       </details>
-
-      <RatingReadinessBox
-        readiness={readiness}
-        error={readinessError}
-        checking={checking}
-        editAnchor={editAnchor}
-      />
-
-      <div className="form-grid">
-        <div className="field field-span">
-          <label className="checkbox-label">
-            <input type="checkbox" name="seedExpectedCosts" defaultChecked /> Seed{" "}
-            {costLabel.toLowerCase()} {expected.toLowerCase()} ngay
-          </label>
-        </div>
-      </div>
-
       <div className="cta-row">
-        <button
-          className="btn"
-          type="submit"
-          disabled={busy || publishedVersions.length === 0 || blocked}
-          title={blocked ? "Bổ sung dữ liệu còn thiếu trước khi tính giá." : undefined}
-        >
-          {busy ? "Đang tính…" : "Tính giá"}
+        <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !buyVersion || buyBlocked} onClick={(e) => onSubmit(e, "buy")}>
+          {busy ? "Đang tính…" : "Tính giá mua"}
+        </button>
+        <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !sellVersion || sellBlocked} onClick={(e) => onSubmit(e, "sell")}>
+          {busy ? "Đang tính…" : "Tính giá bán"}
+        </button>
+        <button className="btn" type="submit" disabled={busy || !buyVersion || !sellVersion || buyBlocked || sellBlocked}>
+          {busy ? "Đang tính…" : "Tính giá cả hai"}
         </button>
       </div>
     </form>
   );
+}
+
+function watchReadiness(
+  body: { rateVersionId: string },
+  setReadiness: (value: RatingReadiness | null) => void,
+  setError: (value: string | null) => void,
+  setChecking: (value: boolean) => void
+) {
+  if (!body.rateVersionId) {
+    setReadiness(null);
+    setError(null);
+    return undefined;
+  }
+  let cancelled = false;
+  const timer = window.setTimeout(async () => {
+    setChecking(true);
+    setError(null);
+    try {
+      const res = await fetch("/bff/ratings/readiness", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+      const payload = (await res.json().catch(() => ({}))) as RatingReadiness & ApiError;
+      if (cancelled) return;
+      if (!res.ok) {
+        setReadiness(null);
+        setError(payload.message ?? "Không kiểm tra được dữ liệu tính giá.");
+        return;
+      }
+      setReadiness(payload);
+    } catch {
+      if (!cancelled) setError("Không kết nối được máy chủ. Thử lại sau.");
+    } finally {
+      if (!cancelled) setChecking(false);
+    }
+  }, 350);
+  return () => {
+    cancelled = true;
+    window.clearTimeout(timer);
+  };
 }

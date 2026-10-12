@@ -23,7 +23,8 @@ public sealed record SurchargeDto(
     string SourceKind,
     Guid? EconomicChargeTypeId = null,
     string? EconomicChargeTypeCode = null,
-    string? EconomicChargeTypeName = null);
+    string? EconomicChargeTypeName = null,
+    DateTimeOffset? PublishedAt = null);
 
 public sealed record ListSurchargesQuery : IRequest<IReadOnlyList<SurchargeDto>>;
 
@@ -111,7 +112,8 @@ public sealed class ListSurchargesQueryHandler : IRequestHandler<ListSurchargesQ
                 "independent",
                 version?.EconomicChargeTypeId,
                 chargeType?.Code,
-                chargeType?.Name);
+                chargeType?.Name,
+                version?.PublishedAt);
         }).ToList();
     }
 
@@ -125,7 +127,9 @@ public sealed record RateAppendixDto(
     string? Note,
     DateTimeOffset? EffectiveFrom,
     int VersionNo,
-    string Status);
+    string Status,
+    DateTimeOffset? EffectiveTo = null,
+    DateTimeOffset? PublishedAt = null);
 
 public sealed record ListRateAppendicesQuery : IRequest<IReadOnlyList<RateAppendixDto>>;
 
@@ -153,7 +157,7 @@ public sealed class ListRateAppendicesQueryHandler : IRequestHandler<ListRateApp
         return versions.Select(v =>
         {
             cards.TryGetValue(v.RateCardId, out var card);
-            return new RateAppendixDto(v.Id, v.RateCardId, card?.Code ?? "", card?.Name ?? "", v.Note, v.EffectiveFrom, v.VersionNo, v.Status);
+            return new RateAppendixDto(v.Id, v.RateCardId, card?.Code ?? "", card?.Name ?? "", v.Note, v.EffectiveFrom, v.VersionNo, v.Status, v.EffectiveTo, v.PublishedAt);
         }).ToList();
     }
 }

@@ -125,6 +125,7 @@ export type SurchargeRow = {
   economicChargeTypeId?: string | null;
   economicChargeTypeCode?: string | null;
   economicChargeTypeName?: string | null;
+  publishedAt?: string | null;
 };
 
 export type AppendixRow = {
@@ -136,6 +137,8 @@ export type AppendixRow = {
   effectiveFrom: string | null;
   versionNo: number;
   status: string;
+  effectiveTo?: string | null;
+  publishedAt?: string | null;
 };
 
 export type RatingHistoryRow = {

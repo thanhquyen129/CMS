@@ -17,13 +17,13 @@ import {
   slicePage,
   totalPages as calcTotalPages,
 } from "@/lib/list-paging";
-import { formatDateVi } from "@/lib/money";
+import { formatDateOnlyVi, formatDateTimeVi } from "@/lib/money";
 import { listAppendices } from "@/lib/rate-cards-server";
 
 type SearchParams = Promise<{ q?: string; status?: string; page?: string; pageSize?: string }>;
 
 function statusLabel(status: string): string {
-  if (status === "published") return "Đã Published";
+  if (status === "published") return "Đã phát hành";
   if (status === "draft") return "Nháp";
   return status;
 }
@@ -109,7 +109,7 @@ export default async function AppendicesPage({
               defaultValue: sp.status ?? "",
               options: [
                 { value: "", label: "Tất cả" },
-                { value: "published", label: "Đã Published" },
+                { value: "published", label: "Đã phát hành" },
                 { value: "draft", label: "Nháp" },
               ],
             },
@@ -141,8 +141,10 @@ export default async function AppendicesPage({
                     <th>Rate Card</th>
                     <th>Nội dung</th>
                     <th>Hiệu lực từ</th>
+                    <th>Hiệu lực đến</th>
+                    <th>Phát hành lúc</th>
                     <th>Phiên bản</th>
-                    <th>Trạng thái</th>
+                    <th>Trạng thái phiên bản</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -155,7 +157,9 @@ export default async function AppendicesPage({
                       </td>
                       <td>{row.cardCode}</td>
                       <td>{row.note || row.cardName}</td>
-                      <td>{formatDateVi(row.effectiveFrom)}</td>
+                      <td>{formatDateOnlyVi(row.effectiveFrom)}</td>
+                      <td>{formatDateOnlyVi(row.effectiveTo)}</td>
+                      <td>{row.publishedAt ? formatDateTimeVi(row.publishedAt) : "—"}</td>
                       <td>v{row.versionNo}</td>
                       <td>{statusLabel(row.status)}</td>
                     </tr>

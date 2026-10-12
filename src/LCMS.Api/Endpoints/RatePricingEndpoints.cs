@@ -320,6 +320,11 @@ public static class RatePricingEndpoints
             var list = await sender.Send(new ListRatingsByBillQuery(billId), ct);
             return Results.Ok(list);
         });
+        bills.MapGet("/{billId:guid}/rate-suggestions", async (Guid billId, ISender sender, CancellationToken ct) =>
+        {
+            var suggestion = await sender.Send(new SuggestBillRatesQuery(billId), ct);
+            return Results.Ok(suggestion);
+        });
 
         ratings.MapPost("/compare", async (CompareRatesRequest body, ISender sender, CancellationToken ct) =>
         {

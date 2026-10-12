@@ -6,7 +6,7 @@ import { SurchargeForm } from "@/components/SurchargeForm";
 import { SurchargeVersionActions } from "@/components/SurchargeVersionActions";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
-import { formatDateTimeVi, formatDateVi } from "@/lib/money";
+import { formatDateOnlyVi, formatDateTimeVi } from "@/lib/money";
 import { listEconomicChargeTypes, listRateCards, getSurcharge } from "@/lib/rate-cards-server";
 import { unwrapPaged } from "@/lib/paging";
 
@@ -60,7 +60,9 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
               <th>Phiên bản</th>
               <th>Khoản mục kinh tế</th>
               <th>Trạng thái</th>
-              <th>Hiệu lực</th>
+              <th>Hiệu lực từ</th>
+              <th>Hiệu lực đến</th>
+              <th>Phát hành lúc</th>
               <th>Cách tính</th>
               <th>Giá trị</th>
             </tr>
@@ -71,10 +73,9 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
                 <td>v{version.versionNo}</td>
                 <td>{version.economicChargeTypeCode ? `${version.economicChargeTypeCode} — ${version.economicChargeTypeName}` : "Chưa gắn"}</td>
                 <td>{version.publishStatus === "published" ? "Đã phát hành" : "Nháp"}</td>
-                <td>
-                  {formatDateVi(version.validFrom)} – {formatDateVi(version.validTo)}
-                  {version.publishedAt ? ` · ${formatDateTimeVi(version.publishedAt)}` : ""}
-                </td>
+                <td>{formatDateOnlyVi(version.validFrom)}</td>
+                <td>{formatDateOnlyVi(version.validTo)}</td>
+                <td>{version.publishedAt ? formatDateTimeVi(version.publishedAt) : "—"}</td>
                 <td>{version.rules.map((item) => item.calculationMode).join(", ") || "—"}</td>
                 <td>{version.rules.map((item) => `${item.rateAmountPercent} ${item.currencyCode}`).join(", ") || "—"}</td>
               </tr>

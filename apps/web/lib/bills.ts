@@ -120,6 +120,8 @@ export type BillProfitability = {
   reportingCost?: number | null;
   reportingProfit?: number | null;
   unconvertedCurrencies?: string[] | null;
+  missingFxCount?: number;
+  reportingComplete?: boolean;
 };
 
 export type ApiResult<T> =

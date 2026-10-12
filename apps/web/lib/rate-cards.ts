@@ -13,6 +13,7 @@ export type RateCard = {
   supplierPartyId?: string | null;
   customerPartyId?: string | null;
   customerGroupCode?: string | null;
+  hasPublishedVersion?: boolean;
 };
 
 export type RateVersion = {
@@ -105,6 +106,7 @@ export type RatingHistoryItem = {
   chargeableBasis?: string | null;
   staleAt?: string | null;
   staleReason?: string | null;
+  partyTypeCode?: string | null;
 };
 
 export type RatingDetail = {
@@ -118,6 +120,13 @@ export type RatingDetail = {
   financialMaturity: string;
   amount: number;
   currencyCode: string;
+  formulaText?: string | null;
+  sourceVersionId?: string | null;
+  amountOriginal?: number | null;
+  originalCurrency?: string | null;
+  lineFxRate?: number | null;
+  vatRate?: number | null;
+  vatAmount?: number | null;
 };
 
 export type Rating = RatingHistoryItem & {
@@ -184,3 +193,14 @@ export function isPublishedVersion(status: string): boolean {
 export function isDraftVersion(status: string): boolean {
   return status?.toLowerCase() === "draft";
 }
+
+export function cardStatusLabel(isActive: boolean): string {
+  return isActive ? "Đang sử dụng" : "Ngừng sử dụng";
+}
+
+export function publicationLabel(hasPublished: boolean): string {
+  return hasPublished ? "Có phiên bản đã phát hành" : "Chưa có phiên bản đã phát hành";
+}
+
+export const publicationListHint =
+  "Chưa có ngữ cảnh Bill. Nhãn này không kết luận sẵn sàng tính giá.";

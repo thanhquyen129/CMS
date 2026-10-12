@@ -1,6 +1,7 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Common.Paging;
+using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,8 @@ public sealed record RateCardDto(
     string? CarrierName = null,
     Guid? SupplierPartyId = null,
     Guid? CustomerPartyId = null,
-    string? CustomerGroupCode = null);
+    string? CustomerGroupCode = null,
+    bool HasPublishedVersion = false);
 
 public sealed record GetRateCardByIdQuery(Guid Id) : IRequest<RateCardDto>;
 
@@ -52,7 +54,10 @@ public sealed class GetRateCardByIdQueryHandler : IRequestHandler<GetRateCardByI
             throw new NotFoundAppException("Không tìm thấy bảng giá.");
         }
 
-        return ToDto(card);
+        var hasPublished = await _db.RateVersions.AnyAsync(
+            v => v.RateCardId == card.Id && v.Status == RateVersionStatuses.Published,
+            cancellationToken);
+        return ToDto(card) with { HasPublishedVersion = hasPublished };
     }
 
     internal static RateCardDto ToDto(Domain.Entities.RateCard card) =>
@@ -146,8 +151,17 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
 
         var items = await pageQuery
             .Select(r => new RateCardDto(
-                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt, r.TransportMode, r.RouteCode, r.CarrierName, r.SupplierPartyId, r.CustomerPartyId, r.CustomerGroupCode))
+                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt, r.TransportMode, r.RouteCode, r.CarrierName, r.SupplierPartyId, r.CustomerPartyId, r.CustomerGroupCode, false))
             .ToListAsync(cancellationToken);
+
+        var ids = items.Select(i => i.Id).ToList();
+        var publishedIds = await _db.RateVersions.AsNoTracking()
+            .Where(v => ids.Contains(v.RateCardId) && v.Status == RateVersionStatuses.Published)
+            .Select(v => v.RateCardId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var published = publishedIds.ToHashSet();
+        items = items.Select(i => i with { HasPublishedVersion = published.Contains(i.Id) }).ToList();
 
         return new PagedResult<RateCardDto>(
             items,

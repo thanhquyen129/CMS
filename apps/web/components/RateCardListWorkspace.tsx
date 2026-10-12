@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { DetailDrawer } from "./DetailDrawer";
 import { DrawerTabs } from "./list/DrawerTabs";
-import { partyTypeLabel, type RateCard } from "@/lib/rate-cards";
+import { cardStatusLabel, partyTypeLabel, publicationLabel, publicationListHint, type RateCard } from "@/lib/rate-cards";
 import { formatDateTimeVi } from "@/lib/money";
 
 type Props = {
@@ -36,7 +36,8 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
               <th scope="col">Hãng/NCC</th>
               <th scope="col">Tuyến</th>
               <th scope="col">Tiền tệ</th>
-              <th scope="col">Trạng thái</th>
+              <th scope="col">Trạng thái bảng giá</th>
+              <th scope="col">Phiên bản</th>
               <th scope="col">
                 <span className="sr-only">Mở</span>
               </th>
@@ -98,8 +99,11 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                     <span
                       className={`maturity-pill ${c.isActive ? "maturity-confirmed" : ""}`}
                     >
-                      {c.isActive ? "Đang hiệu lực" : "Ngưng"}
+                      {cardStatusLabel(c.isActive)}
                     </span>
+                  </td>
+                  <td>
+                    <span title={publicationListHint}>{publicationLabel(Boolean(c.hasPublishedVersion))}</span>
                   </td>
                   <td>
                     <Link
@@ -129,7 +133,7 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
               <span
                 className={`maturity-pill ${selected.isActive ? "maturity-confirmed" : ""}`}
               >
-                {selected.isActive ? "Đang hiệu lực" : "Ngưng"}
+                {cardStatusLabel(selected.isActive)}
               </span>
             </>
           ) : null
@@ -181,6 +185,14 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                 <div>
                   <dt>Tiền tệ</dt>
                   <dd>{selected.currencyCode}</dd>
+                </div>
+                <div>
+                  <dt>Trạng thái bảng giá</dt>
+                  <dd>{cardStatusLabel(selected.isActive)}</dd>
+                </div>
+                <div>
+                  <dt>Phiên bản</dt>
+                  <dd title={publicationListHint}>{publicationLabel(Boolean(selected.hasPublishedVersion))}</dd>
                 </div>
                 <div>
                   <dt>Mô tả</dt>

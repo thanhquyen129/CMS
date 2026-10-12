@@ -4,11 +4,12 @@ import { RerateRatingButton } from "@/components/RerateRatingButton";
 import { basisLabel, formatChargeable, ratingStatusView } from "@/lib/opref-edit";
 import { SeedExpectedCostsButton } from "@/components/SeedExpectedCostsButton";
 import { SeedExpectedRevenuesButton } from "@/components/SeedExpectedRevenuesButton";
+import { getProfitability } from "@/lib/bills";
+import { expectedProfitView } from "@/lib/expected-profit";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
-import type { RateCard, RateVersion } from "@/lib/rate-cards";
+import { partyTypeLabel, type Rating } from "@/lib/rate-cards";
 import {
-  listRateCards as fetchRateCards,
-  listRateVersions as fetchRateVersions,
+  getRating,
   listRatingsByBill as fetchRatingsByBill,
 } from "@/lib/rate-cards-server";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -22,25 +23,22 @@ export async function BillRatingPanel({ terms, billId }: Props) {
   const billLabel = term(terms, "BILL", "Bill");
   const expected = term(terms, "EXPECTED", "Dự kiến");
 
-  const [cardsRes, ratingsRes] = await Promise.all([
-    fetchRateCards(),
+  const [ratingsRes, profitRes] = await Promise.all([
     fetchRatingsByBill(billId),
+    getProfitability(billId, "expected"),
   ]);
 
-  let cardsWithVersions: { card: RateCard; versions: RateVersion[] }[] = [];
-  if (cardsRes.ok) {
-    cardsWithVersions = await Promise.all(
-      cardsRes.data.items.map(async (card) => {
-        const versionsRes = await fetchRateVersions(card.id);
-        return {
-          card,
-          versions: versionsRes.ok ? versionsRes.data : [],
-        };
-      })
-    );
-  }
-
   const ratings = ratingsRes.ok ? ratingsRes.data : [];
+  const activeRatings = ratings.filter((r) => r.status?.toLowerCase() !== "superseded");
+  const latestBuy = activeRatings.find((r) => r.partyTypeCode?.toLowerCase() === "vendor");
+  const latestSell = activeRatings.find((r) => r.partyTypeCode?.toLowerCase() === "customer");
+  const breakdownIds = [latestBuy?.id, latestSell?.id].filter((id): id is string => Boolean(id));
+  const breakdowns = (
+    await Promise.all(breakdownIds.map(async (id) => getRating(id)))
+  ).flatMap((res) => (res.ok ? [res.data] : []));
+  const profit = profitRes.ok
+    ? expectedProfitView(profitRes.data)
+    : { kind: "empty" as const, text: profitRes.message };
 
   const staleCount = ratings.filter(
     (r) => r.staleAt && r.status?.toLowerCase() !== "superseded"
@@ -63,17 +61,24 @@ export async function BillRatingPanel({ terms, billId }: Props) {
         </Link>
       </p>
 
-      {!cardsRes.ok ? (
-        <div className="alert alert-error" role="alert">
-          {cardsRes.message}
+      <RateBillForm terms={terms} billId={billId} />
+
+      <h3 className="section-title sm">Lợi nhuận dự kiến</h3>
+      {profit.kind === "profit" ? (
+        <p>
+          {profit.text}: <strong>{formatMoney(profit.amount, profit.currency)}</strong>
+        </p>
+      ) : profit.kind === "fx-missing" ? (
+        <div className="alert alert-warning" role="status">
+          {profit.text}
         </div>
       ) : (
-        <RateBillForm
-          terms={terms}
-          billId={billId}
-          cardsWithVersions={cardsWithVersions}
-        />
+        <p className="note">{profit.text}</p>
       )}
+
+      {breakdowns.map((rating) => (
+        <RatingBreakdown key={rating.id} rating={rating} />
+      ))}
 
       <h3 className="section-title sm">Lịch sử tính giá</h3>
       {!ratingsRes.ok ? (
@@ -90,6 +95,7 @@ export async function BillRatingPanel({ terms, billId }: Props) {
             <thead>
               <tr>
                 <th scope="col">Thời điểm</th>
+                <th scope="col">Chiều</th>
                 <th scope="col" className="num">
                   Tổng
                 </th>
@@ -107,6 +113,7 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                 return (
                 <tr key={r.id}>
                   <td>{formatDateTimeVi(r.ratedAt)}</td>
+                  <td>{r.partyTypeCode ? partyTypeLabel(r.partyTypeCode) : "—"}</td>
                   <td className="num">
                     {formatMoney(r.totalAmount, r.currencyCode)}
                   </td>
@@ -148,6 +155,52 @@ export async function BillRatingPanel({ terms, billId }: Props) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function RatingBreakdown({ rating }: { rating: Rating }) {
+  const side = rating.partyTypeCode ? partyTypeLabel(rating.partyTypeCode) : "Kết quả";
+  return (
+    <div className="stack">
+      <h3 className="section-title sm">
+        {side} · v vừa tính · {formatMoney(rating.totalAmount, rating.currencyCode)}
+      </h3>
+      <div className="table-wrap">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Nguồn</th>
+              <th>Công thức</th>
+              <th className="num">Thành tiền</th>
+              <th className="num">Nguyên tệ</th>
+              <th className="num">Tỷ giá</th>
+              <th className="num">VAT</th>
+              <th>Độ chín</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rating.details.map((d) => (
+              <tr key={d.id}>
+                <td>
+                  <code>{d.ruleCode}</code>
+                  {d.componentCode ? ` · ${d.componentCode}` : ""}
+                </td>
+                <td>{d.formulaText || d.componentName}</td>
+                <td className="num">{formatMoney(d.amount, d.currencyCode)}</td>
+                <td className="num">
+                  {d.amountOriginal != null && d.originalCurrency
+                    ? formatMoney(d.amountOriginal, d.originalCurrency)
+                    : "—"}
+                </td>
+                <td className="num">{d.lineFxRate ?? "—"}</td>
+                <td className="num">{d.vatRate == null ? "chưa khai báo" : `${d.vatRate}%`}</td>
+                <td>{d.financialMaturity === "expected" ? "Dự kiến" : d.financialMaturity}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

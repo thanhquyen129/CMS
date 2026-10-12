@@ -118,6 +118,10 @@ public sealed class RatingContextResolver
         }
 
         var card = await _db.RateCards.AsNoTracking().FirstOrDefaultAsync(c => c.Id == version.RateCardId, cancellationToken);
+        if (card is { IsActive: false })
+        {
+            throw new ConflictAppException(BillRateNotices.Retired);
+        }
 
         var serviceType = N(input.ServiceTypeCode) ?? N(bill.ServiceTypeCode) ?? N(bill.BillType);
         var partyType = N(input.PartyTypeCode) ?? N(card?.PartyType);

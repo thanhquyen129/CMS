@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-12 — RATE-UI-01, RATE-UI-02, UI-DATETIME-01
+
+- Tách trạng thái bảng giá và phiên bản; đề xuất BUY/SELL theo Bill và không tự chọn khi nhiều bảng giá cùng phù hợp. Ngừng sử dụng chặn tính giá mới. Ngày hiệu lực giữ date-only; giờ phát hành hiển thị Asia/Ho_Chi_Minh. BILL-PKG-01 giữ HOLD.
+- Files: `BillRateSuggestion.cs`, `SuggestBillRatesQuery.cs`, `RateBillForm.tsx`, `money.ts`, `GET /api/bills/{id}/rate-suggestions`.
+
 ## 2026-10-12 — Mobile End-to-End Field Wiring & Sprint 7 Release Pipeline
 
 - Mobile integrates e-PoD signature modal and DriverQuickExpenseSheet onto BillDetailScreen and adds 'Lộ trình của tôi (My Trips)' tab with direct PoD/expense action buttons in BillsScreen. ScannerScreen gains Torch flash toggle and batch scanning mode for dark warehouse/continuous scanning. DeviceIntegrity adds __DEV__ bypass for debug cables/simulators, app.json blocks RECORD_AUDIO, and eas.json defines preview (APK/internal) and production (AAB/TestFlight) profiles with Apple Reviewer auditor persona.

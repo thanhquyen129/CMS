@@ -1,3 +1,7 @@
 # Expo Prebuild native directories
 /android/
 /ios/
+
+# Build artifacts
+*.apk
+*.aab

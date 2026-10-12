@@ -147,6 +147,18 @@ public sealed class BillRateSuggestionTests
     }
 
     [Fact]
+    public void Cost_only_view_hides_sell_and_profit()
+    {
+        var margin = RatingPairMargin.Compute("VND", ("VND", 1000m), ("VND", 1800m), _ => 1m);
+        var hidden = RatingPairMargin.Redact(margin, canCost: true, canRevenue: false);
+
+        Assert.Equal(1000m, hidden.BuyAmount);
+        Assert.Null(hidden.SellAmount);
+        Assert.Null(hidden.ReportingProfit);
+        Assert.False(hidden.FxMissing);
+    }
+
+    [Fact]
     public void One_side_does_not_show_profit()
     {
         var margin = RatingPairMargin.Compute("VND", ("VND", 1000m), null, _ => 1m);

@@ -80,11 +80,13 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public GetRatingByIdQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public GetRatingByIdQueryHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<RatingDto> Handle(GetRatingByIdQuery request, CancellationToken cancellationToken)
@@ -99,6 +101,12 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
             .FirstOrDefaultAsync(r => r.Id == request.Id, cancellationToken);
 
         if (rating is null)
+        {
+            throw new NotFoundAppException("Không tìm thấy lần tính giá.");
+        }
+
+        var access = await RatingSideAccess.ResolveAsync(_permissions, cancellationToken);
+        if (!RatingSideAccess.CanSee(rating.PartyTypeCode, access.Buy, access.Sell))
         {
             throw new NotFoundAppException("Không tìm thấy lần tính giá.");
         }
@@ -170,11 +178,13 @@ public sealed class ListRatingsByBillQueryHandler
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IPermissionService _permissions;
 
-    public ListRatingsByBillQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public ListRatingsByBillQueryHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _permissions = permissions;
     }
 
     public async Task<IReadOnlyList<RatingHistoryItemDto>> Handle(
@@ -213,8 +223,10 @@ public sealed class ListRatingsByBillQueryHandler
                 r.PartyTypeCode))
             .ToListAsync(cancellationToken);
 
+        var access = await RatingSideAccess.ResolveAsync(_permissions, cancellationToken);
         // Client-side order: SQLite cannot ORDER BY DateTimeOffset (tests); Postgres OK either way.
         return items
+            .Where(r => RatingSideAccess.CanSee(r.PartyTypeCode, access.Buy, access.Sell))
             .OrderByDescending(r => r.RatedAt)
             .ThenByDescending(r => r.Id)
             .ToList();

@@ -84,6 +84,27 @@ public sealed class BillRateSuggestionApiTests : IAsyncLifetime
         Assert.Null(missing.ReportingProfit);
     }
 
+    [Fact]
+    public async Task CostAccountant_DoesNotSeeSellRatingOrProfit()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId);
+        var buy = await PublishedCardAsync(tenantId, "RC-BUY-SOD", "vendor", null, 1000m);
+        var sell = await PublishedCardAsync(tenantId, "RC-SELL-SOD", "customer", null, 1800m);
+        await RateAsync(tenantId, billId, buy.VersionId);
+        await RateAsync(tenantId, billId, sell.VersionId);
+        var costUser = await UserInRoleAsync(tenantId, "cost-margin@example.com", "CostAccountant");
+
+        var margin = await GetAsync<MarginBody>(tenantId, $"/api/bills/{billId}/rating-margin", costUser);
+        Assert.Equal(1000m, margin.BuyAmount);
+        Assert.Null(margin.SellAmount);
+        Assert.Null(margin.ReportingProfit);
+
+        var history = await GetAsync<List<HistoryBody>>(tenantId, $"/api/bills/{billId}/ratings", costUser);
+        Assert.DoesNotContain(history, row => string.Equals(row.PartyTypeCode, "customer", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(history, row => string.Equals(row.PartyTypeCode, "vendor", StringComparison.OrdinalIgnoreCase));
+    }
+
     private async Task RateAsync(Guid tenantId, Guid billId, Guid versionId)
     {
         using var rate = Tenant(HttpMethod.Post, "/api/ratings", tenantId);
@@ -171,18 +192,39 @@ public sealed class BillRateSuggestionApiTests : IAsyncLifetime
         (await _client.SendAsync(req)).EnsureSuccessStatusCode();
     }
 
-    private async Task<T> GetAsync<T>(Guid tenantId, string path)
+    private async Task<T> GetAsync<T>(Guid tenantId, string path, Guid? userId = null)
     {
-        using var req = Tenant(HttpMethod.Get, path, tenantId);
+        using var req = Tenant(HttpMethod.Get, path, tenantId, userId);
         var res = await _client.SendAsync(req);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<T>(Json))!;
     }
 
-    private HttpRequestMessage Tenant(HttpMethod method, string path, Guid tenantId)
+    private async Task<Guid> UserInRoleAsync(Guid tenantId, string email, string roleCode)
+    {
+        using var createUser = Tenant(HttpMethod.Post, "/api/users", tenantId);
+        createUser.Content = JsonContent.Create(new { email, displayName = roleCode });
+        var userRes = await _client.SendAsync(createUser);
+        userRes.EnsureSuccessStatusCode();
+        var userId = (await userRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+
+        using var listRoles = Tenant(HttpMethod.Get, "/api/roles", tenantId);
+        var roles = await (await _client.SendAsync(listRoles)).Content.ReadFromJsonAsync<List<RoleBody>>(Json);
+        var role = Assert.Single(roles!, r => r.Code == roleCode);
+        using var assign = Tenant(HttpMethod.Post, $"/api/users/{userId}/roles/{role.Id}", tenantId);
+        Assert.Equal(HttpStatusCode.NoContent, (await _client.SendAsync(assign)).StatusCode);
+        return userId;
+    }
+
+    private HttpRequestMessage Tenant(HttpMethod method, string path, Guid tenantId, Guid? userId = null)
     {
         var req = new HttpRequestMessage(method, path);
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        if (userId is Guid id)
+        {
+            req.Headers.Add("X-User-Id", id.ToString());
+        }
+
         return req;
     }
 
@@ -190,5 +232,7 @@ public sealed class BillRateSuggestionApiTests : IAsyncLifetime
     private sealed record SuggestionBody(SideBody Buy, SideBody Sell);
     private sealed record SideBody(IReadOnlyList<OptionBody> Options);
     private sealed record OptionBody(Guid VersionId, bool Selectable, string? Reason);
-    private sealed record MarginBody(decimal? ReportingProfit, bool FxMissing);
+    private sealed record MarginBody(decimal? BuyAmount, decimal? SellAmount, decimal? ReportingProfit, bool FxMissing);
+    private sealed record HistoryBody(string? PartyTypeCode);
+    private sealed record RoleBody(Guid Id, string Code);
 }

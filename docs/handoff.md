@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-12 — Rating margin requires both cost and revenue read
+
+- Lợi nhuận dự kiến từ hai lần tính giá chỉ trả khi có cả `cost.read` và `revenue.read`. Kế toán chi phí không nhận số chiều bán, không nhận lợi nhuận, và không thấy lần tính giá bán trong lịch sử.
+- Files: `GetBillRatingMarginQuery.cs`, `GetRatingByIdQuery.cs`, `RatingSideAccess.cs`.
+
 ## 2026-10-12 — Rating suggestion matches rules; margin is the two latest ratings
 
 - Đề xuất bảng giá chặn theo tuyến của quy tắc giá. Lợi nhuận dự kiến chỉ lấy lần tính BUY và SELL mới nhất; thiếu tỷ giá thì không có số. Mỗi chiều có khối lượng riêng. `GET /api/bills/{id}/rating-margin`.

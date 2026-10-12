@@ -2,6 +2,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Fx;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -96,6 +97,27 @@ public static class RatingPairMargin
 
         return decimal.Round(side.Amount * rate.Value, 4, MidpointRounding.AwayFromZero);
     }
+
+    public static BillRatingMarginDto Redact(BillRatingMarginDto source, bool canCost, bool canRevenue)
+    {
+        if (canCost && canRevenue)
+        {
+            return source;
+        }
+
+        return source with
+        {
+            BuyAmount = canCost ? source.BuyAmount : null,
+            BuyCurrency = canCost ? source.BuyCurrency : null,
+            SellAmount = canRevenue ? source.SellAmount : null,
+            SellCurrency = canRevenue ? source.SellCurrency : null,
+            ReportingCost = null,
+            ReportingRevenue = null,
+            ReportingProfit = null,
+            FxMissing = false,
+            Notice = "Không đủ quyền xem lợi nhuận.",
+        };
+    }
 }
 
 public sealed class GetBillRatingMarginQueryHandler : IRequestHandler<GetBillRatingMarginQuery, BillRatingMarginDto>
@@ -104,17 +126,20 @@ public sealed class GetBillRatingMarginQueryHandler : IRequestHandler<GetBillRat
     private readonly ITenantContext _tenant;
     private readonly IReportingCurrencyProvider _reporting;
     private readonly IFxRateLookup _fx;
+    private readonly IPermissionService _permissions;
 
     public GetBillRatingMarginQueryHandler(
         ILcmsDbContext db,
         ITenantContext tenant,
         IReportingCurrencyProvider reporting,
-        IFxRateLookup fx)
+        IFxRateLookup fx,
+        IPermissionService permissions)
     {
         _db = db;
         _tenant = tenant;
         _reporting = reporting;
         _fx = fx;
+        _permissions = permissions;
     }
 
     public async Task<BillRatingMarginDto> Handle(GetBillRatingMarginQuery request, CancellationToken cancellationToken)
@@ -163,10 +188,13 @@ public sealed class GetBillRatingMarginQueryHandler : IRequestHandler<GetBillRat
             }
         }
 
-        return RatingPairMargin.Compute(
+        var margin = RatingPairMargin.Compute(
             reporting,
             buy is null ? null : (buy.CurrencyCode, buy.TotalAmount),
             sell is null ? null : (sell.CurrencyCode, sell.TotalAmount),
             currency => rates.TryGetValue(currency, out var rate) ? rate : null);
+        var canCost = await _permissions.HasPermissionAsync(PermissionCodes.CostRead, cancellationToken);
+        var canRevenue = await _permissions.HasPermissionAsync(PermissionCodes.RevenueRead, cancellationToken);
+        return RatingPairMargin.Redact(margin, canCost, canRevenue);
     }
 }

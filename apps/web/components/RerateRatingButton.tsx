@@ -14,7 +14,6 @@ export function RerateRatingButton({
   contextType,
   transportLegId,
   vendorPartyId,
-  quantity,
 }: {
   billId: string;
   ratingId: string;
@@ -23,7 +22,6 @@ export function RerateRatingButton({
   contextType?: string | null;
   transportLegId?: string | null;
   vendorPartyId?: string | null;
-  quantity?: number | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -43,7 +41,6 @@ export function RerateRatingButton({
           billId,
           rateVersionId,
           supersedesRatingId: ratingId,
-          quantity: quantity ?? null,
           ...(contextType === "leg"
             ? { contextType: "leg", transportLegId: transportLegId ?? null, vendorPartyId: vendorPartyId ?? null }
             : {}),

@@ -103,7 +103,8 @@ public sealed record CostListItemDto(
     Guid? RateVersionId = null,
     Guid? PricingRuleId = null,
     string? LegNo = null,
-    bool IncludedInBillTotal = true);
+    bool IncludedInBillTotal = true,
+    Guid? SourceCostId = null);
 
 public sealed record GetCostByIdQuery(Guid Id) : IRequest<CostDto>;
 
@@ -399,7 +400,8 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, Page
                 c.RateVersionId,
                 c.PricingRuleId,
                 null,
-                true))
+                true,
+                null))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CostListItemDto>(

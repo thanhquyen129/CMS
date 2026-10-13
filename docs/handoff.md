@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-13 — Chặng: tính lại theo số mới, commodity của chặng, không sửa khoản dùng chung từ Bill
+
+- Nút tính lại không gửi số lượng cũ; engine đọc trọng lượng hiện tại của chặng. Form đổi số lượng hoặc trọng lượng thì thay lần tính trước. Gợi ý giá mua theo chặng lọc commodity của chặng, không lấy commodity của Bill. Dòng nguồn dùng chung trên Bill không còn Điều chỉnh hay Exposure; dòng đã phân bổ mở lịch sử bằng id cost nguồn.
+- Files: `RateBillForm.tsx`, `RerateRatingButton.tsx`, `BillCostRevenuePanel.tsx`, `SuggestBillRatesQuery.cs`, `GetBillFinancialViewQuery.cs`, `BuyRatingLegTests`.
+
 ## 2026-10-13 — Tính lại theo Chặng và hiện chi phí dùng chung trên Bill
 
 - Tính lại theo chặng gửi lần tính trước (chặng, vendor, phiên bản). Cùng số liệu thì không tạo thêm. Đổi số liệu thì thay Expected cũ; chi phí đã xác nhận, thực tế hoặc đã phân bổ thì bị chặn. Bill Financial View hiện chi phí nguồn dùng chung nhưng không cộng vào tổng; sau phân bổ chỉ cộng phần của Bill. Chặng sửa được trọng lượng, thể tích, mode, dịch vụ, tuyến — tính giá không lấy trọng lượng cả Bill.

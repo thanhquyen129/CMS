@@ -140,7 +140,6 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                         contextType={r.contextType}
                         transportLegId={r.transportLegId}
                         vendorPartyId={r.vendorPartyId}
-                        quantity={r.quantity}
                       />
                     ) : (
                       <div className="row-actions">

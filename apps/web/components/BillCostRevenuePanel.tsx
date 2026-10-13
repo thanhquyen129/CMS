@@ -279,6 +279,7 @@ export function BillCostRevenuePanel({
             <tbody>
               {costs.map((c) => {
                 const traceOnly = c.includedInBillTotal === false || c.attributionType?.toLowerCase() === "allocated";
+                const historyCostId = c.sourceCostId || (traceOnly ? null : c.id);
                 const confirmOk =
                   !traceOnly &&
                   canConfirm(c.financialMaturity, c.recordStatus) &&
@@ -355,7 +356,7 @@ export function BillCostRevenuePanel({
                         ) : (
                           <span className="muted small">—</span>
                         )}
-                        {c.recordStatus === "active" ? (
+                        {!traceOnly && c.recordStatus === "active" ? (
                           <AdjustCostRevenueButton
                             terms={terms}
                             kind="cost"
@@ -366,13 +367,15 @@ export function BillCostRevenuePanel({
                             rowVersion={c.rowVersion}
                           />
                         ) : null}
-                        <Link
-                          className="btn btn-ghost btn-sm"
-                          href={`/costs/${c.id}`}
-                        >
-                          Lịch sử
-                        </Link>
-                        {c.recordStatus === "active" ? (
+                        {historyCostId ? (
+                          <Link
+                            className="btn btn-ghost btn-sm"
+                            href={`/costs/${historyCostId}`}
+                          >
+                            Lịch sử
+                          </Link>
+                        ) : null}
+                        {!traceOnly && c.recordStatus === "active" ? (
                           <Link
                             className="btn btn-ghost btn-sm"
                             href={`/ap-ar/exposures/new?kind=payable&billId=${encodeURIComponent(billId)}&costId=${encodeURIComponent(c.id)}&amount=${encodeURIComponent(String(c.amount))}&currency=${encodeURIComponent(c.currencyCode)}`}

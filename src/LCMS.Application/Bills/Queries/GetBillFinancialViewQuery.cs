@@ -96,7 +96,8 @@ public sealed class GetBillFinancialViewQueryHandler
                     c.RateVersionId,
                     c.PricingRuleId,
                     null,
-                    true))
+                    true,
+                    null))
                 .ToListAsync(cancellationToken);
             var rows = costs.ToList();
             var linkedLegIds = await _db.BillLegLinks.AsNoTracking()
@@ -135,7 +136,8 @@ public sealed class GetBillFinancialViewQueryHandler
                     c.RateVersionId,
                     c.PricingRuleId,
                     null,
-                    false)));
+                    false,
+                    c.Id)));
             }
 
             var allocated = await (
@@ -147,7 +149,8 @@ public sealed class GetBillFinancialViewQueryHandler
                       && c.RecordStatus == "active"
                 select new
                 {
-                    d.Id,
+                    DetailId = d.Id,
+                    CostId = c.Id,
                     d.AllocatedAmount,
                     c.CurrencyCode,
                     c.CostTypeCode,
@@ -160,7 +163,7 @@ public sealed class GetBillFinancialViewQueryHandler
                     c.EffectiveDate
                 }).ToListAsync(cancellationToken);
             rows.AddRange(allocated.Select(a => new CostListItemDto(
-                a.Id,
+                a.DetailId,
                 request.BillId,
                 "allocated",
                 CostMaturities.Expected,
@@ -182,7 +185,8 @@ public sealed class GetBillFinancialViewQueryHandler
                 a.RateVersionId,
                 a.PricingRuleId,
                 null,
-                true)));
+                true,
+                a.CostId)));
             var legIds = rows.Where(c => c.TransportLegId is not null).Select(c => c.TransportLegId!.Value).Distinct().ToList();
             if (legIds.Count > 0)
             {

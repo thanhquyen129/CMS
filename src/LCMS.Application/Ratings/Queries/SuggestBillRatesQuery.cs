@@ -18,7 +18,8 @@ public sealed record LegRateOptionDto(
     string? TransportMode,
     string? RouteCode,
     string? ServiceTypeCode,
-    int LinkedBillCount);
+    int LinkedBillCount,
+    string? CommodityCode = null);
 
 public sealed record VendorRateOptionDto(Guid Id, string Code, string Name);
 
@@ -137,7 +138,7 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
                     leg.ServiceTypeCode,
                     leg.OriginCode,
                     leg.DestinationCode,
-                    context.CommodityCode);
+                    leg.CommodityCode);
                 var withVendor = buyCards.Where(c => c.SupplierPartyId is not null).ToList();
                 var preview = BillRateSuggestion.Classify(withVendor, versions, rules, legContext, rateDate);
                 var selectableCards = preview.Options.Where(o => o.Selectable).Select(o => o.RateCardId).ToHashSet();
@@ -257,10 +258,22 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);
         var countByLeg = counts.ToDictionary(x => x.Key, x => x.Count);
+        var commodityIds = legs
+            .Select(l => l.CommodityTypeId ?? (shipments.TryGetValue(l.ShipmentId, out var shipment) ? shipment.CommodityTypeId : null))
+            .Where(id => id is not null)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+        var commodityCodes = commodityIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _db.CommodityTypes.AsNoTracking()
+                .Where(c => commodityIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c.Code, cancellationToken);
         return legs.Select(l =>
         {
             shipments.TryGetValue(l.ShipmentId, out var shipment);
             countByLeg.TryGetValue(l.Id, out var linked);
+            var commodityId = l.CommodityTypeId ?? shipment?.CommodityTypeId;
             return new LegRateOptionDto(
                 l.Id,
                 l.LegNo,
@@ -271,7 +284,8 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
                 l.TransportMode ?? shipment?.TransportMode,
                 l.RouteCode ?? shipment?.RouteCode,
                 l.ServiceTypeCode ?? shipment?.ServiceTypeCode,
-                linked);
+                linked,
+                commodityId is Guid id && commodityCodes.TryGetValue(id, out var code) ? code : null);
         }).ToList();
     }
 

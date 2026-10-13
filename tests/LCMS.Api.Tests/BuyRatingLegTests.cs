@@ -544,6 +544,7 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
         Assert.True(share.IncludedInBillTotal);
         Assert.Equal(10m, share.Amount);
         Assert.Equal(legId, share.TransportLegId);
+        Assert.Equal(source.Id, share.SourceCostId);
     }
 
     [Fact]
@@ -688,6 +689,85 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
         Assert.Equal(0, payDoc.RootElement.GetArrayLength());
     }
 
+    [Fact]
+    public async Task LegRerateWithoutQuantity_UsesTheNewLegWeight()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "BL-RERATE");
+        await EditBillAsync(tenantId, billId, new { transport_mode = "air", gross_weight_kg = "100", volume_cbm = "1" });
+        var vendorId = await CreateVendorAsync(tenantId, "NCC-RR", "Vendor rerate");
+        var (_, versionId) = await PublishBuyAsync(tenantId, "RC-RR", vendorId, 10m);
+        var legId = await LinkLegAsync(tenantId, billId, "L-RR", "SH-RR", "HAN", "SGN");
+        var first = await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = versionId,
+            quantity = 2m,
+            contextType = "leg",
+            transportLegId = legId,
+            vendorPartyId = vendorId,
+            seedExpectedCosts = true
+        });
+        await PatchObjectAsync(tenantId, "leg", legId, new
+        {
+            transport_mode = "air",
+            gross_weight_kg = "12",
+            volume_cbm = "0.2"
+        });
+
+        var second = await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = versionId,
+            contextType = "leg",
+            transportLegId = legId,
+            vendorPartyId = vendorId,
+            supersedesRatingId = first,
+            seedExpectedCosts = true
+        });
+        var rating = await GetRatingAsync(tenantId, second);
+        Assert.Equal(33.4m, rating.Quantity);
+        Assert.Equal(334m, rating.TotalAmount);
+        Assert.Equal("superseded", (await GetRatingAsync(tenantId, first)).Status);
+        var active = Assert.Single(await ListCostsAsync(tenantId, billId), c => c.RecordStatus == "active");
+        Assert.Equal(334m, active.ExpectedAmount);
+    }
+
+    [Fact]
+    public async Task LegSuggestion_UsesLegCommodity_NotTheBill()
+    {
+        var tenantId = await CreateTenantAsync();
+        var billId = await CreateBillAsync(tenantId, "BL-CMD");
+        var vendorId = await CreateVendorAsync(tenantId, "NCC-CMD", "Vendor hàng");
+        var generalId = await PutId(tenantId, "/api/commodities", new { code = "GEN", name = "Thường" });
+        var dangerousId = await PutId(tenantId, "/api/commodities", new { code = "DG", name = "Nguy hiểm" });
+        await PatchObjectAsync(tenantId, "bill", billId, new { commodity_type_id = generalId });
+        var legId = await LinkLegAsync(tenantId, billId, "L-CMD", "SH-CMD", "HAN", "SGN");
+        await PatchObjectAsync(tenantId, "leg", legId, new { commodity_type_id = dangerousId });
+        var (_, billVersion) = await PublishBuyAsync(tenantId, "RC-GEN", vendorId, 1m, commodityCode: "GEN");
+        var (_, legVersion) = await PublishBuyAsync(tenantId, "RC-DG", vendorId, 5m, commodityCode: "DG");
+
+        using var req = Tenant(HttpMethod.Get, $"/api/bills/{billId}/rate-suggestions?contextType=leg&legId={legId}&vendorPartyId={vendorId}", tenantId);
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        var body = await res.Content.ReadFromJsonAsync<SuggestionBody>(Json);
+        var selectable = body!.Buy.Options.Where(o => o.Selectable).Select(o => o.VersionId).ToList();
+        Assert.Equal(legVersion, Assert.Single(selectable));
+        Assert.DoesNotContain(body.Buy.Options, o => o.VersionId == billVersion && o.Selectable);
+
+        var ratingId = await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = legVersion,
+            quantity = 2m,
+            contextType = "leg",
+            transportLegId = legId,
+            vendorPartyId = vendorId,
+            seedExpectedCosts = true
+        });
+        Assert.Equal("DG", (await GetRatingAsync(tenantId, ratingId)).ContextCommodity);
+    }
+
     private async Task<(Guid CardId, Guid VersionId)> PublishBuyAsync(
         Guid tenantId,
         string code,
@@ -696,7 +776,8 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
         string? routeCode = null,
         string? serviceTypeCode = null,
         string partyType = "vendor",
-        bool publish = true)
+        bool publish = true,
+        string? commodityCode = null)
     {
         using var cardReq = Tenant(HttpMethod.Post, "/api/rate-cards", tenantId);
         cardReq.Content = JsonContent.Create(new { code, name = code, partyType, currencyCode = "VND", routeCode });
@@ -723,7 +804,8 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
             calcMethod = "unit_rate",
             unitAmount,
             currencyCode = "VND",
-            serviceTypeCode
+            serviceTypeCode,
+            commodityCode
         });
         (await _client.SendAsync(rule)).EnsureSuccessStatusCode();
         if (publish)
@@ -849,6 +931,7 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
             ? gross.GetDecimal()
             : null;
         rating.ContextService = doc.RootElement.TryGetProperty("serviceType", out var service) ? service.GetString() : null;
+        rating.ContextCommodity = doc.RootElement.TryGetProperty("commodityCode", out var commodity) ? commodity.GetString() : null;
         return rating;
     }
 
@@ -915,6 +998,7 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
         public string? ContextOrigin { get; set; }
         public decimal? ContextGross { get; set; }
         public string? ContextService { get; set; }
+        public string? ContextCommodity { get; set; }
     }
 
     private sealed record CostBody(
@@ -953,5 +1037,6 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
         bool IncludedInBillTotal,
         Guid? TransportLegId,
         string? LegNo,
-        Guid? VendorPartyId);
+        Guid? VendorPartyId,
+        Guid? SourceCostId = null);
 }

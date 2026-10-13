@@ -71,6 +71,11 @@ function num(raw: string): number | null {
   return Number.isFinite(n) ? n : NaN;
 }
 
+function changed(typed: number | null, active: number | null | undefined): boolean {
+  if (typed === null || Number.isNaN(typed) || active == null) return false;
+  return Math.abs(typed - active) > 0.0001;
+}
+
 function SideBlock({
   title,
   sideId,
@@ -249,6 +254,13 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       const q = num(side === "buy" ? buyQuantity : sellQuantity);
       const w = num(side === "buy" ? buyWeight : sellWeight);
       const reason = side === "buy" ? buyReason : sellReason;
+      const activeId = suggestion?.activeRatingId ?? null;
+      const quantityChanged = changed(q, suggestion?.activeRatingQuantity);
+      const weightChanged = changed(w, suggestion?.activeRatingWeight);
+      const supersedesRatingId =
+        side === "buy" && buyContext === "leg" && activeId && (replaceExisting || quantityChanged || weightChanged)
+          ? activeId
+          : null;
       return {
         billId,
         rateVersionId: versionId,
@@ -261,7 +273,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
                 contextType: "leg",
                 transportLegId: legId || null,
                 vendorPartyId: vendorId || null,
-                supersedesRatingId: replaceExisting && suggestion?.activeRatingId ? suggestion.activeRatingId : null,
+                supersedesRatingId,
               }
             : { contextType: "bill" }
           : {}),
@@ -573,7 +585,7 @@ function BuyContextFields({
           {activeRatingId ? (
             <label className="checkbox-field">
               <input type="checkbox" checked={replaceExisting} onChange={(ev) => onReplace(ev.target.checked)} />
-              Tính lại và thay thế lần tính hiện có
+              Tính lại và thay thế lần tính hiện có. Đổi số lượng hoặc trọng lượng cũng thay lần tính đó.
             </label>
           ) : null}
         </>

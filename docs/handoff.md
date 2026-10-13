@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-13 — Push to main deploys both CMS hosts
+
+- CI deploy matrix now includes cms-lss-01 (`169.58.47.30`, cms.lsslogistics.vn) beside cms-sg-01. Secrets `CMS_LSS_HOST` and `CMS_LSS_SSH_KEY`. Still `/opt/cms` only, and `infra/.env` is not overwritten.
+- Files: `.github/workflows/ci.yml`, `docs/ops/github-actions.md`.
+
 ## 2026-10-13 — BILL-PKG-01 phương án 1: màn tạo Bill chỉ giữ số tổng
 
 - PO chốt ADR-0024. Màn tạo Bill bỏ lưới kiện/container. Bill AIR không có dòng kiện vẫn lưu. Số tổng trên Bill là đầu vào tính giá. Không đối chiếu tổng dòng trên màn này. Trọng lượng tính cước và kiểm soát Rating không đổi.

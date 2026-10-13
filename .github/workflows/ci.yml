@@ -96,10 +96,10 @@ jobs:
             host_secret: CMS_DEPLOY_HOST
             key_secret: CMS_DEPLOY_SSH_KEY
             default_host: "194.233.89.26"
-          - name: cms-contabo-01
-            host_secret: CMS_CONTABO_HOST
-            key_secret: CMS_CONTABO_SSH_KEY
-            default_host: ""
+          - name: cms-lss-01
+            host_secret: CMS_LSS_HOST
+            key_secret: CMS_LSS_SSH_KEY
+            default_host: "169.58.47.30"
     steps:
       - uses: actions/checkout@v4
 

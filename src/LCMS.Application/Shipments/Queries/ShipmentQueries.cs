@@ -1,6 +1,7 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences;
+using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,9 +28,11 @@ public sealed record ShipmentDto(
     string? Description = null,
     int RelatedBillCount = 0,
     int LegCount = 0,
-    OperationalContextDocument? Context = null);
+    OperationalContextDocument? Context = null,
+    string? DerivedTransportMode = null,
+    bool TransportModeMismatch = false);
 
-public sealed record ShipmentLegRef(Guid Id, string LegNo, string OperationalStatus);
+public sealed record ShipmentLegRef(Guid Id, string LegNo, string OperationalStatus, string? TransportMode = null);
 
 public sealed record ShipmentDetailDto(
     Guid Id,
@@ -53,7 +56,9 @@ public sealed record ShipmentDetailDto(
     DateTimeOffset? EtaAt = null,
     string? CustomerReference = null,
     string? Description = null,
-    OperationalContextDocument? Context = null);
+    OperationalContextDocument? Context = null,
+    string? DerivedTransportMode = null,
+    bool TransportModeMismatch = false);
 
 public sealed record ListShipmentsQuery(string? Q = null) : IRequest<IReadOnlyList<ShipmentDto>>;
 
@@ -98,6 +103,7 @@ public sealed class ListShipmentsQueryHandler : IRequestHandler<ListShipmentsQue
         var ids = rows.Select(s => s.Id).ToList();
         Dictionary<Guid, int> billCounts = [];
         Dictionary<Guid, int> legCounts = [];
+        Dictionary<Guid, IReadOnlyList<string?>> legModes = [];
         if (ids.Count > 0)
         {
             var billLinks = await _db.BillShipmentLinks.AsNoTracking()
@@ -108,12 +114,19 @@ public sealed class ListShipmentsQueryHandler : IRequestHandler<ListShipmentsQue
 
             var legs = await _db.TransportLegs.AsNoTracking()
                 .Where(l => ids.Contains(l.ShipmentId))
-                .Select(l => l.ShipmentId)
+                .Select(l => new { l.ShipmentId, l.TransportMode })
                 .ToListAsync(cancellationToken);
-            legCounts = legs.GroupBy(id => id).ToDictionary(g => g.Key, g => g.Count());
+            legCounts = legs.GroupBy(l => l.ShipmentId).ToDictionary(g => g.Key, g => g.Count());
+            legModes = legs.GroupBy(l => l.ShipmentId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<string?>)g.Select(x => x.TransportMode).ToList());
         }
 
-        return rows.Select(s => new ShipmentDto(
+        return rows.Select(s =>
+        {
+            var classified = ShipmentModePolicy.Classify(
+                s.TransportMode,
+                legModes.TryGetValue(s.Id, out var modes) ? modes : []);
+            return new ShipmentDto(
             s.Id,
             s.TenantId,
             s.ShipmentNo,
@@ -134,7 +147,10 @@ public sealed class ListShipmentsQueryHandler : IRequestHandler<ListShipmentsQue
             s.Description,
             billCounts.GetValueOrDefault(s.Id),
             legCounts.GetValueOrDefault(s.Id),
-            OperationalContextJson.Deserialize(s.ContextJson))).ToList();
+            OperationalContextJson.Deserialize(s.ContextJson),
+            classified.Derived,
+            classified.Mismatch);
+        }).ToList();
     }
 }
 
@@ -172,11 +188,15 @@ public sealed class GetShipmentByIdQueryHandler : IRequestHandler<GetShipmentByI
             select new OperationalBillRef(b.Id, b.BillNo, b.OperationalStatus))
             .ToListAsync(cancellationToken);
 
-        var legs = await _db.TransportLegs.AsNoTracking()
+        var legRows = await _db.TransportLegs.AsNoTracking()
             .Where(l => l.ShipmentId == shipment.Id)
             .OrderBy(l => l.LegNo)
-            .Select(l => new ShipmentLegRef(l.Id, l.LegNo, l.OperationalStatus))
+            .Select(l => new { l.Id, l.LegNo, l.OperationalStatus, l.TransportMode })
             .ToListAsync(cancellationToken);
+        var legs = legRows
+            .Select(l => new ShipmentLegRef(l.Id, l.LegNo, l.OperationalStatus, l.TransportMode))
+            .ToList();
+        var classified = ShipmentModePolicy.Classify(shipment.TransportMode, legRows.Select(l => l.TransportMode));
 
         string? assignedName = null;
         if (shipment.AssignedUserId is Guid uid)
@@ -209,6 +229,8 @@ public sealed class GetShipmentByIdQueryHandler : IRequestHandler<GetShipmentByI
             shipment.EtaAt,
             shipment.CustomerReference,
             shipment.Description,
-            OperationalContextJson.Deserialize(shipment.ContextJson));
+            OperationalContextJson.Deserialize(shipment.ContextJson),
+            classified.Derived,
+            classified.Mismatch);
     }
 }

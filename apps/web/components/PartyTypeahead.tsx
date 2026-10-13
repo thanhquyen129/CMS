@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   lookupPartiesClient,
   type PartyLookupItem,
@@ -16,6 +16,7 @@ type Props = {
   defaultId?: string | null;
   defaultLabel?: string | null;
   hint?: string;
+  emptyHint?: ReactNode;
   usableOnly?: boolean;
   onSelect?: (item: PartyLookupItem | null) => void;
 };
@@ -29,6 +30,7 @@ export function PartyTypeahead({
   defaultId,
   defaultLabel,
   hint,
+  emptyHint,
   usableOnly = true,
   onSelect,
 }: Props) {
@@ -125,7 +127,9 @@ export function PartyTypeahead({
           {loading ? (
             <li className="muted">Đang tìm…</li>
           ) : items.length === 0 ? (
-            <li className="muted">Không có đối tác khớp. Tạo mới tại Danh mục → Đối tác.</li>
+            <li className="muted">
+              {emptyHint ?? "Không có đối tác khớp. Tạo mới tại Danh mục → Đối tác."}
+            </li>
           ) : (
             items.map((item) => (
               <li key={item.id}>

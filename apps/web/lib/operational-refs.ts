@@ -59,6 +59,8 @@ export type ShipmentListItem = {
   description?: string | null;
   relatedBillCount?: number;
   legCount?: number;
+  derivedTransportMode?: string | null;
+  transportModeMismatch?: boolean;
 };
 
 export type ShipmentDetail = ShipmentListItem & {
@@ -66,7 +68,7 @@ export type ShipmentDetail = ShipmentListItem & {
   externalVersion: string | null;
   assignedUserName?: string | null;
   relatedBills: OperationalBillRef[];
-  legs: { id: string; legNo: string; operationalStatus: string }[];
+  legs: { id: string; legNo: string; operationalStatus: string; transportMode?: string | null }[];
   context?: OperationalContext | null;
 };
 

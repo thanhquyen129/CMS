@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-13 — Tạo nhanh Shipment, phân loại đa phương thức, lọc đối tác bảng giá
+
+- Tạo Chặng có “+ Tạo nhanh Shipment” ngay tại chỗ chọn lô; lưu xong gắn id, dữ liệu chặng giữ nguyên. Shipment nhận thêm phân loại MULTIMODAL; mode từng chặng độc lập. Khi các chặng khác phương thức, phân loại thực tế là đa phương thức và giá trị nguồn không bị ghi đè. SEA/OCEAN/WATER cùng một nhóm đường biển. Giá mua chỉ gắn đối tác có vai trò nhà cung cấp, giá bán chỉ gắn khách hàng; bảng giá cũ không bị sửa đối tác. PARTNER-ROLE-01 chỉ có báo cáo rà soát, không gộp vai trò.
+- Files: `QuickCreateShipmentDialog.tsx`, `CreateLegForm.tsx`, `ShipmentModePolicy.cs`, `ShipmentQueries.cs`, `RatingReadiness.cs`, `RateCardCommands.cs`, `ComposeTariffForm.tsx`, `PARTNER-ROLE-01-review.md`.
+
 ## 2026-10-13 — Chặng: tính lại theo số mới, commodity của chặng, không sửa khoản dùng chung từ Bill
 
 - Nút tính lại không gửi số lượng cũ; engine đọc trọng lượng hiện tại của chặng. Form đổi số lượng hoặc trọng lượng thì thay lần tính trước. Gợi ý giá mua theo chặng lọc commodity của chặng, không lấy commodity của Bill. Dòng nguồn dùng chung trên Bill không còn Điều chỉnh hay Exposure; dòng đã phân bổ mở lịch sử bằng id cost nguồn.

@@ -8,7 +8,7 @@ import { CreateSection, CreateWorkspace } from "@/components/CreateWorkspace";
 import { LocationField } from "@/components/LocationField";
 import { RefTagPicker, type RefHit } from "@/components/RefTagPicker";
 import {
-  TRANSPORT_MODES,
+  shipmentModeOptions,
   composeRoute,
   formChecks,
   formDateIso,
@@ -17,7 +17,6 @@ import {
   formStr,
   generateBusinessNo,
   manualSource,
-  mergeCatalog,
   type CatalogOption,
 } from "@/lib/create-workspace";
 
@@ -56,7 +55,7 @@ export function CreateShipmentForm({
   const [origin, setOrigin] = useState("");
   const [dest, setDest] = useState("");
   const [bills, setBills] = useState<RefHit[]>([]);
-  const modeOpts = mergeCatalog(modes, TRANSPORT_MODES);
+  const modeOpts = shipmentModeOptions(modes);
   const route = useMemo(() => composeRoute(origin || null, dest || null), [origin, dest]);
   const submitting = busy || pending;
 

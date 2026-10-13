@@ -1,14 +1,15 @@
 "use client";
 
 import type { FormEvent } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CreateSection, CreateWorkspace } from "@/components/CreateWorkspace";
+import { QuickCreateShipmentDialog } from "@/components/QuickCreateShipmentDialog";
 import {
   formStr,
   generateBusinessNo,
   manualSource,
+  type CatalogOption,
 } from "@/lib/create-workspace";
 
 export type ShipmentOption = { id: string; shipmentNo: string };
@@ -16,10 +17,12 @@ export type ShipmentOption = { id: string; shipmentNo: string };
 type Props = {
   shipments: ShipmentOption[];
   shipmentsError?: string | null;
+  modes: CatalogOption[];
+  locations: CatalogOption[];
 };
 
 /** UI-02 Tạo Chặng — financial reference under Shipment; not TMS dispatch. */
-export function CreateLegForm({ shipments, shipmentsError }: Props) {
+export function CreateLegForm({ shipments, shipmentsError, modes, locations }: Props) {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
   const [error, setError] = useState<string | null>(null);
@@ -28,19 +31,20 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
   const [autoNo, setAutoNo] = useState(false);
   const [legNo, setLegNo] = useState("");
   const [shipmentId, setShipmentId] = useState("");
+  const [createdShipments, setCreatedShipments] = useState<ShipmentOption[]>([]);
+  const [quickOpen, setQuickOpen] = useState(false);
   const submitting = busy || pending;
-  const noShipments = !shipmentsError && shipments.length === 0;
+  const shipmentOptions = [
+    ...createdShipments,
+    ...shipments.filter((s) => !createdShipments.some((c) => c.id === s.id)),
+  ];
   const shipmentLabel =
-    shipments.find((s) => s.id === shipmentId)?.shipmentNo ?? "Chưa chọn";
+    shipmentOptions.find((s) => s.id === shipmentId)?.shipmentNo ?? "Chưa chọn";
 
   async function submit(status: "draft" | "active") {
     setError(null);
     if (shipmentsError) {
       setError(shipmentsError);
-      return;
-    }
-    if (noShipments) {
-      setError("Chưa có lô hàng để gắn chặng. Tạo Shipment trước.");
       return;
     }
     const form = document.getElementById("create-leg-form") as HTMLFormElement | null;
@@ -115,7 +119,7 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
       <button
         className="btn"
         type="button"
-        disabled={submitting || noShipments || !!shipmentsError}
+        disabled={submitting || !!shipmentsError}
         onClick={() => void submit("draft")}
       >
         Lưu nháp
@@ -124,7 +128,7 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
         className="btn"
         type="submit"
         form="create-leg-form"
-        disabled={submitting || noShipments || !!shipmentsError}
+        disabled={submitting || !!shipmentsError}
       >
         {submitting ? "Đang lưu…" : "✓  Lưu chặng"}
       </button>
@@ -132,6 +136,7 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
   );
 
   return (
+    <>
     <form id="create-leg-form" onSubmit={onSubmit} noValidate>
       <CreateWorkspace
         breadcrumbs={[
@@ -179,14 +184,14 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
             <button
               className="btn"
               type="submit"
-              disabled={submitting || noShipments || !!shipmentsError}
+              disabled={submitting || !!shipmentsError}
             >
               ✓  Lưu chặng
             </button>
             <button
               className="btn btn-ghost"
               type="button"
-              disabled={submitting || noShipments || !!shipmentsError}
+              disabled={submitting || !!shipmentsError}
               onClick={() => void submit("draft")}
             >
               Lưu nháp
@@ -199,14 +204,8 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
             {shipmentsError}
           </div>
         ) : null}
-        {noShipments ? (
-          <div className="empty-state" role="status">
-            Chưa có lô hàng để gắn chặng.{" "}
-            <Link className="row-link" href="/shipments/new">
-              Tạo Shipment
-            </Link>{" "}
-            trước, rồi quay lại màn này.
-          </div>
+        {shipmentOptions.length === 0 && !shipmentsError ? (
+          <p className="muted small">Chưa có lô hàng trong danh sách. Tạo nhanh ngay tại trường Lô hàng.</p>
         ) : null}
 
         <CreateSection
@@ -225,7 +224,7 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
                 maxLength={64}
                 value={legNo}
                 onChange={(e) => setLegNo(e.target.value)}
-                disabled={submitting || noShipments}
+                disabled={submitting}
                 placeholder="Nhập số chặng"
               />
               <p className="cw-hint">Mã nghiệp vụ hiện có hoặc tự động tạo.</p>
@@ -234,7 +233,7 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
                   <input
                     type="checkbox"
                     checked={autoNo}
-                    disabled={submitting || noShipments}
+                    disabled={submitting}
                     onChange={(e) => {
                       const on = e.target.checked;
                       setAutoNo(on);
@@ -265,19 +264,22 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
                 id="shipmentId"
                 name="shipmentId"
                 required
-                disabled={submitting || noShipments}
+                disabled={submitting || shipmentOptions.length === 0}
                 value={shipmentId}
                 onChange={(e) => setShipmentId(e.target.value)}
               >
                 <option value="" disabled>
                   Chọn lô hàng
                 </option>
-                {shipments.map((s) => (
+                {shipmentOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.shipmentNo}
                   </option>
                 ))}
               </select>
+              <button className="btn btn-ghost btn-sm" type="button" disabled={submitting} onClick={() => setQuickOpen(true)}>
+                + Tạo nhanh Shipment
+              </button>
             </div>
             <div className="cw-field s6">
               <label>Hệ thống nguồn</label>
@@ -289,7 +291,7 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
                 id="externalId"
                 name="externalId"
                 maxLength={128}
-                disabled={submitting || noShipments}
+                disabled={submitting}
                 placeholder="Để trống = số chặng"
               />
             </div>
@@ -307,5 +309,18 @@ export function CreateLegForm({ shipments, shipmentsError }: Props) {
         </CreateSection>
       </CreateWorkspace>
     </form>
+    <QuickCreateShipmentDialog
+      open={quickOpen}
+      modes={modes}
+      locations={locations}
+      onClose={() => setQuickOpen(false)}
+      onCreated={(shipment) => {
+        setCreatedShipments((prev) => [shipment, ...prev.filter((s) => s.id !== shipment.id)]);
+        setShipmentId(shipment.id);
+        setQuickOpen(false);
+        setError(null);
+      }}
+    />
+    </>
   );
 }

@@ -187,8 +187,9 @@ public sealed class RatingContextResolver
         var partyType = N(input.PartyTypeCode) ?? N(card?.PartyType);
         var routeCode = N(input.RouteCode)
             ?? (legContext ? N(leg?.RouteCode) ?? N(shipment?.RouteCode) : N(bill.RouteCode));
-        var transportMode = N(input.TransportMode)
-            ?? (legContext ? N(leg?.TransportMode) ?? N(shipment?.TransportMode) : N(bill.TransportMode));
+        var transportMode = legContext
+            ? ShipmentModePolicy.LegRatingMode(leg?.TransportMode, shipment?.TransportMode, input.TransportMode)
+            : N(input.TransportMode) ?? N(bill.TransportMode);
         var originCode = N(input.OriginCode)
             ?? (legContext ? N(leg?.OriginCode) ?? N(shipment?.OriginCode) : N(bill.OriginCode));
         var destinationCode = N(input.DestinationCode)

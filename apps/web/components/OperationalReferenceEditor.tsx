@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { SPECIAL_FLAGS } from "@/lib/create-workspace";
 import {
   FIELD_GROUP_LABELS,
+  SHIPMENT_MODE_OPTIONS,
   TRANSPORT_MODE_OPTIONS,
   chargeableStateLabel,
   formatChargeable,
@@ -412,6 +413,7 @@ export function OperationalReferenceEditor({ objectType, objectId, ratingHref }:
                       value={draft[f.code] ?? ""}
                       commodities={view.commodities}
                       disabled={busy}
+                      allowMultimodal={objectType === "shipment"}
                       onChange={(v) => setDraft((d) => ({ ...d, [f.code]: v }))}
                       onRevert={() => onRevert(f.code)}
                     />
@@ -487,6 +489,7 @@ function FieldInput({
   value,
   commodities,
   disabled,
+  allowMultimodal,
   onChange,
   onRevert,
 }: {
@@ -494,6 +497,7 @@ function FieldInput({
   value: string;
   commodities: { value: string; label: string }[];
   disabled: boolean;
+  allowMultimodal?: boolean;
   onChange: (value: string) => void;
   onRevert: () => void;
 }) {
@@ -502,9 +506,10 @@ function FieldInput({
   let control: ReactNode;
   switch (field.kind) {
     case "transport_mode": {
-      const options = TRANSPORT_MODE_OPTIONS.some((o) => o.value === value) || !value
-        ? TRANSPORT_MODE_OPTIONS
-        : [{ value, label: value }, ...TRANSPORT_MODE_OPTIONS];
+      const catalog = allowMultimodal ? SHIPMENT_MODE_OPTIONS : TRANSPORT_MODE_OPTIONS;
+      const options = catalog.some((o) => o.value === value) || !value
+        ? catalog
+        : [{ value, label: value }, ...catalog];
       control = (
         <select id={id} value={value} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
           <option value="">Chưa chọn</option>

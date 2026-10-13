@@ -7,6 +7,10 @@ type Row = {
   customerName?: string | null;
   assignedUserName?: string | null;
   transportMode?: string | null;
+  derivedTransportMode?: string | null;
+  transportModeMismatch?: boolean;
+  legCount?: number;
+  legs?: { transportMode?: string | null }[];
   originCode?: string | null;
   destinationCode?: string | null;
   routeCode?: string | null;
@@ -47,11 +51,23 @@ export function OperationalContextGrid({ row }: { row: Row }) {
       ? `${row.originCode} → ${row.destinationCode}`
       : row.originCode || row.destinationCode);
 
+  const classified = "derivedTransportMode" in row;
+  const waterAlias = (row.legs ?? []).some((leg) => {
+    const mode = (leg.transportMode ?? "").toLowerCase();
+    return mode === "water" || mode === "ocean";
+  });
   return (
+    <>
     <dl className="kv-grid">
       <Kv label="Khách hàng" value={row.customerName} />
       <Kv label="Người phụ trách" value={row.assignedUserName} />
-      <Kv label="Phương thức" value={transportModeLabel(row.transportMode)} />
+      <Kv
+        label={classified ? "Phương thức dự kiến" : "Phương thức"}
+        value={transportModeLabel(row.transportMode)}
+      />
+      {classified && row.derivedTransportMode ? (
+        <Kv label="Phân loại thực tế" value={transportModeLabel(row.derivedTransportMode)} />
+      ) : null}
       <Kv label="Tuyến" value={route} />
       <Kv label="ETD" value={row.etdAt ? formatDateTimeVi(row.etdAt) : null} />
       <Kv label="ETA" value={row.etaAt ? formatDateTimeVi(row.etaAt) : null} />
@@ -70,5 +86,16 @@ export function OperationalContextGrid({ row }: { row: Row }) {
       <Kv label="Tiền tệ báo giá" value={ctx?.preferredCurrency} />
       <Kv label="Ghi chú tính giá" value={ctx?.ratingNote} />
     </dl>
+    {row.transportModeMismatch ? (
+      <p className="alert alert-warning" role="status">
+        Phương thức nguồn khác phân loại suy ra từ chặng. Giá trị nguồn được giữ, không ghi đè.
+      </p>
+    ) : null}
+    {waterAlias ? (
+      <p className="muted small">
+        SEA, OCEAN và WATER cùng nhóm đường biển khi phân loại Shipment. Mode trên từng chặng không đổi.
+      </p>
+    ) : null}
+    </>
   );
 }

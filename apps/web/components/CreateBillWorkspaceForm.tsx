@@ -11,7 +11,7 @@ import { RefTagPicker, type RefHit } from "@/components/RefTagPicker";
 import {
   BILL_TYPES,
   INCOTERMS,
-  TRANSPORT_MODES,
+  physicalModeOptions,
   composeRoute,
   formChecks,
   formDateIso,
@@ -20,7 +20,6 @@ import {
   formStr,
   generateBusinessNo,
   manualSource,
-  mergeCatalog,
   type CatalogOption,
 } from "@/lib/create-workspace";
 
@@ -63,7 +62,7 @@ export function CreateBillWorkspaceForm({
   const [customerLabel, setCustomerLabel] = useState("Chưa chọn");
   const [orders, setOrders] = useState<RefHit[]>([]);
   const [shipments, setShipments] = useState<RefHit[]>([]);
-  const modeOpts = mergeCatalog(modes, TRANSPORT_MODES);
+  const modeOpts = physicalModeOptions(modes);
   const route = useMemo(() => {
     const picked = canonicalRoutes.find((r) => r.id === routeId);
     return picked?.code ?? composeRoute(origin || null, dest || null);

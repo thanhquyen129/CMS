@@ -315,9 +315,15 @@ export function ShipmentListWorkspace({
                   </dd>
                 </div>
                 <div>
-                  <dt>Phương thức</dt>
+                  <dt>{row.legCount ? "Phương thức dự kiến" : "Phương thức (dự kiến)"}</dt>
                   <dd>{transportModeLabel(row.transportMode)}</dd>
                 </div>
+                {row.derivedTransportMode ? (
+                  <div>
+                    <dt>Phân loại thực tế</dt>
+                    <dd>{transportModeLabel(row.derivedTransportMode)}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>Nguồn</dt>
                   <dd>{sourceSystemLabel(row.sourceSystem)}</dd>
@@ -341,6 +347,11 @@ export function ShipmentListWorkspace({
                   <dd>{row.description?.trim() || "—"}</dd>
                 </div>
               </dl>
+            ) : null}
+            {tab === "overview" && row.transportModeMismatch ? (
+              <p className="alert alert-warning" role="status">
+                Phương thức nguồn khác phân loại suy ra từ chặng. Giá trị nguồn được giữ, không ghi đè.
+              </p>
             ) : null}
             {tab === "bills" ? (
               !detail || detail.relatedBills.length === 0 ? (
@@ -378,6 +389,7 @@ export function ShipmentListWorkspace({
                       </Link>
                       <div className="muted small">
                         {operationalStatusLabel(leg.operationalStatus)}
+                        {leg.transportMode ? ` · ${transportModeLabel(leg.transportMode)}` : ""}
                       </div>
                     </li>
                   ))}

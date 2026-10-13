@@ -18,7 +18,7 @@ import {
 import {
   EXTRA_SERVICES,
   INCOTERMS,
-  TRANSPORT_MODES,
+  physicalModeOptions,
   composeRoute,
   formChecks,
   formDateIso,
@@ -27,7 +27,6 @@ import {
   formStr,
   generateBusinessNo,
   manualSource,
-  mergeCatalog,
   type CatalogOption,
 } from "@/lib/create-workspace";
 
@@ -69,7 +68,7 @@ export function CreateOrderForm({
   const [packages, setPackages] = useState<PackageLineDraft[]>([]);
   const [containers, setContainers] = useState<ContainerLineDraft[]>([]);
 
-  const modeOpts = mergeCatalog(modes, TRANSPORT_MODES);
+  const modeOpts = physicalModeOptions(modes);
   const route = useMemo(() => composeRoute(origin || null, dest || null), [origin, dest]);
   const submitting = busy || pending;
 

@@ -131,6 +131,10 @@ export function transportModeLabel(mode: string | null | undefined): string {
       return "Road";
     case "rail":
       return "Rail";
+    case "water":
+      return "Water";
+    case "multimodal":
+      return "Đa phương thức";
     default:
       return mode || "—";
   }

@@ -42,7 +42,7 @@ public static class ChargeableWeightPolicy
     public sealed record Computation(decimal? Value, string? RuleCode, string? MissingReason, string Uom);
 
     public static bool IsSea(string? transportMode) =>
-        transportMode?.Trim().ToLowerInvariant() is "sea" or "ocean";
+        ShipmentModePolicy.IsWaterFamily(transportMode);
 
     public static bool IsAir(string? transportMode) =>
         transportMode?.Trim().ToLowerInvariant() is "air" or "express" or "courier";

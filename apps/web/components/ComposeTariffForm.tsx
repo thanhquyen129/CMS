@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 
@@ -96,6 +97,10 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
   const [remoteAmount, setRemoteAmount] = useState("85000");
   const [remoteCurrency, setRemoteCurrency] = useState("VND");
   const [remoteDestinations, setRemoteDestinations] = useState("SBH, SWK");
+  const [partyType, setPartyType] = useState("vendor");
+  const [partnerEpoch, setPartnerEpoch] = useState(0);
+  const [partnerNotice, setPartnerNotice] = useState<string | null>(null);
+  const sell = partyType === "customer";
 
   const unit = mode === "sea" ? "CBM" : "kg";
   const priced = useMemo(
@@ -187,7 +192,7 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
     if (!filling) {
       body.code = String(fd.get("code") ?? "").trim();
       body.name = String(fd.get("name") ?? "").trim();
-      body.partyType = String(fd.get("partyType") ?? "vendor");
+      body.partyType = partyType;
       body.currencyCode = String(fd.get("currencyCode") ?? currencyCode ?? "VND").trim().toUpperCase();
       body.description = String(fd.get("description") ?? "").trim() || null;
       body.routeCode = String(fd.get("routeCode") ?? "").trim() || null;
@@ -195,9 +200,9 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
       const from = String(fd.get("effectiveFrom") ?? "").trim();
       body.effectiveFrom = from ? new Date(from).toISOString() : null;
       body.note = String(fd.get("note") ?? "").trim() || null;
-      body.supplierPartyId = String(fd.get("supplierPartyId") ?? "").trim() || null;
-      body.customerPartyId = String(fd.get("customerPartyId") ?? "").trim() || null;
-      body.customerGroupCode = String(fd.get("customerGroupCode") ?? "").trim() || null;
+      body.supplierPartyId = sell ? null : String(fd.get("supplierPartyId") ?? "").trim() || null;
+      body.customerPartyId = sell ? String(fd.get("customerPartyId") ?? "").trim() || null : null;
+      body.customerGroupCode = sell ? String(fd.get("customerGroupCode") ?? "").trim() || null : null;
       const vatRaw = String(fd.get("vatRate") ?? "").trim().replace(",", ".");
       body.vatRate = vatRaw ? Number(vatRaw) : null;
       if (!body.code || !body.name) {
@@ -260,7 +265,26 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
           </div>
           <div className="field">
             <label htmlFor="partyType">Loại giá</label>
-            <select id="partyType" name="partyType" defaultValue="vendor">
+            <select
+              id="partyType"
+              name="partyType"
+              value={partyType}
+              onChange={(ev) => {
+                const next = ev.target.value;
+                if (next === partyType) return;
+                const fd = new FormData(ev.currentTarget.form ?? undefined);
+                const chosen = String(fd.get("supplierPartyId") ?? fd.get("customerPartyId") ?? "").trim();
+                const group = String(fd.get("customerGroupCode") ?? "").trim();
+                if ((chosen || group) && !window.confirm("Đổi chiều giá sẽ bỏ đối tác đã chọn vì không đúng vai trò. Tiếp tục?")) {
+                  return;
+                }
+                setPartyType(next);
+                setPartnerEpoch((n) => n + 1);
+                if (chosen || group) {
+                  setPartnerNotice("Đã bỏ đối tác không đúng vai trò cho chiều giá mới.");
+                }
+              }}
+            >
               <option value="vendor">Giá mua</option>
               <option value="customer">Giá bán</option>
             </select>
@@ -270,7 +294,7 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
             <input id="currencyCode" name="currencyCode" defaultValue={currencyCode || "VND"} maxLength={3} required />
           </div>
           <div className="field">
-            <label htmlFor="carrierName">Hãng/NCC</label>
+            <label htmlFor="carrierName">Hãng vận chuyển</label>
             <input id="carrierName" name="carrierName" maxLength={128} />
           </div>
           <div className="field">
@@ -282,15 +306,53 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
             <input id="vatRate" name="vatRate" inputMode="decimal" placeholder="Để trống nếu chưa khai báo" />
           </div>
           <div className="field">
-            <PartyTypeahead name="supplierPartyId" label="Nhà cung cấp" roleCode="vendor" hint="Chỉ bảng giá mua. Để trống nếu giá chung." />
+            {sell ? (
+              <PartyTypeahead
+                key={`sell-${partnerEpoch}`}
+                name="customerPartyId"
+                label="Khách hàng (Customer)"
+                roleCode="customer"
+                hint="Chỉ bảng giá bán. Để trống nếu bảng giá chung."
+                emptyHint={
+                  <>
+                    Không có khách hàng đúng vai trò.{" "}
+                    <Link href="/admin/parties">Mở Đối tác</Link> để bổ sung vai trò. Không tạo đối tác trùng.
+                  </>
+                }
+              />
+            ) : (
+              <PartyTypeahead
+                key={`buy-${partnerEpoch}`}
+                name="supplierPartyId"
+                label="Nhà cung cấp (Vendor)"
+                roleCode="vendor"
+                hint="Chỉ bảng giá mua. Để trống nếu bảng giá chung. Hãng vận chuyển hoặc đại lý không tự thành nhà cung cấp."
+                emptyHint={
+                  <>
+                    Không có nhà cung cấp đúng vai trò.{" "}
+                    <Link href="/admin/parties">Mở Đối tác</Link> để bổ sung vai trò. Không tạo đối tác trùng.
+                  </>
+                }
+              />
+            )}
+            {partnerNotice ? (
+              <p className="alert alert-warning" role="status">
+                {partnerNotice}
+              </p>
+            ) : null}
           </div>
-          <div className="field">
-            <PartyTypeahead name="customerPartyId" label="Khách hàng" roleCode="customer" hint="Chỉ bảng giá bán." />
-          </div>
-          <div className="field">
-            <label htmlFor="customerGroupCode">Nhóm khách hàng</label>
-            <input id="customerGroupCode" name="customerGroupCode" maxLength={64} placeholder="Mã nhóm, không chọn cùng khách hàng" />
-          </div>
+          {sell ? (
+            <div className="field">
+              <label htmlFor="customerGroupCode">Nhóm khách hàng</label>
+              <input
+                key={`group-${partnerEpoch}`}
+                id="customerGroupCode"
+                name="customerGroupCode"
+                maxLength={64}
+                placeholder="Mã nhóm, không chọn cùng khách hàng"
+              />
+            </div>
+          ) : null}
           <div className="field">
             <label htmlFor="effectiveFrom">Hiệu lực từ</label>
             <input id="effectiveFrom" name="effectiveFrom" type="date" />

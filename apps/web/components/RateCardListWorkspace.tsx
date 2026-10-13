@@ -33,7 +33,7 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
               <th scope="col">Mã bảng giá</th>
               <th scope="col">Tên bảng giá</th>
               <th scope="col">Loại giá</th>
-              <th scope="col">Hãng/NCC</th>
+              <th scope="col">Hãng vận chuyển</th>
               <th scope="col">Tuyến</th>
               <th scope="col">Tiền tệ</th>
               <th scope="col">Trạng thái bảng giá</th>
@@ -171,7 +171,7 @@ export function RateCardListWorkspace({ cards, billLabel }: Props) {
                   <dd>{partyTypeLabel(selected.partyType)}</dd>
                 </div>
                 <div>
-                  <dt>Hãng/NCC</dt>
+                  <dt>Hãng vận chuyển</dt>
                   <dd>{selected.carrierName || "—"}</dd>
                 </div>
                 <div>

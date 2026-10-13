@@ -44,6 +44,17 @@ export const TRANSPORT_MODES: CatalogOption[] = [
   { value: "rail", label: "Rail" },
 ];
 
+/** Physical modes only. MULTIMODAL is a shipment classification, not a leg mode. */
+export function physicalModeOptions(catalog: CatalogOption[]): CatalogOption[] {
+  return mergeCatalog(catalog, TRANSPORT_MODES).filter(
+    (m) => m.value.toLowerCase() !== "multimodal"
+  );
+}
+
+export function shipmentModeOptions(catalog: CatalogOption[]): CatalogOption[] {
+  return [...physicalModeOptions(catalog), { value: "multimodal", label: "Đa phương thức" }];
+}
+
 export const BILL_TYPES: CatalogOption[] = [
   { value: "house", label: "House Bill" },
   { value: "master", label: "Master Bill" },

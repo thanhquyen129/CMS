@@ -281,7 +281,7 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
                 shipment?.ShipmentNo ?? "",
                 l.OriginCode ?? shipment?.OriginCode,
                 l.DestinationCode ?? shipment?.DestinationCode,
-                l.TransportMode ?? shipment?.TransportMode,
+                ShipmentModePolicy.LegRatingMode(l.TransportMode, shipment?.TransportMode, null),
                 l.RouteCode ?? shipment?.RouteCode,
                 l.ServiceTypeCode ?? shipment?.ServiceTypeCode,
                 linked,

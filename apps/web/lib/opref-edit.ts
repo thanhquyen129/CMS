@@ -124,6 +124,11 @@ export const TRANSPORT_MODE_OPTIONS: OprefOption[] = [
   { value: "express", label: "Chuyển phát nhanh" },
 ];
 
+export const SHIPMENT_MODE_OPTIONS: OprefOption[] = [
+  ...TRANSPORT_MODE_OPTIONS,
+  { value: "multimodal", label: "Đa phương thức (Multimodal)" },
+];
+
 export const FIELD_GROUP_LABELS: Record<string, string> = {
   cargo: "Hàng hóa & đo lường",
   route: "Tuyến & lịch",

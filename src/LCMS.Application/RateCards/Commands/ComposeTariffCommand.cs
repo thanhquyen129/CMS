@@ -175,6 +175,14 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             {
                 throw new ConflictAppException("Giá mua chỉ gắn nhà cung cấp. Giá bán gắn khách hàng hoặc nhóm khách hàng, không cả hai.");
             }
+
+            await PricingPartnerRules.EnsureRoleOnChangeAsync(
+                _db,
+                card.SupplierPartyId,
+                card.CustomerPartyId,
+                null,
+                null,
+                cancellationToken);
             version = new RateVersion
             {
                 TenantId = tenantId,

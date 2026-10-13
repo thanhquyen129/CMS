@@ -68,6 +68,43 @@ public static class PricingPartnerRules
 
     public static bool MatchesDirection(CreateRateCardCommand command) =>
         MatchesDirection(command.PartyType, command.SupplierPartyId, command.CustomerPartyId, command.CustomerGroupCode);
+
+    /// <summary>
+    /// New partner ids must hold the role for that price direction.
+    /// An id already stored on the card is left alone so a historical mismatch is not rewritten.
+    /// </summary>
+    public static async Task EnsureRoleOnChangeAsync(
+        ILcmsDbContext db,
+        Guid? supplierPartyId,
+        Guid? customerPartyId,
+        Guid? unchangedSupplierPartyId,
+        Guid? unchangedCustomerPartyId,
+        CancellationToken cancellationToken)
+    {
+        if (supplierPartyId is Guid supplier && supplier != unchangedSupplierPartyId)
+        {
+            var vendor = await db.PartyRoles.AnyAsync(
+                r => r.PartyId == supplier && r.RoleCode == PartyRoleCodes.Vendor && r.IsActive,
+                cancellationToken);
+            if (!vendor)
+            {
+                throw new ConflictAppException(
+                    "Đối tác chưa có vai trò Nhà cung cấp. Bổ sung vai trò tại Đối tác, không tạo đối tác trùng.");
+            }
+        }
+
+        if (customerPartyId is Guid customer && customer != unchangedCustomerPartyId)
+        {
+            var isCustomer = await db.PartyRoles.AnyAsync(
+                r => r.PartyId == customer && r.RoleCode == PartyRoleCodes.Customer && r.IsActive,
+                cancellationToken);
+            if (!isCustomer)
+            {
+                throw new ConflictAppException(
+                    "Đối tác chưa có vai trò Khách hàng. Bổ sung vai trò tại Đối tác, không tạo đối tác trùng.");
+            }
+        }
+    }
 }
 
 public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCardCommand, Guid>
@@ -117,6 +154,13 @@ public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCar
             CustomerGroupCode = RateCardText.Clean(request.CustomerGroupCode),
             IsActive = true
         };
+        await PricingPartnerRules.EnsureRoleOnChangeAsync(
+            _db,
+            card.SupplierPartyId,
+            card.CustomerPartyId,
+            null,
+            null,
+            cancellationToken);
 
         _db.RateCards.Add(card);
         try
@@ -291,6 +335,14 @@ public sealed class SetRateCardPartnerCommandHandler : IRequestHandler<SetRateCa
         {
             throw new NotFoundAppException("Không tìm thấy khách hàng.");
         }
+
+        await PricingPartnerRules.EnsureRoleOnChangeAsync(
+            _db,
+            request.SupplierPartyId,
+            request.CustomerPartyId,
+            card.SupplierPartyId,
+            card.CustomerPartyId,
+            cancellationToken);
 
         card.SupplierPartyId = request.SupplierPartyId;
         card.CustomerPartyId = request.CustomerPartyId;

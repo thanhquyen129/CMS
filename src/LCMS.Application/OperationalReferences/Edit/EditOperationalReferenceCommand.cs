@@ -113,7 +113,7 @@ public sealed class EditOperationalReferenceCommandHandler
                 continue;
             }
 
-            var (ok, value, message) = await NormalizeAsync(def, rawValue, cancellationToken);
+            var (ok, value, message) = await NormalizeAsync(type, def, rawValue, cancellationToken);
             if (!ok)
             {
                 errors[code] = [message!];
@@ -588,6 +588,7 @@ public sealed class EditOperationalReferenceCommandHandler
     }
 
     private async Task<(bool Ok, string? Value, string? Message)> NormalizeAsync(
+        string objectType,
         OperationalFieldDef def,
         string? raw,
         CancellationToken cancellationToken)
@@ -632,9 +633,18 @@ public sealed class EditOperationalReferenceCommandHandler
             case OperationalFieldKinds.TransportMode:
             {
                 var mode = text.ToLowerInvariant();
-                return mode.Length > 32
-                    ? (false, null, $"{def.Label} tối đa 32 ký tự.")
-                    : (true, mode, null);
+                if (mode.Length > 32)
+                {
+                    return (false, null, $"{def.Label} tối đa 32 ký tự.");
+                }
+
+                if (ShipmentModePolicy.IsMultimodal(mode)
+                    && !string.Equals(objectType, OperationalObjectTypes.Shipment, StringComparison.Ordinal))
+                {
+                    return (false, null, "Đa phương thức chỉ là phân loại của Shipment, không gán cho chặng.");
+                }
+
+                return (true, mode, null);
             }
             case OperationalFieldKinds.Commodity:
             {

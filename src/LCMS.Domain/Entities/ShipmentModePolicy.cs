@@ -2,8 +2,8 @@ namespace LCMS.Domain.Entities;
 
 /// <summary>
 /// Shipment classification versus the physical mode of a leg (SHIPMENT-MODE-01).
-/// MULTIMODAL describes the shipment only. SEA, OCEAN and WATER are one water family
-/// for that classification; stored leg codes are not rewritten.
+/// MULTIMODAL describes the shipment only. SEA and OCEAN share one sea family.
+/// WATER is inland water and stays its own family. Stored leg codes are not rewritten.
 /// </summary>
 public static class ShipmentModePolicy
 {
@@ -15,10 +15,10 @@ public static class ShipmentModePolicy
 
     public static bool IsMultimodal(string? mode) => Normalize(mode) == Multimodal;
 
-    public static bool IsWaterFamily(string? mode) =>
-        Normalize(mode) is "sea" or "ocean" or "water";
+    public static bool IsSeaFamily(string? mode) =>
+        Normalize(mode) is "sea" or "ocean";
 
-    /// <summary>Null for blank or MULTIMODAL. Water aliases collapse to <see cref="SeaFamily"/>.</summary>
+    /// <summary>Null for blank or MULTIMODAL. OCEAN collapses to <see cref="SeaFamily"/>. WATER stays water.</summary>
     public static string? PhysicalFamily(string? mode)
     {
         var normalized = Normalize(mode);
@@ -27,7 +27,7 @@ public static class ShipmentModePolicy
             return null;
         }
 
-        return IsWaterFamily(normalized) ? SeaFamily : normalized;
+        return IsSeaFamily(normalized) ? SeaFamily : normalized;
     }
 
     public static bool IsPhysical(string? mode) => PhysicalFamily(mode) is not null;

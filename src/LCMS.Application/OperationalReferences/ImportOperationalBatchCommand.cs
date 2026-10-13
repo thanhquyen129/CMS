@@ -18,7 +18,8 @@ public sealed record OperationalImportRow(
     decimal? ChargeableWeightKg = null,
     string? ParentExternalId = null,
     int? SequenceNo = null,
-    DateTimeOffset? MovementOn = null);
+    DateTimeOffset? MovementOn = null,
+    string? TransportMode = null);
 
 public sealed record OperationalImportIssue(int Row, string Field, string Message);
 
@@ -156,6 +157,19 @@ public sealed class OperationalImportBatch
                 issues.Add(new OperationalImportIssue(rowNo, "destinationCode", "Điểm đi và điểm đến không được trùng."));
             }
 
+            var mode = ShipmentModePolicy.Normalize(row.TransportMode);
+            if (mode is not null && mode.Length > 32)
+            {
+                issues.Add(new OperationalImportIssue(rowNo, "transportMode", "Phương thức không được vượt quá 32 ký tự."));
+            }
+            else if (ShipmentModePolicy.IsMultimodal(mode) && type != OperationalObjectTypes.Shipment)
+            {
+                issues.Add(new OperationalImportIssue(
+                    rowNo,
+                    "transportMode",
+                    "Đa phương thức chỉ là phân loại của Shipment, không gán cho chặng."));
+            }
+
             if (type == OperationalObjectTypes.Leg)
             {
                 var parent = Trim(row.ParentExternalId);
@@ -265,6 +279,11 @@ public sealed class OperationalImportBatch
 
             leg.OriginCode = Trim(row.OriginCode) ?? leg.OriginCode;
             leg.DestinationCode = Trim(row.DestinationCode) ?? leg.DestinationCode;
+            var legMode = ShipmentModePolicy.Normalize(row.TransportMode);
+            if (legMode is not null && !ShipmentModePolicy.IsMultimodal(legMode))
+            {
+                leg.TransportMode = legMode;
+            }
             leg.SequenceNo = row.SequenceNo ?? leg.SequenceNo;
             await OperationalOverrideGuard.ReapplyEntityOverridesAsync(_db, OperationalObjectTypes.Leg, leg.Id, cancellationToken);
         }
@@ -360,6 +379,11 @@ public sealed class OperationalImportBatch
 
             shipment.OriginCode = origin ?? shipment.OriginCode;
             shipment.DestinationCode = destination ?? shipment.DestinationCode;
+            var shipmentMode = ShipmentModePolicy.Normalize(row.TransportMode);
+            if (shipmentMode is not null)
+            {
+                shipment.TransportMode = shipmentMode;
+            }
             shipments[external] = shipment;
             await OwnAsync(type, shipment.Id, tenantId, source, origin, cancellationToken);
             return shipment.Id;

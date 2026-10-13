@@ -237,6 +237,7 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
         var partyType = request.PartyType.Trim().ToLowerInvariant();
         var writeCode = partyType == "customer" ? PermissionCodes.RateSellWrite : PermissionCodes.RateBuyWrite;
         await _permissions.EnsureAsync(writeCode, "Bạn không có quyền sửa bảng giá này.", cancellationToken);
+        await EnsurePartnerFitsNewDirectionAsync(card, partyType, cancellationToken);
         card.Name = request.Name.Trim();
         card.PartyType = partyType;
         card.CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant();
@@ -246,6 +247,68 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
         if (request.CarrierName is not null) card.CarrierName = RateCardText.Clean(request.CarrierName);
         card.IsActive = request.IsActive;
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task EnsurePartnerFitsNewDirectionAsync(
+        RateCard card,
+        string partyType,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(card.PartyType, partyType, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (partyType == "customer" && card.SupplierPartyId is Guid)
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["partyType"] =
+                [
+                    "Đổi chiều giá sang bán không được giữ nhà cung cấp của chiều mua. Bỏ đối tác trước khi lưu."
+                ]
+            });
+        }
+
+        if (partyType == "vendor"
+            && (card.CustomerPartyId is Guid || !string.IsNullOrWhiteSpace(card.CustomerGroupCode)))
+        {
+            throw new ValidationAppException(new Dictionary<string, string[]>
+            {
+                ["partyType"] =
+                [
+                    "Đổi chiều giá sang mua không được giữ khách hàng của chiều bán. Bỏ đối tác trước khi lưu."
+                ]
+            });
+        }
+
+        if (partyType == "customer" && card.CustomerPartyId is Guid customerId)
+        {
+            var isCustomer = await _db.PartyRoles.AnyAsync(
+                r => r.PartyId == customerId && r.RoleCode == PartyRoleCodes.Customer && r.IsActive,
+                cancellationToken);
+            if (!isCustomer)
+            {
+                throw new ValidationAppException(new Dictionary<string, string[]>
+                {
+                    ["customerPartyId"] = ["Đối tác hiện tại không có vai trò Khách hàng của chiều bán."]
+                });
+            }
+        }
+
+        if (partyType == "vendor" && card.SupplierPartyId is Guid supplierId)
+        {
+            var isVendor = await _db.PartyRoles.AnyAsync(
+                r => r.PartyId == supplierId && r.RoleCode == PartyRoleCodes.Vendor && r.IsActive,
+                cancellationToken);
+            if (!isVendor)
+            {
+                throw new ValidationAppException(new Dictionary<string, string[]>
+                {
+                    ["supplierPartyId"] = ["Đối tác hiện tại không có vai trò Nhà cung cấp của chiều mua."]
+                });
+            }
+        }
     }
 }
 

@@ -117,13 +117,14 @@ public static class OperationalReferenceEndpoints
                         || body.EtaAt is not null
                         || body.CustomerReference is not null
                         || body.Description is not null
-                        || body.Context is not null),
+                        || body.Context is not null,
+                    EntryChannel: body.EntryChannel),
                 ct);
             return Results.Ok(new { id });
         });
-        shipments.MapGet("/", async (string? q, ISender sender, CancellationToken ct) =>
+        shipments.MapGet("/", async (string? q, string? transportMode, ISender sender, CancellationToken ct) =>
         {
-            var list = await sender.Send(new ListShipmentsQuery(q), ct);
+            var list = await sender.Send(new ListShipmentsQuery(q, transportMode), ct);
             return Results.Ok(list);
         });
         shipments.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -384,7 +385,8 @@ public sealed record UpsertShipmentRequest(
     string? CustomerReference = null,
     string? Description = null,
     OperationalContextDocument? Context = null,
-    bool ApplyContext = false);
+    bool ApplyContext = false,
+    string? EntryChannel = null);
 
 public sealed record UpsertTransportLegRequest(
     string LegNo,

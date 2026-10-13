@@ -43,6 +43,8 @@ public static class PermissionCodes
     public const string RateSellPublish = "rate.sell.publish";
     public const string RateQuantityOverride = "rate.quantity.override";
     public const string RateRerate = "rate.rerate";
+    /// <summary>Create or upsert a Shipment (PUT /api/shipments), including quick-create from a leg.</summary>
+    public const string ShipmentCreate = "shipment.create";
     /// <summary>Edit Order / Shipment / Chặng / Chuyến reference fields (Bill uses bill.update).</summary>
     public const string OperationalReferenceUpdate = "opref.update";
     /// <summary>Controlled override of fields owned by an integrated source system (ADR-0039).</summary>
@@ -87,6 +89,7 @@ public static class PermissionCodes
         (RateSellPublish, "Phát hành bảng giá bán"),
         (RateQuantityOverride, "Ghi đè số lượng tính giá"),
         (RateRerate, "Tính lại giá"),
+        (ShipmentCreate, "Tạo Shipment"),
         (OperationalReferenceUpdate, "Sửa tham chiếu vận hành"),
         (OperationalSourceOverride, "Ghi đè dữ liệu hệ thống nguồn"),
         (FxOverride, "Nhập / ghi đè tỷ giá")
@@ -129,6 +132,7 @@ public static class PermissionCodes
         RateSellPublish,
         RateQuantityOverride,
         RateRerate,
+        ShipmentCreate,
         OperationalReferenceUpdate,
         OperationalSourceOverride,
         FxOverride

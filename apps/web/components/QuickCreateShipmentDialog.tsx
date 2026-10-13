@@ -60,6 +60,7 @@ export function QuickCreateShipmentDialog({ open, modes, locations, onClose, onC
           transportMode: mode || "air",
           originCode: origin.trim(),
           destinationCode: dest.trim(),
+          entryChannel: "quick_create_modal",
         }),
       });
       if (res.status === 401) {
@@ -88,7 +89,7 @@ export function QuickCreateShipmentDialog({ open, modes, locations, onClose, onC
       setDest("");
       setError(null);
     } catch {
-      setError("Không kết nối được máy chủ. Shipment chưa được tạo. Thử lại sẽ dùng cùng mã.");
+      setError("Không nhận được phản hồi từ máy chủ. Vui lòng bấm thử lại để tiếp tục đồng bộ");
     } finally {
       inFlight.current = false;
       setBusy(false);

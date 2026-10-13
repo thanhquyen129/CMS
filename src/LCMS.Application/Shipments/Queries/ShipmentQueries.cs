@@ -60,7 +60,7 @@ public sealed record ShipmentDetailDto(
     string? DerivedTransportMode = null,
     bool TransportModeMismatch = false);
 
-public sealed record ListShipmentsQuery(string? Q = null) : IRequest<IReadOnlyList<ShipmentDto>>;
+public sealed record ListShipmentsQuery(string? Q = null, string? TransportMode = null) : IRequest<IReadOnlyList<ShipmentDto>>;
 
 /// <summary>Lists tenant shipments for Manual Reference Entry workspace.</summary>
 public sealed class ListShipmentsQueryHandler : IRequestHandler<ListShipmentsQuery, IReadOnlyList<ShipmentDto>>
@@ -92,6 +92,12 @@ public sealed class ListShipmentsQueryHandler : IRequestHandler<ListShipmentsQue
                 || s.ExternalId.ToLower().Contains(pattern)
                 || (s.CustomerReference != null && s.CustomerReference.ToLower().Contains(pattern))
                 || (s.RouteCode != null && s.RouteCode.ToLower().Contains(pattern)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.TransportMode))
+        {
+            var mode = request.TransportMode.Trim().ToLowerInvariant();
+            query = query.Where(s => s.TransportMode != null && s.TransportMode.ToLower() == mode);
         }
 
         // ORDER BY DateTimeOffset is rejected by SQLite tests; Postgres accepts in-memory sort equally.

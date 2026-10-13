@@ -1,9 +1,11 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences;
 using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,7 +32,8 @@ public sealed record UpsertShipmentCommand(
     string? CustomerReference = null,
     string? Description = null,
     OperationalContextDocument? Context = null,
-    bool ApplyContext = false) : IRequest<Guid>;
+    bool ApplyContext = false,
+    string? EntryChannel = null) : IRequest<Guid>;
 
 public sealed class UpsertShipmentCommandValidator : AbstractValidator<UpsertShipmentCommand>
 {
@@ -73,12 +76,24 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IOperationalCargoStore _cargo;
+    private readonly IPermissionService _permissions;
+    private readonly IAuditWriter _audit;
+    private readonly ICurrentUserContext _user;
 
-    public UpsertShipmentCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IOperationalCargoStore cargo)
+    public UpsertShipmentCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IOperationalCargoStore cargo,
+        IPermissionService permissions,
+        IAuditWriter audit,
+        ICurrentUserContext user)
     {
         _db = db;
         _tenantContext = tenantContext;
         _cargo = cargo;
+        _permissions = permissions;
+        _audit = audit;
+        _user = user;
     }
 
     public async Task<Guid> Handle(UpsertShipmentCommand request, CancellationToken cancellationToken)
@@ -87,6 +102,11 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         {
             throw new TenantRequiredAppException();
         }
+
+        await _permissions.EnsureAsync(
+            PermissionCodes.ShipmentCreate,
+            "Bạn không có quyền tạo Shipment.",
+            cancellationToken);
 
         var tenantId = _tenantContext.TenantId!.Value;
         var sourceSystem = request.SourceSystem.Trim();
@@ -119,6 +139,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
             };
             ApplyContext(shipment, request);
             _db.Shipments.Add(shipment);
+            AuditQuickCreate(shipment.Id, shipmentNo, externalId, request);
             if (request.ApplyContext)
             {
                 await _cargo.ApplyAsync(OperationalObjectTypes.Shipment, shipment.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
@@ -159,8 +180,34 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         }
 
         await OperationalOverrideGuard.ReapplyEntityOverridesAsync(_db, OperationalObjectTypes.Shipment, existing.Id, cancellationToken);
+        AuditQuickCreate(existing.Id, shipmentNo, externalId, request);
         await _db.SaveChangesAsync(cancellationToken);
         return existing.Id;
+    }
+
+    private void AuditQuickCreate(Guid shipmentId, string shipmentNo, string externalId, UpsertShipmentCommand request)
+    {
+        if (!string.Equals(request.EntryChannel?.Trim(), "quick_create_modal", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _audit.Append(
+            AuditActions.ShipmentCreate,
+            AuditObjectTypes.Shipment,
+            shipmentId,
+            afterJson: AuditJson.Serialize(new
+            {
+                source = "quick_create_modal",
+                userId = _user.UserId,
+                timestamp = DateTimeOffset.UtcNow,
+                shipmentNo,
+                externalId,
+                transportMode = request.TransportMode,
+                originCode = request.OriginCode,
+                destinationCode = request.DestinationCode
+            }),
+            reason: "quick_create_modal");
     }
 
     private static void ApplyContext(Shipment shipment, UpsertShipmentCommand request)

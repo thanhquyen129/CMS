@@ -52,10 +52,12 @@ export function OperationalContextGrid({ row }: { row: Row }) {
       : row.originCode || row.destinationCode);
 
   const classified = "derivedTransportMode" in row;
-  const waterAlias = (row.legs ?? []).some((leg) => {
-    const mode = (leg.transportMode ?? "").toLowerCase();
-    return mode === "water" || mode === "ocean";
-  });
+  const hasInlandWater = (row.legs ?? []).some(
+    (leg) => (leg.transportMode ?? "").toLowerCase() === "water"
+  );
+  const hasOcean = (row.legs ?? []).some(
+    (leg) => (leg.transportMode ?? "").toLowerCase() === "ocean"
+  );
   return (
     <>
     <dl className="kv-grid">
@@ -91,9 +93,14 @@ export function OperationalContextGrid({ row }: { row: Row }) {
         Phương thức nguồn khác phân loại suy ra từ chặng. Giá trị nguồn được giữ, không ghi đè.
       </p>
     ) : null}
-    {waterAlias ? (
+    {hasInlandWater ? (
       <p className="muted small">
-        SEA, OCEAN và WATER cùng nhóm đường biển khi phân loại Shipment. Mode trên từng chặng không đổi.
+        WATER là đường thủy nội địa. Phân loại và trọng lượng tính cước không dùng quy tắc W/M của SEA.
+      </p>
+    ) : null}
+    {hasOcean ? (
+      <p className="muted small">
+        OCEAN được xếp cùng nhóm đường biển với SEA. Mode trên từng chặng không đổi.
       </p>
     ) : null}
     </>

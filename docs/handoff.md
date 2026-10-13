@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-13 — Quyền tạo Shipment, audit tạo nhanh, chặn đổi chiều giá sai đối tác
+
+- `PUT /api/shipments` yêu cầu `shipment.create` (403 nếu user không có quyền). Tạo nhanh từ màn Chặng ghi audit `shipment.create` với nguồn `quick_create_modal`. Đổi BUY/SELL trên bảng giá bị từ chối 400 khi đối tác cũ không thuộc chiều mới; không xóa đối tác ngầm. WATER không còn dùng W/M của SEA và không gộp vào họ biển. Import `multimodal` ghi được trên Shipment; gán lên chặng bị từ chối trước khi ghi.
+- Files: `UpsertShipmentCommand.cs`, `RateCardCommands.cs`, `ChargeableWeightPolicy.cs`, `ShipmentModePolicy.cs`, `ImportOperationalBatchCommand.cs`, `QuickCreateShipmentDialog.tsx`.
+
 ## 2026-10-13 — Tạo nhanh Shipment, phân loại đa phương thức, lọc đối tác bảng giá
 
 - Tạo Chặng có “+ Tạo nhanh Shipment” ngay tại chỗ chọn lô; lưu xong gắn id, dữ liệu chặng giữ nguyên. Shipment nhận thêm phân loại MULTIMODAL; mode từng chặng độc lập. Khi các chặng khác phương thức, phân loại thực tế là đa phương thức và giá trị nguồn không bị ghi đè. SEA/OCEAN/WATER cùng một nhóm đường biển. Giá mua chỉ gắn đối tác có vai trò nhà cung cấp, giá bán chỉ gắn khách hàng; bảng giá cũ không bị sửa đối tác. PARTNER-ROLE-01 chỉ có báo cáo rà soát, không gộp vai trò.

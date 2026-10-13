@@ -10596,6 +10596,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("CommodityTypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("commodity_type_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -10657,6 +10661,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("origin_location_id");
 
+                    b.Property<string>("RouteCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("route_code");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -10666,6 +10675,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<int>("SequenceNo")
                         .HasColumnType("integer")
                         .HasColumnName("sequence_no");
+
+                    b.Property<string>("ServiceTypeCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("service_type_code");
 
                     b.Property<Guid>("ShipmentId")
                         .HasColumnType("uuid")
@@ -10680,6 +10694,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
+
+                    b.Property<string>("TransportMode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("transport_mode");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

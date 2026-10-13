@@ -179,24 +179,28 @@ public sealed class RatingContextResolver
             }
         }
 
+        var legContext = contextType == RatingContextTypes.Leg;
         var serviceType = N(input.ServiceTypeCode)
-            ?? (contextType == RatingContextTypes.Leg ? N(shipment?.ServiceTypeCode) : null)
-            ?? N(bill.ServiceTypeCode)
-            ?? N(bill.BillType);
+            ?? (legContext
+                ? N(leg?.ServiceTypeCode) ?? N(shipment?.ServiceTypeCode)
+                : N(bill.ServiceTypeCode) ?? N(bill.BillType));
         var partyType = N(input.PartyTypeCode) ?? N(card?.PartyType);
         var routeCode = N(input.RouteCode)
-            ?? (contextType == RatingContextTypes.Leg ? N(shipment?.RouteCode) : N(bill.RouteCode));
+            ?? (legContext ? N(leg?.RouteCode) ?? N(shipment?.RouteCode) : N(bill.RouteCode));
         var transportMode = N(input.TransportMode)
-            ?? (contextType == RatingContextTypes.Leg ? N(shipment?.TransportMode) : N(bill.TransportMode));
+            ?? (legContext ? N(leg?.TransportMode) ?? N(shipment?.TransportMode) : N(bill.TransportMode));
         var originCode = N(input.OriginCode)
-            ?? (contextType == RatingContextTypes.Leg ? N(leg?.OriginCode) : N(bill.OriginCode));
+            ?? (legContext ? N(leg?.OriginCode) ?? N(shipment?.OriginCode) : N(bill.OriginCode));
         var destinationCode = N(input.DestinationCode)
-            ?? (contextType == RatingContextTypes.Leg ? N(leg?.DestinationCode) : N(bill.DestinationCode));
+            ?? (legContext ? N(leg?.DestinationCode) ?? N(shipment?.DestinationCode) : N(bill.DestinationCode));
         var commodityCode = N(input.CommodityCode);
-        if (commodityCode is null && bill.CommodityTypeId is Guid commodityId)
+        var commodityId = legContext
+            ? leg?.CommodityTypeId ?? shipment?.CommodityTypeId
+            : bill.CommodityTypeId;
+        if (commodityCode is null && commodityId is Guid resolvedCommodityId)
         {
             commodityCode = N(await _db.CommodityTypes.AsNoTracking()
-                .Where(c => c.Id == commodityId)
+                .Where(c => c.Id == resolvedCommodityId)
                 .Select(c => c.Code)
                 .FirstOrDefaultAsync(cancellationToken));
         }
@@ -285,6 +289,14 @@ public sealed class RatingContextResolver
         var measures = await _db.OperationalMeasurements.AsNoTracking()
             .Where(m => m.ObjectType == measureType && m.ObjectId == measureId)
             .ToListAsync(cancellationToken);
+        if (contextType == RatingContextTypes.Leg
+            && shipment is not null
+            && !measures.Any(m => m.MeasureCode is MeasureCodes.GrossWeightKg or MeasureCodes.VolumeCbm or MeasureCodes.ChargeableWeightKg))
+        {
+            measures = await _db.OperationalMeasurements.AsNoTracking()
+                .Where(m => m.ObjectType == OperationalObjectTypes.Shipment && m.ObjectId == shipment.Id)
+                .ToListAsync(cancellationToken);
+        }
         var cwOverride = await _db.OperationalFieldOverrides.AsNoTracking()
             .FirstOrDefaultAsync(
                 o => o.ObjectType == measureType && o.ObjectId == measureId && o.FieldCode == OperationalFieldCodes.ChargeableWeightKg,

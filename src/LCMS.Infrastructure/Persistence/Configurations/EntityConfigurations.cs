@@ -833,6 +833,10 @@ internal sealed class TransportLegConfiguration : IEntityTypeConfiguration<Trans
         builder.Property(e => e.DestinationCode).HasMaxLength(64);
         builder.Property(e => e.OriginLocationId).HasColumnType("uuid");
         builder.Property(e => e.DestinationLocationId).HasColumnType("uuid");
+        builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
+        builder.Property(e => e.RouteCode).HasMaxLength(64);
+        builder.Property(e => e.CommodityTypeId).HasColumnType("uuid");
 
         builder.HasIndex(e => new { e.TenantId, e.SourceSystem, e.ExternalId }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.ShipmentId });

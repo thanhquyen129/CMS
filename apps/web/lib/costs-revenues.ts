@@ -21,6 +21,7 @@ export type CostListItem = {
   rateVersionId?: string | null;
   pricingRuleId?: string | null;
   legNo?: string | null;
+  includedInBillTotal?: boolean;
 };
 
 export type CostAllocationDetail = {

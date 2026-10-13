@@ -4,6 +4,7 @@ using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Queries;
 using LCMS.Application.FinancialDocuments.Queries;
 using LCMS.Application.Revenues.Queries;
+using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -94,18 +95,106 @@ public sealed class GetBillFinancialViewQueryHandler
                     c.RateCardId,
                     c.RateVersionId,
                     c.PricingRuleId,
-                    null))
+                    null,
+                    true))
                 .ToListAsync(cancellationToken);
-            var legIds = costs.Where(c => c.TransportLegId is not null).Select(c => c.TransportLegId!.Value).Distinct().ToList();
+            var rows = costs.ToList();
+            var linkedLegIds = await _db.BillLegLinks.AsNoTracking()
+                .Where(l => l.BillId == request.BillId)
+                .Select(l => l.TransportLegId)
+                .ToListAsync(cancellationToken);
+            if (linkedLegIds.Count > 0)
+            {
+                var sharedSources = await _db.Costs.AsNoTracking()
+                    .Where(c => c.BillId == null
+                                && c.AttributionType == CostAttributionTypes.Shared
+                                && c.RecordStatus == "active"
+                                && c.TransportLegId != null
+                                && linkedLegIds.Contains(c.TransportLegId.Value))
+                    .ToListAsync(cancellationToken);
+                rows.AddRange(sharedSources.Select(c => new CostListItemDto(
+                    c.Id,
+                    request.BillId,
+                    c.AttributionType,
+                    c.FinancialMaturity,
+                    c.Amount,
+                    c.CurrencyCode,
+                    c.CostTypeCode,
+                    c.RecordStatus,
+                    c.OrganizationId,
+                    c.CreatedBy,
+                    c.EffectiveDate,
+                    c.VendorPartyId,
+                    c.ExpectedAmount,
+                    c.ConfirmedAmount,
+                    c.ActualAmount,
+                    c.RowVersion,
+                    c.TransportLegId,
+                    c.OriginLevel,
+                    c.RateCardId,
+                    c.RateVersionId,
+                    c.PricingRuleId,
+                    null,
+                    false)));
+            }
+
+            var allocated = await (
+                from d in _db.CostAllocationDetails.AsNoTracking()
+                join a in _db.CostAllocations.AsNoTracking() on d.AllocationId equals a.Id
+                join c in _db.Costs.AsNoTracking() on a.CostId equals c.Id
+                where d.BillId == request.BillId
+                      && a.AllocationStatus == CostAllocationStatuses.Finalized
+                      && c.RecordStatus == "active"
+                select new
+                {
+                    d.Id,
+                    d.AllocatedAmount,
+                    c.CurrencyCode,
+                    c.CostTypeCode,
+                    c.VendorPartyId,
+                    c.TransportLegId,
+                    c.OriginLevel,
+                    c.RateCardId,
+                    c.RateVersionId,
+                    c.PricingRuleId,
+                    c.EffectiveDate
+                }).ToListAsync(cancellationToken);
+            rows.AddRange(allocated.Select(a => new CostListItemDto(
+                a.Id,
+                request.BillId,
+                "allocated",
+                CostMaturities.Expected,
+                a.AllocatedAmount,
+                a.CurrencyCode,
+                a.CostTypeCode,
+                "allocation",
+                null,
+                null,
+                a.EffectiveDate,
+                a.VendorPartyId,
+                a.AllocatedAmount,
+                null,
+                null,
+                null,
+                a.TransportLegId,
+                a.OriginLevel,
+                a.RateCardId,
+                a.RateVersionId,
+                a.PricingRuleId,
+                null,
+                true)));
+            var legIds = rows.Where(c => c.TransportLegId is not null).Select(c => c.TransportLegId!.Value).Distinct().ToList();
             if (legIds.Count > 0)
             {
                 var legNos = await _db.TransportLegs.AsNoTracking()
                     .Where(l => legIds.Contains(l.Id))
                     .ToDictionaryAsync(l => l.Id, l => l.LegNo, cancellationToken);
-                costs = costs
+                rows = rows
                     .Select(c => c.TransportLegId is Guid id && legNos.TryGetValue(id, out var no) ? c with { LegNo = no } : c)
                     .ToList();
             }
+
+            costs = rows;
         }
 
         if (await _permissions.HasPermissionAsync(PermissionCodes.RevenueRead, cancellationToken))

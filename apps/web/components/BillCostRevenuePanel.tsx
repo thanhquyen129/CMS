@@ -50,6 +50,9 @@ function attributionLabel(
   if (attributionType?.toLowerCase() === "shared") {
     return term(terms, "ATTRIBUTION_SHARED", "Chung");
   }
+  if (attributionType?.toLowerCase() === "allocated") {
+    return "Đã phân bổ";
+  }
   return attributionType;
 }
 
@@ -275,10 +278,13 @@ export function BillCostRevenuePanel({
             </thead>
             <tbody>
               {costs.map((c) => {
+                const traceOnly = c.includedInBillTotal === false || c.attributionType?.toLowerCase() === "allocated";
                 const confirmOk =
+                  !traceOnly &&
                   canConfirm(c.financialMaturity, c.recordStatus) &&
                   !isBlocked("cost", "confirm", c.id);
                 const actualizeOk =
+                  !traceOnly &&
                   canActualize(c.financialMaturity, c.recordStatus) &&
                   !isBlocked("cost", "actualize", c.id);
                 return (
@@ -288,7 +294,8 @@ export function BillCostRevenuePanel({
                       <span className="muted small block">
                         {attributionLabel(terms, c.attributionType)}
                         {c.legNo ? ` · Chặng ${c.legNo}` : ""}
-                        {c.recordStatus !== "active" ? ` · ${c.recordStatus}` : ""}
+                        {c.includedInBillTotal === false ? " · Không cộng vào tổng Bill" : ""}
+                        {c.recordStatus !== "active" && c.recordStatus !== "allocation" ? ` · ${c.recordStatus}` : ""}
                       </span>
                     </td>
                     <td>{c.effectiveDate}</td>

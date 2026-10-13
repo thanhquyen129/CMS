@@ -53,6 +53,9 @@ type Suggestion = {
   vendorPartyId?: string | null;
   legs?: LegOption[];
   vendors?: VendorOption[];
+  activeRatingId?: string | null;
+  activeRatingQuantity?: number | null;
+  activeRatingWeight?: number | null;
 };
 
 type Props = {
@@ -187,6 +190,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
   const [legId, setLegId] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [vendorTouched, setVendorTouched] = useState(false);
+  const [replaceExisting, setReplaceExisting] = useState(false);
 
   const expected = term(terms, "EXPECTED", "Dự kiến");
   const costLabel = term(terms, "COST", "Chi phí");
@@ -199,6 +203,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       params.set("contextType", "leg");
       if (legId) params.set("legId", legId);
       if (vendorId) params.set("vendorPartyId", vendorId);
+      if (buyVersion) params.set("rateVersionId", buyVersion);
     }
     const query = params.toString();
     (async () => {
@@ -222,7 +227,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
     return () => {
       cancelled = true;
     };
-  }, [billId, buyContext, legId, vendorId]);
+  }, [billId, buyContext, legId, vendorId, buyVersion]);
 
   useEffect(() => {
     if (!suggestion || buyTouched) return;
@@ -252,12 +257,17 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
         chargeableOverrideReason: reason.trim() || null,
         ...(side === "buy"
           ? buyContext === "leg"
-            ? { contextType: "leg", transportLegId: legId || null, vendorPartyId: vendorId || null }
+            ? {
+                contextType: "leg",
+                transportLegId: legId || null,
+                vendorPartyId: vendorId || null,
+                supersedesRatingId: replaceExisting && suggestion?.activeRatingId ? suggestion.activeRatingId : null,
+              }
             : { contextType: "bill" }
           : {}),
       };
     };
-  }, [billId, buyQuantity, sellQuantity, buyWeight, sellWeight, buyReason, sellReason, buyContext, legId, vendorId]);
+  }, [billId, buyQuantity, sellQuantity, buyWeight, sellWeight, buyReason, sellReason, buyContext, legId, vendorId, replaceExisting, suggestion]);
 
   useEffect(() => {
     return watchReadiness(bodyFor("buy", buyVersion), setBuyReadiness, setBuyReadinessError, setBuyChecking);
@@ -273,7 +283,6 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         ...bodyFor(side, versionId),
-        supersedesRatingId: null,
         seedExpectedCosts: seed === "cost",
         seedExpectedRevenues: seed === "revenue",
       }),
@@ -430,6 +439,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
               setBuyTouched(false);
               setBuyVersion("");
               setVendorTouched(false);
+              setReplaceExisting(false);
               if (next === "bill") {
                 setLegId("");
                 setVendorId("");
@@ -441,13 +451,18 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
               setVendorTouched(false);
               setBuyTouched(false);
               setBuyVersion("");
+              setReplaceExisting(false);
             }}
             onVendor={(id) => {
               setVendorTouched(true);
               setVendorId(id);
               setBuyTouched(false);
               setBuyVersion("");
+              setReplaceExisting(false);
             }}
+            activeRatingId={suggestion.activeRatingId ?? null}
+            replaceExisting={replaceExisting}
+            onReplace={setReplaceExisting}
           />}
         />
         <SideBlock
@@ -500,6 +515,9 @@ function BuyContextFields({
   onContext,
   onLeg,
   onVendor,
+  activeRatingId,
+  replaceExisting,
+  onReplace,
 }: {
   context: "bill" | "leg";
   legs: LegOption[];
@@ -509,6 +527,9 @@ function BuyContextFields({
   onContext: (value: "bill" | "leg") => void;
   onLeg: (id: string) => void;
   onVendor: (id: string) => void;
+  activeRatingId: string | null;
+  replaceExisting: boolean;
+  onReplace: (value: boolean) => void;
 }) {
   return (
     <>
@@ -549,6 +570,12 @@ function BuyContextFields({
               ))}
             </select>
           </div>
+          {activeRatingId ? (
+            <label className="checkbox-field">
+              <input type="checkbox" checked={replaceExisting} onChange={(ev) => onReplace(ev.target.checked)} />
+              Tính lại và thay thế lần tính hiện có
+            </label>
+          ) : null}
         </>
       ) : null}
     </>

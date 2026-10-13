@@ -91,7 +91,7 @@ public static class OperationalFieldCatalog
                 PackageCount, Gross, Volume, Commodity,
                 Mode, Service, Carrier, Origin, Destination, Route, Etd, Eta, CustomerRef, Description
             ],
-            [OperationalObjectTypes.Leg] = [Sequence, Origin, Destination],
+            [OperationalObjectTypes.Leg] = [Sequence, Origin, Destination, Route, Mode, Service, Gross, Volume, Commodity],
             [OperationalObjectTypes.Movement] = [MovementOn, Mode]
         };
 

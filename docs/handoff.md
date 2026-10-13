@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-13 — Tính lại theo Chặng và hiện chi phí dùng chung trên Bill
+
+- Tính lại theo chặng gửi lần tính trước (chặng, vendor, phiên bản). Cùng số liệu thì không tạo thêm. Đổi số liệu thì thay Expected cũ; chi phí đã xác nhận, thực tế hoặc đã phân bổ thì bị chặn. Bill Financial View hiện chi phí nguồn dùng chung nhưng không cộng vào tổng; sau phân bổ chỉ cộng phần của Bill. Chặng sửa được trọng lượng, thể tích, mode, dịch vụ, tuyến — tính giá không lấy trọng lượng cả Bill.
+- Files: `RateBillForm.tsx`, `RerateRatingButton.tsx`, `GetBillFinancialViewQuery.cs`, `RatingReadiness.cs`, `SuggestBillRatesQuery.cs`, `20261013065435_TransportLegBuyInputs`, `BuyRatingLegTests`.
+
 ## 2026-10-13 — Giá mua theo Chặng dùng Rating Engine hiện có
 
 - Bill → Tính giá → Giá mua chọn Theo Bill hoặc Theo Chặng. Theo Chặng chỉ hiện chặng liên kết, lọc vendor và phiên bản giá mua phù hợp, không tự chọn khi có nhiều bảng giá. Expected Cost lưu chặng, vendor, bảng giá. Chặng dùng chung từ 2 Bill trở lên ghi một chi phí nguồn `shared` (không gắn Bill); lợi nhuận Bill không cộng khoản đó trước khi phân bổ.

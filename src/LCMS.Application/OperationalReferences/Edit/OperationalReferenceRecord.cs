@@ -47,6 +47,7 @@ internal sealed class OperationalReferenceRecord
         OperationalObjectTypes.Order => Order!.TransportMode,
         OperationalObjectTypes.Shipment => Shipment!.TransportMode,
         OperationalObjectTypes.Movement => Movement!.TransportMode,
+        OperationalObjectTypes.Leg => Leg!.TransportMode,
         _ => null
     };
 
@@ -192,7 +193,7 @@ internal sealed class OperationalReferenceRecord
             case OperationalFieldCodes.ChargeableWeightKg:
                 return OperationalFieldValues.FormatDecimal(Measure(MeasureCodes.ChargeableWeightKg)?.Quantity);
             case OperationalFieldCodes.CommodityTypeId:
-                return (Bill?.CommodityTypeId ?? Order?.CommodityTypeId ?? Shipment?.CommodityTypeId)?.ToString();
+                return (Bill?.CommodityTypeId ?? Order?.CommodityTypeId ?? Shipment?.CommodityTypeId ?? Leg?.CommodityTypeId)?.ToString();
             case OperationalFieldCodes.SpecialFlags:
                 return Context?.SpecialFlags is { Count: > 0 } flags
                     ? string.Join(",", flags.OrderBy(f => f, StringComparer.Ordinal))
@@ -202,13 +203,13 @@ internal sealed class OperationalReferenceRecord
             case OperationalFieldCodes.TransportMode:
                 return TransportMode;
             case OperationalFieldCodes.ServiceTypeCode:
-                return Bill?.ServiceTypeCode ?? Order?.ServiceTypeCode ?? Shipment?.ServiceTypeCode;
+                return Bill?.ServiceTypeCode ?? Order?.ServiceTypeCode ?? Shipment?.ServiceTypeCode ?? Leg?.ServiceTypeCode;
             case OperationalFieldCodes.OriginCode:
                 return Bill?.OriginCode ?? Order?.OriginCode ?? Shipment?.OriginCode ?? Leg?.OriginCode;
             case OperationalFieldCodes.DestinationCode:
                 return Bill?.DestinationCode ?? Order?.DestinationCode ?? Shipment?.DestinationCode ?? Leg?.DestinationCode;
             case OperationalFieldCodes.RouteCode:
-                return Bill?.RouteCode ?? Order?.RouteCode ?? Shipment?.RouteCode;
+                return Bill?.RouteCode ?? Order?.RouteCode ?? Shipment?.RouteCode ?? Leg?.RouteCode;
             case OperationalFieldCodes.EtdAt:
                 return OperationalFieldValues.FormatDate(Bill?.EtdAt ?? Order?.EtdAt ?? Shipment?.EtdAt);
             case OperationalFieldCodes.EtaAt:
@@ -238,6 +239,7 @@ internal sealed class OperationalReferenceRecord
                 if (Bill is not null) Bill.CommodityTypeId = commodity;
                 if (Order is not null) Order.CommodityTypeId = commodity;
                 if (Shipment is not null) Shipment.CommodityTypeId = commodity;
+                if (Leg is not null) Leg.CommodityTypeId = commodity;
                 break;
             case OperationalFieldCodes.SpecialFlags:
                 EnsureContext().SpecialFlags = value is null
@@ -254,11 +256,13 @@ internal sealed class OperationalReferenceRecord
                 if (Order is not null) Order.TransportMode = value;
                 if (Shipment is not null) Shipment.TransportMode = value;
                 if (Movement is not null) Movement.TransportMode = value;
+                if (Leg is not null) Leg.TransportMode = value;
                 break;
             case OperationalFieldCodes.ServiceTypeCode:
                 if (Bill is not null) Bill.ServiceTypeCode = value;
                 if (Order is not null) Order.ServiceTypeCode = value;
                 if (Shipment is not null) Shipment.ServiceTypeCode = value;
+                if (Leg is not null) Leg.ServiceTypeCode = value;
                 break;
             case OperationalFieldCodes.OriginCode:
                 if (Bill is not null) Bill.OriginCode = value;
@@ -276,6 +280,7 @@ internal sealed class OperationalReferenceRecord
                 if (Bill is not null) Bill.RouteCode = value;
                 if (Order is not null) Order.RouteCode = value;
                 if (Shipment is not null) Shipment.RouteCode = value;
+                if (Leg is not null) Leg.RouteCode = value;
                 break;
             case OperationalFieldCodes.EtdAt:
                 var etd = value is null ? (DateTimeOffset?)null : DateTimeOffset.Parse(value, System.Globalization.CultureInfo.InvariantCulture);

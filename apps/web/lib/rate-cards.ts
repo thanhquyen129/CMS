@@ -107,6 +107,9 @@ export type RatingHistoryItem = {
   staleAt?: string | null;
   staleReason?: string | null;
   partyTypeCode?: string | null;
+  contextType?: string | null;
+  transportLegId?: string | null;
+  vendorPartyId?: string | null;
 };
 
 export type RatingDetail = {

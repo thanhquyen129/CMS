@@ -78,7 +78,10 @@ public sealed record RatingHistoryItemDto(
     string? ChargeableBasis = null,
     DateTimeOffset? StaleAt = null,
     string? StaleReason = null,
-    string? PartyTypeCode = null);
+    string? PartyTypeCode = null,
+    string? ContextType = null,
+    Guid? TransportLegId = null,
+    Guid? VendorPartyId = null);
 
 public sealed record GetRatingByIdQuery(Guid Id) : IRequest<RatingDto>;
 
@@ -232,7 +235,10 @@ public sealed class ListRatingsByBillQueryHandler
                 r.ChargeableBasis,
                 r.StaleAt,
                 r.StaleReason,
-                r.PartyTypeCode))
+                r.PartyTypeCode,
+                r.ContextType,
+                r.TransportLegId,
+                r.VendorPartyId))
             .ToListAsync(cancellationToken);
 
         var access = await RatingSideAccess.ResolveAsync(_permissions, cancellationToken);

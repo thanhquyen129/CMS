@@ -26,6 +26,13 @@ public sealed class TransportLeg : TenantEntityBase
     public string? OriginCode { get; set; }
     public string? DestinationCode { get; set; }
 
+    /// <summary>air / sea / road / rail. Rating reads this before the shipment.</summary>
+    public string? TransportMode { get; set; }
+
+    public string? ServiceTypeCode { get; set; }
+    public string? RouteCode { get; set; }
+    public Guid? CommodityTypeId { get; set; }
+
     public Tenant? Tenant { get; set; }
     public Shipment? Shipment { get; set; }
 }

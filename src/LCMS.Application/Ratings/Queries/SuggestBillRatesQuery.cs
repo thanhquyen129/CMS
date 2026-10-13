@@ -17,6 +17,7 @@ public sealed record LegRateOptionDto(
     string? DestinationCode,
     string? TransportMode,
     string? RouteCode,
+    string? ServiceTypeCode,
     int LinkedBillCount);
 
 public sealed record VendorRateOptionDto(Guid Id, string Code, string Name);
@@ -31,14 +32,18 @@ public sealed record BillRateSuggestionDto(
     Guid? LegId = null,
     Guid? VendorPartyId = null,
     IReadOnlyList<LegRateOptionDto>? Legs = null,
-    IReadOnlyList<VendorRateOptionDto>? Vendors = null);
+    IReadOnlyList<VendorRateOptionDto>? Vendors = null,
+    Guid? ActiveRatingId = null,
+    decimal? ActiveRatingQuantity = null,
+    decimal? ActiveRatingWeight = null);
 
 public sealed record SuggestBillRatesQuery(
     Guid BillId,
     DateTimeOffset? RateDate = null,
     string? ContextType = null,
     Guid? LegId = null,
-    Guid? VendorPartyId = null) : IRequest<BillRateSuggestionDto>;
+    Guid? VendorPartyId = null,
+    Guid? RateVersionId = null) : IRequest<BillRateSuggestionDto>;
 
 public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRatesQuery, BillRateSuggestionDto>
 {
@@ -129,7 +134,7 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
                 var legContext = new BillRateMatchContext(
                     leg.RouteCode,
                     leg.TransportMode,
-                    context.ServiceTypeCode,
+                    leg.ServiceTypeCode,
                     leg.OriginCode,
                     leg.DestinationCode,
                     context.CommodityCode);
@@ -186,6 +191,30 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
             }
         }
 
+        Guid? activeRatingId = null;
+        decimal? activeQuantity = null;
+        decimal? activeWeight = null;
+        if (contextType == RatingContextTypes.Leg
+            && selectedLeg is Guid activeLeg
+            && selectedVendor is Guid activeVendor
+            && request.RateVersionId is Guid activeVersion)
+        {
+            var activeRows = await _db.Ratings.AsNoTracking()
+                .Where(r => r.ContextType == RatingContextTypes.Leg
+                            && r.TransportLegId == activeLeg
+                            && r.VendorPartyId == activeVendor
+                            && r.RateVersionId == activeVersion
+                            && r.Status == RatingStatuses.Completed)
+                .ToListAsync(cancellationToken);
+            var active = activeRows.OrderByDescending(r => r.RatedAt).FirstOrDefault();
+            if (active is not null)
+            {
+                activeRatingId = active.Id;
+                activeQuantity = active.Quantity;
+                activeWeight = active.Weight;
+            }
+        }
+
         return new BillRateSuggestionDto(
             bill.Id,
             bill.RouteCode,
@@ -196,7 +225,10 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
             selectedLeg,
             selectedVendor,
             legs,
-            vendors);
+            vendors,
+            activeRatingId,
+            activeQuantity,
+            activeWeight);
     }
 
     private async Task<IReadOnlyList<LegRateOptionDto>> LoadLegsAsync(Guid billId, CancellationToken cancellationToken)
@@ -236,8 +268,9 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
                 shipment?.ShipmentNo ?? "",
                 l.OriginCode ?? shipment?.OriginCode,
                 l.DestinationCode ?? shipment?.DestinationCode,
-                shipment?.TransportMode,
-                shipment?.RouteCode,
+                l.TransportMode ?? shipment?.TransportMode,
+                l.RouteCode ?? shipment?.RouteCode,
+                l.ServiceTypeCode ?? shipment?.ServiceTypeCode,
                 linked);
         }).ToList();
     }

@@ -11,11 +11,19 @@ export function RerateRatingButton({
   ratingId,
   rateVersionId,
   editAnchor = "bill-edit",
+  contextType,
+  transportLegId,
+  vendorPartyId,
+  quantity,
 }: {
   billId: string;
   ratingId: string;
   rateVersionId: string;
   editAnchor?: string;
+  contextType?: string | null;
+  transportLegId?: string | null;
+  vendorPartyId?: string | null;
+  quantity?: number | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -31,7 +39,15 @@ export function RerateRatingButton({
       const res = await fetch("/bff/ratings", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ billId, rateVersionId, supersedesRatingId: ratingId }),
+        body: JSON.stringify({
+          billId,
+          rateVersionId,
+          supersedesRatingId: ratingId,
+          quantity: quantity ?? null,
+          ...(contextType === "leg"
+            ? { contextType: "leg", transportLegId: transportLegId ?? null, vendorPartyId: vendorPartyId ?? null }
+            : {}),
+        }),
       });
       if (res.status === 401) {
         window.location.href = "/login";

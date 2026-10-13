@@ -331,11 +331,12 @@ public static class RatePricingEndpoints
             string? contextType,
             Guid? legId,
             Guid? vendorPartyId,
+            Guid? rateVersionId,
             ISender sender,
             CancellationToken ct) =>
         {
             var suggestion = await sender.Send(
-                new SuggestBillRatesQuery(billId, null, contextType, legId, vendorPartyId),
+                new SuggestBillRatesQuery(billId, null, contextType, legId, vendorPartyId, rateVersionId),
                 ct);
             return Results.Ok(suggestion);
         });

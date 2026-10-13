@@ -44,7 +44,7 @@ public static class BillWaybillMapper
             : body.NonDeliveryAction.Trim().ToLowerInvariant();
         target.SenderCommitAccepted = body.SenderCommitAccepted;
         target.SentAt = body.SentAt?.ToUniversalTime();
-        target.ParcelCount = body.ParcelCount is > 0 ? body.ParcelCount.Value : 1;
+        target.ParcelCount = body.ParcelCount is > 0 ? body.ParcelCount.Value : 0;
         target.ActualWeightKg = body.ActualWeightKg;
         target.ChargeableWeightKg = body.ChargeableWeightKg;
 

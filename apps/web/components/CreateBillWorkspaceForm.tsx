@@ -4,17 +4,10 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { CreateCargoFields } from "@/components/CreateCargoFields";
-import { CreateCargoLineGrid } from "@/components/CreateCargoLineGrid";
 import { CreateSection, CreateWorkspace } from "@/components/CreateWorkspace";
 import { LocationField } from "@/components/LocationField";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { RefTagPicker, type RefHit } from "@/components/RefTagPicker";
-import {
-  submitCargoLines,
-  validateCargoLines,
-  type ContainerLineDraft,
-  type PackageLineDraft,
-} from "@/lib/cargo-lines";
 import {
   BILL_TYPES,
   INCOTERMS,
@@ -70,8 +63,6 @@ export function CreateBillWorkspaceForm({
   const [customerLabel, setCustomerLabel] = useState("Chưa chọn");
   const [orders, setOrders] = useState<RefHit[]>([]);
   const [shipments, setShipments] = useState<RefHit[]>([]);
-  const [packages, setPackages] = useState<PackageLineDraft[]>([]);
-  const [containers, setContainers] = useState<ContainerLineDraft[]>([]);
   const modeOpts = mergeCatalog(modes, TRANSPORT_MODES);
   const route = useMemo(() => {
     const picked = canonicalRoutes.find((r) => r.id === routeId);
@@ -103,11 +94,6 @@ export function CreateBillWorkspaceForm({
     const destinationCode = formStr(fd, "destinationCode");
     if (!originCode || !destinationCode) {
       setError("Chọn điểm đi và điểm đến.");
-      return;
-    }
-    const cargoErr = validateCargoLines(packages, containers);
-    if (cargoErr) {
-      setError(cargoErr);
       return;
     }
 
@@ -205,7 +191,7 @@ export function CreateBillWorkspaceForm({
           body: JSON.stringify({
             sender: { name: shipper },
             consignee: { name: consignee },
-            parcelCount: pkgs ?? 1,
+            parcelCount: pkgs,
             actualWeightKg: weight,
             chargeableWeightKg: formNum(fd, "chargeableWeightKg"),
             contentsDescription: formStr(fd, "cargoDescription"),
@@ -226,15 +212,6 @@ export function CreateBillWorkspaceForm({
           method: "POST",
           headers: { Accept: "application/json" },
         });
-      }
-
-      const cargo = await submitCargoLines("bill", billId, packages, containers);
-      if (!cargo.ok) {
-        setError(
-          `Bill đã tạo nhưng chưa lưu đủ kiện/container: ${cargo.message} Mở hồ sơ Bill để kiểm tra.`
-        );
-        startTransition(() => router.push(`/bills/${billId}`));
-        return;
       }
 
       startTransition(() => router.push(`/bills/${billId}`));
@@ -404,22 +381,12 @@ export function CreateBillWorkspaceForm({
           </div>
         </CreateSection>
 
-        <CreateSection title="3. Thông tin hàng hóa & đo lường" hint="Dữ liệu phục vụ rating context và phân bổ chi phí/doanh thu">
+        <CreateSection title="3. Thông tin hàng hóa & đo lường" hint="Chỉ nhập số tổng. Số này là đầu vào tính giá. Màn này không nhập từng kiện hay từng container.">
           <CreateCargoFields
             disabled={submitting}
             commodities={commodities}
             descriptionPlaceholder="Tên hàng, quy cách đóng gói, đặc tính cần lưu ý..."
           />
-          <div style={{ marginTop: 16 }}>
-            <h3 style={{ margin: "0 0 8px", fontSize: "0.9rem" }}>Kiện / Container</h3>
-            <CreateCargoLineGrid
-              disabled={submitting}
-              packages={packages}
-              containers={containers}
-              onPackagesChange={setPackages}
-              onContainersChange={setContainers}
-            />
-          </div>
         </CreateSection>
 
         <CreateSection title="4. Liên kết nghiệp vụ" hint="Bill có thể liên kết nhiều Order và nhiều Shipment">

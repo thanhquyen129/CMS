@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-13 — BILL-PKG-01 phương án 1: màn tạo Bill chỉ giữ số tổng
+
+- PO chốt ADR-0024. Màn tạo Bill bỏ lưới kiện/container. Bill AIR không có dòng kiện vẫn lưu. Số tổng trên Bill là đầu vào tính giá. Không đối chiếu tổng dòng trên màn này. Trọng lượng tính cước và kiểm soát Rating không đổi.
+- Files: `CreateBillWorkspaceForm.tsx`, `BillWaybillMapper.cs`, `BillCreateTotalsTests`.
+
 ## 2026-10-12 — Rating margin requires both cost and revenue read
 
 - Lợi nhuận dự kiến từ hai lần tính giá chỉ trả khi có cả `cost.read` và `revenue.read`. Kế toán chi phí không nhận số chiều bán, không nhận lợi nhuận, và không thấy lần tính giá bán trong lịch sử.

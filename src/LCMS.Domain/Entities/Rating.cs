@@ -7,6 +7,17 @@ public sealed class Rating : TenantEntityBase
 {
     public Guid BillId { get; set; }
     public Guid RateVersionId { get; set; }
+
+    /// <summary>bill | leg. Sell stays bill. Buy may rate a linked transport leg.</summary>
+    public string ContextType { get; set; } = RatingContextTypes.Bill;
+
+    public Guid? TransportLegId { get; set; }
+    public Guid? ShipmentId { get; set; }
+    public Guid? VendorPartyId { get; set; }
+    public Guid? RateCardId { get; set; }
+
+    /// <summary>First selected pricing rule. The full set stays in <see cref="ContextJson"/>.</summary>
+    public Guid? PricingRuleId { get; set; }
     public DateTimeOffset RatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string CurrencyCode { get; set; } = "VND";
     public decimal TotalAmount { get; set; }
@@ -55,4 +66,15 @@ public static class RatingStatuses
 {
     public const string Completed = "completed";
     public const string Superseded = "superseded";
+}
+
+public static class RatingContextTypes
+{
+    public const string Bill = "bill";
+    public const string Leg = "leg";
+
+    public static bool IsLeg(string? value) =>
+        string.Equals(value, Leg, StringComparison.OrdinalIgnoreCase);
+
+    public static string Normalize(string? value) => IsLeg(value) ? Leg : Bill;
 }

@@ -55,7 +55,10 @@ public sealed record RatingInput(
     decimal? GrossWeightKg = null,
     decimal? VolumeCbm = null,
     string? ChargeableOverrideReason = null,
-    IReadOnlyList<RatingContainerQty>? Containers = null);
+    IReadOnlyList<RatingContainerQty>? Containers = null,
+    string? ContextType = null,
+    Guid? TransportLegId = null,
+    Guid? VendorPartyId = null);
 
 public sealed class ResolvedRatingContext
 {
@@ -82,6 +85,11 @@ public sealed class ResolvedRatingContext
     public string? QuantityRuleCode { get; init; }
     public bool RequiresOverride { get; init; }
     public IReadOnlyList<string> ExcludedLegacySurchargeCodes { get; init; } = [];
+    public string ContextType { get; init; } = RatingContextTypes.Bill;
+    public Guid? TransportLegId { get; init; }
+    public Guid? ShipmentId { get; init; }
+    public Guid? VendorPartyId { get; init; }
+    public int LinkedBillCount { get; init; }
     public List<RatingMissingFieldDto> Missing { get; } = [];
 }
 
@@ -123,12 +131,67 @@ public sealed class RatingContextResolver
             throw new ConflictAppException(BillRateNotices.Retired);
         }
 
-        var serviceType = N(input.ServiceTypeCode) ?? N(bill.ServiceTypeCode) ?? N(bill.BillType);
+        var contextType = RatingContextTypes.Normalize(input.ContextType);
+        TransportLeg? leg = null;
+        Shipment? shipment = null;
+        var linkedBillCount = 0;
+        Guid? vendorPartyId = input.VendorPartyId;
+        if (contextType == RatingContextTypes.Leg)
+        {
+            if (input.TransportLegId is not Guid legId || legId == Guid.Empty)
+            {
+                throw new ConflictAppException("Chọn chặng liên kết với Bill trước khi tính giá mua.");
+            }
+
+            var linked = await _db.BillLegLinks.AsNoTracking()
+                .AnyAsync(l => l.BillId == bill.Id && l.TransportLegId == legId, cancellationToken);
+            if (!linked)
+            {
+                throw new ConflictAppException("Chặng không liên kết với Bill này.");
+            }
+
+            leg = await _db.TransportLegs.AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Id == legId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy chặng.");
+            shipment = await _db.Shipments.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == leg.ShipmentId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy lô hàng của chặng.");
+            linkedBillCount = await _db.BillLegLinks.AsNoTracking()
+                .CountAsync(l => l.TransportLegId == leg.Id, cancellationToken);
+
+            if (card is not null && !string.Equals(card.PartyType, "vendor", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ConflictAppException("Tính giá theo chặng chỉ dùng bảng giá mua.");
+            }
+
+            if (card?.SupplierPartyId is Guid supplierId)
+            {
+                if (vendorPartyId is Guid chosen && chosen != supplierId)
+                {
+                    throw new ConflictAppException("Bảng giá không thuộc vendor đã chọn.");
+                }
+
+                vendorPartyId = supplierId;
+            }
+            else if (card is not null)
+            {
+                throw new ConflictAppException("Bảng giá mua chưa gắn vendor.");
+            }
+        }
+
+        var serviceType = N(input.ServiceTypeCode)
+            ?? (contextType == RatingContextTypes.Leg ? N(shipment?.ServiceTypeCode) : null)
+            ?? N(bill.ServiceTypeCode)
+            ?? N(bill.BillType);
         var partyType = N(input.PartyTypeCode) ?? N(card?.PartyType);
-        var routeCode = N(input.RouteCode) ?? N(bill.RouteCode);
-        var transportMode = N(input.TransportMode) ?? N(bill.TransportMode);
-        var originCode = N(input.OriginCode) ?? N(bill.OriginCode);
-        var destinationCode = N(input.DestinationCode) ?? N(bill.DestinationCode);
+        var routeCode = N(input.RouteCode)
+            ?? (contextType == RatingContextTypes.Leg ? N(shipment?.RouteCode) : N(bill.RouteCode));
+        var transportMode = N(input.TransportMode)
+            ?? (contextType == RatingContextTypes.Leg ? N(shipment?.TransportMode) : N(bill.TransportMode));
+        var originCode = N(input.OriginCode)
+            ?? (contextType == RatingContextTypes.Leg ? N(leg?.OriginCode) : N(bill.OriginCode));
+        var destinationCode = N(input.DestinationCode)
+            ?? (contextType == RatingContextTypes.Leg ? N(leg?.DestinationCode) : N(bill.DestinationCode));
         var commodityCode = N(input.CommodityCode);
         if (commodityCode is null && bill.CommodityTypeId is Guid commodityId)
         {
@@ -217,12 +280,14 @@ public sealed class RatingContextResolver
             .Where(p => ruleIds.Contains(p.PricingRuleId))
             .ToListAsync(cancellationToken);
 
+        var measureType = contextType == RatingContextTypes.Leg ? OperationalObjectTypes.Leg : OperationalObjectTypes.Bill;
+        var measureId = contextType == RatingContextTypes.Leg ? leg!.Id : bill.Id;
         var measures = await _db.OperationalMeasurements.AsNoTracking()
-            .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id)
+            .Where(m => m.ObjectType == measureType && m.ObjectId == measureId)
             .ToListAsync(cancellationToken);
         var cwOverride = await _db.OperationalFieldOverrides.AsNoTracking()
             .FirstOrDefaultAsync(
-                o => o.ObjectType == OperationalObjectTypes.Bill && o.ObjectId == bill.Id && o.FieldCode == OperationalFieldCodes.ChargeableWeightKg,
+                o => o.ObjectType == measureType && o.ObjectId == measureId && o.FieldCode == OperationalFieldCodes.ChargeableWeightKg,
                 cancellationToken);
         var mode = transportMode ?? N(card?.TransportMode);
         var billCw = ChargeableWeightPolicy.Resolve(measures, cwOverride, mode, bill.SourceSystem);
@@ -287,12 +352,15 @@ public sealed class RatingContextResolver
             if (needQty.Count > 0)
             {
                 var uom = ChargeableWeightPolicy.UomFor(mode);
+                var legGap = contextType == RatingContextTypes.Leg;
                 missing.Add(new RatingMissingFieldDto(
                     OperationalFieldCodes.ChargeableWeightKg,
                     uom == "W/M" ? "Khối tính cước (W/M)" : "Trọng lượng tính cước",
                     needQty,
-                    $"Trọng lượng tính cước chưa xác định — quy tắc {string.Join(", ", needQty)} cần giá trị này. {billCw.MissingReason ?? computed.MissingReason}".Trim(),
-                    RatingReadinessActions.EditBill));
+                    legGap
+                        ? "Chặng chưa có trọng lượng tính cước. Không dùng trọng lượng của cả Bill."
+                        : $"Trọng lượng tính cước chưa xác định — quy tắc {string.Join(", ", needQty)} cần giá trị này. {billCw.MissingReason ?? computed.MissingReason}".Trim(),
+                    legGap ? RatingReadinessActions.RatingForm : RatingReadinessActions.EditBill));
             }
             else
             {
@@ -309,12 +377,15 @@ public sealed class RatingContextResolver
             .ToList();
         if (perKg.Count > 0 && (input.Weight ?? gross) is not > 0m)
         {
+            var legWeight = contextType == RatingContextTypes.Leg;
             missing.Add(new RatingMissingFieldDto(
                 OperationalFieldCodes.GrossWeightKg,
                 "Trọng lượng thực (kg)",
                 perKg,
-                $"Phụ phí theo kg cần trọng lượng thực (quy tắc {string.Join(", ", perKg)}).",
-                RatingReadinessActions.EditBill));
+                legWeight
+                    ? $"Chặng chưa có trọng lượng thực (quy tắc {string.Join(", ", perKg)}). Không dùng trọng lượng của cả Bill."
+                    : $"Phụ phí theo kg cần trọng lượng thực (quy tắc {string.Join(", ", perKg)}).",
+                legWeight ? RatingReadinessActions.RatingForm : RatingReadinessActions.EditBill));
         }
 
         var containerRules = selected
@@ -372,7 +443,12 @@ public sealed class RatingContextResolver
             RequiresOverride = requiresOverride,
             ExcludedLegacySurchargeCodes = excludedLegacy
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray()
+                .ToArray(),
+            ContextType = contextType,
+            TransportLegId = leg?.Id,
+            ShipmentId = shipment?.Id,
+            VendorPartyId = vendorPartyId,
+            LinkedBillCount = linkedBillCount
         };
         ctx.Missing.AddRange(missing);
         return ctx;

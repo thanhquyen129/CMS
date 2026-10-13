@@ -162,7 +162,12 @@ public static class OperationalReferenceEndpoints
                     body.ExternalId,
                     body.ExternalVersion,
                     body.OperationalStatus,
-                    body.IsActive ?? true),
+                    body.IsActive ?? true,
+                    body.SequenceNo,
+                    body.OriginCode,
+                    body.DestinationCode,
+                    body.OriginLocationId,
+                    body.DestinationLocationId),
                 ct);
             return Results.Ok(new { id });
         });
@@ -388,7 +393,12 @@ public sealed record UpsertTransportLegRequest(
     string ExternalId,
     string? ExternalVersion,
     string? OperationalStatus,
-    bool? IsActive);
+    bool? IsActive,
+    int? SequenceNo = null,
+    string? OriginCode = null,
+    string? DestinationCode = null,
+    Guid? OriginLocationId = null,
+    Guid? DestinationLocationId = null);
 
 public sealed record UpsertTransportMovementRequest(
     string MovementNo,

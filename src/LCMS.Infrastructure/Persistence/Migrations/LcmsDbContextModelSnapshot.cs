@@ -2787,6 +2787,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("organization_id");
 
+                    b.Property<string>("OriginLevel")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("origin_level");
+
                     b.Property<bool>("PartnerOverrideRequiresRerate")
                         .HasColumnType("boolean")
                         .HasColumnName("partner_override_requires_rerate");
@@ -2794,6 +2799,18 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("PartnerSuggestedId")
                         .HasColumnType("uuid")
                         .HasColumnName("partner_suggested_id");
+
+                    b.Property<Guid?>("PricingRuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pricing_rule_id");
+
+                    b.Property<Guid?>("RateCardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rate_card_id");
+
+                    b.Property<Guid?>("RateVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rate_version_id");
 
                     b.Property<string>("RecordStatus")
                         .IsRequired()
@@ -2812,6 +2829,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("bytea")
                         .HasColumnName("row_version");
 
+                    b.Property<Guid?>("ShipmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shipment_id");
+
                     b.Property<Guid?>("SourceId")
                         .HasColumnType("uuid")
                         .HasColumnName("source_id");
@@ -2824,6 +2845,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
+
+                    b.Property<Guid?>("TransportLegId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transport_leg_id");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2858,6 +2883,9 @@ namespace LCMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "OrganizationId")
                         .HasDatabaseName("ix_costs_tenant_id_organization_id");
+
+                    b.HasIndex("TenantId", "TransportLegId")
+                        .HasDatabaseName("ix_costs_tenant_id_transport_leg_id");
 
                     b.HasIndex("TenantId", "SourceType", "SourceId")
                         .IsUnique()
@@ -7627,6 +7655,14 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("context_json");
 
+                    b.Property<string>("ContextType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasDefaultValue("bill")
+                        .HasColumnName("context_type");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -7678,10 +7714,18 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("party_type_code");
 
+                    b.Property<Guid?>("PricingRuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pricing_rule_id");
+
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("quantity");
+
+                    b.Property<Guid?>("RateCardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rate_card_id");
 
                     b.Property<DateTimeOffset?>("RateDate")
                         .HasColumnType("timestamp with time zone")
@@ -7716,6 +7760,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("service_type_code");
 
+                    b.Property<Guid?>("ShipmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shipment_id");
+
                     b.Property<DateTimeOffset?>("StaleAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("stale_at");
@@ -7744,6 +7792,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("total_amount");
 
+                    b.Property<Guid?>("TransportLegId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transport_leg_id");
+
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -7751,6 +7803,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedBy")
                         .HasColumnType("uuid")
                         .HasColumnName("updated_by");
+
+                    b.Property<Guid?>("VendorPartyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vendor_party_id");
 
                     b.Property<decimal?>("Weight")
                         .HasPrecision(18, 4)
@@ -7777,6 +7833,9 @@ namespace LCMS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "BillId", "RatedAt")
                         .HasDatabaseName("ix_ratings_tenant_id_bill_id_rated_at");
+
+                    b.HasIndex("TenantId", "TransportLegId", "RateVersionId", "VendorPartyId")
+                        .HasDatabaseName("ix_ratings_tenant_id_transport_leg_id_rate_version_id_vendor_p");
 
                     b.ToTable("ratings", (string)null);
                 });

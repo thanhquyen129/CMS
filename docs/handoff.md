@@ -1,5 +1,10 @@
 # Handoff
 
+## 2026-10-13 — Giá mua theo Chặng dùng Rating Engine hiện có
+
+- Bill → Tính giá → Giá mua chọn Theo Bill hoặc Theo Chặng. Theo Chặng chỉ hiện chặng liên kết, lọc vendor và phiên bản giá mua phù hợp, không tự chọn khi có nhiều bảng giá. Expected Cost lưu chặng, vendor, bảng giá. Chặng dùng chung từ 2 Bill trở lên ghi một chi phí nguồn `shared` (không gắn Bill); lợi nhuận Bill không cộng khoản đó trước khi phân bổ.
+- Files: `RateBillForm.tsx`, `RatingContextResolver`, `CreateRatingCommand`, `SeedExpectedCostsFromRatingCommand`, `SuggestBillRatesQuery`, `BuyRatingLegTests`.
+
 ## 2026-10-13 — Push to main deploys both CMS hosts
 
 - CI deploy matrix now includes cms-lss-01 (`169.58.47.30`, cms.lsslogistics.vn) beside cms-sg-01. Secrets `CMS_LSS_HOST` and `CMS_LSS_SSH_KEY`. Still `/opt/cms` only, and `infra/.env` is not overwritten.

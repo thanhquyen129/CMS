@@ -72,6 +72,15 @@ public sealed class Cost : TenantEntityBase, IReportingFx
     /// <summary>Owning organization for Data Scope = organization (usually from Bill).</summary>
     public Guid? OrganizationId { get; set; }
 
+    /// <summary>bill | leg | shipment. Null on rows written before leg rating.</summary>
+    public string? OriginLevel { get; set; }
+
+    public Guid? TransportLegId { get; set; }
+    public Guid? ShipmentId { get; set; }
+    public Guid? RateCardId { get; set; }
+    public Guid? RateVersionId { get; set; }
+    public Guid? PricingRuleId { get; set; }
+
     public Bill? Bill { get; set; }
 }
 
@@ -86,6 +95,13 @@ public static class CostAttributionTypes
 {
     public const string Direct = "direct";
     public const string Shared = "shared";
+}
+
+public static class CostOriginLevels
+{
+    public const string Bill = "bill";
+    public const string Leg = "leg";
+    public const string Shipment = "shipment";
 }
 
 public static class CostSourceTypes

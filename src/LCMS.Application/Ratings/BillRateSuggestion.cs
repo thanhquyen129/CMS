@@ -24,7 +24,8 @@ public sealed record RateSuggestionCard(
     bool IsActive,
     string? RouteCode,
     string? TransportMode,
-    string CurrencyCode);
+    string CurrencyCode,
+    Guid? SupplierPartyId = null);
 
 public sealed record RateSuggestionVersion(
     Guid Id,

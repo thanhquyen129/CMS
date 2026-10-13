@@ -281,7 +281,10 @@ public static class RatePricingEndpoints
                     body.VolumeCbm,
                     body.ChargeableOverrideReason,
                     body.TargetCurrency,
-                    body.Containers?.Select(c => new RatingContainerQty(c.ContainerType, c.Quantity)).ToList()),
+                    body.Containers?.Select(c => new RatingContainerQty(c.ContainerType, c.Quantity)).ToList(),
+                    body.ContextType,
+                    body.TransportLegId,
+                    body.VendorPartyId),
                 ct);
             return Results.Created($"/api/ratings/{id}", new { id });
         });
@@ -304,7 +307,10 @@ public static class RatePricingEndpoints
                     body.GrossWeightKg,
                     body.VolumeCbm,
                     body.ChargeableOverrideReason,
-                    body.Containers?.Select(c => new RatingContainerQty(c.ContainerType, c.Quantity)).ToList())),
+                    body.Containers?.Select(c => new RatingContainerQty(c.ContainerType, c.Quantity)).ToList(),
+                    body.ContextType,
+                    body.TransportLegId,
+                    body.VendorPartyId)),
                 ct);
             return Results.Ok(readiness);
         });
@@ -320,9 +326,17 @@ public static class RatePricingEndpoints
             var list = await sender.Send(new ListRatingsByBillQuery(billId), ct);
             return Results.Ok(list);
         });
-        bills.MapGet("/{billId:guid}/rate-suggestions", async (Guid billId, ISender sender, CancellationToken ct) =>
+        bills.MapGet("/{billId:guid}/rate-suggestions", async (
+            Guid billId,
+            string? contextType,
+            Guid? legId,
+            Guid? vendorPartyId,
+            ISender sender,
+            CancellationToken ct) =>
         {
-            var suggestion = await sender.Send(new SuggestBillRatesQuery(billId), ct);
+            var suggestion = await sender.Send(
+                new SuggestBillRatesQuery(billId, null, contextType, legId, vendorPartyId),
+                ct);
             return Results.Ok(suggestion);
         });
         bills.MapGet("/{billId:guid}/rating-margin", async (Guid billId, ISender sender, CancellationToken ct) =>
@@ -494,7 +508,10 @@ public sealed record CreateRatingRequest(
     decimal? VolumeCbm = null,
     string? ChargeableOverrideReason = null,
     string? TargetCurrency = null,
-    IReadOnlyList<RatingContainerRequest>? Containers = null);
+    IReadOnlyList<RatingContainerRequest>? Containers = null,
+    string? ContextType = null,
+    Guid? TransportLegId = null,
+    Guid? VendorPartyId = null);
 
 public sealed record RatingContainerRequest(string ContainerType, int Quantity);
 

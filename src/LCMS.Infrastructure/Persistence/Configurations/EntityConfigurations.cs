@@ -356,7 +356,9 @@ internal sealed class CostConfiguration : IEntityTypeConfiguration<Cost>
         builder.Property(e => e.VatRate).HasPrecision(9, 4);
         builder.Property(e => e.VatAmount).HasPrecision(18, 4);
         builder.Property(e => e.GrossAmount).HasPrecision(18, 4);
+        builder.Property(e => e.OriginLevel).HasMaxLength(16);
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
+        builder.HasIndex(e => new { e.TenantId, e.TransportLegId });
         builder.HasIndex(e => new { e.TenantId, e.EconomicChargeTypeId });
 
         // IDX-003
@@ -1143,10 +1145,12 @@ internal sealed class RatingConfiguration : IEntityTypeConfiguration<Rating>
         builder.Property(e => e.RoundedAmount).HasPrecision(18, 4);
         builder.Property(e => e.StaleAt);
         builder.Property(e => e.StaleReason).HasMaxLength(1000);
+        builder.Property(e => e.ContextType).HasMaxLength(16).IsRequired().HasDefaultValue(RatingContextTypes.Bill);
 
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.RatedAt });
         builder.HasIndex(e => new { e.TenantId, e.RateVersionId });
         builder.HasIndex(e => new { e.TenantId, e.SupersedesRatingId });
+        builder.HasIndex(e => new { e.TenantId, e.TransportLegId, e.RateVersionId, e.VendorPartyId });
 
         builder.HasOne(e => e.Bill)
             .WithMany()

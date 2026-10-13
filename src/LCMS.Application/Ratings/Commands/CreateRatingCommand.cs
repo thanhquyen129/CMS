@@ -4,6 +4,7 @@ using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Commands;
 using LCMS.Application.Fx;
 using LCMS.Application.Pricing;
+using LCMS.Application.Ratings;
 using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Pricing;
@@ -34,7 +35,10 @@ public sealed record CreateRatingCommand(
     decimal? VolumeCbm = null,
     string? ChargeableOverrideReason = null,
     string? TargetCurrency = null,
-    IReadOnlyList<RatingContainerQty>? Containers = null) : IRequest<Guid>;
+    IReadOnlyList<RatingContainerQty>? Containers = null,
+    string? ContextType = null,
+    Guid? TransportLegId = null,
+    Guid? VendorPartyId = null) : IRequest<Guid>;
 
 public sealed class CreateRatingCommandValidator : AbstractValidator<CreateRatingCommand>
 {
@@ -60,6 +64,15 @@ public sealed class CreateRatingCommandValidator : AbstractValidator<CreateRatin
         RuleFor(x => x.RouteCode)
             .MaximumLength(64)
             .When(x => x.RouteCode is not null);
+        RuleFor(x => x.ContextType)
+            .Must(v => v is null
+                       || string.Equals(v, RatingContextTypes.Bill, StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(v, RatingContextTypes.Leg, StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Ngữ cảnh tính giá phải là Theo Bill hoặc Theo Chặng.");
+        RuleFor(x => x.TransportLegId)
+            .NotEmpty()
+            .WithMessage("Chọn chặng liên kết với Bill.")
+            .When(x => RatingContextTypes.IsLeg(x.ContextType));
     }
 }
 
@@ -117,7 +130,10 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                 request.GrossWeightKg,
                 request.VolumeCbm,
                 request.ChargeableOverrideReason,
-                request.Containers),
+                request.Containers,
+                request.ContextType,
+                request.TransportLegId,
+                request.VendorPartyId),
             cancellationToken);
         if (ctx.Missing.Count > 0)
         {
@@ -143,6 +159,20 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         var volume = ctx.Volume;
         var quantity = ctx.Quantity!.Value;
         var basis = ctx.Basis;
+
+        if (RatingContextTypes.IsLeg(ctx.ContextType) && request.SupersedesRatingId is null)
+        {
+            var replayId = await FindLegReplayAsync(ctx, quantity, request.Weight, cancellationToken);
+            if (replayId is Guid existingId)
+            {
+                if (request.SeedExpectedCosts)
+                {
+                    await _sender.Send(new SeedExpectedCostsFromRatingCommand(existingId), cancellationToken);
+                }
+
+                return existingId;
+            }
+        }
 
         if (ctx.RequiresOverride)
         {
@@ -177,6 +207,10 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                 PermissionCodes.RateRerate,
                 "Bạn không có quyền tính lại giá.",
                 cancellationToken);
+            if (RatingContextTypes.IsLeg(ctx.ContextType))
+            {
+                await RetireLegExpectedCostsAsync(prior.Id, cancellationToken);
+            }
         }
 
         var rating = new Rating
@@ -184,6 +218,12 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             TenantId = tenantId,
             BillId = bill.Id,
             RateVersionId = version.Id,
+            ContextType = ctx.ContextType,
+            TransportLegId = ctx.TransportLegId,
+            ShipmentId = ctx.ShipmentId,
+            VendorPartyId = ctx.VendorPartyId,
+            RateCardId = card?.Id ?? version.RateCardId,
+            PricingRuleId = selected[0].Id,
             RatedAt = DateTimeOffset.UtcNow,
             CurrencyCode = card?.CurrencyCode ?? selected[0].CurrencyCode,
             Quantity = quantity,
@@ -434,6 +474,14 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             chargeableConfirmed = ctx.BillChargeable.IsConfirmed,
             overrideReason = ctx.RequiresOverride ? request.ChargeableOverrideReason?.Trim() : null,
             versionId = version.Id,
+            rateCardId = rating.RateCardId,
+            contextType = ctx.ContextType,
+            legId = ctx.TransportLegId,
+            shipmentId = ctx.ShipmentId,
+            vendorPartyId = ctx.VendorPartyId,
+            linkedBillCount = ctx.LinkedBillCount,
+            pricingRuleId = rating.PricingRuleId,
+            pricingRuleIds = selected.Select(r => r.Id).ToArray(),
             rules = selected.Select(r => r.Code).ToArray(),
             surcharges = surchargeResult.Trace,
             excludedLegacySurcharges = ctx.ExcludedLegacySurchargeCodes
@@ -471,6 +519,84 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         }
 
         return rating.Id;
+    }
+
+    private async Task<Guid?> FindLegReplayAsync(
+        ResolvedRatingContext ctx,
+        decimal quantity,
+        decimal? weight,
+        CancellationToken cancellationToken)
+    {
+        var rows = await _db.Ratings.AsNoTracking()
+            .Where(r => r.ContextType == RatingContextTypes.Leg
+                        && r.TransportLegId == ctx.TransportLegId
+                        && r.RateVersionId == ctx.Version.Id
+                        && r.VendorPartyId == ctx.VendorPartyId
+                        && r.Status == RatingStatuses.Completed)
+            .ToListAsync(cancellationToken);
+        rows = rows.OrderByDescending(r => r.RatedAt).ToList();
+        if (ctx.LinkedBillCount < 2)
+        {
+            rows = rows.Where(r => r.BillId == ctx.Bill.Id).ToList();
+        }
+
+        var existing = rows.FirstOrDefault();
+        if (existing is null)
+        {
+            return null;
+        }
+
+        var sameQty = decimal.Round(existing.Quantity, 4, MidpointRounding.AwayFromZero)
+                      == decimal.Round(quantity, 4, MidpointRounding.AwayFromZero);
+        var sameWeight = weight is null || existing.Weight == weight;
+        if (sameQty && sameWeight)
+        {
+            return existing.Id;
+        }
+
+        throw new ConflictAppException(
+            "Đã có chi phí dự kiến cho chặng, vendor và bảng giá này. Dùng tính lại nếu số liệu đổi — không tạo thêm một khoản.");
+    }
+
+    private async Task RetireLegExpectedCostsAsync(Guid priorRatingId, CancellationToken cancellationToken)
+    {
+        var detailIds = await _db.RatingDetails.AsNoTracking()
+            .Where(d => d.RatingId == priorRatingId)
+            .Select(d => d.Id)
+            .ToListAsync(cancellationToken);
+        if (detailIds.Count == 0)
+        {
+            return;
+        }
+
+        var costs = await _db.Costs
+            .Where(c => c.SourceType == CostSourceTypes.RatingDetail
+                        && c.SourceId != null
+                        && detailIds.Contains(c.SourceId.Value)
+                        && c.RecordStatus == "active")
+            .ToListAsync(cancellationToken);
+        if (costs.Count == 0)
+        {
+            return;
+        }
+
+        var costIds = costs.Select(c => c.Id).ToList();
+        var locked = costs.Any(c =>
+                !string.Equals(c.FinancialMaturity, CostMaturities.Expected, StringComparison.OrdinalIgnoreCase)
+                || c.ConfirmedAmount is not null
+                || c.ActualAmount is not null)
+            || await _db.CostAllocations.AnyAsync(
+                a => costIds.Contains(a.CostId) && a.AllocationStatus == CostAllocationStatuses.Finalized,
+                cancellationToken);
+        if (locked)
+        {
+            throw new ConflictAppException("Chi phí của lần tính giá trước đã xác nhận, thực tế hoặc đã phân bổ. Không thay thế.");
+        }
+
+        foreach (var cost in costs)
+        {
+            cost.RecordStatus = "inactive";
+        }
     }
 
     internal static bool MatchesApplicability(

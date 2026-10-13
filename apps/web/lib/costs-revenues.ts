@@ -15,6 +15,12 @@ export type CostListItem = {
   confirmedAmount?: number | null;
   actualAmount?: number | null;
   rowVersion?: string | null;
+  transportLegId?: string | null;
+  originLevel?: string | null;
+  rateCardId?: string | null;
+  rateVersionId?: string | null;
+  pricingRuleId?: string | null;
+  legNo?: string | null;
 };
 
 export type CostAllocationDetail = {

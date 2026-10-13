@@ -72,7 +72,13 @@ public sealed record CostDto(
     IReadOnlyList<CostAllocationDto> Allocations,
     byte[] RowVersion,
     Guid? PartnerSuggestedId = null,
-    bool PartnerOverrideRequiresRerate = false);
+    bool PartnerOverrideRequiresRerate = false,
+    string? OriginLevel = null,
+    Guid? TransportLegId = null,
+    Guid? ShipmentId = null,
+    Guid? RateCardId = null,
+    Guid? RateVersionId = null,
+    Guid? PricingRuleId = null);
 
 public sealed record CostListItemDto(
     Guid Id,
@@ -90,7 +96,13 @@ public sealed record CostListItemDto(
     decimal ExpectedAmount = 0,
     decimal? ConfirmedAmount = null,
     decimal? ActualAmount = null,
-    byte[]? RowVersion = null);
+    byte[]? RowVersion = null,
+    Guid? TransportLegId = null,
+    string? OriginLevel = null,
+    Guid? RateCardId = null,
+    Guid? RateVersionId = null,
+    Guid? PricingRuleId = null,
+    string? LegNo = null);
 
 public sealed record GetCostByIdQuery(Guid Id) : IRequest<CostDto>;
 
@@ -235,7 +247,13 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             allocationDtos,
             cost.RowVersion,
             cost.PartnerSuggestedId,
-            cost.PartnerOverrideRequiresRerate);
+            cost.PartnerOverrideRequiresRerate,
+            cost.OriginLevel,
+            cost.TransportLegId,
+            cost.ShipmentId,
+            cost.RateCardId,
+            cost.RateVersionId,
+            cost.PricingRuleId);
     }
 }
 
@@ -373,7 +391,13 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, Page
                 c.ExpectedAmount,
                 c.ConfirmedAmount,
                 c.ActualAmount,
-                c.RowVersion))
+                c.RowVersion,
+                c.TransportLegId,
+                c.OriginLevel,
+                c.RateCardId,
+                c.RateVersionId,
+                c.PricingRuleId,
+                null))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<CostListItemDto>(

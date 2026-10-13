@@ -78,6 +78,14 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
         var created = 0;
         var costIds = new List<Guid>();
         var effective = DateOnly.FromDateTime(rating.RatedAt.UtcDateTime);
+        var linkedBills = rating.TransportLegId is Guid legId
+            ? await _db.BillLegLinks.AsNoTracking().CountAsync(l => l.TransportLegId == legId, cancellationToken)
+            : 0;
+        var shared = RatingContextTypes.IsLeg(rating.ContextType) && linkedBills >= 2;
+        var organizationId = await _db.Bills.AsNoTracking()
+            .Where(b => b.Id == rating.BillId)
+            .Select(b => b.OrganizationId)
+            .FirstOrDefaultAsync(cancellationToken);
 
         foreach (var detail in details)
         {
@@ -91,16 +99,23 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             var cost = new Cost
             {
                 TenantId = tenantId,
-                BillId = rating.BillId,
-                AttributionType = CostAttributionTypes.Direct,
+                BillId = shared ? null : rating.BillId,
+                AttributionType = shared ? CostAttributionTypes.Shared : CostAttributionTypes.Direct,
+                OriginLevel = rating.TransportLegId is null ? CostOriginLevels.Bill : CostOriginLevels.Leg,
+                TransportLegId = rating.TransportLegId,
+                ShipmentId = rating.ShipmentId,
+                RateCardId = rating.RateCardId,
+                RateVersionId = rating.RateVersionId,
+                PricingRuleId = detail.PricingRuleId,
+                OrganizationId = organizationId,
                 FinancialMaturity = CostMaturities.Expected,
                 ExpectedAmount = amount,
                 Amount = amount,
                 CurrencyCode = detail.CurrencyCode,
                 CostTypeCode = detail.ComponentCode,
                 EconomicChargeTypeId = detail.EconomicChargeTypeId,
-                PartnerSuggestedId = detail.PartnerSuggestedId,
-                VendorPartyId = detail.PartnerSuggestedId,
+                PartnerSuggestedId = detail.PartnerSuggestedId ?? rating.VendorPartyId,
+                VendorPartyId = rating.VendorPartyId ?? detail.PartnerSuggestedId,
                 NetAmount = detail.NetAmount,
                 VatRate = detail.VatRate,
                 VatAmount = detail.VatAmount,

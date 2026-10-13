@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent, MouseEvent } from "react";
+import type { FormEvent, MouseEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { RatingReadinessBox } from "@/components/RatingReadinessBox";
@@ -28,12 +28,31 @@ type RateSide = {
   options: RateOption[];
 };
 
+type LegOption = {
+  id: string;
+  legNo: string;
+  shipmentId: string;
+  shipmentNo: string;
+  originCode: string | null;
+  destinationCode: string | null;
+  transportMode: string | null;
+  routeCode: string | null;
+  linkedBillCount: number;
+};
+
+type VendorOption = { id: string; code: string; name: string };
+
 type Suggestion = {
   billId: string;
   routeCode: string | null;
   transportMode: string | null;
   buy: RateSide;
   sell: RateSide;
+  contextType?: string;
+  legId?: string | null;
+  vendorPartyId?: string | null;
+  legs?: LegOption[];
+  vendors?: VendorOption[];
 };
 
 type Props = {
@@ -65,6 +84,7 @@ function SideBlock({
   readinessError,
   checking,
   editAnchor,
+  extra,
 }: {
   title: string;
   sideId: string;
@@ -81,6 +101,7 @@ function SideBlock({
   readinessError: string | null;
   checking: boolean;
   editAnchor: string;
+  extra?: ReactNode;
 }) {
   const selectable = side.options.filter((o) => o.selectable);
   const blocked = side.options.filter((o) => !o.selectable);
@@ -96,6 +117,7 @@ function SideBlock({
           {side.notice}
         </div>
       ) : null}
+      {extra}
       <div className="field">
         <label htmlFor={`version-${sideId}`}>Bảng giá / phiên bản đã phát hành</label>
         <select id={`version-${sideId}`} value={versionId} onChange={(ev) => onVersion(ev.target.value)}>
@@ -161,6 +183,10 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
   const [sellReadinessError, setSellReadinessError] = useState<string | null>(null);
   const [buyChecking, setBuyChecking] = useState(false);
   const [sellChecking, setSellChecking] = useState(false);
+  const [buyContext, setBuyContext] = useState<"bill" | "leg">("bill");
+  const [legId, setLegId] = useState("");
+  const [vendorId, setVendorId] = useState("");
+  const [vendorTouched, setVendorTouched] = useState(false);
 
   const expected = term(terms, "EXPECTED", "Dự kiến");
   const costLabel = term(terms, "COST", "Chi phí");
@@ -168,9 +194,16 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
 
   useEffect(() => {
     let cancelled = false;
+    const params = new URLSearchParams();
+    if (buyContext === "leg") {
+      params.set("contextType", "leg");
+      if (legId) params.set("legId", legId);
+      if (vendorId) params.set("vendorPartyId", vendorId);
+    }
+    const query = params.toString();
     (async () => {
       try {
-        const res = await fetch(`/bff/bills/${billId}/rate-suggestions`, { headers: { Accept: "application/json" } });
+        const res = await fetch(`/bff/bills/${billId}/rate-suggestions${query ? `?${query}` : ""}`, { headers: { Accept: "application/json" } });
         if (res.status === 401) {
           window.location.href = "/login";
           return;
@@ -189,12 +222,17 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
     return () => {
       cancelled = true;
     };
-  }, [billId]);
+  }, [billId, buyContext, legId, vendorId]);
 
   useEffect(() => {
     if (!suggestion || buyTouched) return;
     setBuyVersion(suggestion.buy.ambiguous ? "" : suggestion.buy.selectedVersionId ?? "");
   }, [suggestion, buyTouched]);
+
+  useEffect(() => {
+    if (!suggestion || buyContext !== "leg" || vendorTouched) return;
+    setVendorId(suggestion.vendorPartyId ?? "");
+  }, [suggestion, buyContext, vendorTouched]);
 
   useEffect(() => {
     if (!suggestion || sellTouched) return;
@@ -212,9 +250,14 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
         quantity: q === null || Number.isNaN(q) ? null : q,
         weight: w === null || Number.isNaN(w) ? null : w,
         chargeableOverrideReason: reason.trim() || null,
+        ...(side === "buy"
+          ? buyContext === "leg"
+            ? { contextType: "leg", transportLegId: legId || null, vendorPartyId: vendorId || null }
+            : { contextType: "bill" }
+          : {}),
       };
     };
-  }, [billId, buyQuantity, sellQuantity, buyWeight, sellWeight, buyReason, sellReason]);
+  }, [billId, buyQuantity, sellQuantity, buyWeight, sellWeight, buyReason, sellReason, buyContext, legId, vendorId]);
 
   useEffect(() => {
     return watchReadiness(bodyFor("buy", buyVersion), setBuyReadiness, setBuyReadinessError, setBuyChecking);
@@ -251,6 +294,16 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
     setError(null);
     setSuccess(null);
     const sides: Array<"buy" | "sell"> = which === "both" ? ["buy", "sell"] : [which];
+    if ((which === "buy" || which === "both") && buyContext === "leg") {
+      if (!legId) {
+        setError("Chọn chặng liên kết với Bill.");
+        return;
+      }
+      if (!vendorId) {
+        setError("Chọn vendor cho giá mua theo chặng.");
+        return;
+      }
+    }
     for (const side of sides) {
       const q = num(side === "buy" ? buyQuantity : sellQuantity);
       const w = num(side === "buy" ? buyWeight : sellWeight);
@@ -295,8 +348,12 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
         else done.push(job.label);
       }
       if (failures.length > 0) setError(failures.join(" "));
+      const sharedLeg = buyContext === "leg" && (suggestion?.legs?.find((l) => l.id === legId)?.linkedBillCount ?? 0) >= 2;
       const parts = [
         done.length > 0 ? `Đã tính ${done.join(" và ")} (${expected.toLowerCase()}).` : "",
+        done.includes("Giá mua") && sharedLeg
+          ? "Chi phí nguồn dùng chung nhiều Bill. Mỗi Bill chỉ nhận phần sau khi phân bổ."
+          : "",
         notes.length > 0 ? notes.join(" ") : "",
       ].filter(Boolean);
       if (parts.length > 0) setSuccess(parts.join(" "));
@@ -322,6 +379,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
   const busy = submitting || isPending;
   const buyBlocked = Boolean(buyVersion && buyReadiness && !buyReadiness.ready);
   const sellBlocked = Boolean(sellVersion && sellReadiness && !sellReadiness.ready);
+  const buyContextBlocked = buyContext === "leg" && (!legId || !vendorId);
 
   return (
     <form className="receive-form" onSubmit={(e) => onSubmit(e, "both")} noValidate>
@@ -329,7 +387,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
         Giá mua tạo {costLabel.toLowerCase()} {expected.toLowerCase()}. Giá bán tạo {revenueLabel.toLowerCase()}{" "}
         {expected.toLowerCase()}. Không tạo Thực tế, chứng từ hay công nợ. Mỗi chiều có khối lượng riêng.
         Nút từng chiều không bị khóa khi chiều kia chưa có bảng giá. Tính cả hai chỉ chạy khi cả hai đã chọn.
-        Nhiều bảng giá cùng phù hợp thì phải chọn, hệ thống không tự chọn.
+        Nhiều bảng giá cùng phù hợp thì phải chọn, hệ thống không tự chọn. Giá mua có thể tính theo Bill hoặc theo chặng liên kết. Giá bán giữ theo Bill.
       </p>
       {error ? (
         <div className="alert alert-error" role="alert">
@@ -361,6 +419,36 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
           readinessError={buyReadinessError}
           checking={buyChecking}
           editAnchor={editAnchor}
+          extra={<BuyContextFields
+            context={buyContext}
+            legs={suggestion.legs ?? []}
+            legId={legId}
+            vendors={suggestion.vendors ?? []}
+            vendorId={vendorId}
+            onContext={(next) => {
+              setBuyContext(next);
+              setBuyTouched(false);
+              setBuyVersion("");
+              setVendorTouched(false);
+              if (next === "bill") {
+                setLegId("");
+                setVendorId("");
+              }
+            }}
+            onLeg={(id) => {
+              setLegId(id);
+              setVendorId("");
+              setVendorTouched(false);
+              setBuyTouched(false);
+              setBuyVersion("");
+            }}
+            onVendor={(id) => {
+              setVendorTouched(true);
+              setVendorId(id);
+              setBuyTouched(false);
+              setBuyVersion("");
+            }}
+          />}
         />
         <SideBlock
           title="Giá bán — Doanh thu dự kiến"
@@ -384,17 +472,86 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
         />
       </div>
       <div className="cta-row">
-        <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !buyVersion || buyBlocked} onClick={(e) => onSubmit(e, "buy")}>
+        <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !buyVersion || buyBlocked || buyContextBlocked} onClick={(e) => onSubmit(e, "buy")}>
           {busy ? "Đang tính…" : "Tính giá mua"}
         </button>
         <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !sellVersion || sellBlocked} onClick={(e) => onSubmit(e, "sell")}>
           {busy ? "Đang tính…" : "Tính giá bán"}
         </button>
-        <button className="btn" type="submit" disabled={busy || !buyVersion || !sellVersion || buyBlocked || sellBlocked}>
+        <button className="btn" type="submit" disabled={busy || !buyVersion || !sellVersion || buyBlocked || sellBlocked || buyContextBlocked}>
           {busy ? "Đang tính…" : "Tính giá cả hai"}
         </button>
       </div>
     </form>
+  );
+}
+
+function legLabel(leg: LegOption): string {
+  const route = [leg.originCode, leg.destinationCode].filter(Boolean).join(" → ");
+  return `${leg.legNo} · ${leg.shipmentNo || "Lô hàng"} · ${route || "chưa rõ tuyến"} · ${leg.transportMode || "chưa rõ phương thức"}`;
+}
+
+function BuyContextFields({
+  context,
+  legs,
+  legId,
+  vendors,
+  vendorId,
+  onContext,
+  onLeg,
+  onVendor,
+}: {
+  context: "bill" | "leg";
+  legs: LegOption[];
+  legId: string;
+  vendors: VendorOption[];
+  vendorId: string;
+  onContext: (value: "bill" | "leg") => void;
+  onLeg: (id: string) => void;
+  onVendor: (id: string) => void;
+}) {
+  return (
+    <>
+      <fieldset className="field">
+        <legend>Ngữ cảnh giá mua</legend>
+        <div className="create-checks">
+          <label className="checkbox-field">
+            <input type="radio" name="buy-context" checked={context === "bill"} onChange={() => onContext("bill")} />
+            Theo Bill
+          </label>
+          <label className="checkbox-field">
+            <input type="radio" name="buy-context" checked={context === "leg"} onChange={() => onContext("leg")} />
+            Theo Chặng
+          </label>
+        </div>
+      </fieldset>
+      {context === "leg" ? (
+        <>
+          <div className="field">
+            <label htmlFor="buy-leg">Chặng liên kết Bill</label>
+            <select id="buy-leg" value={legId} onChange={(ev) => onLeg(ev.target.value)}>
+              <option value="">{legs.length === 0 ? "Bill chưa có chặng liên kết" : "Chọn chặng"}</option>
+              {legs.map((leg) => (
+                <option key={leg.id} value={leg.id}>
+                  {legLabel(leg)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="buy-vendor">Vendor</label>
+            <select id="buy-vendor" value={vendorId} disabled={!legId} onChange={(ev) => onVendor(ev.target.value)}>
+              <option value="">{vendors.length === 0 ? "Chưa có vendor phù hợp" : "Chọn vendor"}</option>
+              {vendors.map((vendor) => (
+                <option key={vendor.id} value={vendor.id}>
+                  {vendor.code} — {vendor.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      ) : null}
+    </>
   );
 }
 

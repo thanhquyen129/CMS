@@ -88,8 +88,24 @@ public sealed class GetBillFinancialViewQueryHandler
                     c.ExpectedAmount,
                     c.ConfirmedAmount,
                     c.ActualAmount,
-                    c.RowVersion))
+                    c.RowVersion,
+                    c.TransportLegId,
+                    c.OriginLevel,
+                    c.RateCardId,
+                    c.RateVersionId,
+                    c.PricingRuleId,
+                    null))
                 .ToListAsync(cancellationToken);
+            var legIds = costs.Where(c => c.TransportLegId is not null).Select(c => c.TransportLegId!.Value).Distinct().ToList();
+            if (legIds.Count > 0)
+            {
+                var legNos = await _db.TransportLegs.AsNoTracking()
+                    .Where(l => legIds.Contains(l.Id))
+                    .ToDictionaryAsync(l => l.Id, l => l.LegNo, cancellationToken);
+                costs = costs
+                    .Select(c => c.TransportLegId is Guid id && legNos.TryGetValue(id, out var no) ? c with { LegNo = no } : c)
+                    .ToList();
+            }
         }
 
         if (await _permissions.HasPermissionAsync(PermissionCodes.RevenueRead, cancellationToken))

@@ -55,7 +55,13 @@ public sealed record RatingDto(
     decimal? OriginalAmount = null,
     decimal? FxRate = null,
     string? FxSource = null,
-    decimal? RoundedAmount = null);
+    decimal? RoundedAmount = null,
+    string? ContextType = null,
+    Guid? TransportLegId = null,
+    Guid? ShipmentId = null,
+    Guid? VendorPartyId = null,
+    Guid? RateCardId = null,
+    Guid? PricingRuleId = null);
 
 public sealed record RatingHistoryItemDto(
     Guid Id,
@@ -167,7 +173,13 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
             rating.OriginalAmount,
             rating.FxRate,
             rating.FxSource,
-            rating.RoundedAmount);
+            rating.RoundedAmount,
+            rating.ContextType,
+            rating.TransportLegId,
+            rating.ShipmentId,
+            rating.VendorPartyId,
+            rating.RateCardId,
+            rating.PricingRuleId);
     }
 }
 

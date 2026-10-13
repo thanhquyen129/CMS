@@ -287,6 +287,7 @@ export function BillCostRevenuePanel({
                       {c.costTypeCode || "—"}
                       <span className="muted small block">
                         {attributionLabel(terms, c.attributionType)}
+                        {c.legNo ? ` · Chặng ${c.legNo}` : ""}
                         {c.recordStatus !== "active" ? ` · ${c.recordStatus}` : ""}
                       </span>
                     </td>

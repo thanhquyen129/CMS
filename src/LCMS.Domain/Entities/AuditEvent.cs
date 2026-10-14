@@ -68,8 +68,9 @@ public static class AuditActions
     public const string PaymentCancel = "payment.cancel";
     public const string CollectionCancel = "collection.cancel";
     public const string RateCardDelete = "rate_card.delete";
-    public const string RateCardDeclaration = "rate_card.declaration";
-    public const string RateCardPublish = "rate_card.publish";
+    public const string RateCardDeclaration = "rate_card.declaration_changed";
+    public const string RateCardVersionCreated = "rate_card.version_created";
+    public const string RateCardPublished = "rate_card.published";
     public const string FinancialDocumentAccept = "financial_document.accept";
     public const string FinancialDocumentLineAdd = "financial_document_line.add";
     public const string FinancialDocumentLineUpdate = "financial_document_line.update";

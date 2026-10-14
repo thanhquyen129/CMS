@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -48,7 +49,8 @@ public sealed record SaveRateCardDeclarationCommand(
     decimal? MinimumQuantity,
     ComposeDeliveryFee? Delivery,
     ComposeRemoteFee? Remote,
-    Guid? RateVersionId) : IRequest<ComposeTariffResult>;
+    Guid? RateVersionId,
+    string? RowVersion = null) : IRequest<ComposeTariffResult>;
 
 public sealed class SaveRateCardDeclarationCommandValidator : AbstractValidator<SaveRateCardDeclarationCommand>
 {
@@ -73,19 +75,22 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
     private readonly IPermissionService _permissions;
     private readonly IAuditWriter _audit;
     private readonly ISender _sender;
+    private readonly IRowVersionGuard _versions;
 
     public SaveRateCardDeclarationCommandHandler(
         ILcmsDbContext db,
         ITenantContext tenantContext,
         IPermissionService permissions,
         IAuditWriter audit,
-        ISender sender)
+        ISender sender,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
         _audit = audit;
         _sender = sender;
+        _versions = versions;
     }
 
     public async Task<ComposeTariffResult> Handle(SaveRateCardDeclarationCommand request, CancellationToken cancellationToken)
@@ -100,12 +105,12 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         var mode = request.DeclarationMode.Trim().ToLowerInvariant();
         if (mode == RateDeclarationModes.Basic && hasMatrixPayload)
         {
-            throw new ConflictAppException(RateDeclarationPolicy.DualPayloadMessage);
+            throw new ConflictAppException(RateDeclarationPolicy.DualPayloadMessage, "invalid_declaration_mode");
         }
 
         if (mode == RateDeclarationModes.Advanced && request.Rules.Count > 0)
         {
-            throw new ConflictAppException(RateDeclarationPolicy.DualPayloadMessage);
+            throw new ConflictAppException(RateDeclarationPolicy.DualPayloadMessage, "invalid_declaration_mode");
         }
 
         if (mode == RateDeclarationModes.Advanced && request.RateCardId is null)
@@ -115,6 +120,11 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
         var tenantId = _tenantContext.TenantId!.Value;
         var card = await LoadOrCreateCardAsync(request, tenantId, cancellationToken);
+        if (request.RateCardId is not null)
+        {
+            _versions.EnsureCurrent(card, request.RowVersion);
+        }
+
         var version = await LoadDraftAsync(card, request, tenantId, cancellationToken);
         var previousMode = card.DeclarationMode;
         await ApplyHeaderAsync(card, version, request, tenantId, cancellationToken);
@@ -124,7 +134,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         var hasBasic = draftRules.Any(r => !RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod));
         if (hasMatrix && hasBasic)
         {
-            throw new ConflictAppException(RateDeclarationPolicy.MixedLegacyMessage);
+            throw new ConflictAppException(RateDeclarationPolicy.MixedLegacyMessage, "invalid_declaration_mode");
         }
 
         var hasPublished = await _db.RateVersions.AnyAsync(
@@ -134,7 +144,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         var decision = RateDeclarationPolicy.DecideMode(previousMode, mode, request.ConfirmModeChange, hasPublished, otherShape);
         if (decision.BlockMessage is not null)
         {
-            throw new ConflictAppException(decision.BlockMessage);
+            throw new ConflictAppException(decision.BlockMessage, "invalid_declaration_mode");
         }
 
         if (decision.RetireOtherShape)
@@ -319,7 +329,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
             if (rule.UnitAmount < 0 || rule.MinAmount < 0 || rule.MaxAmount < 0)
             {
-                throw new ConflictAppException("Số tiền / đơn giá không được âm.");
+                throw new ConflictAppException("Số tiền / đơn giá không được âm.", "invalid_amount");
             }
 
             if (method == PricingCalcMethods.MinMaxClamp && rule.MinAmount is null && rule.MaxAmount is null)

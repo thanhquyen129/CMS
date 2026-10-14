@@ -19,6 +19,7 @@ export type RateCard = {
   routeIsActive?: boolean | null;
   routeOriginCode?: string | null;
   routeDestinationCode?: string | null;
+  rowVersion?: string | null;
 };
 
 export type RateVersion = {
@@ -200,6 +201,27 @@ export const basicCalcMethods = [
   { value: "container_rate", label: "Đơn giá container" },
   { value: "composite", label: "Giá thành phần" },
 ] as const;
+
+export function rateTransportLabel(mode: string | null | undefined): string {
+  switch ((mode ?? "").toLowerCase()) {
+    case "air":
+      return "Hàng không";
+    case "sea":
+    case "ocean":
+      return "Đường biển";
+    case "road":
+    case "truck":
+      return "Đường bộ";
+    case "rail":
+      return "Đường sắt";
+    case "water":
+      return "Đường thủy";
+    case "multimodal":
+      return "Đa phương thức";
+    default:
+      return mode ? "Phương thức khác" : "";
+  }
+}
 
 export function declarationModeLabel(mode: string | null | undefined): string {
   switch (mode?.toLowerCase()) {

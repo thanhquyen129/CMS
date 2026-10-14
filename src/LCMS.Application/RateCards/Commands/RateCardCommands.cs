@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Common;
 using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
@@ -197,7 +198,8 @@ public sealed record UpdateRateCardCommand(
     string? TransportMode = null,
     string? RouteCode = null,
     string? CarrierName = null,
-    Guid? RouteId = null) : IRequest;
+    Guid? RouteId = null,
+    string? RowVersion = null) : IRequest;
 
 public sealed class UpdateRateCardCommandValidator : AbstractValidator<UpdateRateCardCommand>
 {
@@ -225,12 +227,18 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly IRowVersionGuard _versions;
 
-    public UpdateRateCardCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
+    public UpdateRateCardCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions,
+        IRowVersionGuard versions)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _versions = versions;
     }
 
     public async Task Handle(UpdateRateCardCommand request, CancellationToken cancellationToken)
@@ -246,6 +254,7 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
             throw new NotFoundAppException("Không tìm thấy bảng giá.");
         }
 
+        _versions.EnsureCurrent(card, request.RowVersion);
         var partyType = request.PartyType.Trim().ToLowerInvariant();
         var writeCode = partyType == "customer" ? PermissionCodes.RateSellWrite : PermissionCodes.RateBuyWrite;
         await _permissions.EnsureAsync(writeCode, "Bạn không có quyền sửa bảng giá này.", cancellationToken);

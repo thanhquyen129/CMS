@@ -85,6 +85,7 @@ export default async function EditRateCardPage({ params }: { params: Params }) {
           note={draft.note}
           transportMode={card.transportMode}
           rules={rules}
+          rowVersion={card.rowVersion}
           defaultCurrency={card.currencyCode}
           currencies={currencies.ok ? currencies.data : []}
           routes={routes.ok ? routes.data : []}

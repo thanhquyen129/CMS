@@ -28,7 +28,8 @@ public sealed record RateCardDto(
     string? DeclarationMode = null,
     bool? RouteIsActive = null,
     string? RouteOriginCode = null,
-    string? RouteDestinationCode = null);
+    string? RouteDestinationCode = null,
+    string? RowVersion = null);
 
 public sealed record GetRateCardByIdQuery(Guid Id) : IRequest<RateCardDto>;
 
@@ -111,7 +112,11 @@ public sealed class GetRateCardByIdQueryHandler : IRequestHandler<GetRateCardByI
             card.CustomerGroupCode,
             false,
             card.RouteId,
-            card.DeclarationMode);
+            card.DeclarationMode,
+            null,
+            null,
+            null,
+            Convert.ToBase64String(card.RowVersion));
 }
 
 public sealed record ListRateCardsQuery(
@@ -201,7 +206,7 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
 
         var items = await pageQuery
             .Select(r => new RateCardDto(
-                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt, r.TransportMode, r.RouteCode, r.CarrierName, r.SupplierPartyId, r.CustomerPartyId, r.CustomerGroupCode, false, r.RouteId, r.DeclarationMode, null, null, null))
+                r.Id, r.Code, r.Name, r.PartyType, r.CurrencyCode, r.Description, r.IsActive, r.CreatedAt, r.TransportMode, r.RouteCode, r.CarrierName, r.SupplierPartyId, r.CustomerPartyId, r.CustomerGroupCode, false, r.RouteId, r.DeclarationMode, null, null, null, null))
             .ToListAsync(cancellationToken);
 
         var ids = items.Select(i => i.Id).ToList();
@@ -221,7 +226,15 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
     }
 }
 
-public sealed record MixedDeclarationRateCardDto(Guid Id, string Code, string Name, string PartyType);
+public sealed record MixedDeclarationRateCardDto(
+    Guid Id,
+    string Code,
+    string Name,
+    string PartyType,
+    int VersionNumber,
+    int CountRules,
+    int CountMatrixBands,
+    string Status);
 
 public sealed record ListMixedDeclarationRateCardsQuery : IRequest<IReadOnlyList<MixedDeclarationRateCardDto>>;
 
@@ -263,18 +276,54 @@ public sealed class ListMixedDeclarationRateCardsQueryHandler
             from rule in _db.PricingRules.AsNoTracking()
             join version in _db.RateVersions.AsNoTracking() on rule.RateVersionId equals version.Id
             join card in _db.RateCards.AsNoTracking() on version.RateCardId equals card.Id
-            select new { card.Id, card.Code, card.Name, card.PartyType, rule.CalcMethod }).ToListAsync(cancellationToken);
+            select new
+            {
+                card.Id,
+                card.Code,
+                card.Name,
+                card.PartyType,
+                VersionId = version.Id,
+                version.VersionNo,
+                version.Status,
+                RuleId = rule.Id,
+                rule.CalcMethod
+            }).ToListAsync(cancellationToken);
+
+        var matrixRuleIds = rows
+            .Where(r => RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod))
+            .Select(r => r.RuleId)
+            .Distinct()
+            .ToList();
+        var bandCounts = matrixRuleIds.Count == 0
+            ? new Dictionary<Guid, int>()
+            : await _db.RateBreaks.AsNoTracking()
+                .Where(b => matrixRuleIds.Contains(b.PricingRuleId))
+                .GroupBy(b => b.PricingRuleId)
+                .Select(g => new { g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Key, x => x.Count, cancellationToken);
 
         return rows
-            .GroupBy(r => r.Id)
+            .GroupBy(r => r.VersionId)
             .Select(g =>
             {
-                var hasMatrix = g.Any(x => RateDeclarationPolicy.IsMatrixMethod(x.CalcMethod));
-                var hasBasic = g.Any(x => !RateDeclarationPolicy.IsMatrixMethod(x.CalcMethod));
+                var basic = g.Where(x => !RateDeclarationPolicy.IsMatrixMethod(x.CalcMethod)).ToList();
+                var matrix = g.Where(x => RateDeclarationPolicy.IsMatrixMethod(x.CalcMethod)).ToList();
+                if (basic.Count == 0 || matrix.Count == 0)
+                {
+                    return null;
+                }
+
                 var first = g.First();
-                return (hasMatrix && hasBasic)
-                    ? new MixedDeclarationRateCardDto(first.Id, first.Code, first.Name, first.PartyType)
-                    : null;
+                var bands = matrix.Sum(x => bandCounts.GetValueOrDefault(x.RuleId));
+                return new MixedDeclarationRateCardDto(
+                    first.Id,
+                    first.Code,
+                    first.Name,
+                    first.PartyType,
+                    first.VersionNo,
+                    basic.Count,
+                    bands,
+                    first.Status);
             })
             .Where(x => x is not null)
             .Select(x => x!)
@@ -282,6 +331,7 @@ public sealed class ListMixedDeclarationRateCardsQueryHandler
                 || (canBuy && x.PartyType == "vendor")
                 || (canSell && x.PartyType == "customer"))
             .OrderBy(x => x.Code)
+            .ThenBy(x => x.VersionNumber)
             .ToList();
     }
 }

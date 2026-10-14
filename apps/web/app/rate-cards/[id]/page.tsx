@@ -21,6 +21,7 @@ import {
   isPublishedVersion,
   isWeightBreakMethod,
   partyTypeLabel,
+  rateTransportLabel,
   publicationLabel,
   publicationListHint,
   versionStatusLabel,
@@ -115,7 +116,7 @@ export default async function RateCardDetailPage({
           Mã: <code>{card.code}</code> · {partyTypeLabel(card.partyType)} ·{" "}
           {card.currencyCode}
           {card.carrierName ? ` · ${card.carrierName}` : ""}
-          {card.transportMode ? ` · ${card.transportMode}` : ""}
+          {card.transportMode ? ` · ${rateTransportLabel(card.transportMode)}` : ""}
           {card.routeOriginCode || card.routeDestinationCode
             ? ` · ${card.routeOriginCode || "—"} → ${card.routeDestinationCode || "—"} (${card.routeCode || "tuyến"})`
             : card.routeCode

@@ -123,7 +123,8 @@ public static class RatePricingEndpoints
                     body.TransportMode,
                     body.RouteCode,
                     body.CarrierName,
-                    body.RouteId),
+                    body.RouteId,
+                    body.RowVersion),
                 ct);
             return Results.NoContent();
         });
@@ -445,7 +446,8 @@ public static class RatePricingEndpoints
             body.MinimumQuantity,
             body.Delivery,
             body.Remote,
-            body.RateVersionId);
+            body.RateVersionId,
+            body.RowVersion);
 
     private static SaveRateCardDeclarationCommand MapDeclaration(Guid rateCardId, UpdateRateCardRequest body) =>
         new(
@@ -472,7 +474,8 @@ public static class RatePricingEndpoints
             body.MinimumQuantity,
             body.Delivery,
             body.Remote,
-            body.RateVersionId);
+            body.RateVersionId,
+            body.RowVersion);
 }
 
 public sealed record ComposeTariffRequest(
@@ -523,7 +526,8 @@ public sealed record CreateRateCardRequest(
     IReadOnlyList<ComposeTariffBand>? Bands = null,
     ComposeDeliveryFee? Delivery = null,
     ComposeRemoteFee? Remote = null,
-    Guid? RateVersionId = null);
+    Guid? RateVersionId = null,
+    string? RowVersion = null);
 
 public sealed record UpdateRateCardRequest(
     string Name,
@@ -550,7 +554,8 @@ public sealed record UpdateRateCardRequest(
     Guid? SupplierPartyId = null,
     Guid? CustomerPartyId = null,
     string? CustomerGroupCode = null,
-    string? Code = null);
+    string? Code = null,
+    string? RowVersion = null);
 
 public sealed record CreateRateVersionRequest(
     DateTimeOffset? EffectiveFrom,

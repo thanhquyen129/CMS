@@ -11,7 +11,7 @@ public static class RateCardCatalog
     {
         if (RateDeclarationPolicy.IsDual(hasBasicPayload, hasMatrixPayload))
         {
-            throw new ConflictAppException(RateDeclarationPolicy.DualPayloadMessage);
+            throw new ConflictAppException(RateDeclarationPolicy.DualPayloadMessage, "invalid_declaration_mode");
         }
     }
 
@@ -29,7 +29,7 @@ public static class RateCardCatalog
         var block = RateDeclarationPolicy.CurrencyBlockReason(active, unchanged);
         if (block is not null)
         {
-            throw new ConflictAppException(block);
+            throw new ConflictAppException(block, "invalid_currency");
         }
     }
 
@@ -54,7 +54,7 @@ public static class RateCardCatalog
             card.RouteId == routeId);
         if (block is not null)
         {
-            throw new ConflictAppException(block);
+            throw new ConflictAppException(block, "invalid_route");
         }
 
         card.RouteId = route!.Id;

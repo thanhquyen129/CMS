@@ -35,8 +35,13 @@ public sealed class NotFoundAppException : AppException
 
 public sealed class ConflictAppException : AppException
 {
-    public ConflictAppException(string vietnameseMessage = "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại và thử lại.")
-        : base(vietnameseMessage, StatusCodes.Conflict, "concurrency_conflict")
+    public ConflictAppException(
+        string vietnameseMessage = "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại và thử lại.",
+        string? errorCode = null)
+        : base(
+            vietnameseMessage,
+            StatusCodes.Conflict,
+            string.IsNullOrWhiteSpace(errorCode) ? "concurrency_conflict" : errorCode)
     {
     }
 }

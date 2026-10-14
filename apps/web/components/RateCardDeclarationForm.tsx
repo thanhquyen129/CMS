@@ -60,14 +60,15 @@ type Props = {
   note?: string | null;
   transportMode?: string | null;
   rules?: PricingRule[];
+  rowVersion?: string | null;
 };
 
 const modeOptions = [
-  { value: "air", label: "Air" },
-  { value: "sea", label: "Sea" },
-  { value: "road", label: "Road" },
-  { value: "rail", label: "Rail" },
-  { value: "water", label: "Water" },
+  { value: "air", label: "Hàng không" },
+  { value: "sea", label: "Đường biển" },
+  { value: "road", label: "Đường bộ" },
+  { value: "rail", label: "Đường sắt" },
+  { value: "water", label: "Đường thủy" },
 ];
 
 function uid(): string {
@@ -332,6 +333,7 @@ export function RateCardDeclarationForm(props: Props) {
       customerGroupCode: sell ? String(fd.get("customerGroupCode") ?? "").trim() || null : null,
       note: String(fd.get("note") ?? "").trim() || null,
       rateVersionId: props.versionId ?? null,
+      rowVersion: props.rowVersion ?? null,
       rules: [],
       columns: [],
       bands: [],
@@ -707,8 +709,8 @@ export function RateCardDeclarationForm(props: Props) {
             Mức Đến trùng mức Từ của khung sau thì số lẻ thuộc khung dưới.
           </p>
           <div className="cta-row">
-            <button className="btn btn-ghost" type="button" onClick={() => applyPreset("air")}>Khung Air</button>
-            <button className="btn btn-ghost" type="button" onClick={() => applyPreset("sea")}>Khung Sea</button>
+            <button className="btn btn-ghost" type="button" onClick={() => applyPreset("air")}>Khung hàng không</button>
+            <button className="btn btn-ghost" type="button" onClick={() => applyPreset("sea")}>Khung đường biển</button>
           </div>
           <div className="table-wrap">
             <table className="data-table">

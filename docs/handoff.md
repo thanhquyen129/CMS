@@ -1,3 +1,7 @@
+## 2026-10-14 — Bảng giá: lỗi tiếng Việt, audit, row_version
+- Đổi hình thức khai báo, tạo phiên bản và phát hành ghi audit `rate_card.declaration_changed`, `rate_card.version_created`, `rate_card.published`. Sửa nháp gửi `rowVersion`; bản cũ bị từ chối. Census hỗn hợp trả version, số quy tắc, số bậc, trạng thái và không gán mode.
+- Files: `SaveRateCardDeclarationCommand.cs`, `RateVersionCommands.cs`, `RateCardQueries.cs`, `RateCardCatalog.cs`, `docs/ops/rate-card-mixed-declaration.sql`.
+
 ## 2026-10-14 — LCMS-CR-20261014-01 bảng giá
 - Tuyến và tiền tệ lấy từ danh mục. Mỗi bảng giá một declaration_mode basic hoặc advanced. Tạo/sửa khai báo giá; chi tiết chỉ xem.
 - Files: RateCard, RateDeclaration, SaveRateCardDeclarationCommand, migration 20261014061119_RateCardDeclarationMode, RateCardDeclarationForm, rate-cards pages.

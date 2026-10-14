@@ -38,11 +38,13 @@ public sealed class CreateRateVersionCommandHandler : IRequestHandler<CreateRate
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditWriter _audit;
 
-    public CreateRateVersionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    public CreateRateVersionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
+        _audit = audit;
     }
 
     public async Task<Guid> Handle(CreateRateVersionCommand request, CancellationToken cancellationToken)
@@ -78,6 +80,13 @@ public sealed class CreateRateVersionCommandHandler : IRequestHandler<CreateRate
         };
 
         _db.RateVersions.Add(version);
+        _audit.Append(
+            AuditActions.RateCardVersionCreated,
+            AuditObjectTypes.RateCard,
+            request.RateCardId,
+            null,
+            version.VersionNo.ToString(),
+            null);
         await _db.SaveChangesAsync(cancellationToken);
         return version.Id;
     }
@@ -204,7 +213,7 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
         version.PublishedAt = DateTimeOffset.UtcNow;
         version.EffectiveFrom ??= version.PublishedAt;
         _audit.Append(
-            AuditActions.RateCardPublish,
+            AuditActions.RateCardPublished,
             AuditObjectTypes.RateCard,
             card.Id,
             null,

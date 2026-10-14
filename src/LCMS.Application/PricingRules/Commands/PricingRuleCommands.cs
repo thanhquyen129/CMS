@@ -517,7 +517,15 @@ public sealed record PricingRuleDto(
     string? ChargeCode = null,
     string? CommodityCode = null,
     string? DestinationCode = null,
-    string? TransportMode = null);
+    string? TransportMode = null,
+    Guid? RouteId = null,
+    bool? AppliesAnyRoute = null,
+    Guid? CarrierPartyId = null,
+    string? CarrierName = null,
+    string? WeightBasis = null,
+    decimal? WeightMin = null,
+    decimal? WeightMax = null,
+    string? MatrixGroupCode = null);
 
 public sealed record ListPricingRulesQuery(Guid RateVersionId) : IRequest<IReadOnlyList<PricingRuleDto>>;
 
@@ -622,7 +630,15 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
                 r.ChargeCode,
                 r.CommodityCode,
                 r.DestinationCode,
-                r.TransportMode))
+                r.TransportMode,
+                r.RouteId,
+                r.AppliesAnyRoute,
+                r.CarrierPartyId,
+                r.CarrierName,
+                r.WeightBasis,
+                r.WeightMin,
+                r.WeightMax,
+                r.MatrixGroupCode))
             .ToList();
     }
 }

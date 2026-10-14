@@ -13,6 +13,7 @@ import { TariffMatrix } from "@/components/TariffMatrix";
 import { formatDateOnlyVi, formatDateTimeVi, formatMoney } from "@/lib/money";
 import {
   amountFieldLabel,
+  weightBandLabel,
   calcMethodLabel,
   declarationModeLabel,
   cardStatusLabel,
@@ -115,13 +116,7 @@ export default async function RateCardDetailPage({
         <p className="lede meta-line">
           Mã: <code>{card.code}</code> · {partyTypeLabel(card.partyType)} ·{" "}
           {card.currencyCode}
-          {card.carrierName ? ` · ${card.carrierName}` : ""}
           {card.transportMode ? ` · ${rateTransportLabel(card.transportMode)}` : ""}
-          {card.routeOriginCode || card.routeDestinationCode
-            ? ` · ${card.routeOriginCode || "—"} → ${card.routeDestinationCode || "—"} (${card.routeCode || "tuyến"})`
-            : card.routeCode
-              ? ` · ${card.routeCode}`
-              : ""}
           {` · ${declarationModeLabel(card.declarationMode)}`}
           {` · ${cardStatusLabel(card.isActive)}`}
           {` · ${publicationLabel(versions.some((v) => isPublishedVersion(v.status)))}`}
@@ -266,9 +261,18 @@ export default async function RateCardDetailPage({
                                 </td>
                                 <td className="muted small">
                                   {[
+                                    r.appliesAnyRoute ? "Tất cả tuyến" : r.routeCode,
+                                    r.carrierName,
+                                    r.weightBasis === "gross"
+                                      ? "Trọng lượng thực"
+                                      : r.weightBasis === "chargeable"
+                                        ? "Trọng lượng tính cước"
+                                        : null,
+                                    r.weightMin != null || r.weightMax != null
+                                      ? weightBandLabel(r.weightMin, r.weightMax)
+                                      : null,
                                     r.serviceTypeCode,
                                     r.partyTypeCode,
-                                    r.routeCode,
                                   ]
                                     .filter(Boolean)
                                     .join(" · ") || "—"}

@@ -193,6 +193,13 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
             throw new ConflictAppException(RateDeclarationPolicy.MixedLegacyMessage);
         }
 
+        var draftRules = await _db.PricingRules.Where(r => r.RateVersionId == version.Id).ToListAsync(cancellationToken);
+        var conflict = RateRuleConflicts.Find(draftRules);
+        if (conflict is not null)
+        {
+            throw new ConflictAppException(conflict, RateRuleConflicts.Code);
+        }
+
         var inferred = RateDeclarationPolicy.Infer(hasMatrix, hasBasic);
         if (string.IsNullOrWhiteSpace(card.DeclarationMode))
         {

@@ -1,5 +1,6 @@
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 
 namespace LCMS.Application.Ratings;
 
@@ -164,6 +165,9 @@ public static class RatingEngine
         if (!string.IsNullOrWhiteSpace(rule.OriginCode)) score++;
         if (!string.IsNullOrWhiteSpace(rule.DestinationCode)) score++;
         if (!string.IsNullOrWhiteSpace(rule.CommodityCode)) score++;
+        if (rule.CarrierPartyId is not null || !string.IsNullOrWhiteSpace(rule.CarrierName)) score++;
+        if (rule.WeightMin is not null || rule.WeightMax is not null) score++;
+        if (!string.IsNullOrWhiteSpace(rule.WeightBasis)) score++;
         return score;
     }
 
@@ -201,16 +205,88 @@ public static class RatingEngine
         string? transportMode,
         string? originCode,
         string? destinationCode,
-        string? commodityCode)
+        string? commodityCode,
+        Guid? routeId = null,
+        Guid? carrierPartyId = null,
+        string? carrierName = null)
     {
         if (!Eq(rule.ServiceTypeCode, serviceType)) return false;
         if (!Eq(rule.PartyTypeCode, partyType)) return false;
-        if (!Eq(rule.RouteCode, routeCode)) return false;
+        if (!RouteMatches(rule, routeId, routeCode)) return false;
+        if (!CarrierMatches(rule, carrierPartyId, carrierName)) return false;
         if (!Eq(rule.TransportMode, transportMode)) return false;
         if (!Eq(rule.OriginCode, originCode)) return false;
         if (!Eq(rule.DestinationCode, destinationCode)) return false;
         if (!Eq(rule.CommodityCode, commodityCode)) return false;
         return true;
+    }
+
+    /// <summary>Explicit ANY matches every route. A stored route is directional. Empty legacy rows still match.</summary>
+    public static bool RouteMatches(PricingRule rule, Guid? routeId, string? routeCode)
+    {
+        if (rule.AppliesAnyRoute == true)
+        {
+            return true;
+        }
+
+        if (rule.RouteId is Guid id)
+        {
+            if (routeId == id)
+            {
+                return true;
+            }
+
+            return !string.IsNullOrWhiteSpace(rule.RouteCode) && Eq(rule.RouteCode, routeCode);
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.RouteCode))
+        {
+            return Eq(rule.RouteCode, routeCode);
+        }
+
+        return rule.AppliesAnyRoute is null;
+    }
+
+    /// <summary>Empty carrier does not restrict. A carrier id is not the vendor.</summary>
+    public static bool CarrierMatches(PricingRule rule, Guid? carrierPartyId, string? carrierName)
+    {
+        if (rule.CarrierPartyId is Guid id)
+        {
+            return carrierPartyId == id;
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.CarrierName))
+        {
+            return string.Equals(rule.CarrierName.Trim(), carrierName?.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Weight tier is a selection condition. A miss is no price — never the nearest tier.
+    /// Gross and chargeable are different sources.
+    /// </summary>
+    public static bool WeightMatches(PricingRule rule, decimal? grossKg, decimal? chargeableKg)
+    {
+        if (rule.WeightMin is null && rule.WeightMax is null)
+        {
+            return true;
+        }
+
+        var basis = rule.WeightBasis?.Trim().ToLowerInvariant();
+        decimal? value = basis switch
+        {
+            WeightBand.Gross => grossKg,
+            WeightBand.Chargeable => chargeableKg,
+            _ => chargeableKg ?? grossKg
+        };
+        if (value is null || rule.WeightMin is not decimal min)
+        {
+            return false;
+        }
+
+        return WeightBand.Contains(value.Value, min, rule.WeightMax);
     }
 
     public static decimal Round(decimal value) =>

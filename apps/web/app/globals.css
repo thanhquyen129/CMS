@@ -5353,6 +5353,64 @@ html[data-layout="horizontal"] .login-page {
   background: #eef1f6;
   color: #536b91;
 }
+
+/* RATE UI-CONTRAST-01 — declaration form only. Sidebar and SVG icons stay. */
+.rate-declaration {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.rate-declaration .rate-block {
+  border: 1px solid #4d5d73;
+  border-radius: 8px;
+  padding: 1rem 1.1rem 1.15rem;
+  background: #fff;
+}
+.rate-declaration .rate-block-general { background: #f4f7fb; }
+.rate-declaration .rate-block-mode { background: #e7eef6; }
+.rate-declaration .rate-block-rules { background: #fff; }
+.rate-declaration .section-title,
+.rate-declaration .field label,
+.rate-declaration .note,
+.rate-declaration .muted { color: #1a2332; }
+.rate-declaration input::placeholder,
+.rate-declaration textarea::placeholder { color: #3e4c63; opacity: 1; }
+.rate-declaration input:not([type="checkbox"]):not([type="radio"]),
+.rate-declaration select,
+.rate-declaration textarea {
+  border: 1px solid #4d5d73;
+  color: #1a2332;
+  background: #fff;
+}
+.rate-declaration input:focus,
+.rate-declaration select:focus,
+.rate-declaration textarea:focus {
+  outline: 2px solid #0b3a75;
+  outline-offset: 2px;
+}
+.rate-declaration input:disabled,
+.rate-declaration select:disabled,
+.rate-declaration textarea:disabled {
+  color: #3d4a5c;
+  background: #e8edf3;
+  border-color: #5c6b80;
+}
+.rate-declaration .data-table th {
+  color: #1a2332;
+  background: #e4ebf5;
+  border-bottom: 1px solid #4d5d73;
+}
+.rate-declaration .data-table td { border-bottom: 1px solid #8b98a8; }
+.rate-declaration .data-table tbody tr:nth-child(even) td,
+.rate-declaration .data-table tbody tr:nth-child(even) th { background: #f3f6fb; }
+.rate-declaration .data-table tbody tr:hover td,
+.rate-declaration .data-table tbody tr:hover th { background: #e7eef8; }
+.rate-declaration .alert-error { border: 1px solid #8f1d32; }
+.rate-declaration .alert-warning { border: 1px solid #8a5a00; }
+@media (max-width: 1600px) {
+  .rate-declaration .table-wrap { overflow-x: auto; }
+  .rate-declaration .data-table { min-width: 68rem; }
+}
 .opref-editor { display: flex; flex-direction: column; gap: 0.75rem; }
 .opref-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .opref-group { border-top: 1px solid var(--line); padding-top: 0.75rem; }

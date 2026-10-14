@@ -1039,7 +1039,13 @@ internal sealed class PricingRuleConfiguration : IEntityTypeConfiguration<Pricin
         builder.Property(e => e.Applicability).HasMaxLength(512);
         builder.Property(e => e.ServiceTypeCode).HasMaxLength(64);
         builder.Property(e => e.PartyTypeCode).HasMaxLength(32);
+        builder.Property(e => e.RouteId).HasColumnType("uuid");
         builder.Property(e => e.RouteCode).HasMaxLength(64);
+        builder.Property(e => e.CarrierName).HasMaxLength(256);
+        builder.Property(e => e.WeightBasis).HasMaxLength(32);
+        builder.Property(e => e.WeightMin).HasPrecision(18, 4);
+        builder.Property(e => e.WeightMax).HasPrecision(18, 4);
+        builder.Property(e => e.MatrixGroupCode).HasMaxLength(64);
         builder.Property(e => e.MinAmount).HasPrecision(18, 4);
         builder.Property(e => e.MaxAmount).HasPrecision(18, 4);
         builder.Property(e => e.ChargeCode).HasMaxLength(64);
@@ -1054,11 +1060,27 @@ internal sealed class PricingRuleConfiguration : IEntityTypeConfiguration<Pricin
 
         builder.HasIndex(e => new { e.TenantId, e.RateVersionId, e.Code }).IsUnique();
         builder.HasIndex(e => new { e.TenantId, e.RateVersionId, e.ServiceTypeCode });
+        builder.HasIndex(e => e.RouteId);
 
         builder.HasOne(e => e.RateVersion)
             .WithMany()
             .HasForeignKey(e => e.RateVersionId)
             .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class RateScopeMigrationLogConfiguration : IEntityTypeConfiguration<RateScopeMigrationLog>
+{
+    public void Configure(EntityTypeBuilder<RateScopeMigrationLog> builder)
+    {
+        builder.ToTable("rate_scope_migration_logs");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.RateCardId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.PricingRuleId).HasColumnType("uuid");
+        builder.Property(e => e.Action).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Detail).HasMaxLength(512);
+        builder.HasIndex(e => new { e.TenantId, e.PricingRuleId, e.Action });
     }
 }
 

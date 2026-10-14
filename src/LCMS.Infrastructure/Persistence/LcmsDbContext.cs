@@ -67,6 +67,7 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<RateCard> RateCards => Set<RateCard>();
     public DbSet<RateVersion> RateVersions => Set<RateVersion>();
     public DbSet<PricingRule> PricingRules => Set<PricingRule>();
+    public DbSet<RateScopeMigrationLog> RateScopeMigrationLogs => Set<RateScopeMigrationLog>();
     public DbSet<PricingRuleComponent> PricingRuleComponents => Set<PricingRuleComponent>();
     public DbSet<RateBreak> RateBreaks => Set<RateBreak>();
     public DbSet<ContainerRatePrice> ContainerRatePrices => Set<ContainerRatePrice>();

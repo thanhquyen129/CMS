@@ -26,8 +26,33 @@ public sealed class PricingRule : TenantEntityBase
     /// <summary>Null = any party type (customer | vendor).</summary>
     public string? PartyTypeCode { get; set; }
 
-    /// <summary>Null = any route (stub code for Pass 2).</summary>
+    /// <summary>Canonical directed route. Null with <see cref="AppliesAnyRoute"/> true means every route.</summary>
+    public Guid? RouteId { get; set; }
+
+    /// <summary>
+    /// True = explicit every-route. False = a route is required. Null = legacy row that still matches any route.
+    /// </summary>
+    public bool? AppliesAnyRoute { get; set; }
+
+    /// <summary>Display code of <see cref="RouteId"/>. Not a free-text route.</summary>
     public string? RouteCode { get; set; }
+
+    /// <summary>Operating carrier. Not the vendor on the rate-card header.</summary>
+    public Guid? CarrierPartyId { get; set; }
+
+    public string? CarrierName { get; set; }
+
+    /// <summary>gross | chargeable. Null does not filter by weight source.</summary>
+    public string? WeightBasis { get; set; }
+
+    /// <summary>Inclusive lower bound of [min, max). Null with <see cref="WeightMax"/> null means no weight tier.</summary>
+    public decimal? WeightMin { get; set; }
+
+    /// <summary>Exclusive upper bound. Null means no upper bound.</summary>
+    public decimal? WeightMax { get; set; }
+
+    /// <summary>Groups advanced matrix columns that share a route and carrier.</summary>
+    public string? MatrixGroupCode { get; set; }
 
     /// <summary>Lower bound for <see cref="PricingCalcMethods.MinMaxClamp"/> (and optional post-clamp).</summary>
     public decimal? MinAmount { get; set; }

@@ -482,7 +482,20 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             linkedBillCount = ctx.LinkedBillCount,
             pricingRuleId = rating.PricingRuleId,
             pricingRuleIds = selected.Select(r => r.Id).ToArray(),
-            rules = selected.Select(r => r.Code).ToArray(),
+            rules = selected.Select(r => new
+            {
+                r.Code,
+                r.RouteId,
+                r.RouteCode,
+                r.AppliesAnyRoute,
+                r.CarrierPartyId,
+                r.CarrierName,
+                r.WeightBasis,
+                r.WeightMin,
+                r.WeightMax,
+                r.CalcMethod,
+                r.ChargeCode
+            }).ToArray(),
             surcharges = surchargeResult.Trace,
             excludedLegacySurcharges = ctx.ExcludedLegacySurchargeCodes
         });

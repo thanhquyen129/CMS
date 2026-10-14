@@ -48,7 +48,11 @@ public sealed record ComposeTariffCommand(
     string? CustomerGroupCode = null,
     decimal? VatRate = null,
     Guid? RouteId = null,
-    bool ReplaceExistingMatrix = false) : IRequest<ComposeTariffResult>;
+    bool ReplaceExistingMatrix = false,
+    bool AppliesAnyRoute = false,
+    Guid? CarrierPartyId = null,
+    string? MatrixGroupCode = null,
+    bool ScopeOnRules = false) : IRequest<ComposeTariffResult>;
 
 public sealed class ComposeTariffCommandValidator : AbstractValidator<ComposeTariffCommand>
 {
@@ -203,7 +207,10 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 VatRate = request.VatRate
             };
             await RateCardCatalog.EnsureCurrencyAsync(_db, card.CurrencyCode, null, cancellationToken);
-            await RateCardCatalog.ApplyRouteAsync(_db, card, request.RouteId, tenantId, cancellationToken);
+            if (!request.ScopeOnRules)
+            {
+                await RateCardCatalog.ApplyRouteAsync(_db, card, request.RouteId, tenantId, cancellationToken);
+            }
             card.DeclarationMode = RateDeclarationModes.Advanced;
             _db.RateCards.Add(card);
             _db.RateVersions.Add(version);
@@ -232,6 +239,7 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
 
         card.DeclarationMode = RateDeclarationModes.Advanced;
 
+        var scope = await ResolveScopeAsync(request, tenantId, cancellationToken);
         var mode = Clean(request.TransportMode) ?? card.TransportMode;
         var air = mode is not null && mode.Equals("air", StringComparison.OrdinalIgnoreCase);
         var sea = mode is not null && (mode.Equals("sea", StringComparison.OrdinalIgnoreCase) || mode.Equals("ocean", StringComparison.OrdinalIgnoreCase));
@@ -246,21 +254,30 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             }
 
             var minAmount = MinimumCharge(request.MinimumQuantity, expanded, col);
+            var groupCode = Clean(request.MatrixGroupCode);
+            var ruleCode = groupCode is null ? columns[col].Code : FitCode(groupCode + "-" + columns[col].Code);
             var rule = new PricingRule
             {
                 TenantId = tenantId,
                 RateVersionId = version.Id,
-                Code = columns[col].Code,
+                Code = ruleCode,
                 Name = columns[col].Name,
                 CalcMethod = PricingCalcMethods.WeightBreakPivot,
                 UnitAmount = 0m,
                 CurrencyCode = currency,
                 ChargeCode = ReferenceCharge.Freight,
                 CommodityCode = columns[col].Code,
+                TransportMode = Clean(request.TransportMode)?.ToLowerInvariant(),
                 MinAmount = minAmount,
                 VolumetricFactor = air ? RatingEngine.DefaultAirFactor : null,
                 SortOrder = (col + 1) * 10,
-                IsActive = true
+                IsActive = true,
+                RouteId = scope.RouteId,
+                RouteCode = scope.RouteCode,
+                AppliesAnyRoute = scope.AppliesAnyRoute,
+                CarrierPartyId = request.CarrierPartyId,
+                CarrierName = Clean(request.CarrierName),
+                MatrixGroupCode = groupCode
             };
             _db.PricingRules.Add(rule);
             var seq = 1;
@@ -402,6 +419,38 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
         }
 
         return new ComposeTariffResult(card.Id, version.Id);
+    }
+
+    private async Task<(Guid? RouteId, string? RouteCode, bool? AppliesAnyRoute)> ResolveScopeAsync(
+        ComposeTariffCommand request,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        if (!request.ScopeOnRules)
+        {
+            return (null, null, null);
+        }
+
+        if (request.AppliesAnyRoute)
+        {
+            return (null, null, true);
+        }
+
+        if (request.RouteId is not Guid routeId)
+        {
+            return (null, Clean(request.RouteCode), null);
+        }
+
+        var route = await _db.Routes.FirstOrDefaultAsync(
+            r => r.Id == routeId && r.TenantId == tenantId,
+            cancellationToken);
+        var block = RateDeclarationPolicy.RouteBlockReason(route is not null, route?.IsActive == true, false);
+        if (block is not null)
+        {
+            throw new ConflictAppException(block, "invalid_route");
+        }
+
+        return (route!.Id, route.Code, false);
     }
 
     private async Task EnsureWriteAsync(string partyType, CancellationToken cancellationToken)

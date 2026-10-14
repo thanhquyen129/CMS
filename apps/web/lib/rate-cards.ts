@@ -78,6 +78,14 @@ export type PricingRule = {
   serviceTypeCode: string | null;
   partyTypeCode: string | null;
   routeCode: string | null;
+  routeId?: string | null;
+  appliesAnyRoute?: boolean | null;
+  carrierPartyId?: string | null;
+  carrierName?: string | null;
+  weightBasis?: string | null;
+  weightMin?: number | null;
+  weightMax?: number | null;
+  matrixGroupCode?: string | null;
   minAmount: number | null;
   maxAmount: number | null;
   sortOrder: number;
@@ -191,6 +199,24 @@ export function calcMethodLabel(method: string): string {
       return "Cách tính khác";
   }
 }
+
+export function weightBandLabel(min: number | null | undefined, max: number | null | undefined): string {
+  if (min == null && max == null) return "—";
+  const text = (value: number) => {
+    const raw = String(value);
+    return raw.includes("e") || raw.includes("E") ? value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") : raw;
+  };
+  const lower = min ?? 0;
+  if (max == null) return `≥ ${text(lower)}`;
+  if (lower === 0) return `< ${text(max)}`;
+  return `${text(lower)} – < ${text(max)}`;
+}
+
+export const weightBasisOptions = [
+  { value: "", label: "Không lọc nấc" },
+  { value: "gross", label: "Trọng lượng thực" },
+  { value: "chargeable", label: "Trọng lượng tính cước" },
+] as const;
 
 export const basicCalcMethods = [
   { value: "fixed", label: "Cố định" },

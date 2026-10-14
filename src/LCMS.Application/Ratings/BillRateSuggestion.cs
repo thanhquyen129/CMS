@@ -178,7 +178,8 @@ public static class BillRateSuggestion
             return BillRateNotices.OutsideDate;
         }
 
-        if (!string.IsNullOrWhiteSpace(card.RouteCode) && string.IsNullOrWhiteSpace(bill.RouteCode))
+        var rulesCarryRoute = rules.Any(r => !string.IsNullOrWhiteSpace(r.RouteCode));
+        if (!rulesCarryRoute && !string.IsNullOrWhiteSpace(card.RouteCode) && string.IsNullOrWhiteSpace(bill.RouteCode))
         {
             return BillRateNotices.MissingBillNotice;
         }
@@ -188,7 +189,8 @@ public static class BillRateSuggestion
             return BillRateNotices.MissingBillNotice;
         }
 
-        if (!string.IsNullOrWhiteSpace(card.RouteCode)
+        if (!rulesCarryRoute
+            && !string.IsNullOrWhiteSpace(card.RouteCode)
             && !string.Equals(card.RouteCode.Trim(), bill.RouteCode?.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return BillRateNotices.RouteMismatch;

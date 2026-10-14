@@ -20,7 +20,7 @@ public static class RatePricingEndpoints
         var cards = app.MapGroup("/api/rate-cards").WithTags("RateCards");
         cards.MapPost("/", async (CreateRateCardRequest body, ISender sender, CancellationToken ct) =>
         {
-            if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands))
+            if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands, body.Groups))
             {
                 var saved = await sender.Send(MapDeclaration(null, body), ct);
                 return Results.Created($"/api/rate-cards/{saved.RateCardId}", new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId });
@@ -106,7 +106,7 @@ public static class RatePricingEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands))
+            if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands, body.Groups))
             {
                 var saved = await sender.Send(MapDeclaration(id, body), ct);
                 return Results.Ok(new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId });
@@ -413,10 +413,11 @@ public static class RatePricingEndpoints
         string? mode,
         IReadOnlyList<BasicRateRuleInput>? rules,
         IReadOnlyList<ComposeTariffColumn>? columns,
-        IReadOnlyList<ComposeTariffBand>? bands)
+        IReadOnlyList<ComposeTariffBand>? bands,
+        IReadOnlyList<TariffMatrixGroupInput>? groups = null)
     {
         var hasRules = rules is { Count: > 0 };
-        var hasMatrix = columns is { Count: > 0 } || bands is { Count: > 0 };
+        var hasMatrix = columns is { Count: > 0 } || bands is { Count: > 0 } || groups is { Count: > 0 };
         RateCardCatalog.RejectDual(hasRules, hasMatrix);
         return mode is not null || hasRules || hasMatrix;
     }
@@ -447,7 +448,8 @@ public static class RatePricingEndpoints
             body.Delivery,
             body.Remote,
             body.RateVersionId,
-            body.RowVersion);
+            body.RowVersion,
+            body.Groups);
 
     private static SaveRateCardDeclarationCommand MapDeclaration(Guid rateCardId, UpdateRateCardRequest body) =>
         new(
@@ -475,7 +477,8 @@ public static class RatePricingEndpoints
             body.Delivery,
             body.Remote,
             body.RateVersionId,
-            body.RowVersion);
+            body.RowVersion,
+            body.Groups);
 }
 
 public sealed record ComposeTariffRequest(
@@ -527,7 +530,8 @@ public sealed record CreateRateCardRequest(
     ComposeDeliveryFee? Delivery = null,
     ComposeRemoteFee? Remote = null,
     Guid? RateVersionId = null,
-    string? RowVersion = null);
+    string? RowVersion = null,
+    IReadOnlyList<TariffMatrixGroupInput>? Groups = null);
 
 public sealed record UpdateRateCardRequest(
     string Name,
@@ -555,7 +559,8 @@ public sealed record UpdateRateCardRequest(
     Guid? CustomerPartyId = null,
     string? CustomerGroupCode = null,
     string? Code = null,
-    string? RowVersion = null);
+    string? RowVersion = null,
+    IReadOnlyList<TariffMatrixGroupInput>? Groups = null);
 
 public sealed record CreateRateVersionRequest(
     DateTimeOffset? EffectiveFrom,

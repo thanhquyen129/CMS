@@ -218,8 +218,22 @@ public sealed class RatingContextResolver
         var rules = storedRules
             .Where(r => !LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
             .ToList();
+        var routeId = legContext ? null : bill.RouteId;
+        var carrierPartyId = legContext ? shipment?.CarrierPartyId : null;
+        var carrierName = legContext ? shipment?.CarrierName : null;
         var applicable = rules
-            .Where(r => RatingEngine.Matches(r, serviceType, partyType, routeCode, transportMode, originCode, destinationCode, commodityCode))
+            .Where(r => RatingEngine.Matches(
+                r,
+                serviceType,
+                partyType,
+                routeCode,
+                transportMode,
+                originCode,
+                destinationCode,
+                commodityCode,
+                routeId,
+                carrierPartyId,
+                carrierName))
             .ToList();
 
         var missing = new List<RatingMissingFieldDto>();
@@ -239,7 +253,7 @@ public sealed class RatingContextResolver
         }
         else
         {
-            selected = RatingEngine.Select(applicable);
+            selected = applicable;
         }
 
         var ruleIds = selected.Select(r => r.Id).ToList();
@@ -399,6 +413,22 @@ public sealed class RatingContextResolver
                     ? $"Chặng chưa có trọng lượng thực (quy tắc {string.Join(", ", perKg)}). Không dùng trọng lượng của cả Bill."
                     : $"Phụ phí theo kg cần trọng lượng thực (quy tắc {string.Join(", ", perKg)}).",
                 legWeight ? RatingReadinessActions.RatingForm : RatingReadinessActions.EditBill));
+        }
+
+        var weighed = selected.Where(r => RatingEngine.WeightMatches(r, gross, quantity)).ToList();
+        if (selected.Count > 0 && weighed.Count == 0)
+        {
+            missing.Add(new RatingMissingFieldDto(
+                "weight_band",
+                "Nấc trọng lượng",
+                selected.Select(r => r.Code).ToList(),
+                "NO_APPLICABLE_RATE: Trọng lượng không thuộc nấc nào. Không chọn nấc gần nhất.",
+                RatingReadinessActions.RateCard));
+            selected = [];
+        }
+        else if (weighed.Count > 0)
+        {
+            selected = RatingEngine.Select(weighed);
         }
 
         var containerRules = selected

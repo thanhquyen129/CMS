@@ -1,3 +1,7 @@
+## 2026-10-14 — Bảng giá đa tuyến, nấc [min, max), tương phản form
+- Tuyến và hãng chuyển xuống quy tắc / nhóm ma trận. Tiền tệ chỉ ở header. Nấc trọng lượng nửa mở; trọng lượng ngoài nấc không lấy nấc gần nhất. Publish chặn RATE_CONFLICT cùng khoản mục. Migration `20261014100816_RateRuleScopeWeightBand` copy route/carrier header xuống rule và ghi `rate_scope_migration_logs`, không sửa rating history.
+- Files: PricingRule, WeightBand, RatingEngine, RatingReadiness, SaveRateCardDeclarationCommand, ComposeTariffCommand, RateCardDeclarationForm, globals.css.
+
 ## 2026-10-14 — Bảng giá: lỗi tiếng Việt, audit, row_version
 - Đổi hình thức khai báo, tạo phiên bản và phát hành ghi audit `rate_card.declaration_changed`, `rate_card.version_created`, `rate_card.published`. Sửa nháp gửi `rowVersion`; bản cũ bị từ chối. Census hỗn hợp trả version, số quy tắc, số bậc, trạng thái và không gán mode.
 - Files: `SaveRateCardDeclarationCommand.cs`, `RateVersionCommands.cs`, `RateCardQueries.cs`, `RateCardCatalog.cs`, `docs/ops/rate-card-mixed-declaration.sql`.

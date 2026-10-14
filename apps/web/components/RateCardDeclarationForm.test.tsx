@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RateCardDeclarationForm } from "@/components/RateCardDeclarationForm";
-import { amountFieldLabel, rateTransportLabel, routeOptionLabel } from "@/lib/rate-cards";
+import { amountFieldLabel, rateTransportLabel, routeOptionLabel, weightBandLabel } from "@/lib/rate-cards";
 
 vi.mock("next/link", () => ({
   default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
@@ -77,9 +77,14 @@ describe("rate card declaration form", () => {
     const user = userEvent.setup();
     renderForm();
     expect(routeOptionLabel({ code: "VN-MY", originCode: "SGN", destinationCode: "HAN" })).toBe("SGN → HAN (VN-MY)");
-    await user.type(screen.getByLabelText("Tuyến"), "HAN");
+    expect(weightBandLabel(0, 5)).toBe("< 5");
+    expect(weightBandLabel(5, 11)).toBe("5 – < 11");
+    expect(weightBandLabel(10.999, 11)).toBe("10.999 – < 11");
+    expect(weightBandLabel(21, null)).toBe("≥ 21");
+    await user.type(screen.getByLabelText("Tuyến 1"), "HAN");
     expect(screen.getByRole("option", { name: "SGN → HAN (VN-MY)" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: /OLD/ })).toBeNull();
+    expect(screen.queryByLabelText("Hãng vận chuyển")).toBeNull();
   });
 
   it("does not invent a route when none are active", () => {
@@ -131,7 +136,7 @@ describe("rate card declaration form", () => {
     renderForm();
     await user.type(screen.getByLabelText("Mã"), "RC-UI");
     await user.type(screen.getByLabelText("Tên"), "Bảng giao diện");
-    await user.selectOptions(screen.getByLabelText("Tuyến").parentElement!.querySelector("select")!, "route-1");
+    await user.selectOptions(screen.getByLabelText("Tuyến 1").parentElement!.querySelector("select")!, "route-1");
     await user.type(screen.getByLabelText("Mã quy tắc 1"), "FRT");
     await user.type(screen.getByLabelText("Tên quy tắc 1"), "Cước");
     await user.type(screen.getByLabelText("Số tiền cố định 1"), "10");
@@ -146,7 +151,8 @@ describe("rate card declaration form", () => {
     expect(body.rules).toEqual([]);
     expect(body.columns.length).toBeGreaterThan(0);
     expect(body.bands.length).toBeGreaterThan(0);
-    expect(body.routeId).toBe("route-1");
+    expect(body.routeId).toBeNull();
+    expect(body.groups[0].routeId).toBe("route-1");
   });
 
   it("labels a fixed amount and a unit rate differently", async () => {
@@ -176,7 +182,7 @@ describe("rate card declaration form", () => {
     renderForm();
     await user.type(screen.getByLabelText("Mã"), "RC-ERR");
     await user.type(screen.getByLabelText("Tên"), "Lỗi");
-    await user.selectOptions(screen.getByLabelText("Tuyến").parentElement!.querySelector("select")!, "route-1");
+    await user.selectOptions(screen.getByLabelText("Tuyến 1").parentElement!.querySelector("select")!, "route-1");
     await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
     expect(screen.getByRole("alert").textContent).toContain("một hình thức khai báo");
     expect(screen.getByRole("alert").textContent).not.toContain("Exception");

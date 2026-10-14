@@ -7078,11 +7078,24 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(512)")
                         .HasColumnName("applicability");
 
+                    b.Property<bool?>("AppliesAnyRoute")
+                        .HasColumnType("boolean")
+                        .HasColumnName("applies_any_route");
+
                     b.Property<string>("CalcMethod")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("calc_method");
+
+                    b.Property<string>("CarrierName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("carrier_name");
+
+                    b.Property<Guid?>("CarrierPartyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("carrier_party_id");
 
                     b.Property<string>("ChargeCode")
                         .HasMaxLength(64)
@@ -7131,6 +7144,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
+                    b.Property<string>("MatrixGroupCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("matrix_group_code");
+
                     b.Property<decimal?>("MaxAmount")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)")
@@ -7170,6 +7188,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
                         .HasColumnName("route_code");
+
+                    b.Property<Guid?>("RouteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("route_id");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -7213,11 +7235,29 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,4)")
                         .HasColumnName("volumetric_factor");
 
+                    b.Property<string>("WeightBasis")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("weight_basis");
+
+                    b.Property<decimal?>("WeightMax")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("weight_max");
+
+                    b.Property<decimal?>("WeightMin")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("weight_min");
+
                     b.HasKey("Id")
                         .HasName("pk_pricing_rules");
 
                     b.HasIndex("RateVersionId")
                         .HasDatabaseName("ix_pricing_rules_rate_version_id");
+
+                    b.HasIndex("RouteId")
+                        .HasDatabaseName("ix_pricing_rules_route_id");
 
                     b.HasIndex("TenantId", "RateVersionId", "Code")
                         .IsUnique()
@@ -7544,6 +7584,74 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_rate_cards_tenant_id_code");
 
                     b.ToTable("rate_cards", (string)null);
+                });
+
+            modelBuilder.Entity("LCMS.Domain.Entities.RateScopeMigrationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("action");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("detail");
+
+                    b.Property<Guid?>("PricingRuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pricing_rule_id");
+
+                    b.Property<Guid>("RateCardId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rate_card_id");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("row_version");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id")
+                        .HasName("pk_rate_scope_migration_logs");
+
+                    b.HasIndex("TenantId", "PricingRuleId", "Action")
+                        .HasDatabaseName("ix_rate_scope_migration_logs_tenant_id_pricing_rule_id_action");
+
+                    b.ToTable("rate_scope_migration_logs", (string)null);
                 });
 
             modelBuilder.Entity("LCMS.Domain.Entities.RateVersion", b =>

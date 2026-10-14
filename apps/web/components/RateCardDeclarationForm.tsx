@@ -11,6 +11,7 @@ import {
   basicCalcMethods,
   isWeightBreakMethod,
   routeOptionLabel,
+  weightBasisOptions,
   type PricingRule,
 } from "@/lib/rate-cards";
 
@@ -23,15 +24,34 @@ type RuleRow = {
   name: string;
   calcMethod: string;
   unitAmount: string;
-  currencyCode: string;
   serviceTypeCode: string;
   commodityCode: string;
   transportMode: string;
   partyTypeCode: string;
-  routeCode: string;
+  routeId: string;
+  appliesAnyRoute: boolean;
+  carrierPartyId: string;
+  carrierName: string;
+  weightBasis: string;
+  weightMin: string;
+  weightMax: string;
+  chargeCode: string;
   applicability: string;
   minAmount: string;
   maxAmount: string;
+};
+
+type MatrixGroup = {
+  key: string;
+  code: string;
+  routeId: string;
+  appliesAnyRoute: boolean;
+  carrierPartyId: string;
+  carrierName: string;
+  transportMode: string;
+  columns: Col[];
+  rows: Band[];
+  cells: Record<string, Record<string, string>>;
 };
 
 type Props = {
@@ -90,44 +110,71 @@ function dateInput(iso: string | null | undefined): string {
   return local.toISOString().slice(0, 10);
 }
 
-function emptyRule(currency: string): RuleRow {
+function emptyRule(): RuleRow {
   return {
     key: uid(),
     code: "",
     name: "",
     calcMethod: "fixed",
     unitAmount: "",
-    currencyCode: currency,
     serviceTypeCode: "",
     commodityCode: "",
     transportMode: "",
     partyTypeCode: "",
-    routeCode: "",
+    routeId: "",
+    appliesAnyRoute: false,
+    carrierPartyId: "",
+    carrierName: "",
+    weightBasis: "",
+    weightMin: "",
+    weightMax: "",
+    chargeCode: "",
     applicability: "",
     minAmount: "",
     maxAmount: "",
   };
 }
 
-function rulesFromSaved(rules: PricingRule[], currency: string): RuleRow[] {
+function rulesFromSaved(rules: PricingRule[]): RuleRow[] {
   const basic = rules.filter((r) => !isWeightBreakMethod(r.calcMethod));
-  if (basic.length === 0) return [emptyRule(currency)];
+  if (basic.length === 0) return [emptyRule()];
   return basic.map((r) => ({
     key: r.id,
     code: r.code,
     name: r.name,
     calcMethod: r.calcMethod,
     unitAmount: String(r.unitAmount),
-    currencyCode: r.currencyCode || currency,
     serviceTypeCode: r.serviceTypeCode ?? "",
     commodityCode: r.commodityCode ?? "",
     transportMode: r.transportMode ?? "",
     partyTypeCode: r.partyTypeCode ?? "",
-    routeCode: r.routeCode ?? "",
+    routeId: r.routeId ?? "",
+    appliesAnyRoute: r.appliesAnyRoute === true,
+    carrierPartyId: r.carrierPartyId ?? "",
+    carrierName: r.carrierName ?? "",
+    weightBasis: r.weightBasis ?? "",
+    weightMin: r.weightMin == null ? "" : String(r.weightMin),
+    weightMax: r.weightMax == null ? "" : String(r.weightMax),
+    chargeCode: r.chargeCode ?? "",
     applicability: r.applicability ?? "",
     minAmount: r.minAmount == null ? "" : String(r.minAmount),
     maxAmount: r.maxAmount == null ? "" : String(r.maxAmount),
   }));
+}
+
+function emptyGroup(preset: "air" | "sea", routeId = "", appliesAnyRoute = false): MatrixGroup {
+  return {
+    key: uid(),
+    code: "",
+    routeId,
+    appliesAnyRoute,
+    carrierPartyId: "",
+    carrierName: "",
+    transportMode: preset,
+    columns: preset === "sea" ? seaCols() : airCols(),
+    rows: preset === "sea" ? seaBands() : airBands(),
+    cells: {},
+  };
 }
 
 const airBands = (): Band[] =>
@@ -213,11 +260,42 @@ function matrixFromRules(rules: PricingRule[]): { columns: Col[]; rows: Band[]; 
   return { columns, rows, cells };
 }
 
+function groupsFromRules(rules: PricingRule[], preset: "air" | "sea", fallbackRouteId: string): MatrixGroup[] {
+  const matrix = rules.filter((r) => isWeightBreakMethod(r.calcMethod) && (r.breaks?.length ?? 0) > 0);
+  if (matrix.length === 0) return [emptyGroup(preset, fallbackRouteId)];
+  const order: string[] = [];
+  const byCode = new Map<string, PricingRule[]>();
+  for (const rule of matrix) {
+    const code = rule.matrixGroupCode || "legacy";
+    if (!byCode.has(code)) {
+      order.push(code);
+      byCode.set(code, []);
+    }
+    byCode.get(code)!.push(rule);
+  }
+  return order.map((code) => {
+    const members = byCode.get(code)!;
+    const head = members[0];
+    const shaped = matrixFromRules(members);
+    return {
+      key: head.id,
+      code: code === "legacy" ? "" : code,
+      routeId: head.appliesAnyRoute ? "" : head.routeId ?? fallbackRouteId,
+      appliesAnyRoute: head.appliesAnyRoute === true,
+      carrierPartyId: head.carrierPartyId ?? "",
+      carrierName: head.carrierName ?? "",
+      transportMode: head.transportMode || preset,
+      columns: shaped?.columns ?? airCols(),
+      rows: shaped?.rows ?? airBands(),
+      cells: shaped?.cells ?? {},
+    };
+  });
+}
+
 export function RateCardDeclarationForm(props: Props) {
   const router = useRouter();
   const editing = Boolean(props.cardId);
   const initialMode = props.declarationMode === "advanced" ? "advanced" : "basic";
-  const seeded = matrixFromRules(props.rules ?? []);
   const startPreset = props.transportMode?.toLowerCase() === "sea" ? "sea" : "air";
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -227,14 +305,17 @@ export function RateCardDeclarationForm(props: Props) {
   const [partnerNotice, setPartnerNotice] = useState<string | null>(null);
   const [currency, setCurrency] = useState((props.currencyCode || props.defaultCurrency || "VND").toUpperCase());
   const [routeQuery, setRouteQuery] = useState("");
-  const [routeId, setRouteId] = useState(props.routeId ?? "");
   const [mode, setMode] = useState<"basic" | "advanced">(initialMode);
   const [pendingMode, setPendingMode] = useState<"basic" | "advanced" | null>(null);
-  const [rules, setRules] = useState<RuleRow[]>(() => rulesFromSaved(props.rules ?? [], currency));
+  const [rules, setRules] = useState<RuleRow[]>(() => {
+    const rows = rulesFromSaved(props.rules ?? []);
+    if (!rows[0].routeId && !rows[0].appliesAnyRoute && props.routeId) {
+      rows[0] = { ...rows[0], routeId: props.routeId };
+    }
+    return rows;
+  });
   const [preset, setPreset] = useState<"air" | "sea">(startPreset);
-  const [columns, setColumns] = useState<Col[]>(() => seeded?.columns ?? (startPreset === "sea" ? seaCols() : airCols()));
-  const [rows, setRows] = useState<Band[]>(() => seeded?.rows ?? (startPreset === "sea" ? seaBands() : airBands()));
-  const [cells, setCells] = useState<Record<string, Record<string, string>>>(() => seeded?.cells ?? {});
+  const [groups, setGroups] = useState<MatrixGroup[]>(() => groupsFromRules(props.rules ?? [], startPreset, props.routeId ?? ""));
   const [minQty, setMinQty] = useState(startPreset === "sea" ? "1" : "");
   const [deliveryOn, setDeliveryOn] = useState(false);
   const [deliveryUnder, setDeliveryUnder] = useState("2");
@@ -252,19 +333,18 @@ export function RateCardDeclarationForm(props: Props) {
     return codes;
   }, [activeCurrencies, currency]);
   const activeRoutes = props.routes.filter((r) => r.isActive);
-  const visibleRoutes = props.routes.filter((r) => r.isActive || r.id === routeId);
-  const filteredRoutes = visibleRoutes.filter((r) => {
+  const filteredRoutes = props.routes.filter((r) => {
+    if (!r.isActive && !rules.some((rule) => rule.routeId === r.id) && !groups.some((group) => group.routeId === r.id)) return false;
     const q = routeQuery.trim().toLowerCase();
     if (!q) return true;
     return [r.code, r.name, r.originCode, r.destinationCode].some((part) => part?.toLowerCase().includes(q));
   });
-  const selectedRoute = props.routes.find((r) => r.id === routeId) ?? null;
   const priced = useMemo(
-    () => Object.values(cells).some((row) => Object.values(row).some((v) => v.trim() !== "")),
-    [cells]
+    () => groups.some((group) => Object.values(group.cells).some((row) => Object.values(row).some((v) => v.trim() !== ""))),
+    [groups]
   );
   const basicDirty = rules.some((r) => r.code.trim() || r.name.trim() || r.unitAmount.trim());
-  const advancedDirty = priced || deliveryOn || remoteOn || Boolean(seeded && mode === "advanced");
+  const advancedDirty = priced || deliveryOn || remoteOn || (initialMode === "advanced" && mode === "advanced");
 
   function askMode(next: "basic" | "advanced") {
     if (props.modeLocked || next === mode) return;
@@ -278,9 +358,15 @@ export function RateCardDeclarationForm(props: Props) {
 
   function acceptMode() {
     if (!pendingMode) return;
-    if (mode === "basic") setRules([emptyRule(currency)]);
+    if (mode === "basic") {
+      const seed = rules[0];
+      setRules([emptyRule()]);
+      setGroups([emptyGroup(preset, seed?.routeId ?? "", seed?.appliesAnyRoute ?? false)]);
+    }
     if (mode === "advanced") {
-      setCells({});
+      const seed = groups[0];
+      setGroups([emptyGroup(preset)]);
+      setRules([{ ...emptyRule(), routeId: seed?.routeId ?? "", appliesAnyRoute: seed?.appliesAnyRoute ?? false }]);
       setDeliveryOn(false);
       setRemoteOn(false);
     }
@@ -288,31 +374,31 @@ export function RateCardDeclarationForm(props: Props) {
     setPendingMode(null);
   }
 
-  function applyPreset(next: "air" | "sea") {
-    if (priced && !window.confirm("Đổi khung sẽ xóa đơn giá đã nhập trên ma trận. Tiếp tục?")) return;
+  function applyPreset(groupKey: string, next: "air" | "sea") {
+    const group = groups.find((item) => item.key === groupKey);
+    const hasPrice = group ? Object.values(group.cells).some((row) => Object.values(row).some((v) => v.trim() !== "")) : false;
+    if (hasPrice && !window.confirm("Đổi khung sẽ xóa đơn giá đã nhập trên ma trận. Tiếp tục?")) return;
     setPreset(next);
-    setColumns(next === "sea" ? seaCols() : airCols());
-    setRows(next === "sea" ? seaBands() : airBands());
-    setCells({});
+    setGroups((prev) => prev.map((item) => item.key === groupKey
+      ? { ...item, transportMode: next, columns: next === "sea" ? seaCols() : airCols(), rows: next === "sea" ? seaBands() : airBands(), cells: {} }
+      : item));
     setMinQty(next === "sea" ? "1" : "");
   }
 
-  function setCell(rowKey: string, colKey: string, value: string) {
-    setCells((prev) => ({ ...prev, [rowKey]: { ...(prev[rowKey] ?? {}), [colKey]: value } }));
+  function setCell(groupKey: string, rowKey: string, colKey: string, value: string) {
+    setGroups((prev) => prev.map((item) => item.key === groupKey
+      ? { ...item, cells: { ...item.cells, [rowKey]: { ...(item.cells[rowKey] ?? {}), [colKey]: value } } }
+      : item));
+  }
+
+  function patchGroup(groupKey: string, patch: Partial<MatrixGroup>) {
+    setGroups((prev) => prev.map((item) => item.key === groupKey ? { ...item, ...patch } : item));
   }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    if (activeRoutes.length === 0 && !routeId) {
-      setError("Danh mục tuyến trống hoặc không có tuyến đang hoạt động. Không tạo tuyến giả.");
-      return;
-    }
-    if (activeRoutes.length > 0 && !routeId && !props.routeCode) {
-      setError("Chọn tuyến từ danh mục.");
-      return;
-    }
     if (currencyChoices.length === 0) {
       setError("Danh mục tiền tệ trống. Khai báo tiền tệ trước khi lưu.");
       return;
@@ -324,8 +410,8 @@ export function RateCardDeclarationForm(props: Props) {
       partyType,
       currencyCode: currency,
       description: String(fd.get("description") ?? "").trim() || null,
-      carrierName: String(fd.get("carrierName") ?? "").trim() || null,
-      routeId: routeId || null,
+      carrierName: null,
+      routeId: null,
       declarationMode: mode,
       confirmModeChange: mode !== initialMode,
       supplierPartyId: sell ? null : String(fd.get("supplierPartyId") ?? "").trim() || null,
@@ -355,6 +441,18 @@ export function RateCardDeclarationForm(props: Props) {
           setError("Mỗi quy tắc cần mã, tên và số tiền / đơn giá không âm.");
           return;
         }
+        if (!rule.appliesAnyRoute && !rule.routeId) {
+          setError(activeRoutes.length === 0
+            ? "Danh mục tuyến trống hoặc không có tuyến đang hoạt động. Không tạo tuyến giả."
+            : "Chọn tuyến từ danh mục hoặc Tất cả tuyến.");
+          return;
+        }
+        const min = parseNum(rule.weightMin);
+        const max = rule.weightMax.trim() ? parseNum(rule.weightMax) : null;
+        if ((rule.weightMin.trim() || rule.weightMax.trim()) && (min === null || min < 0 || (rule.weightMax.trim() && (max === null || max <= min)))) {
+          setError("Nấc trọng lượng cần mức từ không âm và mức đến lớn hơn mức từ.");
+          return;
+        }
         if (rule.calcMethod === "min_max_clamp" && !rule.minAmount.trim() && !rule.maxAmount.trim()) {
           setError("Cách tính kẹp min/max cần số tiền tối thiểu hoặc tối đa.");
           return;
@@ -365,18 +463,37 @@ export function RateCardDeclarationForm(props: Props) {
         name: rule.name.trim(),
         calcMethod: rule.calcMethod,
         unitAmount: parseNum(rule.unitAmount),
-        currencyCode: rule.currencyCode,
+        currencyCode: currency,
         serviceTypeCode: rule.serviceTypeCode.trim() || null,
         commodityCode: rule.commodityCode.trim() || null,
         transportMode: rule.transportMode.trim() || null,
         partyTypeCode: rule.partyTypeCode.trim() || null,
-        routeCode: rule.routeCode.trim() || null,
+        routeId: rule.appliesAnyRoute ? null : rule.routeId || null,
+        appliesAnyRoute: rule.appliesAnyRoute,
+        carrierPartyId: rule.carrierPartyId || null,
+        carrierName: rule.carrierName.trim() || null,
+        weightBasis: rule.weightBasis || null,
+        weightMin: parseNum(rule.weightMin),
+        weightMax: rule.weightMax.trim() ? parseNum(rule.weightMax) : null,
+        chargeCode: rule.chargeCode.trim() || null,
         applicability: rule.applicability.trim() || null,
         minAmount: parseNum(rule.minAmount),
         maxAmount: parseNum(rule.maxAmount),
       }));
       body.transportMode = props.transportMode ?? null;
     } else {
+      for (const group of groups) {
+        if (!group.appliesAnyRoute && !group.routeId) {
+          setError(activeRoutes.length === 0
+            ? "Danh mục tuyến trống hoặc không có tuyến đang hoạt động. Không tạo tuyến giả."
+            : "Chọn tuyến hoặc Tất cả tuyến cho từng nhóm ma trận.");
+          return;
+        }
+      }
+      const first = groups[0];
+      const rows = first.rows;
+      const columns = first.columns;
+      const cells = first.cells;
       const parsedRows = rows.map((row) => ({ row, min: parseNum(row.min), max: row.max.trim() ? parseNum(row.max) : null }));
       if (parsedRows.some((r) => r.min === null || (r.row.max.trim() && r.max === null))) {
         setError("Mức từ / đến của khung phải là số.");
@@ -405,8 +522,25 @@ export function RateCardDeclarationForm(props: Props) {
         setError("Phụ phí vùng cần đơn giá không âm.");
         return;
       }
-      body.transportMode = preset;
+      body.transportMode = first.transportMode || preset;
       body.minimumQuantity = parseNum(minQty);
+      body.groups = groups.map((group, index) => ({
+        code: group.code.trim() || `G${index + 1}`,
+        routeId: group.appliesAnyRoute ? null : group.routeId || null,
+        appliesAnyRoute: group.appliesAnyRoute,
+        carrierPartyId: group.carrierPartyId || null,
+        carrierName: group.carrierName.trim() || null,
+        transportMode: group.transportMode || preset,
+        columns: group.columns.map((c) => ({ code: c.code.trim(), name: c.name.trim() })),
+        bands: group.rows.map((row) => ({
+          minQuantity: parseNum(row.min),
+          maxQuantity: row.max.trim() ? parseNum(row.max) : null,
+          prices: group.columns.map((col) => {
+            const raw = group.cells[row.key]?.[col.key] ?? "";
+            return raw.trim() ? parseNum(raw) : null;
+          }),
+        })),
+      }));
       body.columns = columns.map((c) => ({ code: c.code.trim(), name: c.name.trim() }));
       body.bands = parsedRows.map(({ row, min, max }) => ({
         minQuantity: min,
@@ -457,7 +591,7 @@ export function RateCardDeclarationForm(props: Props) {
   const unit = preset === "sea" ? "CBM" : "kg";
 
   return (
-    <form className="receive-form" onSubmit={onSubmit} noValidate>
+    <form className="receive-form rate-declaration" onSubmit={onSubmit} noValidate>
       <p className="note">
         Nhập thông tin chung và chọn một hình thức khai báo. Mỗi bảng giá chỉ dùng bảng giá cơ bản hoặc bảng giá nâng cao.
       </p>
@@ -465,6 +599,7 @@ export function RateCardDeclarationForm(props: Props) {
       {props.routeError ? <div className="alert alert-error" role="alert">{props.routeError}</div> : null}
       {props.currencyError ? <div className="alert alert-error" role="alert">{props.currencyError}</div> : null}
 
+      <section className="rate-block rate-block-general">
       <h2 className="section-title">1. Thông tin chung</h2>
       <div className="form-grid">
         <div className="field">
@@ -510,38 +645,7 @@ export function RateCardDeclarationForm(props: Props) {
               <option key={code} value={code}>{code}</option>
             ))}
           </select>
-          <p className="muted small">Đổi tiền tệ không quy đổi số tiền đã nhập.</p>
-        </div>
-        <div className="field">
-          <label htmlFor="carrierName">Hãng vận chuyển</label>
-          <input id="carrierName" name="carrierName" maxLength={128} defaultValue={props.carrierName ?? ""} placeholder="Chọn hãng vận chuyển nếu có" />
-        </div>
-        <div className="field">
-          <label htmlFor="routeSearch">Tuyến</label>
-          <input
-            id="routeSearch"
-            value={routeQuery}
-            onChange={(ev) => setRouteQuery(ev.target.value)}
-            placeholder="Tìm mã tuyến, điểm đi, điểm đến"
-            autoComplete="off"
-          />
-          <select id="routeId" name="routeId" value={routeId} onChange={(ev) => setRouteId(ev.target.value)} required={activeRoutes.length > 0 && !props.routeCode}>
-            <option value="">{activeRoutes.length === 0 ? "Không có tuyến đang hoạt động" : "Chọn tuyến"}</option>
-            {filteredRoutes.map((route) => (
-              <option key={route.id} value={route.id}>
-                {routeOptionLabel(route)}{route.isActive ? "" : " — ngừng sử dụng"}
-              </option>
-            ))}
-          </select>
-          {selectedRoute && !selectedRoute.isActive ? (
-            <p className="alert alert-warning" role="status">Tuyến đã lưu ngừng hiệu lực. Giữ nguyên hoặc chọn tuyến đang hoạt động.</p>
-          ) : null}
-          {!selectedRoute && props.routeCode ? (
-            <p className="alert alert-warning" role="status">Tuyến đã lưu dạng chữ {props.routeCode}. Chọn lại từ danh mục khi sửa.</p>
-          ) : null}
-          {activeRoutes.length === 0 ? (
-            <p className="alert alert-warning" role="status">Danh mục tuyến trống hoặc không có tuyến đang hoạt động. Không tạo tuyến giả.</p>
-          ) : null}
+          <p className="muted small">Một tiền tệ cho cả bảng giá. Quy tắc bên dưới không ghi đè.</p>
         </div>
         <div className="field">
           {sell ? (
@@ -590,7 +694,9 @@ export function RateCardDeclarationForm(props: Props) {
           <input id="note" name="note" maxLength={1024} defaultValue={props.note ?? ""} />
         </div>
       </div>
+      </section>
 
+      <section className="rate-block rate-block-mode">
       <h2 className="section-title">2. Hình thức khai báo giá</h2>
       {props.modeLocked ? <p className="note">Hình thức đã khóa vì bảng giá đã có phiên bản phát hành. Bản nháp giữ cùng hình thức.</p> : null}
       <div className="form-grid">
@@ -605,6 +711,7 @@ export function RateCardDeclarationForm(props: Props) {
           <div className="muted small">Khai báo giá theo khung trọng lượng và nhóm hàng</div>
         </label>
       </div>
+      </section>
       {pendingMode ? (
         <div className="alert alert-warning" role="dialog" aria-modal="true" aria-labelledby="mode-switch-title">
           <p id="mode-switch-title">
@@ -618,23 +725,25 @@ export function RateCardDeclarationForm(props: Props) {
       ) : null}
 
       {mode === "basic" ? (
-        <>
+        <section className="rate-block rate-block-rules">
           <h2 className="section-title">3. Bảng giá cơ bản</h2>
-          <p className="note">Quy tắc áp cho bản nháp này. Cách tính lấy từ cấu hình tính giá hiện có.</p>
+          <p className="note">Quy tắc dùng tiền tệ {currency}. Tuyến và hãng vận chuyển khai báo trên từng quy tắc. Nấc trọng lượng là điều kiện chọn, không phải bậc lũy tiến.</p>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Mã quy tắc</th>
-                  <th>Tên quy tắc</th>
-                  <th>Cách tính</th>
-                  <th>Số tiền / Đơn giá</th>
-                  <th>Tiền tệ</th>
-                  <th>Loại dịch vụ</th>
-                  <th>Mã loại hàng</th>
-                  <th>Mã phương thức</th>
-                  <th>Thao tác</th>
+                  <th scope="col">#</th>
+                  <th scope="col">Mã quy tắc</th>
+                  <th scope="col">Tên quy tắc</th>
+                  <th scope="col">Tuyến</th>
+                  <th scope="col">Hãng vận chuyển</th>
+                  <th scope="col">Cách tính</th>
+                  <th scope="col">Số tiền / Đơn giá</th>
+                  <th scope="col">Loại dịch vụ</th>
+                  <th scope="col">Loại hàng</th>
+                  <th scope="col">Phương thức</th>
+                  <th scope="col">Nấc trọng lượng</th>
+                  <th scope="col">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -643,6 +752,41 @@ export function RateCardDeclarationForm(props: Props) {
                     <td>{index + 1}</td>
                     <td><input aria-label={`Mã quy tắc ${index + 1}`} value={rule.code} maxLength={64} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, code: ev.target.value } : r))} /></td>
                     <td><input aria-label={`Tên quy tắc ${index + 1}`} value={rule.name} maxLength={256} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, name: ev.target.value } : r))} /></td>
+                    <td>
+                      <label htmlFor={`route-search-${rule.key}`}>Tuyến {index + 1}</label>
+                      <input id={`route-search-${rule.key}`} value={routeQuery} onChange={(ev) => setRouteQuery(ev.target.value)} placeholder="Tìm mã tuyến, điểm đi, điểm đến" autoComplete="off" />
+                      <select
+                        aria-label={`Chọn tuyến ${index + 1}`}
+                        value={rule.appliesAnyRoute ? "ANY" : rule.routeId}
+                        onChange={(ev) => {
+                          const value = ev.target.value;
+                          setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, appliesAnyRoute: value === "ANY", routeId: value === "ANY" ? "" : value } : r));
+                        }}
+                      >
+                        <option value="">{activeRoutes.length === 0 ? "Không có tuyến đang hoạt động" : "Chọn tuyến"}</option>
+                        <option value="ANY">Tất cả tuyến</option>
+                        {filteredRoutes.map((route) => (
+                          <option key={route.id} value={route.id}>{routeOptionLabel(route)}{route.isActive ? "" : " — ngừng sử dụng"}</option>
+                        ))}
+                      </select>
+                      {props.routes.some((route) => route.id === rule.routeId && !route.isActive) ? (
+                        <p className="alert alert-warning" role="status">Tuyến đã lưu ngừng hiệu lực. Giữ nguyên hoặc chọn tuyến đang hoạt động.</p>
+                      ) : null}
+                      {activeRoutes.length === 0 ? (
+                        <p className="alert alert-warning" role="status">Danh mục tuyến trống hoặc không có tuyến đang hoạt động. Không tạo tuyến giả.</p>
+                      ) : null}
+                    </td>
+                    <td>
+                      <PartyTypeahead
+                        name={`carrier-${rule.key}`}
+                        label={`Hãng vận chuyển ${index + 1}`}
+                        roleCode="carrier"
+                        defaultId={rule.carrierPartyId || null}
+                        defaultLabel={rule.carrierName || null}
+                        hint="Hãng khai thác, không phải nhà cung cấp trên bảng giá."
+                        onSelect={(item) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, carrierPartyId: item?.id ?? "", carrierName: item?.name ?? "" } : r))}
+                      />
+                    </td>
                     <td>
                       <select aria-label={`Cách tính ${index + 1}`} value={rule.calcMethod} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, calcMethod: ev.target.value } : r))}>
                         {basicCalcMethods.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -670,11 +814,6 @@ export function RateCardDeclarationForm(props: Props) {
                         </div>
                       ) : null}
                     </td>
-                    <td>
-                      <select aria-label={`Tiền tệ quy tắc ${index + 1}`} value={rule.currencyCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, currencyCode: ev.target.value } : r))}>
-                        {currencyChoices.map((code) => <option key={code} value={code}>{code}</option>)}
-                      </select>
-                    </td>
                     <td><input aria-label={`Loại dịch vụ ${index + 1}`} value={rule.serviceTypeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, serviceTypeCode: ev.target.value } : r))} /></td>
                     <td><input aria-label={`Mã loại hàng ${index + 1}`} value={rule.commodityCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, commodityCode: ev.target.value } : r))} /></td>
                     <td>
@@ -687,10 +826,17 @@ export function RateCardDeclarationForm(props: Props) {
                         <option value="vendor">Giá mua</option>
                         <option value="customer">Giá bán</option>
                       </select>
-                      <input aria-label={`Lọc tuyến ${index + 1}`} placeholder="Lọc tuyến" value={rule.routeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, routeCode: ev.target.value } : r))} />
+                      <input aria-label={`Khoản mục ${index + 1}`} placeholder="Khoản mục, ví dụ cước chính" value={rule.chargeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, chargeCode: ev.target.value } : r))} />
                     </td>
                     <td>
-                      <button className="btn btn-ghost" type="button" onClick={() => setRules((prev) => prev.length === 1 ? [emptyRule(currency)] : prev.filter((r) => r.key !== rule.key))}>Xóa</button>
+                      <select aria-label={`Loại trọng lượng ${index + 1}`} value={rule.weightBasis} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightBasis: ev.target.value } : r))}>
+                        {weightBasisOptions.map((item) => <option key={item.value || "none"} value={item.value}>{item.label}</option>)}
+                      </select>
+                      <input aria-label={`Trọng lượng từ ${index + 1}`} placeholder="Từ (kg)" inputMode="decimal" value={rule.weightMin} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMin: ev.target.value } : r))} />
+                      <input aria-label={`Trọng lượng đến ${index + 1}`} placeholder="Đến, bỏ trống nếu không giới hạn" inputMode="decimal" value={rule.weightMax} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMax: ev.target.value } : r))} />
+                    </td>
+                    <td>
+                      <button className="btn btn-ghost" type="button" onClick={() => setRules((prev) => prev.length === 1 ? [emptyRule()] : prev.filter((r) => r.key !== rule.key))}>Xóa</button>
                     </td>
                   </tr>
                 ))}
@@ -698,9 +844,9 @@ export function RateCardDeclarationForm(props: Props) {
             </table>
           </div>
           <div className="cta-row">
-            <button className="btn btn-ghost" type="button" onClick={() => setRules((prev) => [...prev, emptyRule(currency)])}>+ Thêm quy tắc giá</button>
+            <button className="btn btn-ghost" type="button" onClick={() => setRules((prev) => [...prev, emptyRule()])}>+ Thêm quy tắc giá</button>
           </div>
-        </>
+        </section>
       ) : (
         <>
           <h2 className="section-title">3. Bảng giá nâng cao</h2>
@@ -708,48 +854,97 @@ export function RateCardDeclarationForm(props: Props) {
             Đơn giá theo khung {unit} và loại hàng. Ô trống nghĩa là khung đó không có giá.
             Mức Đến trùng mức Từ của khung sau thì số lẻ thuộc khung dưới.
           </p>
+          {groups.map((group, groupIndex) => {
+            const groupUnit = group.transportMode === "sea" ? "CBM" : "kg";
+            return (
+              <section key={group.key} className="rate-block rate-block-rules">
+                <h3 className="section-title sm">Nhóm ma trận {groupIndex + 1}</h3>
+                <div className="form-grid">
+                  <div className="field">
+                    <label htmlFor={`group-route-${group.key}`}>Tuyến nhóm {groupIndex + 1}</label>
+                    <select
+                      id={`group-route-${group.key}`}
+                      value={group.appliesAnyRoute ? "ANY" : group.routeId}
+                      onChange={(ev) => {
+                        const value = ev.target.value;
+                        patchGroup(group.key, { appliesAnyRoute: value === "ANY", routeId: value === "ANY" ? "" : value });
+                      }}
+                    >
+                      <option value="">Chọn tuyến</option>
+                      <option value="ANY">Tất cả tuyến</option>
+                      {props.routes.filter((route) => route.isActive || route.id === group.routeId).map((route) => (
+                        <option key={route.id} value={route.id}>{routeOptionLabel(route)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <PartyTypeahead
+                      name={`group-carrier-${group.key}`}
+                      label={`Hãng nhóm ${groupIndex + 1}`}
+                      roleCode="carrier"
+                      defaultId={group.carrierPartyId || null}
+                      defaultLabel={group.carrierName || null}
+                      hint="Hãng khai thác của nhóm, không phải nhà cung cấp."
+                      onSelect={(item) => patchGroup(group.key, { carrierPartyId: item?.id ?? "", carrierName: item?.name ?? "" })}
+                    />
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`group-mode-${group.key}`}>Phương thức nhóm {groupIndex + 1}</label>
+                    <select id={`group-mode-${group.key}`} value={group.transportMode} onChange={(ev) => patchGroup(group.key, { transportMode: ev.target.value })}>
+                      {modeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="cta-row">
+                  <button className="btn btn-ghost" type="button" onClick={() => applyPreset(group.key, "air")}>Khung hàng không</button>
+                  <button className="btn btn-ghost" type="button" onClick={() => applyPreset(group.key, "sea")}>Khung đường biển</button>
+                  <button className="btn btn-ghost" type="button" onClick={() => setGroups((prev) => [...prev, { ...group, key: uid(), code: "", cells: { ...group.cells } }])}>Sao chép nhóm</button>
+                  <button className="btn btn-ghost" type="button" disabled={groups.length <= 1} onClick={() => setGroups((prev) => prev.filter((item) => item.key !== group.key))}>Xóa nhóm</button>
+                </div>
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <caption className="muted small">Đơn giá / {groupUnit}. Nấc [từ, đến).</caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Khung ({groupUnit})</th>
+                        {group.columns.map((col) => (
+                          <th key={col.key} scope="col">
+                            <input aria-label={`Tên ${col.code}`} value={col.name} onChange={(ev) => patchGroup(group.key, { columns: group.columns.map((c) => c.key === col.key ? { ...c, name: ev.target.value } : c) })} />
+                            <input aria-label={`Mã ${col.name}`} value={col.code} onChange={(ev) => patchGroup(group.key, { columns: group.columns.map((c) => c.key === col.key ? { ...c, code: ev.target.value.toUpperCase() } : c) })} />
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.rows.map((row, index) => (
+                        <tr key={row.key}>
+                          <th>
+                            <span className="muted small">{preview(row, group.rows[index + 1])}</span>
+                            <div className="cta-row">
+                              <input aria-label="Từ" value={row.min} inputMode="decimal" style={{ width: "4.5rem" }} onChange={(ev) => patchGroup(group.key, { rows: group.rows.map((r) => r.key === row.key ? { ...r, min: ev.target.value } : r) })} />
+                              <input aria-label="Đến" value={row.max} inputMode="decimal" placeholder="mở" style={{ width: "4.5rem" }} onChange={(ev) => patchGroup(group.key, { rows: group.rows.map((r) => r.key === row.key ? { ...r, max: ev.target.value } : r) })} />
+                              <button className="btn btn-ghost" type="button" disabled={group.rows.length <= 1} onClick={() => patchGroup(group.key, { rows: group.rows.filter((r) => r.key !== row.key) })}>Xóa</button>
+                            </div>
+                          </th>
+                          {group.columns.map((col) => (
+                            <td key={col.key}>
+                              <input aria-label={`${col.name} ${preview(row, group.rows[index + 1])}`} inputMode="decimal" value={group.cells[row.key]?.[col.key] ?? ""} onChange={(ev) => setCell(group.key, row.key, col.key, ev.target.value)} style={{ width: "7rem" }} />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="cta-row">
+                  <button className="btn btn-ghost" type="button" onClick={() => patchGroup(group.key, { rows: [...group.rows, { key: uid(), min: "", max: "" }] })}>Thêm khung</button>
+                  <button className="btn btn-ghost" type="button" onClick={() => patchGroup(group.key, { columns: [...group.columns, { key: uid(), name: "Loại hàng", code: `COL${group.columns.length + 1}` }] })}>Thêm loại hàng</button>
+                </div>
+              </section>
+            );
+          })}
           <div className="cta-row">
-            <button className="btn btn-ghost" type="button" onClick={() => applyPreset("air")}>Khung hàng không</button>
-            <button className="btn btn-ghost" type="button" onClick={() => applyPreset("sea")}>Khung đường biển</button>
-          </div>
-          <div className="table-wrap">
-            <table className="data-table">
-              <caption className="muted small">Đơn giá / {unit}</caption>
-              <thead>
-                <tr>
-                  <th>Khung ({unit})</th>
-                  {columns.map((col) => (
-                    <th key={col.key}>
-                      <input aria-label={`Tên ${col.code}`} value={col.name} onChange={(ev) => setColumns((prev) => prev.map((c) => c.key === col.key ? { ...c, name: ev.target.value } : c))} />
-                      <input aria-label={`Mã ${col.name}`} value={col.code} onChange={(ev) => setColumns((prev) => prev.map((c) => c.key === col.key ? { ...c, code: ev.target.value.toUpperCase() } : c))} />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => (
-                  <tr key={row.key}>
-                    <th>
-                      <span className="muted small">{preview(row, rows[index + 1])}</span>
-                      <div className="cta-row">
-                        <input aria-label="Từ" value={row.min} inputMode="decimal" style={{ width: "4.5rem" }} onChange={(ev) => setRows((prev) => prev.map((r) => r.key === row.key ? { ...r, min: ev.target.value } : r))} />
-                        <input aria-label="Đến" value={row.max} inputMode="decimal" placeholder="mở" style={{ width: "4.5rem" }} onChange={(ev) => setRows((prev) => prev.map((r) => r.key === row.key ? { ...r, max: ev.target.value } : r))} />
-                        <button className="btn btn-ghost" type="button" disabled={rows.length <= 1} onClick={() => setRows((prev) => prev.filter((r) => r.key !== row.key))}>Xóa</button>
-                      </div>
-                    </th>
-                    {columns.map((col) => (
-                      <td key={col.key}>
-                        <input aria-label={`${col.name} ${preview(row, rows[index + 1])}`} inputMode="decimal" value={cells[row.key]?.[col.key] ?? ""} onChange={(ev) => setCell(row.key, col.key, ev.target.value)} style={{ width: "7rem" }} />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="cta-row">
-            <button className="btn btn-ghost" type="button" onClick={() => setRows((prev) => [...prev, { key: uid(), min: "", max: "" }])}>Thêm khung</button>
-            <button className="btn btn-ghost" type="button" onClick={() => setColumns((prev) => [...prev, { key: uid(), name: "Loại hàng", code: `COL${prev.length + 1}` }])}>Thêm loại hàng</button>
+            <button className="btn btn-ghost" type="button" onClick={() => setGroups((prev) => [...prev, emptyGroup(preset)])}>Thêm nhóm</button>
           </div>
           {!editing ? (
             <div className="form-grid">

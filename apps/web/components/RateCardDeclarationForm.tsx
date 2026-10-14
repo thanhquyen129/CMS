@@ -110,9 +110,9 @@ function dateInput(iso: string | null | undefined): string {
   return local.toISOString().slice(0, 10);
 }
 
-function emptyRule(): RuleRow {
+function emptyRule(key?: string): RuleRow {
   return {
-    key: uid(),
+    key: key ?? uid(),
     code: "",
     name: "",
     calcMethod: "fixed",
@@ -137,7 +137,7 @@ function emptyRule(): RuleRow {
 
 function rulesFromSaved(rules: PricingRule[]): RuleRow[] {
   const basic = rules.filter((r) => !isWeightBreakMethod(r.calcMethod));
-  if (basic.length === 0) return [emptyRule()];
+  if (basic.length === 0) return [emptyRule("rule-1")];
   return basic.map((r) => ({
     key: r.id,
     code: r.code,
@@ -162,53 +162,58 @@ function rulesFromSaved(rules: PricingRule[]): RuleRow[] {
   }));
 }
 
-function emptyGroup(preset: "air" | "sea", routeId = "", appliesAnyRoute = false): MatrixGroup {
+function emptyGroup(preset: "air" | "sea", routeId = "", appliesAnyRoute = false, key?: string): MatrixGroup {
+  const id = key ?? uid();
   return {
-    key: uid(),
+    key: id,
     code: "",
     routeId,
     appliesAnyRoute,
     carrierPartyId: "",
     carrierName: "",
     transportMode: preset,
-    columns: preset === "sea" ? seaCols() : airCols(),
-    rows: preset === "sea" ? seaBands() : airBands(),
+    columns: preset === "sea" ? seaCols(id) : airCols(id),
+    rows: preset === "sea" ? seaBands(id) : airBands(id),
     cells: {},
   };
 }
 
-const airBands = (): Band[] =>
-  [
-    ["0", "6"],
-    ["6", "11"],
-    ["11", "21"],
-    ["21", "101"],
-    ["101", "301"],
-    ["301", "501"],
-    ["501", ""],
-  ].map(([min, max]) => ({ key: uid(), min, max }));
+function indexed<T extends { key: string }>(prefix: string, kind: string, rows: Omit<T, "key">[]): T[] {
+  return rows.map((row, index) => ({ ...row, key: `${prefix}-${kind}${index + 1}` }) as T);
+}
 
-const airCols = (): Col[] =>
-  [
-    ["Hàng thường", "GENERAL"],
-    ["Thực phẩm khô", "DRY_FOOD"],
-    ["Mỹ phẩm", "COSMETICS"],
-    ["Chuyển nhanh", "EXPRESS"],
-  ].map(([name, code]) => ({ key: uid(), name, code }));
+const airBands = (prefix: string): Band[] =>
+  indexed<Band>(prefix, "b", [
+    { min: "0", max: "6" },
+    { min: "6", max: "11" },
+    { min: "11", max: "21" },
+    { min: "21", max: "101" },
+    { min: "101", max: "301" },
+    { min: "301", max: "501" },
+    { min: "501", max: "" },
+  ]);
 
-const seaBands = (): Band[] =>
-  [
-    ["0", "4"],
-    ["4", "7"],
-    ["7", "10.001"],
-    ["10.001", ""],
-  ].map(([min, max]) => ({ key: uid(), min, max }));
+const airCols = (prefix: string): Col[] =>
+  indexed<Col>(prefix, "c", [
+    { name: "Hàng thường", code: "GENERAL" },
+    { name: "Thực phẩm khô", code: "DRY_FOOD" },
+    { name: "Mỹ phẩm", code: "COSMETICS" },
+    { name: "Chuyển nhanh", code: "EXPRESS" },
+  ]);
 
-const seaCols = (): Col[] =>
-  [
-    ["Hàng thường", "GENERAL"],
-    ["Mỹ phẩm, thực phẩm", "COSMETICS_FOOD"],
-  ].map(([name, code]) => ({ key: uid(), name, code }));
+const seaBands = (prefix: string): Band[] =>
+  indexed<Band>(prefix, "b", [
+    { min: "0", max: "4" },
+    { min: "4", max: "7" },
+    { min: "7", max: "10.001" },
+    { min: "10.001", max: "" },
+  ]);
+
+const seaCols = (prefix: string): Col[] =>
+  indexed<Col>(prefix, "c", [
+    { name: "Hàng thường", code: "GENERAL" },
+    { name: "Mỹ phẩm, thực phẩm", code: "COSMETICS_FOOD" },
+  ]);
 
 function preview(row: Band, next: Band | undefined): string {
   const min = parseNum(row.min);
@@ -262,7 +267,7 @@ function matrixFromRules(rules: PricingRule[]): { columns: Col[]; rows: Band[]; 
 
 function groupsFromRules(rules: PricingRule[], preset: "air" | "sea", fallbackRouteId: string): MatrixGroup[] {
   const matrix = rules.filter((r) => isWeightBreakMethod(r.calcMethod) && (r.breaks?.length ?? 0) > 0);
-  if (matrix.length === 0) return [emptyGroup(preset, fallbackRouteId)];
+  if (matrix.length === 0) return [emptyGroup(preset, fallbackRouteId, false, "group-1")];
   const order: string[] = [];
   const byCode = new Map<string, PricingRule[]>();
   for (const rule of matrix) {
@@ -285,8 +290,8 @@ function groupsFromRules(rules: PricingRule[], preset: "air" | "sea", fallbackRo
       carrierPartyId: head.carrierPartyId ?? "",
       carrierName: head.carrierName ?? "",
       transportMode: head.transportMode || preset,
-      columns: shaped?.columns ?? airCols(),
-      rows: shaped?.rows ?? airBands(),
+      columns: shaped?.columns ?? airCols(head.id),
+      rows: shaped?.rows ?? airBands(head.id),
       cells: shaped?.cells ?? {},
     };
   });
@@ -380,7 +385,7 @@ export function RateCardDeclarationForm(props: Props) {
     if (hasPrice && !window.confirm("Đổi khung sẽ xóa đơn giá đã nhập trên ma trận. Tiếp tục?")) return;
     setPreset(next);
     setGroups((prev) => prev.map((item) => item.key === groupKey
-      ? { ...item, transportMode: next, columns: next === "sea" ? seaCols() : airCols(), rows: next === "sea" ? seaBands() : airBands(), cells: {} }
+      ? { ...item, transportMode: next, columns: next === "sea" ? seaCols(groupKey) : airCols(groupKey), rows: next === "sea" ? seaBands(groupKey) : airBands(groupKey), cells: {} }
       : item));
     setMinQty(next === "sea" ? "1" : "");
   }
@@ -729,21 +734,21 @@ export function RateCardDeclarationForm(props: Props) {
           <h2 className="section-title">3. Bảng giá cơ bản</h2>
           <p className="note">Quy tắc dùng tiền tệ {currency}. Tuyến và hãng vận chuyển khai báo trên từng quy tắc. Nấc trọng lượng là điều kiện chọn, không phải bậc lũy tiến.</p>
           <div className="table-wrap">
-            <table className="data-table">
+            <table className="data-table rate-rules">
               <thead>
                 <tr>
-                  <th scope="col">#</th>
-                  <th scope="col">Mã quy tắc</th>
-                  <th scope="col">Tên quy tắc</th>
-                  <th scope="col">Tuyến</th>
-                  <th scope="col">Hãng vận chuyển</th>
-                  <th scope="col">Cách tính</th>
-                  <th scope="col">Số tiền / Đơn giá</th>
-                  <th scope="col">Loại dịch vụ</th>
-                  <th scope="col">Loại hàng</th>
-                  <th scope="col">Phương thức</th>
-                  <th scope="col">Nấc trọng lượng</th>
-                  <th scope="col">Thao tác</th>
+                  <th className="col-idx" scope="col">#</th>
+                  <th className="col-code" scope="col">Mã quy tắc</th>
+                  <th className="col-name" scope="col">Tên quy tắc</th>
+                  <th className="col-route" scope="col">Tuyến</th>
+                  <th className="col-carrier" scope="col">Hãng vận chuyển</th>
+                  <th className="col-weight" scope="col">Nấc trọng lượng</th>
+                  <th className="col-method" scope="col">Cách tính</th>
+                  <th className="col-amount" scope="col">Số tiền / Đơn giá</th>
+                  <th className="col-service" scope="col">Loại dịch vụ</th>
+                  <th className="col-commodity" scope="col">Loại hàng</th>
+                  <th className="col-mode" scope="col">Phương thức</th>
+                  <th className="col-actions" scope="col">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -752,7 +757,7 @@ export function RateCardDeclarationForm(props: Props) {
                     <td>{index + 1}</td>
                     <td><input aria-label={`Mã quy tắc ${index + 1}`} value={rule.code} maxLength={64} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, code: ev.target.value } : r))} /></td>
                     <td><input aria-label={`Tên quy tắc ${index + 1}`} value={rule.name} maxLength={256} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, name: ev.target.value } : r))} /></td>
-                    <td>
+                    <td className="col-route">
                       <label htmlFor={`route-search-${rule.key}`}>Tuyến {index + 1}</label>
                       <input id={`route-search-${rule.key}`} value={routeQuery} onChange={(ev) => setRouteQuery(ev.target.value)} placeholder="Tìm mã tuyến, điểm đi, điểm đến" autoComplete="off" />
                       <select
@@ -776,7 +781,7 @@ export function RateCardDeclarationForm(props: Props) {
                         <p className="alert alert-warning" role="status">Danh mục tuyến trống hoặc không có tuyến đang hoạt động. Không tạo tuyến giả.</p>
                       ) : null}
                     </td>
-                    <td>
+                    <td className="col-carrier">
                       <PartyTypeahead
                         name={`carrier-${rule.key}`}
                         label={`Hãng vận chuyển ${index + 1}`}
@@ -787,18 +792,31 @@ export function RateCardDeclarationForm(props: Props) {
                         onSelect={(item) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, carrierPartyId: item?.id ?? "", carrierName: item?.name ?? "" } : r))}
                       />
                     </td>
-                    <td>
+                    <td className="col-weight">
+                      <div className="muted small">Loại trọng lượng</div>
+                      <select aria-label={`Loại trọng lượng ${index + 1}`} value={rule.weightBasis} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightBasis: ev.target.value } : r))}>
+                        {weightBasisOptions.map((item) => <option key={item.value || "none"} value={item.value}>{item.label}</option>)}
+                      </select>
+                      <div className="muted small">Trọng lượng từ (kg)</div>
+                      <input aria-label={`Trọng lượng từ ${index + 1}`} placeholder="min" inputMode="decimal" value={rule.weightMin} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMin: ev.target.value } : r))} />
+                      <div className="muted small">Trọng lượng đến (kg)</div>
+                      <input aria-label={`Trọng lượng đến ${index + 1}`} placeholder="max, bỏ trống nếu mở" inputMode="decimal" value={rule.weightMax} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMax: ev.target.value } : r))} />
+                    </td>
+                    <td className="col-method">
                       <select aria-label={`Cách tính ${index + 1}`} value={rule.calcMethod} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, calcMethod: ev.target.value } : r))}>
                         {basicCalcMethods.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                       </select>
                       {rule.calcMethod === "unit_rate" ? (
-                        <select aria-label={`Đơn vị áp dụng ${index + 1}`} value={rule.applicability} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, applicability: ev.target.value } : r))}>
-                          <option value="">Theo số lượng cước</option>
-                          <option value="per_gross_kg">Theo kg thực</option>
-                        </select>
+                        <>
+                          <div className="muted small">Đơn vị tính</div>
+                          <select aria-label={`Đơn vị áp dụng ${index + 1}`} value={rule.applicability} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, applicability: ev.target.value } : r))}>
+                            <option value="">Theo số lượng cước</option>
+                            <option value="per_gross_kg">Theo kg thực</option>
+                          </select>
+                        </>
                       ) : null}
                     </td>
-                    <td>
+                    <td className="col-amount">
                       <input
                         aria-label={`${amountFieldLabel(rule.calcMethod, rule.applicability)} ${index + 1}`}
                         placeholder={amountFieldLabel(rule.calcMethod, rule.applicability)}
@@ -816,7 +834,7 @@ export function RateCardDeclarationForm(props: Props) {
                     </td>
                     <td><input aria-label={`Loại dịch vụ ${index + 1}`} value={rule.serviceTypeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, serviceTypeCode: ev.target.value } : r))} /></td>
                     <td><input aria-label={`Mã loại hàng ${index + 1}`} value={rule.commodityCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, commodityCode: ev.target.value } : r))} /></td>
-                    <td>
+                    <td className="col-mode">
                       <select aria-label={`Phương thức ${index + 1}`} value={rule.transportMode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, transportMode: ev.target.value } : r))}>
                         <option value="">Mọi phương thức</option>
                         {modeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -827,13 +845,6 @@ export function RateCardDeclarationForm(props: Props) {
                         <option value="customer">Giá bán</option>
                       </select>
                       <input aria-label={`Khoản mục ${index + 1}`} placeholder="Khoản mục, ví dụ cước chính" value={rule.chargeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, chargeCode: ev.target.value } : r))} />
-                    </td>
-                    <td>
-                      <select aria-label={`Loại trọng lượng ${index + 1}`} value={rule.weightBasis} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightBasis: ev.target.value } : r))}>
-                        {weightBasisOptions.map((item) => <option key={item.value || "none"} value={item.value}>{item.label}</option>)}
-                      </select>
-                      <input aria-label={`Trọng lượng từ ${index + 1}`} placeholder="Từ (kg)" inputMode="decimal" value={rule.weightMin} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMin: ev.target.value } : r))} />
-                      <input aria-label={`Trọng lượng đến ${index + 1}`} placeholder="Đến, bỏ trống nếu không giới hạn" inputMode="decimal" value={rule.weightMax} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMax: ev.target.value } : r))} />
                     </td>
                     <td>
                       <button className="btn btn-ghost" type="button" onClick={() => setRules((prev) => prev.length === 1 ? [emptyRule()] : prev.filter((r) => r.key !== rule.key))}>Xóa</button>

@@ -5407,9 +5407,52 @@ html[data-layout="horizontal"] .login-page {
 .rate-declaration .data-table tbody tr:hover th { background: #e7eef8; }
 .rate-declaration .alert-error { border: 1px solid #8f1d32; }
 .rate-declaration .alert-warning { border: 1px solid #8a5a00; }
-@media (max-width: 1600px) {
-  .rate-declaration .table-wrap { overflow-x: auto; }
-  .rate-declaration .data-table { min-width: 68rem; }
+.rate-declaration > .cta-row {
+  position: static;
+  bottom: auto;
+  z-index: auto;
+  margin-top: 0.25rem !important;
+  background: #fff;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.rate-declaration .table-wrap { overflow-x: auto; }
+.rate-declaration .rate-rules {
+  width: max-content;
+  min-width: 100%;
+}
+.rate-declaration .rate-rules th,
+.rate-declaration .rate-rules td { vertical-align: top; }
+.rate-declaration .rate-rules .col-idx { min-width: 2.75rem; }
+.rate-declaration .rate-rules .col-code { min-width: 9rem; }
+.rate-declaration .rate-rules .col-name { min-width: 11rem; }
+.rate-declaration .rate-rules .col-route { min-width: 15rem; }
+.rate-declaration .rate-rules .col-carrier { min-width: 14rem; }
+.rate-declaration .rate-rules .col-method { min-width: 11rem; }
+.rate-declaration .rate-rules .col-amount { min-width: 12.5rem; }
+.rate-declaration .rate-rules .col-weight { min-width: 10rem; }
+.rate-declaration .rate-rules .col-route,
+.rate-declaration .rate-rules .col-carrier,
+.rate-declaration .rate-rules .col-weight,
+.rate-declaration .rate-rules .col-method,
+.rate-declaration .rate-rules .col-amount {
+  padding-left: 0.45rem;
+  padding-right: 0.45rem;
+}
+.rate-declaration .rate-rules .col-actions { min-width: 6.5rem; }
+.rate-declaration .rate-rules input,
+.rate-declaration .rate-rules select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.rate-declaration .rate-rules .col-amount .muted {
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
 }
 .opref-editor { display: flex; flex-direction: column; gap: 0.75rem; }
 .opref-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }

@@ -1,3 +1,7 @@
+## 2026-10-14 — Form bảng giá: thanh nút không che nội dung, hết lỗi hydration
+- Thanh Hủy / Lưu nháp của form khai báo giá nằm cuối form, không còn dính đáy màn hình. Cột quy tắc có bề rộng tối thiểu; khóa dòng quy tắc ổn định giữa server và client nên hết cảnh báo hydration.
+- Files: `apps/web/app/globals.css`, `apps/web/components/RateCardDeclarationForm.tsx`, `apps/web/app/favicon.ico`.
+
 ## 2026-10-14 — AC còn lại: test API, migration Postgres, vết rating
 - Shipment nhận `carrierPartyId` đúng thuê bao để rating chặng lọc hãng. ContextJson ghi `route_id`, `carrier_party_id`, `weight_basis`, `applied_weight`, `formula_type`, `matched_rule_id`. Quy tắc thiếu tuyến nhận tuyến header đã lưu, kể cả khi tuyến đó vừa ngừng hoạt động.
 - Migration `20261014100816_RateRuleScopeWeightBand` thêm một dòng `card_preserved` mỗi bảng giá, bỏ `gen_random_bytes`, và sửa UPDATE gắn `route_id` theo mã tuyến. Không sửa rating.

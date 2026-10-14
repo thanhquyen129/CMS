@@ -33,7 +33,8 @@ public sealed record UpsertShipmentCommand(
     string? Description = null,
     OperationalContextDocument? Context = null,
     bool ApplyContext = false,
-    string? EntryChannel = null) : IRequest<Guid>;
+    string? EntryChannel = null,
+    Guid? CarrierPartyId = null) : IRequest<Guid>;
 
 public sealed class UpsertShipmentCommandValidator : AbstractValidator<UpsertShipmentCommand>
 {
@@ -138,6 +139,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
                 IsActive = request.IsActive
             };
             ApplyContext(shipment, request);
+            await ApplyCarrierAsync(shipment, request.CarrierPartyId, tenantId, cancellationToken);
             _db.Shipments.Add(shipment);
             AuditQuickCreate(shipment.Id, shipmentNo, externalId, request);
             if (request.ApplyContext)
@@ -174,6 +176,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
         ApplyContext(existing, request);
+        await ApplyCarrierAsync(existing, request.CarrierPartyId, tenantId, cancellationToken);
         if (request.ApplyContext)
         {
             await _cargo.ApplyAsync(OperationalObjectTypes.Shipment, existing.Id, request.Context, sourceSystem, request.OriginCode is not null, cancellationToken);
@@ -208,6 +211,28 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
                 destinationCode = request.DestinationCode
             }),
             reason: "quick_create_modal");
+    }
+
+    private async Task ApplyCarrierAsync(
+        Shipment shipment,
+        Guid? carrierPartyId,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        if (carrierPartyId is not Guid carrierId)
+        {
+            return;
+        }
+
+        var exists = await _db.BusinessParties.AnyAsync(
+            p => p.Id == carrierId && p.TenantId == tenantId,
+            cancellationToken);
+        if (!exists)
+        {
+            throw new ConflictAppException("Hãng vận chuyển không thuộc thuê bao.", "invalid_carrier");
+        }
+
+        shipment.CarrierPartyId = carrierId;
     }
 
     private static void ApplyContext(Shipment shipment, UpsertShipmentCommand request)

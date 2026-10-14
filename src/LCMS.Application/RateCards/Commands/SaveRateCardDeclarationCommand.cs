@@ -369,7 +369,10 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 throw new ConflictAppException("Loại trọng lượng phải là trọng lượng thực hoặc trọng lượng tính cước.", "invalid_weight_band");
             }
 
-            if (rule.RouteId is null && !rule.AppliesAnyRoute && string.IsNullOrWhiteSpace(rule.RouteCode))
+            if (rule.RouteId is null
+                && !rule.AppliesAnyRoute
+                && string.IsNullOrWhiteSpace(rule.RouteCode)
+                && card.RouteId is null)
             {
                 throw new ConflictAppException("Chọn tuyến từ danh mục hoặc Tất cả tuyến. Không suy ra mọi tuyến từ ô trống.", "invalid_route");
             }
@@ -433,7 +436,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 SortOrder = sort,
                 IsActive = true
             };
-            await ApplyRuleRouteAsync(entity, rule, tenantId, cancellationToken);
+            await ApplyRuleRouteAsync(entity, rule, card, tenantId, cancellationToken);
             staged.Add(entity);
             sort += 10;
         }
@@ -497,6 +500,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
     private async Task ApplyRuleRouteAsync(
         PricingRule entity,
         BasicRateRuleInput rule,
+        RateCard card,
         Guid tenantId,
         CancellationToken cancellationToken)
     {
@@ -508,12 +512,14 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             return;
         }
 
-        if (rule.RouteId is Guid routeId)
+        var routeId = rule.RouteId
+            ?? (string.IsNullOrWhiteSpace(rule.RouteCode) ? card.RouteId : null);
+        if (routeId is Guid)
         {
             var route = await _db.Routes.FirstOrDefaultAsync(
                 r => r.Id == routeId && r.TenantId == tenantId,
                 cancellationToken);
-            var block = RateDeclarationPolicy.RouteBlockReason(route is not null, route?.IsActive == true, false);
+            var block = RateDeclarationPolicy.RouteBlockReason(route is not null, route?.IsActive == true, card.RouteId == routeId);
             if (block is not null)
             {
                 throw new ConflictAppException(block, "invalid_route");

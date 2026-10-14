@@ -117,8 +117,10 @@ public static class OperationalReferenceEndpoints
                         || body.EtaAt is not null
                         || body.CustomerReference is not null
                         || body.Description is not null
-                        || body.Context is not null,
-                    EntryChannel: body.EntryChannel),
+                        || body.Context is not null
+                    || body.CarrierPartyId is not null,
+                    EntryChannel: body.EntryChannel,
+                    CarrierPartyId: body.CarrierPartyId),
                 ct);
             return Results.Ok(new { id });
         });
@@ -386,7 +388,8 @@ public sealed record UpsertShipmentRequest(
     string? Description = null,
     OperationalContextDocument? Context = null,
     bool ApplyContext = false,
-    string? EntryChannel = null);
+    string? EntryChannel = null,
+    Guid? CarrierPartyId = null);
 
 public sealed record UpsertTransportLegRequest(
     string LegNo,

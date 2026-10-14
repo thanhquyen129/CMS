@@ -1,3 +1,8 @@
+## 2026-10-14 — AC còn lại: test API, migration Postgres, vết rating
+- Shipment nhận `carrierPartyId` đúng thuê bao để rating chặng lọc hãng. ContextJson ghi `route_id`, `carrier_party_id`, `weight_basis`, `applied_weight`, `formula_type`, `matched_rule_id`. Quy tắc thiếu tuyến nhận tuyến header đã lưu, kể cả khi tuyến đó vừa ngừng hoạt động.
+- Migration `20261014100816_RateRuleScopeWeightBand` thêm một dòng `card_preserved` mỗi bảng giá, bỏ `gen_random_bytes`, và sửa UPDATE gắn `route_id` theo mã tuyến. Không sửa rating.
+- Files: `UpsertShipmentCommand.cs`, `CreateRatingCommand.cs`, `SaveRateCardDeclarationCommand.cs`, `20261014100816_RateRuleScopeWeightBand.cs`, `RateCardRemainingAcceptanceTests.cs`, `RateScopeMigrationPostgresTests.cs`.
+
 ## 2026-10-14 — Bảng giá đa tuyến, nấc [min, max), tương phản form
 - Tuyến và hãng chuyển xuống quy tắc / nhóm ma trận. Tiền tệ chỉ ở header. Nấc trọng lượng nửa mở; trọng lượng ngoài nấc không lấy nấc gần nhất. Publish chặn RATE_CONFLICT cùng khoản mục. Migration `20261014100816_RateRuleScopeWeightBand` copy route/carrier header xuống rule và ghi `rate_scope_migration_logs`, không sửa rating history.
 - Files: PricingRule, WeightBand, RatingEngine, RatingReadiness, SaveRateCardDeclarationCommand, ComposeTariffCommand, RateCardDeclarationForm, globals.css.

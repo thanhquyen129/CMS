@@ -482,6 +482,12 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             linkedBillCount = ctx.LinkedBillCount,
             pricingRuleId = rating.PricingRuleId,
             pricingRuleIds = selected.Select(r => r.Id).ToArray(),
+            route_id = selected[0].RouteId,
+            carrier_party_id = selected[0].CarrierPartyId,
+            weight_basis = selected[0].WeightBasis,
+            applied_weight = quantity,
+            formula_type = selected[0].CalcMethod,
+            matched_rule_id = rating.PricingRuleId,
             rules = selected.Select(r => new
             {
                 r.Code,
@@ -494,7 +500,13 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                 r.WeightMin,
                 r.WeightMax,
                 r.CalcMethod,
-                r.ChargeCode
+                r.ChargeCode,
+                route_id = r.RouteId,
+                carrier_party_id = r.CarrierPartyId,
+                weight_basis = r.WeightBasis,
+                applied_weight = quantity,
+                formula_type = r.CalcMethod,
+                matched_rule_id = r.Id
             }).ToArray(),
             surcharges = surchargeResult.Trace,
             excludedLegacySurcharges = ctx.ExcludedLegacySurchargeCodes

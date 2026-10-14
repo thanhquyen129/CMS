@@ -105,7 +105,7 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     (id, tenant_id, rate_card_id, pricing_rule_id, action, detail, row_version, created_at)
                 SELECT gen_random_uuid(), c.tenant_id, c.id, r.id, 'copy_header_route',
                        'Copied header route onto the rule. Rating snapshots were not changed.',
-                       gen_random_bytes(16), now()
+                       decode(md5(random()::text || clock_timestamp()::text), 'hex'), now()
                 FROM pricing_rules r
                 JOIN rate_versions v ON v.id = r.rate_version_id
                 JOIN rate_cards c ON c.id = v.rate_card_id
@@ -132,7 +132,7 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     (id, tenant_id, rate_card_id, pricing_rule_id, action, detail, row_version, created_at)
                 SELECT gen_random_uuid(), c.tenant_id, c.id, r.id, 'copy_header_carrier',
                        'Copied header carrier name onto the rule. Vendor was not changed.',
-                       gen_random_bytes(16), now()
+                       decode(md5(random()::text || clock_timestamp()::text), 'hex'), now()
                 FROM pricing_rules r
                 JOIN rate_versions v ON v.id = r.rate_version_id
                 JOIN rate_cards c ON c.id = v.rate_card_id
@@ -156,7 +156,7 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     (id, tenant_id, rate_card_id, pricing_rule_id, action, detail, row_version, created_at)
                 SELECT gen_random_uuid(), c.tenant_id, c.id, r.id, 'mark_any_route',
                        'Legacy empty route kept as explicit every-route. Meaning was not deleted.',
-                       gen_random_bytes(16), now()
+                       decode(md5(random()::text || clock_timestamp()::text), 'hex'), now()
                 FROM pricing_rules r
                 JOIN rate_versions v ON v.id = r.rate_version_id
                 JOIN rate_cards c ON c.id = v.rate_card_id
@@ -182,7 +182,7 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     (id, tenant_id, rate_card_id, pricing_rule_id, action, detail, row_version, created_at)
                 SELECT gen_random_uuid(), c.tenant_id, c.id, r.id, 'bind_route_code',
                        'Bound an existing rule route code to the canonical route id.',
-                       gen_random_bytes(16), now()
+                       decode(md5(random()::text || clock_timestamp()::text), 'hex'), now()
                 FROM pricing_rules r
                 JOIN rate_versions v ON v.id = r.rate_version_id
                 JOIN rate_cards c ON c.id = v.rate_card_id
@@ -196,16 +196,24 @@ namespace LCMS.Infrastructure.Persistence.Migrations
 
                 UPDATE pricing_rules AS r
                 SET route_id = rt.id
-                FROM rate_versions v
-                JOIN rate_cards c ON c.id = v.rate_card_id
-                JOIN routes rt ON rt.tenant_id = c.tenant_id
-                    AND rt.deleted_at IS NULL
-                    AND upper(rt.code) = upper(r.route_code)
+                FROM rate_versions v, rate_cards c, routes rt
                 WHERE r.rate_version_id = v.id
+                  AND c.id = v.rate_card_id
+                  AND rt.tenant_id = c.tenant_id
+                  AND rt.deleted_at IS NULL
+                  AND upper(rt.code) = upper(r.route_code)
                   AND r.deleted_at IS NULL
                   AND r.route_id IS NULL
                   AND r.route_code IS NOT NULL
                   AND btrim(r.route_code) <> '';
+
+                INSERT INTO rate_scope_migration_logs
+                    (id, tenant_id, rate_card_id, pricing_rule_id, action, detail, row_version, created_at)
+                SELECT gen_random_uuid(), c.tenant_id, c.id, NULL, 'card_preserved',
+                       'Original rate card retained. Ratings were not changed.',
+                       decode(md5(random()::text || clock_timestamp()::text), 'hex'), now()
+                FROM rate_cards c
+                WHERE c.deleted_at IS NULL;
                 """);
         }
 

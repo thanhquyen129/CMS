@@ -1,6 +1,9 @@
+using LCMS.Application.Common.Exceptions;
 using LCMS.Application.PricingRules.Commands;
+using LCMS.Application.RateCards;
 using LCMS.Application.RateCards.Commands;
 using LCMS.Application.RateCards.Queries;
+using LCMS.Domain.Entities;
 using LCMS.Application.RateVersions.Commands;
 using LCMS.Application.RateVersions.Queries;
 using LCMS.Application.Ratings;
@@ -17,6 +20,12 @@ public static class RatePricingEndpoints
         var cards = app.MapGroup("/api/rate-cards").WithTags("RateCards");
         cards.MapPost("/", async (CreateRateCardRequest body, ISender sender, CancellationToken ct) =>
         {
+            if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands))
+            {
+                var saved = await sender.Send(MapDeclaration(null, body), ct);
+                return Results.Created($"/api/rate-cards/{saved.RateCardId}", new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId });
+            }
+
             var id = await sender.Send(
                 new CreateRateCardCommand(
                     body.Code,
@@ -29,7 +38,9 @@ public static class RatePricingEndpoints
                     body.CarrierName,
                     body.SupplierPartyId,
                     body.CustomerPartyId,
-                    body.CustomerGroupCode),
+                    body.CustomerGroupCode,
+                    body.RouteId,
+                    body.DeclarationMode),
                 ct);
             return Results.Created($"/api/rate-cards/{id}", new { id });
         });
@@ -56,7 +67,9 @@ public static class RatePricingEndpoints
                     body.SupplierPartyId,
                     body.CustomerPartyId,
                     body.CustomerGroupCode,
-                    body.VatRate),
+                    body.VatRate,
+                    body.RouteId,
+                    body.ReplaceExistingMatrix),
                 ct);
             return Results.Created($"/api/rate-cards/{result.RateCardId}", result);
         });
@@ -80,6 +93,8 @@ public static class RatePricingEndpoints
 
             return Results.Ok(list);
         });
+        cards.MapGet("/mixed-declaration", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListMixedDeclarationRateCardsQuery(), ct)));
         cards.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             var card = await sender.Send(new GetRateCardByIdQuery(id), ct);
@@ -91,6 +106,12 @@ public static class RatePricingEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
+            if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands))
+            {
+                var saved = await sender.Send(MapDeclaration(id, body), ct);
+                return Results.Ok(new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId });
+            }
+
             await sender.Send(
                 new UpdateRateCardCommand(
                     id,
@@ -101,7 +122,8 @@ public static class RatePricingEndpoints
                     body.IsActive,
                     body.TransportMode,
                     body.RouteCode,
-                    body.CarrierName),
+                    body.CarrierName,
+                    body.RouteId),
                 ct);
             return Results.NoContent();
         });
@@ -385,6 +407,72 @@ public static class RatePricingEndpoints
 
         return app;
     }
+
+    private static bool IsDeclaration(
+        string? mode,
+        IReadOnlyList<BasicRateRuleInput>? rules,
+        IReadOnlyList<ComposeTariffColumn>? columns,
+        IReadOnlyList<ComposeTariffBand>? bands)
+    {
+        var hasRules = rules is { Count: > 0 };
+        var hasMatrix = columns is { Count: > 0 } || bands is { Count: > 0 };
+        RateCardCatalog.RejectDual(hasRules, hasMatrix);
+        return mode is not null || hasRules || hasMatrix;
+    }
+
+    private static SaveRateCardDeclarationCommand MapDeclaration(Guid? rateCardId, CreateRateCardRequest body) =>
+        new(
+            rateCardId,
+            body.Code,
+            body.Name,
+            body.PartyType,
+            body.CurrencyCode,
+            body.Description,
+            body.TransportMode,
+            body.RouteId,
+            body.CarrierName,
+            body.EffectiveFrom,
+            body.Note,
+            body.VatRate,
+            body.SupplierPartyId,
+            body.CustomerPartyId,
+            body.CustomerGroupCode,
+            body.DeclarationMode ?? RateDeclarationModes.Basic,
+            body.ConfirmModeChange,
+            body.Rules ?? [],
+            body.Columns ?? [],
+            body.Bands ?? [],
+            body.MinimumQuantity,
+            body.Delivery,
+            body.Remote,
+            body.RateVersionId);
+
+    private static SaveRateCardDeclarationCommand MapDeclaration(Guid rateCardId, UpdateRateCardRequest body) =>
+        new(
+            rateCardId,
+            body.Code,
+            body.Name,
+            body.PartyType,
+            body.CurrencyCode,
+            body.Description,
+            body.TransportMode,
+            body.RouteId,
+            body.CarrierName,
+            body.EffectiveFrom,
+            body.Note,
+            body.VatRate,
+            body.SupplierPartyId,
+            body.CustomerPartyId,
+            body.CustomerGroupCode,
+            body.DeclarationMode ?? RateDeclarationModes.Basic,
+            body.ConfirmModeChange,
+            body.Rules ?? [],
+            body.Columns ?? [],
+            body.Bands ?? [],
+            body.MinimumQuantity,
+            body.Delivery,
+            body.Remote,
+            body.RateVersionId);
 }
 
 public sealed record ComposeTariffRequest(
@@ -407,7 +495,9 @@ public sealed record ComposeTariffRequest(
     Guid? SupplierPartyId = null,
     Guid? CustomerPartyId = null,
     string? CustomerGroupCode = null,
-    decimal? VatRate = null);
+    decimal? VatRate = null,
+    Guid? RouteId = null,
+    bool ReplaceExistingMatrix = false);
 
 public sealed record CreateRateCardRequest(
     string Code,
@@ -420,17 +510,47 @@ public sealed record CreateRateCardRequest(
     string? CarrierName = null,
     Guid? SupplierPartyId = null,
     Guid? CustomerPartyId = null,
-    string? CustomerGroupCode = null);
+    string? CustomerGroupCode = null,
+    Guid? RouteId = null,
+    string? DeclarationMode = null,
+    bool ConfirmModeChange = false,
+    DateTimeOffset? EffectiveFrom = null,
+    string? Note = null,
+    decimal? VatRate = null,
+    decimal? MinimumQuantity = null,
+    IReadOnlyList<BasicRateRuleInput>? Rules = null,
+    IReadOnlyList<ComposeTariffColumn>? Columns = null,
+    IReadOnlyList<ComposeTariffBand>? Bands = null,
+    ComposeDeliveryFee? Delivery = null,
+    ComposeRemoteFee? Remote = null,
+    Guid? RateVersionId = null);
 
 public sealed record UpdateRateCardRequest(
     string Name,
     string PartyType,
     string CurrencyCode,
     string? Description,
-    bool IsActive,
+    bool IsActive = true,
     string? TransportMode = null,
     string? RouteCode = null,
-    string? CarrierName = null);
+    string? CarrierName = null,
+    Guid? RouteId = null,
+    string? DeclarationMode = null,
+    bool ConfirmModeChange = false,
+    DateTimeOffset? EffectiveFrom = null,
+    string? Note = null,
+    decimal? VatRate = null,
+    decimal? MinimumQuantity = null,
+    IReadOnlyList<BasicRateRuleInput>? Rules = null,
+    IReadOnlyList<ComposeTariffColumn>? Columns = null,
+    IReadOnlyList<ComposeTariffBand>? Bands = null,
+    ComposeDeliveryFee? Delivery = null,
+    ComposeRemoteFee? Remote = null,
+    Guid? RateVersionId = null,
+    Guid? SupplierPartyId = null,
+    Guid? CustomerPartyId = null,
+    string? CustomerGroupCode = null,
+    string? Code = null);
 
 public sealed record CreateRateVersionRequest(
     DateTimeOffset? EffectiveFrom,

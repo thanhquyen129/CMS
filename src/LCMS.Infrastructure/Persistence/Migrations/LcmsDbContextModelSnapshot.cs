@@ -7463,6 +7463,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("customer_party_id");
 
+                    b.Property<string>("DeclarationMode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("declaration_mode");
+
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
@@ -7497,6 +7502,10 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("route_code");
 
+                    b.Property<Guid?>("RouteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("route_id");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -7526,6 +7535,9 @@ namespace LCMS.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_rate_cards");
+
+                    b.HasIndex("RouteId")
+                        .HasDatabaseName("ix_rate_cards_route_id");
 
                     b.HasIndex("TenantId", "Code")
                         .IsUnique()
@@ -11773,6 +11785,15 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_rate_breaks_pricing_rules_pricing_rule_id");
 
                     b.Navigation("PricingRule");
+                });
+
+            modelBuilder.Entity("LCMS.Domain.Entities.RateCard", b =>
+                {
+                    b.HasOne("LCMS.Domain.Entities.RouteMaster", null)
+                        .WithMany()
+                        .HasForeignKey("RouteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_rate_cards_routes_route_id");
                 });
 
             modelBuilder.Entity("LCMS.Domain.Entities.RateVersion", b =>

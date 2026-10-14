@@ -979,14 +979,21 @@ internal sealed class RateCardConfiguration : IEntityTypeConfiguration<RateCard>
         builder.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(1024);
         builder.Property(e => e.TransportMode).HasMaxLength(32);
+        builder.Property(e => e.RouteId).HasColumnType("uuid");
         builder.Property(e => e.RouteCode).HasMaxLength(64);
         builder.Property(e => e.CarrierName).HasMaxLength(256);
+        builder.Property(e => e.DeclarationMode).HasMaxLength(16);
         builder.Property(e => e.IsActive).IsRequired();
         builder.Property(e => e.SupplierPartyId).HasColumnType("uuid");
         builder.Property(e => e.CustomerPartyId).HasColumnType("uuid");
         builder.Property(e => e.CustomerGroupCode).HasMaxLength(64);
 
         builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
+        builder.HasIndex(e => e.RouteId);
+        builder.HasOne<RouteMaster>()
+            .WithMany()
+            .HasForeignKey(e => e.RouteId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.EconomicCharges;
 using LCMS.Application.Surcharges;
@@ -106,6 +107,28 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
         }
 
         EnsureDraft(version);
+
+        var card = await _db.RateCards.FirstOrDefaultAsync(c => c.Id == version.RateCardId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy bảng giá.");
+        if (RateDeclarationPolicy.IsMatrixMethod(request.CalcMethod)
+            || string.Equals(card.DeclarationMode, RateDeclarationModes.Advanced, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Bảng giá nâng cao khai báo bằng ma trận khung giá, không thêm quy tắc đơn.");
+        }
+
+        var hasMatrix = await _db.PricingRules.AnyAsync(
+            r => r.RateVersionId == version.Id && r.CalcMethod.ToLower() == PricingCalcMethods.WeightBreakPivot,
+            cancellationToken);
+        if (hasMatrix)
+        {
+            throw new ConflictAppException(RateDeclarationPolicy.MixedLegacyMessage);
+        }
+
+        await RateCardCatalog.EnsureCurrencyAsync(_db, request.CurrencyCode, null, cancellationToken);
+        if (string.IsNullOrWhiteSpace(card.DeclarationMode))
+        {
+            card.DeclarationMode = RateDeclarationModes.Basic;
+        }
 
         if (LegacyComponentClassifier.IsAdditionalCharge(request.Code, request.Name, request.ChargeCode))
         {
@@ -493,7 +516,8 @@ public sealed record PricingRuleDto(
     IReadOnlyList<ContainerRateDto> ContainerRates,
     string? ChargeCode = null,
     string? CommodityCode = null,
-    string? DestinationCode = null);
+    string? DestinationCode = null,
+    string? TransportMode = null);
 
 public sealed record ListPricingRulesQuery(Guid RateVersionId) : IRequest<IReadOnlyList<PricingRuleDto>>;
 
@@ -597,7 +621,8 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
                 containersByRule.TryGetValue(r.Id, out var cr) ? cr : [],
                 r.ChargeCode,
                 r.CommodityCode,
-                r.DestinationCode))
+                r.DestinationCode,
+                r.TransportMode))
             .ToList();
     }
 }

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -132,12 +133,18 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly IAuditWriter _audit;
 
-    public PublishRateVersionCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
+    public PublishRateVersionCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _audit = audit;
     }
 
     public async Task Handle(PublishRateVersionCommand request, CancellationToken cancellationToken)
@@ -164,11 +171,31 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
             throw new ConflictAppException("Phiên bản bảng giá phải có ít nhất một quy tắc tính giá trước khi phát hành.");
         }
 
-        var partyType = await _db.RateCards.AsNoTracking()
-            .Where(c => c.Id == version.RateCardId)
-            .Select(c => c.PartyType)
-            .FirstAsync(cancellationToken);
-        var publishCode = string.Equals(partyType, "customer", StringComparison.OrdinalIgnoreCase)
+        var card = await _db.RateCards.FirstOrDefaultAsync(c => c.Id == version.RateCardId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy bảng giá.");
+        var methods = await _db.PricingRules
+            .Where(r => r.RateVersionId == version.Id)
+            .Select(r => r.CalcMethod)
+            .ToListAsync(cancellationToken);
+        var hasMatrix = methods.Any(RateDeclarationPolicy.IsMatrixMethod);
+        var hasBasic = methods.Any(m => !RateDeclarationPolicy.IsMatrixMethod(m));
+        if (hasMatrix && hasBasic)
+        {
+            throw new ConflictAppException(RateDeclarationPolicy.MixedLegacyMessage);
+        }
+
+        var inferred = RateDeclarationPolicy.Infer(hasMatrix, hasBasic);
+        if (string.IsNullOrWhiteSpace(card.DeclarationMode))
+        {
+            card.DeclarationMode = inferred;
+        }
+        else if (inferred is not null
+            && !string.Equals(card.DeclarationMode, inferred, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Hình thức khai báo không khớp dữ liệu giá của phiên bản.");
+        }
+
+        var publishCode = string.Equals(card.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
             ? PermissionCodes.RateSellPublish
             : PermissionCodes.RateBuyPublish;
         await _permissions.EnsureAsync(publishCode, "Bạn không có quyền phát hành bảng giá này.", cancellationToken);
@@ -176,6 +203,13 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
         version.Status = RateVersionStatuses.Published;
         version.PublishedAt = DateTimeOffset.UtcNow;
         version.EffectiveFrom ??= version.PublishedAt;
+        _audit.Append(
+            AuditActions.RateCardPublish,
+            AuditObjectTypes.RateCard,
+            card.Id,
+            null,
+            card.DeclarationMode,
+            $"v{version.VersionNo}");
         await _db.SaveChangesAsync(cancellationToken);
     }
 }

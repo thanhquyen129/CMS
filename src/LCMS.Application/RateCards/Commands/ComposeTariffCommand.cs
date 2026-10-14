@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Ratings;
 using LCMS.Application.Surcharges;
@@ -45,7 +46,9 @@ public sealed record ComposeTariffCommand(
     Guid? SupplierPartyId = null,
     Guid? CustomerPartyId = null,
     string? CustomerGroupCode = null,
-    decimal? VatRate = null) : IRequest<ComposeTariffResult>;
+    decimal? VatRate = null,
+    Guid? RouteId = null,
+    bool ReplaceExistingMatrix = false) : IRequest<ComposeTariffResult>;
 
 public sealed class ComposeTariffCommandValidator : AbstractValidator<ComposeTariffCommand>
 {
@@ -86,12 +89,18 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenantContext;
     private readonly IPermissionService _permissions;
+    private readonly IAuditWriter _audit;
 
-    public ComposeTariffCommandHandler(ILcmsDbContext db, ITenantContext tenantContext, IPermissionService permissions)
+    public ComposeTariffCommandHandler(
+        ILcmsDbContext db,
+        ITenantContext tenantContext,
+        IPermissionService permissions,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
         _permissions = permissions;
+        _audit = audit;
     }
 
     public async Task<ComposeTariffResult> Handle(ComposeTariffCommand request, CancellationToken cancellationToken)
@@ -193,9 +202,35 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 Note = Clean(request.Note),
                 VatRate = request.VatRate
             };
+            await RateCardCatalog.EnsureCurrencyAsync(_db, card.CurrencyCode, null, cancellationToken);
+            await RateCardCatalog.ApplyRouteAsync(_db, card, request.RouteId, tenantId, cancellationToken);
+            card.DeclarationMode = RateDeclarationModes.Advanced;
             _db.RateCards.Add(card);
             _db.RateVersions.Add(version);
         }
+
+        if (string.Equals(card.DeclarationMode, RateDeclarationModes.Basic, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Bảng giá đang ở hình thức cơ bản. Không ghi ma trận khung giá vào cùng bảng giá.");
+        }
+
+        var existingRules = (await _db.PricingRules.Where(r => r.RateVersionId == version.Id).ToListAsync(cancellationToken))
+            .Where(r => r.DeletedAt == null)
+            .ToList();
+        if (existingRules.Any(r => !RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod)))
+        {
+            throw new ConflictAppException("Phiên bản đang có quy tắc giá cơ bản. Không thêm ma trận trên cùng phiên bản.");
+        }
+
+        if (request.ReplaceExistingMatrix)
+        {
+            await RateCardCatalog.RetireRulesAsync(
+                _db,
+                existingRules.Where(r => RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod)).ToList(),
+                cancellationToken);
+        }
+
+        card.DeclarationMode = RateDeclarationModes.Advanced;
 
         var mode = Clean(request.TransportMode) ?? card.TransportMode;
         var air = mode is not null && mode.Equals("air", StringComparison.OrdinalIgnoreCase);
@@ -312,6 +347,8 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 throw new ConflictAppException("Tiền tệ phụ phí vùng phải gồm 3 ký tự.");
             }
 
+            await RateCardCatalog.EnsureCurrencyAsync(_db, remoteCurrency, null, cancellationToken);
+
             var sort = 60;
             foreach (var destination in destinations)
             {
@@ -348,6 +385,13 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             }
         }
 
+        _audit.Append(
+            AuditActions.RateCardDeclaration,
+            AuditObjectTypes.RateCard,
+            card.Id,
+            null,
+            RateDeclarationModes.Advanced,
+            null);
         try
         {
             await _db.SaveChangesAsync(cancellationToken);

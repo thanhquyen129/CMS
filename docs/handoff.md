@@ -1,3 +1,7 @@
+## 2026-10-14 — LCMS-CR-20261014-01 bảng giá
+- Tuyến và tiền tệ lấy từ danh mục. Mỗi bảng giá một declaration_mode basic hoặc advanced. Tạo/sửa khai báo giá; chi tiết chỉ xem.
+- Files: RateCard, RateDeclaration, SaveRateCardDeclarationCommand, migration 20261014061119_RateCardDeclarationMode, RateCardDeclarationForm, rate-cards pages.
+
 # Handoff
 
 ## 2026-10-13 — Quyền tạo Shipment, audit tạo nhanh, chặn đổi chiều giá sai đối tác

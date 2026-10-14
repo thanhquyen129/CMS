@@ -14,6 +14,11 @@ export type RateCard = {
   customerPartyId?: string | null;
   customerGroupCode?: string | null;
   hasPublishedVersion?: boolean;
+  routeId?: string | null;
+  declarationMode?: string | null;
+  routeIsActive?: boolean | null;
+  routeOriginCode?: string | null;
+  routeDestinationCode?: string | null;
 };
 
 export type RateVersion = {
@@ -76,6 +81,7 @@ export type PricingRule = {
   maxAmount: number | null;
   sortOrder: number;
   chargeCode?: string | null;
+  transportMode?: string | null;
   commodityCode?: string | null;
   destinationCode?: string | null;
   components?: PricingRuleComponent[];
@@ -174,11 +180,65 @@ export function calcMethodLabel(method: string): string {
       return "Kẹp min/max";
     case "weight_break_pivot":
       return "Bậc trọng lượng";
+    case "weight_step":
+      return "Bậc bước trọng lượng";
     case "container_rate":
       return "Đơn giá container";
+    case "composite":
+      return "Giá thành phần";
     default:
-      return method;
+      return "Cách tính khác";
   }
+}
+
+export const basicCalcMethods = [
+  { value: "fixed", label: "Cố định" },
+  { value: "unit_rate", label: "Đơn giá × số lượng" },
+  { value: "percent_of_base", label: "% trên cơ sở" },
+  { value: "min_max_clamp", label: "Kẹp min/max" },
+  { value: "weight_step", label: "Bậc bước trọng lượng" },
+  { value: "container_rate", label: "Đơn giá container" },
+  { value: "composite", label: "Giá thành phần" },
+] as const;
+
+export function declarationModeLabel(mode: string | null | undefined): string {
+  switch (mode?.toLowerCase()) {
+    case "basic":
+      return "Bảng giá cơ bản";
+    case "advanced":
+      return "Bảng giá nâng cao";
+    default:
+      return "Chưa xác định hình thức";
+  }
+}
+
+export function amountFieldLabel(calcMethod: string, applicability?: string | null): string {
+  switch (calcMethod?.toLowerCase()) {
+    case "fixed":
+      return "Số tiền cố định";
+    case "percent_of_base":
+      return "Tỷ lệ (%)";
+    case "unit_rate":
+      return applicability === "per_gross_kg" ? "Đơn giá (theo kg thực)" : "Đơn giá (theo số lượng cước)";
+    case "container_rate":
+      return "Đơn giá (theo container)";
+    case "weight_step":
+      return "Đơn giá (theo kg)";
+    case "min_max_clamp":
+      return "Đơn giá (kẹp min/max)";
+    default:
+      return "Đơn giá";
+  }
+}
+
+export function routeOptionLabel(route: {
+  code: string;
+  originCode?: string | null;
+  destinationCode?: string | null;
+}): string {
+  const from = route.originCode || "—";
+  const to = route.destinationCode || "—";
+  return `${from} → ${to} (${route.code})`;
 }
 
 export function isWeightBreakMethod(method: string): boolean {

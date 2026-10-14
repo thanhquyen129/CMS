@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
@@ -19,7 +20,9 @@ public sealed record CreateRateCardCommand(
     string? CarrierName = null,
     Guid? SupplierPartyId = null,
     Guid? CustomerPartyId = null,
-    string? CustomerGroupCode = null) : IRequest<Guid>;
+    string? CustomerGroupCode = null,
+    Guid? RouteId = null,
+    string? DeclarationMode = null) : IRequest<Guid>;
 
 public sealed class CreateRateCardCommandValidator : AbstractValidator<CreateRateCardCommand>
 {
@@ -44,6 +47,9 @@ public sealed class CreateRateCardCommandValidator : AbstractValidator<CreateRat
         RuleFor(x => x.CustomerGroupCode).MaximumLength(64).When(x => x.CustomerGroupCode is not null);
         RuleFor(x => x).Must(PricingPartnerRules.MatchesDirection)
             .WithMessage("Giá mua chỉ gắn nhà cung cấp. Giá bán gắn khách hàng hoặc nhóm khách hàng, không cả hai.");
+        RuleFor(x => x.DeclarationMode)
+            .Must(m => m is null || RateDeclarationModes.IsKnown(m))
+            .WithMessage(RateDeclarationPolicy.UnknownModeMessage);
     }
 }
 
@@ -152,8 +158,13 @@ public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCar
             SupplierPartyId = request.SupplierPartyId,
             CustomerPartyId = request.CustomerPartyId,
             CustomerGroupCode = RateCardText.Clean(request.CustomerGroupCode),
+            DeclarationMode = string.IsNullOrWhiteSpace(request.DeclarationMode)
+                ? null
+                : request.DeclarationMode.Trim().ToLowerInvariant(),
             IsActive = true
         };
+        await RateCardCatalog.EnsureCurrencyAsync(_db, card.CurrencyCode, null, cancellationToken);
+        await RateCardCatalog.ApplyRouteAsync(_db, card, request.RouteId, tenantId, cancellationToken);
         await PricingPartnerRules.EnsureRoleOnChangeAsync(
             _db,
             card.SupplierPartyId,
@@ -185,7 +196,8 @@ public sealed record UpdateRateCardCommand(
     bool IsActive,
     string? TransportMode = null,
     string? RouteCode = null,
-    string? CarrierName = null) : IRequest;
+    string? CarrierName = null,
+    Guid? RouteId = null) : IRequest;
 
 public sealed class UpdateRateCardCommandValidator : AbstractValidator<UpdateRateCardCommand>
 {
@@ -238,13 +250,16 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
         var writeCode = partyType == "customer" ? PermissionCodes.RateSellWrite : PermissionCodes.RateBuyWrite;
         await _permissions.EnsureAsync(writeCode, "Bạn không có quyền sửa bảng giá này.", cancellationToken);
         await EnsurePartnerFitsNewDirectionAsync(card, partyType, cancellationToken);
+        var nextCurrency = request.CurrencyCode.Trim().ToUpperInvariant();
+        await RateCardCatalog.EnsureCurrencyAsync(_db, nextCurrency, card.CurrencyCode, cancellationToken);
         card.Name = request.Name.Trim();
         card.PartyType = partyType;
-        card.CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant();
+        card.CurrencyCode = nextCurrency;
         card.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         if (request.TransportMode is not null) card.TransportMode = RateCardText.Clean(request.TransportMode);
-        if (request.RouteCode is not null) card.RouteCode = RateCardText.Clean(request.RouteCode);
+        if (request.RouteCode is not null && request.RouteId is null) card.RouteCode = RateCardText.Clean(request.RouteCode);
         if (request.CarrierName is not null) card.CarrierName = RateCardText.Clean(request.CarrierName);
+        await RateCardCatalog.ApplyRouteAsync(_db, card, request.RouteId, card.TenantId, cancellationToken);
         card.IsActive = request.IsActive;
         await _db.SaveChangesAsync(cancellationToken);
     }

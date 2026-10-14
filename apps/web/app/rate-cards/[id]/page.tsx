@@ -2,9 +2,6 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { AddPricingRuleForm } from "@/components/AddPricingRuleForm";
-import { AddPricingRuleComponentForm } from "@/components/AddPricingRuleComponentForm";
-import { PricingRuleComponentActions } from "@/components/PricingRuleComponentActions";
 import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
 import { DraftRateVersionVatForm } from "@/components/DraftRateVersionVatForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
@@ -12,11 +9,12 @@ import { RetireRateCardButton } from "@/components/RetireRateCardButton";
 import { SetRateCardActiveButton } from "@/components/SetRateCardActiveButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
-import { ComposeTariffForm } from "@/components/ComposeTariffForm";
 import { TariffMatrix } from "@/components/TariffMatrix";
 import { formatDateOnlyVi, formatDateTimeVi, formatMoney } from "@/lib/money";
 import {
+  amountFieldLabel,
   calcMethodLabel,
+  declarationModeLabel,
   cardStatusLabel,
   isContainerRateMethod,
   isDraftVersion,
@@ -31,7 +29,6 @@ import {
 } from "@/lib/rate-cards";
 import {
   getRateCard,
-  listEconomicChargeTypes,
   listPricingRules,
   listRateVersions,
 } from "@/lib/rate-cards-server";
@@ -66,12 +63,10 @@ export default async function RateCardDetailPage({
   const terms = await fetchTerminology();
   const billLabel = term(terms, "BILL", "Bill");
 
-  const [cardRes, versionsRes, chargeTypesRes] = await Promise.all([
+  const [cardRes, versionsRes] = await Promise.all([
     getRateCard(id),
     listRateVersions(id),
-    listEconomicChargeTypes(),
   ]);
-  const chargeTypes = chargeTypesRes.ok ? chargeTypesRes.data.filter((row) => row.isActive) : [];
 
   if (!cardRes.ok && cardRes.status === 404) {
     return (
@@ -121,16 +116,31 @@ export default async function RateCardDetailPage({
           {card.currencyCode}
           {card.carrierName ? ` · ${card.carrierName}` : ""}
           {card.transportMode ? ` · ${card.transportMode}` : ""}
-          {card.routeCode ? ` · ${card.routeCode}` : ""}
+          {card.routeOriginCode || card.routeDestinationCode
+            ? ` · ${card.routeOriginCode || "—"} → ${card.routeDestinationCode || "—"} (${card.routeCode || "tuyến"})`
+            : card.routeCode
+              ? ` · ${card.routeCode}`
+              : ""}
+          {` · ${declarationModeLabel(card.declarationMode)}`}
           {` · ${cardStatusLabel(card.isActive)}`}
           {` · ${publicationLabel(versions.some((v) => isPublishedVersion(v.status)))}`}
           {card.description ? ` · ${card.description}` : ""}
         </p>
 
+        {card.routeIsActive === false ? (
+          <p className="alert alert-warning" role="status">
+            Tuyến đã lưu ngừng hiệu lực. Giữ nguyên trên bản này. Khi sửa nháp, chọn tuyến đang hoạt động nếu đổi tuyến.
+          </p>
+        ) : null}
         <p className="cta-row" style={{ marginTop: 0 }}>
           <Link className="btn btn-ghost" href="/bills">
             Tính giá trên {billLabel}
           </Link>
+          {versions.some((v) => isDraftVersion(v.status)) ? (
+            <Link className="btn" href={`/rate-cards/${card.id}/edit`}>
+              Chỉnh sửa bảng giá
+            </Link>
+          ) : null}
         </p>
         <p className="note" title={publicationListHint}>
           Trạng thái bảng giá và trạng thái phiên bản là hai việc khác nhau. Danh sách không kết luận sẵn sàng tính giá khi chưa có Bill.
@@ -201,17 +211,20 @@ export default async function RateCardDetailPage({
                         isWeightBreakMethod(r.calcMethod) &&
                         (r.breaks?.length ?? 0) > 0
                     ) ? (
-                    <TariffMatrix
-                      rules={rules}
-                      currencyCode={card.currencyCode}
-                      transportMode={card.transportMode}
-                    />
+                    <>
+                      {rules.some((r) => !isWeightBreakMethod(r.calcMethod)) ? (
+                        <div className="alert alert-warning" role="status">
+                          Phiên bản này đang có cả quy tắc giá và ma trận. Dữ liệu không bị xóa. Cần quyết định xử lý trước khi ghi đè.
+                        </div>
+                      ) : null}
+                      <TariffMatrix
+                        rules={rules}
+                        currencyCode={card.currencyCode}
+                        transportMode={card.transportMode}
+                      />
+                    </>
                   ) : rules.length === 0 && draft ? (
-                    <ComposeTariffForm
-                      versionId={v.id}
-                      currencyCode={card.currencyCode}
-                      transportMode={card.transportMode}
-                    />
+                    <p className="note">Chưa có giá trên bản nháp. Dùng Chỉnh sửa bảng giá để khai báo.</p>
                   ) : rules.length === 0 ? (
                     <p className="note">Chưa có quy tắc.</p>
                   ) : (
@@ -223,7 +236,7 @@ export default async function RateCardDetailPage({
                             <th scope="col">Tên</th>
                             <th scope="col">Cách tính</th>
                             <th scope="col" className="num">
-                              Đơn giá
+                              Số tiền / Đơn giá
                             </th>
                             <th scope="col">Lọc</th>
                           </tr>
@@ -247,6 +260,7 @@ export default async function RateCardDetailPage({
                                 <td>{r.name}</td>
                                 <td>{calcMethodLabel(r.calcMethod)}</td>
                                 <td className="num">
+                                  {amountFieldLabel(r.calcMethod, r.applicability)}:{" "}
                                   {formatMoney(r.unitAmount, r.currencyCode)}
                                 </td>
                                 <td className="muted small">
@@ -272,17 +286,6 @@ export default async function RateCardDetailPage({
                                             c.amount,
                                             c.currencyCode
                                           )}
-                                          {draft ? (
-                                            <PricingRuleComponentActions
-                                              componentId={c.id}
-                                              name={c.name}
-                                              amount={c.amount}
-                                              currencyCode={c.currencyCode}
-                                              financialNature={c.financialNature}
-                                              costTypeCode={c.costTypeCode}
-                                              revenueTypeCode={c.revenueTypeCode}
-                                            />
-                                          ) : null}
                                         </div>
                                       ))}
                                     </div>
@@ -342,26 +345,7 @@ export default async function RateCardDetailPage({
                   )}
 
                   {draft && rules.length > 0 ? (
-                    <>
-                      <AddPricingRuleForm
-                        versionId={v.id}
-                        defaultCurrency={card.currencyCode}
-                      />
-                      {rules.map((r) => (
-                        <AddPricingRuleComponentForm
-                          key={r.id}
-                          ruleId={r.id}
-                          defaultCurrency={r.currencyCode || card.currencyCode}
-                          chargeTypes={chargeTypes}
-                        />
-                      ))}
-                      {rules.length > 0 ? (
-                        <PublishRateVersionButton
-                          versionId={v.id}
-                          versionNo={v.versionNo}
-                        />
-                      ) : null}
-                    </>
+                    <PublishRateVersionButton versionId={v.id} versionNo={v.versionNo} />
                   ) : null}
 
                   {published ? (

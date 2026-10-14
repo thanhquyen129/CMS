@@ -14,8 +14,15 @@ public sealed class RateCard : TenantEntityBase
     public string CurrencyCode { get; set; } = "VND";
     public string? Description { get; set; }
     public string? TransportMode { get; set; }
+
+    /// <summary>Master route. RouteCode stays as the stable display code for rating filters.</summary>
+    public Guid? RouteId { get; set; }
+
     public string? RouteCode { get; set; }
     public string? CarrierName { get; set; }
+
+    /// <summary>basic | advanced. One card never stores both shapes.</summary>
+    public string? DeclarationMode { get; set; }
     public bool IsActive { get; set; } = true;
 
     /// <summary>BUY price source. Empty means a general buy card.</summary>

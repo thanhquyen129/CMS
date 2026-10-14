@@ -6,7 +6,7 @@ import { RateCardDeclarationForm } from "@/components/RateCardDeclarationForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listCurrencies } from "@/lib/master-data";
-import { listRoutes } from "@/lib/reference-masters";
+import { listCommodities, listRoutes } from "@/lib/reference-masters";
 import { getRateCard, listPricingRules, listRateVersions } from "@/lib/rate-cards-server";
 import { isDraftVersion, isWeightBreakMethod } from "@/lib/rate-cards";
 
@@ -17,12 +17,13 @@ export default async function EditRateCardPage({ params }: { params: Params }) {
   if (!jar.get(AUTH_COOKIE)?.value) redirect("/login");
 
   const { id } = await params;
-  const [terms, cardRes, versionsRes, routes, currencies] = await Promise.all([
+  const [terms, cardRes, versionsRes, routes, currencies, commodities] = await Promise.all([
     fetchTerminology(),
     getRateCard(id),
     listRateVersions(id),
     listRoutes(false),
     listCurrencies(),
+    listCommodities(true),
   ]);
 
   if (!cardRes.ok) {
@@ -89,6 +90,7 @@ export default async function EditRateCardPage({ params }: { params: Params }) {
           defaultCurrency={card.currencyCode}
           currencies={currencies.ok ? currencies.data : []}
           routes={routes.ok ? routes.data : []}
+          commodities={commodities.ok ? commodities.data : []}
           routeError={routes.ok ? null : routes.message}
           currencyError={currencies.ok ? null : currencies.message}
         />

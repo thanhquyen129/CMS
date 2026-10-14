@@ -6,7 +6,7 @@ import { RateCardDeclarationForm } from "@/components/RateCardDeclarationForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listCurrencies } from "@/lib/master-data";
-import { listRoutes } from "@/lib/reference-masters";
+import { listCommodities, listRoutes } from "@/lib/reference-masters";
 import { getTenantProfile } from "@/lib/tenant-admin";
 
 export default async function NewRateCardPage() {
@@ -15,11 +15,12 @@ export default async function NewRateCardPage() {
     redirect("/login");
   }
 
-  const [terms, routes, currencies, profile] = await Promise.all([
+  const [terms, routes, currencies, profile, commodities] = await Promise.all([
     fetchTerminology(),
     listRoutes(false),
     listCurrencies(),
     getTenantProfile(),
+    listCommodities(true),
   ]);
   const active = currencies.ok ? currencies.data.filter((c) => c.isActive) : [];
   const preferred = (profile.ok ? profile.data.defaultCurrencyCode : "VND").toUpperCase();
@@ -42,6 +43,7 @@ export default async function NewRateCardPage() {
           defaultCurrency={defaultCurrency}
           currencies={currencies.ok ? currencies.data : []}
           routes={routes.ok ? routes.data : []}
+          commodities={commodities.ok ? commodities.data : []}
           routeError={routes.ok ? null : routes.message}
           currencyError={currencies.ok ? null : currencies.message}
         />

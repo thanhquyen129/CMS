@@ -1,3 +1,7 @@
+## 2026-10-14 — Bảng giá: nhãn tiếng Việt, nấc ≥, chi tiết chỉ đọc
+- Ma trận nâng cao chọn loại hàng bằng tên tiếng Việt, không hiện mã nội bộ. Nấc mở hiển thị ≥ kg; ô đến để trống là Không giới hạn. Bảng cơ bản đủ mã, tên, khoản mục; từ/đến nằm một hàng. Màn chi tiết chỉ đọc: một hàng nút, VAT không sửa tại chỗ, bản đã phát hành khóa nút sửa.
+- Files: `RateCardDeclarationForm.tsx`, `TariffMatrix.tsx`, `ComposeTariffForm.tsx`, `rate-cards.ts`, `app/rate-cards/[id]/page.tsx`, `PublishRateVersionButton.tsx`, `SetRateCardActiveButton.tsx`, `globals.css`.
+
 ## 2026-10-14 — Form bảng giá: thanh nút không che nội dung, hết lỗi hydration
 - Thanh Hủy / Lưu nháp của form khai báo giá nằm cuối form, không còn dính đáy màn hình. Cột quy tắc có bề rộng tối thiểu; khóa dòng quy tắc ổn định giữa server và client nên hết cảnh báo hydration.
 - Files: `apps/web/app/globals.css`, `apps/web/components/RateCardDeclarationForm.tsx`, `apps/web/app/favicon.ico`.

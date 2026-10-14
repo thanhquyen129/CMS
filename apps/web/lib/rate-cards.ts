@@ -207,7 +207,7 @@ export function weightBandLabel(min: number | null | undefined, max: number | nu
     return raw.includes("e") || raw.includes("E") ? value.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") : raw;
   };
   const lower = min ?? 0;
-  if (max == null) return `≥ ${text(lower)}`;
+  if (max == null) return `≥ ${text(lower)} kg`;
   if (lower === 0) return `< ${text(max)}`;
   return `${text(lower)} – < ${text(max)}`;
 }

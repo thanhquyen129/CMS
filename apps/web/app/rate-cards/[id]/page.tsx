@@ -2,10 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { CreateRateVersionForm } from "@/components/CreateRateVersionForm";
-import { DraftRateVersionVatForm } from "@/components/DraftRateVersionVatForm";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
-import { RetireRateCardButton } from "@/components/RetireRateCardButton";
 import { SetRateCardActiveButton } from "@/components/SetRateCardActiveButton";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
@@ -103,6 +100,11 @@ export default async function RateCardDetailPage({
   const card = cardRes.data;
   const versions = versionsRes.ok ? versionsRes.data : [];
   const rulesByVersion = await loadRulesForVersions(versions);
+  const draftVersion = versions
+    .filter((v) => isDraftVersion(v.status))
+    .sort((a, b) => b.versionNo - a.versionNo)[0];
+  const draftRules = draftVersion ? (rulesByVersion.get(draftVersion.id)?.rules ?? []) : [];
+  const publishedLocked = versions.some((v) => isPublishedVersion(v.status)) && !draftVersion;
 
   return (
     <AppShell terms={terms} active="rate-cards">
@@ -128,23 +130,30 @@ export default async function RateCardDetailPage({
             Tuyến đã lưu ngừng hiệu lực. Giữ nguyên trên bản này. Khi sửa nháp, chọn tuyến đang hoạt động nếu đổi tuyến.
           </p>
         ) : null}
-        <p className="cta-row" style={{ marginTop: 0 }}>
-          <Link className="btn btn-ghost" href="/bills">
-            Tính giá trên {billLabel}
-          </Link>
-          {versions.some((v) => isDraftVersion(v.status)) ? (
+        <div className="cta-row rate-detail-toolbar">
+          {draftVersion ? (
             <Link className="btn" href={`/rate-cards/${card.id}/edit`}>
               Chỉnh sửa bảng giá
             </Link>
           ) : null}
-        </p>
+          <Link className="btn btn-ghost" href="/bills">
+            Tính giá trên {billLabel}
+          </Link>
+          {draftVersion && draftRules.length > 0 ? (
+            <PublishRateVersionButton versionId={draftVersion.id} versionNo={draftVersion.versionNo} label="Phát hành phiên bản" />
+          ) : null}
+          <SetRateCardActiveButton card={card} inline />
+          {publishedLocked ? (
+            <span className="status-pill status-closed">Đã phát hành</span>
+          ) : draftVersion ? (
+            <span className="status-pill status-draft">Nháp</span>
+          ) : null}
+        </div>
         <p className="note" title={publicationListHint}>
-          Trạng thái bảng giá và trạng thái phiên bản là hai việc khác nhau. Danh sách không kết luận sẵn sàng tính giá khi chưa có Bill.
+          {draftVersion
+            ? "Màn chi tiết chỉ để xem. Sửa bản nháp bằng Chỉnh sửa bảng giá."
+            : "Phiên bản đã phát hành không sửa được. Màn này chỉ để xem."}
         </p>
-        <SetRateCardActiveButton card={card} />
-        {versionsRes.ok && !versions.some((v) => isPublishedVersion(v.status)) ? (
-          <RetireRateCardButton rateCardId={card.id} code={card.code} />
-        ) : null}
 
         <h2 className="section-title">Phiên bản</h2>
         {!versionsRes.ok ? (
@@ -153,7 +162,7 @@ export default async function RateCardDetailPage({
           </div>
         ) : versions.length === 0 ? (
           <div className="empty-state" role="status">
-            Chưa có phiên bản. Tạo nháp bên dưới.
+            Chưa có phiên bản. Tạo bảng giá mới để khai báo bản nháp.
           </div>
         ) : (
           <div className="stack">
@@ -189,13 +198,10 @@ export default async function RateCardDetailPage({
                   <p className="muted small">
                     Quy tắc ở đây là cước chính. Phụ phí dùng chung tạo ở Quản lý phụ phí và không bắt buộc gắn vào bảng giá.
                   </p>
-                  {draft ? (
-                    <DraftRateVersionVatForm versionId={v.id} vatRate={v.vatRate ?? null} />
-                  ) : (
-                    <p className="muted small">
-                      VAT: {v.vatRate == null ? "chưa khai báo" : `${v.vatRate}%`}. Phiên bản đã phát hành không sửa thuế suất.
-                    </p>
-                  )}
+                  <p className="muted small">
+                    Thuế suất VAT: {v.vatRate == null ? "chưa khai báo" : `${v.vatRate}%`}.
+                    {published ? " Phiên bản đã phát hành không sửa thuế suất." : " Sửa thuế suất trên màn khai báo bảng giá."}
+                  </p>
                   {v.note ? <p className="note">{v.note}</p> : null}
 
                   {ruleBag?.error ? (
@@ -228,8 +234,8 @@ export default async function RateCardDetailPage({
                       <table className="data-table">
                         <thead>
                           <tr>
-                            <th scope="col">Mã</th>
-                            <th scope="col">Tên</th>
+                            <th scope="col">Tên quy tắc</th>
+                            <th scope="col">Mã quy tắc</th>
                             <th scope="col">Cách tính</th>
                             <th scope="col" className="num">
                               Số tiền / Đơn giá
@@ -250,10 +256,8 @@ export default async function RateCardDetailPage({
 
                             return (
                               <tr key={r.id}>
-                                <td>
-                                  <code>{r.code}</code>
-                                </td>
                                 <td>{r.name}</td>
+                                <td>{r.code}</td>
                                 <td>{calcMethodLabel(r.calcMethod)}</td>
                                 <td className="num">
                                   {amountFieldLabel(r.calcMethod, r.applicability)}:{" "}
@@ -349,10 +353,6 @@ export default async function RateCardDetailPage({
                     </div>
                   )}
 
-                  {draft && rules.length > 0 ? (
-                    <PublishRateVersionButton versionId={v.id} versionNo={v.versionNo} />
-                  ) : null}
-
                   {published ? (
                     <p className="note">
                       Phiên bản đã phát hành — bất biến. Dùng trên {billLabel} để
@@ -364,8 +364,6 @@ export default async function RateCardDetailPage({
             })}
           </div>
         )}
-
-        <CreateRateVersionForm rateCardId={card.id} />
       </section>
     </AppShell>
   );

@@ -21,7 +21,7 @@ function bandLabel(min: number, max: number | null): string {
   }
 
   if (max == null) {
-    return `> ${Math.floor(min + 0.0001)}`;
+    return `≥ ${trimNum(min)} kg`;
   }
 
   return `${trimNum(min)} – ${Math.floor(max + 0.0001)}`;

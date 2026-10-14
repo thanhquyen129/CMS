@@ -54,10 +54,31 @@ type MatrixGroup = {
   cells: Record<string, Record<string, string>>;
 };
 
+type CommodityChoice = { code: string; name: string; isActive?: boolean };
+
+const fallbackCommodities: CommodityChoice[] = [
+  { code: "GENERAL", name: "Hàng thường", isActive: true },
+  { code: "DRY_FOOD", name: "Thực phẩm khô", isActive: true },
+  { code: "COSMETICS", name: "Mỹ phẩm", isActive: true },
+  { code: "EXPRESS", name: "Chuyển nhanh", isActive: true },
+];
+
+function commodityOptions(items: CommodityChoice[] | undefined): CommodityChoice[] {
+  const active = (items ?? []).filter((item) => item.isActive !== false && item.name.trim());
+  return active.length > 0 ? active : fallbackCommodities;
+}
+
+function commodityCaption(item: CommodityChoice): string {
+  const name = item.name.trim();
+  if (!name || name.toUpperCase() === item.code.trim().toUpperCase()) return "Loại hàng";
+  return name;
+}
+
 type Props = {
   defaultCurrency: string;
   currencies: CurrencyOption[];
   routes: RouteItem[];
+  commodities?: CommodityChoice[];
   routeError?: string | null;
   currencyError?: string | null;
   cardId?: string;
@@ -219,16 +240,15 @@ function preview(row: Band, next: Band | undefined): string {
   const min = parseNum(row.min);
   const max = parseNum(row.max);
   if (min === null) return "—";
+  if (max === null) return `≥ ${trimNum(min)} kg`;
   if (next) {
     const nextMin = parseNum(next.min);
-    if (nextMin !== null && (max === null || nextMin - max <= 1)) {
-      const upper = Math.floor(nextMin - 0.001 + 0.0001);
-      return min === 0 ? `< ${Math.round(nextMin)}` : `${trimNum(min)} – ${upper}`;
+    if (nextMin !== null && nextMin - max <= 1) {
+      return min === 0 ? `< ${trimNum(nextMin)} kg` : `${trimNum(min)} – < ${trimNum(nextMin)} kg`;
     }
   }
-  if (max === null) return `> ${Math.floor(min + 0.0001)}`;
-  if (min === 0) return `< ${Math.round(max)}`;
-  return `${trimNum(min)} – ${Math.floor(max + 0.0001)}`;
+  if (min === 0) return `< ${trimNum(max)} kg`;
+  return `${trimNum(min)} – < ${trimNum(max)} kg`;
 }
 
 function trimNum(value: number): string {
@@ -337,6 +357,7 @@ export function RateCardDeclarationForm(props: Props) {
     if (currency && !codes.includes(currency)) codes.unshift(currency);
     return codes;
   }, [activeCurrencies, currency]);
+  const commodities = commodityOptions(props.commodities);
   const activeRoutes = props.routes.filter((r) => r.isActive);
   const filteredRoutes = props.routes.filter((r) => {
     if (!r.isActive && !rules.some((rule) => rule.routeId === r.id) && !groups.some((group) => group.routeId === r.id)) return false;
@@ -738,11 +759,12 @@ export function RateCardDeclarationForm(props: Props) {
               <thead>
                 <tr>
                   <th className="col-idx" scope="col">#</th>
-                  <th className="col-code" scope="col">Mã quy tắc</th>
+                  <th className="col-code" scope="col">Mã quy tắc / Khoản mục</th>
                   <th className="col-name" scope="col">Tên quy tắc</th>
                   <th className="col-route" scope="col">Tuyến</th>
                   <th className="col-carrier" scope="col">Hãng vận chuyển</th>
-                  <th className="col-weight" scope="col">Nấc trọng lượng</th>
+                  <th className="col-basis" scope="col">Loại trọng lượng</th>
+                  <th className="col-weight" scope="col">Nấc trọng lượng (Từ – Đến)</th>
                   <th className="col-method" scope="col">Cách tính</th>
                   <th className="col-amount" scope="col">Số tiền / Đơn giá</th>
                   <th className="col-service" scope="col">Loại dịch vụ</th>
@@ -755,11 +777,14 @@ export function RateCardDeclarationForm(props: Props) {
                 {rules.map((rule, index) => (
                   <tr key={rule.key}>
                     <td>{index + 1}</td>
-                    <td><input aria-label={`Mã quy tắc ${index + 1}`} value={rule.code} maxLength={64} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, code: ev.target.value } : r))} /></td>
+                    <td className="col-code">
+                      <input aria-label={`Mã quy tắc ${index + 1}`} value={rule.code} maxLength={64} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, code: ev.target.value } : r))} />
+                      <input aria-label={`Khoản mục ${index + 1}`} placeholder="Khoản mục, ví dụ cước chính" value={rule.chargeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, chargeCode: ev.target.value } : r))} />
+                    </td>
                     <td><input aria-label={`Tên quy tắc ${index + 1}`} value={rule.name} maxLength={256} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, name: ev.target.value } : r))} /></td>
                     <td className="col-route">
-                      <label htmlFor={`route-search-${rule.key}`}>Tuyến {index + 1}</label>
-                      <input id={`route-search-${rule.key}`} value={routeQuery} onChange={(ev) => setRouteQuery(ev.target.value)} placeholder="Tìm mã tuyến, điểm đi, điểm đến" autoComplete="off" />
+                      <label className="sr-only" htmlFor={`route-search-${rule.key}`}>Tuyến {index + 1}</label>
+                      <input id={`route-search-${rule.key}`} value={routeQuery} onChange={(ev) => setRouteQuery(ev.target.value)} placeholder="Tìm tuyến" autoComplete="off" />
                       <select
                         aria-label={`Chọn tuyến ${index + 1}`}
                         value={rule.appliesAnyRoute ? "ANY" : rule.routeId}
@@ -792,15 +817,17 @@ export function RateCardDeclarationForm(props: Props) {
                         onSelect={(item) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, carrierPartyId: item?.id ?? "", carrierName: item?.name ?? "" } : r))}
                       />
                     </td>
-                    <td className="col-weight">
-                      <div className="muted small">Loại trọng lượng</div>
+                    <td className="col-basis">
                       <select aria-label={`Loại trọng lượng ${index + 1}`} value={rule.weightBasis} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightBasis: ev.target.value } : r))}>
                         {weightBasisOptions.map((item) => <option key={item.value || "none"} value={item.value}>{item.label}</option>)}
                       </select>
-                      <div className="muted small">Trọng lượng từ (kg)</div>
-                      <input aria-label={`Trọng lượng từ ${index + 1}`} placeholder="min" inputMode="decimal" value={rule.weightMin} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMin: ev.target.value } : r))} />
-                      <div className="muted small">Trọng lượng đến (kg)</div>
-                      <input aria-label={`Trọng lượng đến ${index + 1}`} placeholder="max, bỏ trống nếu mở" inputMode="decimal" value={rule.weightMax} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMax: ev.target.value } : r))} />
+                    </td>
+                    <td className="col-weight">
+                      <div className="rate-band">
+                        <input aria-label={`Trọng lượng từ ${index + 1}`} placeholder="Từ" inputMode="decimal" value={rule.weightMin} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMin: ev.target.value } : r))} />
+                        <span aria-hidden="true">–</span>
+                        <input aria-label={`Trọng lượng đến ${index + 1}`} placeholder="Không giới hạn" inputMode="decimal" value={rule.weightMax} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMax: ev.target.value } : r))} />
+                      </div>
                     </td>
                     <td className="col-method">
                       <select aria-label={`Cách tính ${index + 1}`} value={rule.calcMethod} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, calcMethod: ev.target.value } : r))}>
@@ -833,7 +860,12 @@ export function RateCardDeclarationForm(props: Props) {
                       ) : null}
                     </td>
                     <td><input aria-label={`Loại dịch vụ ${index + 1}`} value={rule.serviceTypeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, serviceTypeCode: ev.target.value } : r))} /></td>
-                    <td><input aria-label={`Mã loại hàng ${index + 1}`} value={rule.commodityCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, commodityCode: ev.target.value } : r))} /></td>
+                    <td className="col-commodity">
+                      <select aria-label={`Loại hàng ${index + 1}`} value={rule.commodityCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, commodityCode: ev.target.value } : r))}>
+                        <option value="">Mọi loại hàng</option>
+                        {commodities.map((item) => <option key={item.code} value={item.code}>{commodityCaption(item)}</option>)}
+                      </select>
+                    </td>
                     <td className="col-mode">
                       <select aria-label={`Phương thức ${index + 1}`} value={rule.transportMode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, transportMode: ev.target.value } : r))}>
                         <option value="">Mọi phương thức</option>
@@ -844,7 +876,6 @@ export function RateCardDeclarationForm(props: Props) {
                         <option value="vendor">Giá mua</option>
                         <option value="customer">Giá bán</option>
                       </select>
-                      <input aria-label={`Khoản mục ${index + 1}`} placeholder="Khoản mục, ví dụ cước chính" value={rule.chargeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, chargeCode: ev.target.value } : r))} />
                     </td>
                     <td>
                       <button className="btn btn-ghost" type="button" onClick={() => setRules((prev) => prev.length === 1 ? [emptyRule()] : prev.filter((r) => r.key !== rule.key))}>Xóa</button>
@@ -918,12 +949,27 @@ export function RateCardDeclarationForm(props: Props) {
                     <thead>
                       <tr>
                         <th scope="col">Khung ({groupUnit})</th>
-                        {group.columns.map((col) => (
+                        {group.columns.map((col, colIndex) => {
+                          const listed = commodities.some((item) => item.code === col.code);
+                          return (
                           <th key={col.key} scope="col">
-                            <input aria-label={`Tên ${col.code}`} value={col.name} onChange={(ev) => patchGroup(group.key, { columns: group.columns.map((c) => c.key === col.key ? { ...c, name: ev.target.value } : c) })} />
-                            <input aria-label={`Mã ${col.name}`} value={col.code} onChange={(ev) => patchGroup(group.key, { columns: group.columns.map((c) => c.key === col.key ? { ...c, code: ev.target.value.toUpperCase() } : c) })} />
+                            <select
+                              aria-label={`Loại hàng cột ${colIndex + 1}`}
+                              value={col.code}
+                              onChange={(ev) => {
+                                const picked = commodities.find((item) => item.code === ev.target.value);
+                                patchGroup(group.key, {
+                                  columns: group.columns.map((item) => item.key === col.key ? { ...item, code: picked?.code ?? "", name: picked ? commodityCaption(picked) : "" } : item),
+                                });
+                              }}
+                            >
+                              <option value="">Chọn loại hàng</option>
+                              {!listed && col.code ? <option value={col.code}>{commodityCaption(col)}</option> : null}
+                              {commodities.map((item) => <option key={item.code} value={item.code}>{commodityCaption(item)}</option>)}
+                            </select>
                           </th>
-                        ))}
+                          );
+                        })}
                       </tr>
                     </thead>
                     <tbody>
@@ -933,7 +979,7 @@ export function RateCardDeclarationForm(props: Props) {
                             <span className="muted small">{preview(row, group.rows[index + 1])}</span>
                             <div className="cta-row">
                               <input aria-label="Từ" value={row.min} inputMode="decimal" style={{ width: "4.5rem" }} onChange={(ev) => patchGroup(group.key, { rows: group.rows.map((r) => r.key === row.key ? { ...r, min: ev.target.value } : r) })} />
-                              <input aria-label="Đến" value={row.max} inputMode="decimal" placeholder="mở" style={{ width: "4.5rem" }} onChange={(ev) => patchGroup(group.key, { rows: group.rows.map((r) => r.key === row.key ? { ...r, max: ev.target.value } : r) })} />
+                              <input aria-label="Đến" value={row.max} inputMode="decimal" placeholder="Không giới hạn" style={{ width: "6.5rem" }} onChange={(ev) => patchGroup(group.key, { rows: group.rows.map((r) => r.key === row.key ? { ...r, max: ev.target.value } : r) })} />
                               <button className="btn btn-ghost" type="button" disabled={group.rows.length <= 1} onClick={() => patchGroup(group.key, { rows: group.rows.filter((r) => r.key !== row.key) })}>Xóa</button>
                             </div>
                           </th>
@@ -949,7 +995,11 @@ export function RateCardDeclarationForm(props: Props) {
                 </div>
                 <div className="cta-row">
                   <button className="btn btn-ghost" type="button" onClick={() => patchGroup(group.key, { rows: [...group.rows, { key: uid(), min: "", max: "" }] })}>Thêm khung</button>
-                  <button className="btn btn-ghost" type="button" onClick={() => patchGroup(group.key, { columns: [...group.columns, { key: uid(), name: "Loại hàng", code: `COL${group.columns.length + 1}` }] })}>Thêm loại hàng</button>
+                  <button className="btn btn-ghost" type="button" onClick={() => {
+                    const used = new Set(group.columns.map((col) => col.code));
+                    const next = commodities.find((item) => !used.has(item.code)) ?? commodities[0];
+                    patchGroup(group.key, { columns: [...group.columns, { key: uid(), name: next ? commodityCaption(next) : "Loại hàng", code: next?.code ?? "" }] });
+                  }}>Thêm loại hàng</button>
                 </div>
               </section>
             );

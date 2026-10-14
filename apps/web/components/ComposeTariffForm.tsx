@@ -63,16 +63,15 @@ function preview(row: Row, next: Row | undefined): string {
   const min = parseNum(row.min);
   const max = parseNum(row.max);
   if (min === null) return "—";
+  if (max === null) return `≥ ${trim(min)} kg`;
   if (next) {
     const nextMin = parseNum(next.min);
-    if (nextMin !== null && (max === null || nextMin - max <= 1)) {
-      const upper = Math.floor(nextMin - 0.001 + 0.0001);
-      return min === 0 ? `< ${Math.round(nextMin)}` : `${trim(min)} – ${upper}`;
+    if (nextMin !== null && nextMin - max <= 1) {
+      return min === 0 ? `< ${trim(nextMin)} kg` : `${trim(min)} – < ${trim(nextMin)} kg`;
     }
   }
-  if (max === null) return `> ${Math.floor(min + 0.0001)}`;
-  if (min === 0) return `< ${Math.round(max)}`;
-  return `${trim(min)} – ${Math.floor(max + 0.0001)}`;
+  if (min === 0) return `< ${trim(max)} kg`;
+  return `${trim(min)} – < ${trim(max)} kg`;
 }
 
 function trim(value: number): string {
@@ -426,7 +425,7 @@ export function ComposeTariffForm({ versionId, currencyCode, transportMode }: Pr
                       aria-label="Đến"
                       value={row.max}
                       inputMode="decimal"
-                      placeholder="mở"
+                      placeholder="Không giới hạn"
                       style={{ width: "4.5rem" }}
                       onChange={(ev) =>
                         setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, max: ev.target.value } : r)))

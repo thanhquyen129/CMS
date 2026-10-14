@@ -5,9 +5,9 @@ import { useState, useTransition } from "react";
 import { formatApiErrorMessage } from "@/lib/api-error";
 import type { RateCard } from "@/lib/rate-cards";
 
-type Props = { card: RateCard };
+type Props = { card: RateCard; inline?: boolean };
 
-export function SetRateCardActiveButton({ card }: Props) {
+export function SetRateCardActiveButton({ card, inline = false }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,8 +56,8 @@ export function SetRateCardActiveButton({ card }: Props) {
     }
   }
 
-  return (
-    <div className="cta-row">
+  const body = (
+    <>
       {error ? (
         <div className="alert alert-error" role="alert">
           {error}
@@ -66,6 +66,8 @@ export function SetRateCardActiveButton({ card }: Props) {
       <button className="btn btn-ghost" type="button" onClick={toggle} disabled={busy || isPending}>
         {busy || isPending ? "Đang lưu…" : nextActive ? "Dùng lại" : "Ngừng sử dụng"}
       </button>
-    </div>
+    </>
   );
+  if (inline) return body;
+  return <div className="cta-row">{body}</div>;
 }

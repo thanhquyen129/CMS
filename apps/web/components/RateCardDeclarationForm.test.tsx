@@ -80,7 +80,7 @@ describe("rate card declaration form", () => {
     expect(weightBandLabel(0, 5)).toBe("< 5");
     expect(weightBandLabel(5, 11)).toBe("5 – < 11");
     expect(weightBandLabel(10.999, 11)).toBe("10.999 – < 11");
-    expect(weightBandLabel(21, null)).toBe("≥ 21");
+    expect(weightBandLabel(21, null)).toBe("≥ 21 kg");
     await user.type(screen.getByLabelText("Tuyến 1"), "HAN");
     expect(screen.getByRole("option", { name: "SGN → HAN (VN-MY)" })).toBeTruthy();
     expect(screen.queryByRole("option", { name: /OLD/ })).toBeNull();

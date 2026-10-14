@@ -6,9 +6,10 @@ import { useState, useTransition } from "react";
 type Props = {
   versionId: string;
   versionNo: number;
+  label?: string;
 };
 
-export function PublishRateVersionButton({ versionId, versionNo }: Props) {
+export function PublishRateVersionButton({ versionId, versionNo, label }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,7 +61,7 @@ export function PublishRateVersionButton({ versionId, versionNo }: Props) {
   const loading = busy || isPending;
 
   return (
-    <div>
+    <>
       {error ? (
         <div className="alert alert-error" role="alert">
           {error}
@@ -72,8 +73,8 @@ export function PublishRateVersionButton({ versionId, versionNo }: Props) {
         disabled={loading}
         onClick={onPublish}
       >
-        {loading ? "Đang phát hành…" : `Phát hành v${versionNo}`}
+        {loading ? "Đang phát hành…" : (label ?? `Phát hành v${versionNo}`)}
       </button>
-    </div>
+    </>
   );
 }

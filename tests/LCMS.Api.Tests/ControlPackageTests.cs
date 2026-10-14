@@ -263,6 +263,14 @@ public sealed class ControlPackageTests : IAsyncLifetime
     {
         var tenantId = await CreateTenantAsync();
         var billId = await CreateBillAsync(tenantId, "HAWB-UAT-001");
+        await PostId(tenantId, "/api/fx-rates", new
+        {
+            fromCurrencyCode = "USD",
+            toCurrencyCode = "VND",
+            rateDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            rate = 25000m,
+            source = "manual"
+        });
         var documentId = await PostId(tenantId, "/api/financial-documents", new
         {
             documentType = "invoice",

@@ -31,23 +31,29 @@ public sealed class RatingModeTests : IAsyncLifetime
     {
         var tenantId = await CreateTenantAsync();
         var billId = await CreateBillAsync(tenantId, "BL-PIVOT");
-        var versionId = await PublishedVersionAsync(tenantId, "RC-PIVOT");
-        var ruleId = await AddRuleAsync(tenantId, versionId, new
+        var composed = await ComposeAsync(tenantId, new
         {
-            code = "AIR",
+            code = "RC-PIVOT",
             name = "Cước air",
-            calcMethod = "weight_break_pivot",
-            unitAmount = 0,
+            partyType = "vendor",
             currencyCode = "USD",
-            chargeCode = "FREIGHT",
-            minAmount = 100,
-            sortOrder = 1
+            minimumQuantity = 25m,
+            columns = new[] { new { code = "GENERAL", name = "Hàng thường" } },
+            bands = new object[]
+            {
+                new { minQuantity = 0m, maxQuantity = 45m, prices = new decimal?[] { 4m } },
+                new { minQuantity = 45.01m, maxQuantity = 100m, prices = new decimal?[] { 2.5m } }
+            }
         });
-        await AddBreakAsync(tenantId, ruleId, 1, 0, 45, 4m);
-        await AddBreakAsync(tenantId, ruleId, 2, 45.01m, 100, 2.5m);
-        await PublishAsync(tenantId, versionId);
+        await PublishAsync(tenantId, composed.RateVersionId);
 
-        var ratingId = await RateAsync(tenantId, new { billId, rateVersionId = versionId, quantity = 100, transportMode = "air" });
+        var ratingId = await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = composed.RateVersionId,
+            quantity = 100,
+            commodityCode = "GENERAL"
+        });
         var rating = await GetAsync(tenantId, ratingId);
         Assert.Equal(250m, rating.TotalAmount);
         Assert.Equal("cost", rating.Details[0].FinancialNature);
@@ -67,27 +73,27 @@ public sealed class RatingModeTests : IAsyncLifetime
     {
         var tenantId = await CreateTenantAsync();
         var billId = await CreateBillAsync(tenantId, "BL-SELL-WB");
-        var cardId = await CreateCardAsync(tenantId, "RC-SELL-WB", "customer");
-        using var versionReq = Tenant(HttpMethod.Post, $"/api/rate-cards/{cardId}/versions", tenantId);
-        versionReq.Content = JsonContent.Create(new { note = "sell" });
-        var versionRes = await _client.SendAsync(versionReq);
-        versionRes.EnsureSuccessStatusCode();
-        var versionId = (await versionRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
-
-        var ruleId = await AddRuleAsync(tenantId, versionId, new
+        var composed = await ComposeAsync(tenantId, new
         {
-            code = "AIR",
+            code = "RC-SELL-WB",
             name = "Cước bán",
-            calcMethod = "weight_break_pivot",
-            unitAmount = 0,
+            partyType = "customer",
             currencyCode = "USD",
-            chargeCode = "FREIGHT",
-            sortOrder = 1
+            columns = new[] { new { code = "GENERAL", name = "Hàng thường" } },
+            bands = new object[]
+            {
+                new { minQuantity = 21m, maxQuantity = 100m, prices = new decimal?[] { 5m } }
+            }
         });
-        await AddBreakAsync(tenantId, ruleId, 1, 21, 100, 5m);
-        await PublishAsync(tenantId, versionId);
+        await PublishAsync(tenantId, composed.RateVersionId);
 
-        var ratingId = await RateAsync(tenantId, new { billId, rateVersionId = versionId, quantity = 60, transportMode = "air" });
+        var ratingId = await RateAsync(tenantId, new
+        {
+            billId,
+            rateVersionId = composed.RateVersionId,
+            quantity = 60,
+            commodityCode = "GENERAL"
+        });
         var rating = await GetAsync(tenantId, ratingId);
         Assert.Equal(300m, rating.TotalAmount);
         var line = Assert.Single(rating.Details);
@@ -136,14 +142,11 @@ public sealed class RatingModeTests : IAsyncLifetime
             chargeCode = "FREIGHT",
             sortOrder = 2
         });
-        await PublishAsync(tenantId, versionId);
-
-        using var ambiguous = Tenant(HttpMethod.Post, "/api/ratings", tenantId);
-        ambiguous.Content = JsonContent.Create(new { billId, rateVersionId = versionId, quantity = 1 });
-        var blocked = await _client.SendAsync(ambiguous);
+        using var publish = Tenant(HttpMethod.Post, $"/api/rate-versions/{versionId}/publish", tenantId);
+        var blocked = await _client.SendAsync(publish);
         Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
         var err = await blocked.Content.ReadFromJsonAsync<Err>(Json);
-        Assert.Contains("AMBIGUOUS_RATE_RULE", err!.Message);
+        Assert.Contains("RATE_CONFLICT", err!.Message);
 
         var version2 = await PublishedVersionAsync(tenantId, "RC-SPEC");
         await AddRuleAsync(tenantId, version2, new
@@ -534,7 +537,8 @@ public sealed class RatingModeTests : IAsyncLifetime
             billId,
             rateVersionId = ids.RateVersionId,
             quantity = 10.5m,
-            commodityCode = "GENERAL"
+            commodityCode = "GENERAL",
+            transportMode = "air"
         }));
         Assert.Equal(682_500m, rated.TotalAmount);
 
@@ -544,7 +548,8 @@ public sealed class RatingModeTests : IAsyncLifetime
             billId,
             rateVersionId = ids.RateVersionId,
             quantity = 5m,
-            commodityCode = "EXPRESS"
+            commodityCode = "EXPRESS",
+            transportMode = "air"
         });
         var blocked = await _client.SendAsync(express);
         Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
@@ -552,29 +557,40 @@ public sealed class RatingModeTests : IAsyncLifetime
 
     private async Task<Guid> PublishReferenceCardAsync(Guid tenantId, ReferenceTariffCatalog.ReferenceRateCard card)
     {
-        using var cardReq = Tenant(HttpMethod.Post, "/api/rate-cards", tenantId);
-        cardReq.Content = JsonContent.Create(new
+        var freight = card.Rules
+            .Where(r => string.Equals(r.CalcMethod, "weight_break_pivot", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var skeleton = freight.OrderByDescending(r => r.Breaks.Count).First();
+        decimal? minimumQuantity = null;
+        var pricedMin = freight.FirstOrDefault(r => r.MinAmount is > 0);
+        var firstBand = pricedMin?.Breaks.OrderBy(b => b.MinQuantity).FirstOrDefault();
+        if (pricedMin?.MinAmount is decimal minAmount && firstBand is not null && firstBand.UnitAmount > 0)
+        {
+            minimumQuantity = minAmount / firstBand.UnitAmount;
+        }
+
+        var composed = await ComposeAsync(tenantId, new
         {
             code = card.Code,
             name = card.Name,
             partyType = "vendor",
             currencyCode = card.CurrencyCode,
             description = card.Description,
-            transportMode = card.TransportMode,
-            routeCode = ReferenceTariffCatalog.Route,
-            carrierName = ReferenceTariffCatalog.Carrier
+            effectiveFrom = card.EffectiveFrom,
+            note = card.Note,
+            minimumQuantity,
+            columns = freight.Select(r => new { code = r.CommodityCode, name = r.Name }).ToArray(),
+            bands = skeleton.Breaks.OrderBy(b => b.MinQuantity).Select(band => new
+            {
+                minQuantity = band.MinQuantity,
+                maxQuantity = band.MaxQuantity,
+                prices = freight.Select(rule => rule.Breaks.FirstOrDefault(x => x.MinQuantity == band.MinQuantity)?.UnitAmount).ToArray()
+            }).ToArray()
         });
-        var cardRes = await _client.SendAsync(cardReq);
-        cardRes.EnsureSuccessStatusCode();
-        var cardId = (await cardRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
-
-        using var versionReq = Tenant(HttpMethod.Post, $"/api/rate-cards/{cardId}/versions", tenantId);
-        versionReq.Content = JsonContent.Create(new { effectiveFrom = card.EffectiveFrom, note = card.Note });
-        var versionRes = await _client.SendAsync(versionReq);
-        versionRes.EnsureSuccessStatusCode();
-        var versionId = (await versionRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+        var cardId = composed.RateCardId;
+        var versionId = composed.RateVersionId;
         using var chargeTypeReq = Tenant(HttpMethod.Post, "/api/economic-charge-types", tenantId);
-        chargeTypeReq.Content = JsonContent.Create(new { code = "DONGGO", name = "Đóng gói" });
+        chargeTypeReq.Content = JsonContent.Create(new { code = "DG-" + card.TransportMode.ToUpperInvariant(), name = "Đóng gói" });
         var chargeTypeRes = await _client.SendAsync(chargeTypeReq);
         chargeTypeRes.EnsureSuccessStatusCode();
         var chargeTypeId = (await chargeTypeRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
@@ -609,27 +625,6 @@ public sealed class RatingModeTests : IAsyncLifetime
                     economicChargeTypeId = chargeTypeId
                 });
                 (await _client.SendAsync(surcharge)).EnsureSuccessStatusCode();
-                continue;
-            }
-
-            var ruleId = await AddRuleAsync(tenantId, versionId, new
-            {
-                code = rule.Code,
-                name = rule.Name,
-                calcMethod = rule.CalcMethod,
-                unitAmount = rule.UnitAmount,
-                currencyCode = rule.CurrencyCode,
-                chargeCode = rule.ChargeCode,
-                commodityCode = rule.CommodityCode,
-                destinationCode = rule.DestinationCode,
-                applicability = rule.Applicability,
-                minAmount = rule.MinAmount,
-                volumetricFactor = rule.VolumetricFactor,
-                sortOrder = rule.SortOrder
-            });
-            foreach (var band in rule.Breaks)
-            {
-                await AddBreakAsync(tenantId, ruleId, band.SequenceNo, band.MinQuantity, band.MaxQuantity, band.UnitAmount);
             }
         }
 
@@ -646,6 +641,15 @@ public sealed class RatingModeTests : IAsyncLifetime
         versionRes.EnsureSuccessStatusCode();
         var versionId = (await versionRes.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
         return versionId;
+    }
+
+    private async Task<ComposeBody> ComposeAsync(Guid tenantId, object body)
+    {
+        using var req = Tenant(HttpMethod.Post, "/api/rate-cards/compose", tenantId);
+        req.Content = JsonContent.Create(body);
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<ComposeBody>(Json))!;
     }
 
     private async Task<Guid> AddRuleAsync(Guid tenantId, Guid versionId, object body)

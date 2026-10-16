@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type LoginState = "idle" | "loading" | "error";
 
@@ -122,6 +123,11 @@ export default function LoginPage() {
             {state === "loading" ? "Đang đăng nhập…" : "Đăng nhập"}
           </button>
         </form>
+        <div style={{ marginTop: "1.25rem", textAlign: "center", fontSize: "0.82rem", color: "var(--muted)" }}>
+          <Link href="/privacy" style={{ color: "var(--accent)", textDecoration: "underline" }}>
+            Chính sách về Quyền riêng tư
+          </Link>
+        </div>
       </div>
     </div>
   );

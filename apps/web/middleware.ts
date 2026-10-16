@@ -3,7 +3,12 @@ import { AUTH_COOKIE } from "@/lib/auth";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (pathname.startsWith("/login") || pathname.startsWith("/bff/")) {
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/bff/") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/cms/policies/privacy")
+  ) {
     return NextResponse.next();
   }
 

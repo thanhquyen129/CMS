@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -228,6 +229,22 @@ export default function LoginScreen() {
             ))
           : null}
       </View>
+
+      <View style={styles.policyFooter}>
+        <Text style={styles.policyFooterText}>
+          Bằng việc đăng nhập, bạn đồng ý với{" "}
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push("/privacy")}
+          accessibilityRole="link"
+          accessibilityLabel="Chính sách về quyền riêng tư"
+        >
+          <Text style={styles.policyFooterLink}>
+            Chính sách về Quyền riêng tư
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.policyFooterText}> của LSS.</Text>
+      </View>
     </ScrollView>
   );
 }
@@ -362,6 +379,25 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#64748B",
     marginTop: 3,
+  },
+  policyFooter: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+  },
+  policyFooterText: {
+    fontSize: 12,
+    color: "#64748B",
+    textAlign: "center",
+  },
+  policyFooterLink: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#2563EB",
+    textDecorationLine: "underline",
   },
 });
 

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { apiRequest } from "../../src/api/client";
 import { useAuth } from "../../src/auth/AuthContext";
+import { useRouter } from "expo-router";
 
 interface TenantProfileDto {
   id?: string;
@@ -69,6 +70,7 @@ interface TenantBackupDto {
 }
 
 export default function SettingsAdminModuleScreen() {
+  const router = useRouter();
   const { bootstrap, pushToken, refreshBootstrap } = useAuth();
   const [subTab, setSubTab] = useState<
     "tenant" | "audit" | "notifications" | "backups"
@@ -353,6 +355,21 @@ export default function SettingsAdminModuleScreen() {
               ))}
             </View>
           ) : null}
+
+          <View style={[styles.infoBox, { marginTop: 12, backgroundColor: "#F8FAFC", borderColor: "#CBD5E1" }]}>
+            <Text style={styles.subHeader}>Quyền riêng tư &amp; Bảo mật Dữ liệu</Text>
+            <Text style={styles.metaText}>
+              Chính sách bảo vệ dữ liệu cá nhân, PII và dữ liệu định vị theo chuẩn Apple App Store &amp; Google Play Store.
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: "#0F172A" }]}
+                onPress={() => router.push("/privacy")}
+              >
+                <Text style={styles.primaryBtnText}>Xem Chính sách Quyền riêng tư</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       ) : subTab === "notifications" ? (
         <>

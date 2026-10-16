@@ -1,3 +1,7 @@
+## 2026-10-16 — Chính sách quyền riêng tư (Privacy Policy) Web & Mobile
+- Triển khai trang Chính sách về Quyền riêng tư tiếng Việt tại `/privacy` và `/cms/policies/privacy`, mở truy cập public không cần đăng nhập trên middleware (phục vụ Apple App Store & Google Play Store). Thêm màn hình native `/privacy` trên Mobile, link truy cập tại Login và Settings.
+- Files: `apps/web/middleware.ts`, `apps/web/app/privacy/page.tsx`, `apps/web/app/privacy/PrivacyPolicyView.tsx`, `apps/web/app/cms/policies/privacy/page.tsx`, `apps/web/app/login/page.tsx`, `apps/mobile/app/privacy.tsx`, `apps/mobile/app/login.tsx`, `apps/mobile/app/modules/settings.tsx`.
+
 ## 2026-10-14 — Bảng giá: nhãn tiếng Việt, nấc ≥, chi tiết chỉ đọc
 - Ma trận nâng cao chọn loại hàng bằng tên tiếng Việt, không hiện mã nội bộ. Nấc mở hiển thị ≥ kg; ô đến để trống là Không giới hạn. Bảng cơ bản đủ mã, tên, khoản mục; từ/đến nằm một hàng. Màn chi tiết chỉ đọc: một hàng nút, VAT không sửa tại chỗ, bản đã phát hành khóa nút sửa.
 - Files: `RateCardDeclarationForm.tsx`, `TariffMatrix.tsx`, `ComposeTariffForm.tsx`, `rate-cards.ts`, `app/rate-cards/[id]/page.tsx`, `PublishRateVersionButton.tsx`, `SetRateCardActiveButton.tsx`, `globals.css`.

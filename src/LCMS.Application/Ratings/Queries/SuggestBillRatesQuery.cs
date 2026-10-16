@@ -85,15 +85,17 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
         var ids = cards.Select(c => c.Id).ToList();
         var versions = await _db.RateVersions.AsNoTracking()
             .Where(v => ids.Contains(v.RateCardId))
-            .Select(v => new RateSuggestionVersion(v.Id, v.RateCardId, v.VersionNo, v.Status, v.EffectiveFrom, v.EffectiveTo))
+            .Select(v => new RateSuggestionVersion(v.Id, v.RateCardId, v.VersionNo, v.Status, v.EffectiveFrom, v.EffectiveTo, v.ExplicitChargeGroups))
             .ToListAsync(cancellationToken);
         var versionIds = versions.Select(v => v.Id).ToList();
+        var explicitVersionIds = versions.Where(v => v.ExplicitChargeGroups).Select(v => v.Id).ToHashSet();
         var rules = await _db.PricingRules.AsNoTracking()
             .Where(r => versionIds.Contains(r.RateVersionId) && r.IsActive)
             .Select(r => new RateSuggestionRule(
-                r.RateVersionId, r.Code, r.Name, r.ChargeCode, r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode, r.TransportMode, r.OriginCode, r.DestinationCode, r.CommodityCode))
+                r.RateVersionId, r.Code, r.Name, r.ChargeCode, r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode, r.TransportMode, r.OriginCode, r.DestinationCode, r.CommodityCode, r.AppliesAnyRoute == true))
             .ToListAsync(cancellationToken);
-        rules = rules.Where(r => !LCMS.Application.Surcharges.LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode)).ToList();
+        rules = rules.Where(r => explicitVersionIds.Contains(r.RateVersionId)
+            || !LCMS.Application.Surcharges.LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode)).ToList();
         string? commodity = null;
         if (bill.CommodityTypeId is Guid commodityId)
         {

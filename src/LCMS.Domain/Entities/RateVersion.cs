@@ -22,6 +22,12 @@ public sealed class RateVersion : TenantEntityBase
     /// <summary>Declared VAT percent. Null means undeclared, not 0%.</summary>
     public decimal? VatRate { get; set; }
 
+    /// <summary>
+    /// True when this draft was saved under the explicit charge-group contract.
+    /// Published legacy rows stay false so keyword classification and null charge codes are unchanged.
+    /// </summary>
+    public bool ExplicitChargeGroups { get; set; }
+
     public RateCard? RateCard { get; set; }
 
     public bool IsPublished =>

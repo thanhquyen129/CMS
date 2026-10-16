@@ -519,6 +519,19 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         }
 
         await StampChargeSnapshotAsync(card, version, bill, ruleNature, details, cancellationToken);
+        var unclassified = details
+            .Where(d => string.Equals(d.SourceType, RatingSourceTypes.BaseRate, StringComparison.OrdinalIgnoreCase)
+                && d.EconomicChargeTypeId is null)
+            .Select(d => d.RuleCode)
+            .Distinct()
+            .ToArray();
+        if (unclassified.Length > 0 && !string.IsNullOrWhiteSpace(rating.ContextJson))
+        {
+            var node = System.Text.Json.Nodes.JsonNode.Parse(rating.ContextJson)!.AsObject();
+            node["economicCategoryStatus"] = RateFieldPolicy.Unclassified;
+            node["unclassifiedRuleCodes"] = System.Text.Json.JsonSerializer.SerializeToNode(unclassified);
+            rating.ContextJson = node.ToJsonString();
+        }
 
         _db.Ratings.Add(rating);
         await _db.SaveChangesAsync(cancellationToken);
@@ -751,6 +764,17 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         var maps = await _db.ChargeTypeMappings.AsNoTracking().ToListAsync(cancellationToken);
         var catalog = types.ToDictionary(t => t.Code.ToUpperInvariant(), t => t.Id);
         var mapping = maps.ToDictionary(m => ChargeLineSnapshot.MapKey(m.SourceKind, m.SourceCode), m => m.EconomicChargeTypeId);
+        var componentIds = details
+            .Where(d => d.PricingRuleComponentId is not null)
+            .Select(d => d.PricingRuleComponentId!.Value)
+            .Distinct()
+            .ToList();
+        var componentRows = componentIds.Count == 0
+            ? []
+            : await _db.PricingRuleComponents.AsNoTracking()
+                .Where(c => componentIds.Contains(c.Id))
+                .ToListAsync(cancellationToken);
+        var componentsById = componentRows.ToDictionary(c => c.Id);
         foreach (var detail in details)
         {
             var fromSurcharge = string.Equals(detail.SourceType, RatingSourceTypes.Surcharge, StringComparison.OrdinalIgnoreCase);
@@ -776,21 +800,17 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                 continue;
             }
 
-            var code = detail.ComponentCode;
-            var kind = string.Equals(detail.FinancialNature, "revenue", StringComparison.OrdinalIgnoreCase)
-                ? ChargeTypeMappingKinds.RevenueType
-                : ChargeTypeMappingKinds.CostType;
-            if (mapping.TryGetValue(ChargeLineSnapshot.MapKey(ChargeTypeMappingKinds.Component, code), out var byComponent))
+            componentsById.TryGetValue(detail.PricingRuleComponentId ?? Guid.Empty, out var component);
+            detail.EconomicChargeTypeId = ChargeLineSnapshot.MappedEconomicCharge(
+                component?.CostTypeCode,
+                component?.RevenueTypeCode,
+                detail.ComponentCode,
+                mapping);
+            if (detail.EconomicChargeTypeId is null
+                && !string.IsNullOrWhiteSpace(detail.ComponentCode)
+                && catalog.TryGetValue(detail.ComponentCode.Trim().ToUpperInvariant(), out var existingType))
             {
-                detail.EconomicChargeTypeId = byComponent;
-            }
-            else if (mapping.TryGetValue(ChargeLineSnapshot.MapKey(kind, code), out var byType))
-            {
-                detail.EconomicChargeTypeId = byType;
-            }
-            else if (!string.IsNullOrWhiteSpace(code) && catalog.TryGetValue(code.Trim().ToUpperInvariant(), out var byCatalog))
-            {
-                detail.EconomicChargeTypeId = byCatalog;
+                detail.EconomicChargeTypeId = existingType;
             }
         }
     }

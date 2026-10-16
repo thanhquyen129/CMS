@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.EconomicCharges;
+using LCMS.Application.Ratings;
 using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -525,7 +526,8 @@ public sealed record PricingRuleDto(
     string? WeightBasis = null,
     decimal? WeightMin = null,
     decimal? WeightMax = null,
-    string? MatrixGroupCode = null);
+    string? MatrixGroupCode = null,
+    string? LineRole = null);
 
 public sealed record ListPricingRulesQuery(Guid RateVersionId) : IRequest<IReadOnlyList<PricingRuleDto>>;
 
@@ -549,8 +551,8 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
             throw new TenantRequiredAppException();
         }
 
-        var versionExists = await _db.RateVersions.AnyAsync(v => v.Id == request.RateVersionId, cancellationToken);
-        if (!versionExists)
+        var version = await _db.RateVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == request.RateVersionId, cancellationToken);
+        if (version is null)
         {
             throw new NotFoundAppException("Không tìm thấy phiên bản bảng giá.");
         }
@@ -562,7 +564,7 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
             .ThenBy(r => r.Code)
             .ToListAsync(cancellationToken);
         rules = rules
-            .Where(r => !LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
+            .Where(r => !RateChargeSelection.ExcludeFromBase(r.Code, r.Name, r.ChargeCode, r.LineRole, version.ExplicitChargeGroups))
             .ToList();
 
         var ruleIds = rules.Select(r => r.Id).ToList();
@@ -573,7 +575,7 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
             .ThenBy(c => c.Code)
             .ToListAsync(cancellationToken);
         components = components
-            .Where(c => !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
+            .Where(c => version.ExplicitChargeGroups || !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
             .ToList();
         var chargeTypeIds = components
             .Where(c => c.EconomicChargeTypeId != null)
@@ -638,7 +640,8 @@ public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRu
                 r.WeightBasis,
                 r.WeightMin,
                 r.WeightMax,
-                r.MatrixGroupCode))
+                r.MatrixGroupCode,
+                r.LineRole))
             .ToList();
     }
 }

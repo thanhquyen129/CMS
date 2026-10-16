@@ -63,6 +63,9 @@ public sealed class PricingRule : TenantEntityBase
     /// <summary>Rules that share a charge code compete. Null keeps legacy “apply every match”.</summary>
     public string? ChargeCode { get; set; }
 
+    /// <summary>base_rate | independent. Null is a legacy row. Surcharges are not stored here.</summary>
+    public string? LineRole { get; set; }
+
     public string? TransportMode { get; set; }
     public string? OriginCode { get; set; }
     public string? DestinationCode { get; set; }
@@ -78,6 +81,20 @@ public sealed class PricingRule : TenantEntityBase
     public bool IsActive { get; set; } = true;
 
     public RateVersion? RateVersion { get; set; }
+}
+
+public static class RateLineRoles
+{
+    public const string BaseRate = "base_rate";
+    public const string Independent = "independent";
+    public const string Surcharge = "surcharge";
+
+    public static bool IsBaseFamily(string? role) =>
+        string.Equals(role, BaseRate, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(role, Independent, StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsSurcharge(string? role) =>
+        string.Equals(role, Surcharge, StringComparison.OrdinalIgnoreCase);
 }
 
 public static class PricingCalcMethods

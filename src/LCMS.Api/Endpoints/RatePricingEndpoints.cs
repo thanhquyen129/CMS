@@ -449,7 +449,8 @@ public static class RatePricingEndpoints
             body.Remote,
             body.RateVersionId,
             body.RowVersion,
-            body.Groups);
+            body.Groups,
+            body.ExplicitChargeGroups);
 
     private static SaveRateCardDeclarationCommand MapDeclaration(Guid rateCardId, UpdateRateCardRequest body) =>
         new(
@@ -478,7 +479,8 @@ public static class RatePricingEndpoints
             body.Remote,
             body.RateVersionId,
             body.RowVersion,
-            body.Groups);
+            body.Groups,
+            body.ExplicitChargeGroups);
 }
 
 public sealed record ComposeTariffRequest(
@@ -531,7 +533,8 @@ public sealed record CreateRateCardRequest(
     ComposeRemoteFee? Remote = null,
     Guid? RateVersionId = null,
     string? RowVersion = null,
-    IReadOnlyList<TariffMatrixGroupInput>? Groups = null);
+    IReadOnlyList<TariffMatrixGroupInput>? Groups = null,
+    bool ExplicitChargeGroups = false);
 
 public sealed record UpdateRateCardRequest(
     string Name,
@@ -560,7 +563,8 @@ public sealed record UpdateRateCardRequest(
     string? CustomerGroupCode = null,
     string? Code = null,
     string? RowVersion = null,
-    IReadOnlyList<TariffMatrixGroupInput>? Groups = null);
+    IReadOnlyList<TariffMatrixGroupInput>? Groups = null,
+    bool ExplicitChargeGroups = false);
 
 public sealed record CreateRateVersionRequest(
     DateTimeOffset? EffectiveFrom,

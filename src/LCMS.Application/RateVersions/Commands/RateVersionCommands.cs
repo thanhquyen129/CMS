@@ -200,6 +200,34 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
             throw new ConflictAppException(conflict, RateRuleConflicts.Code);
         }
 
+        if (version.ExplicitChargeGroups)
+        {
+            var ruleIds = draftRules.Select(rule => rule.Id).ToList();
+            var components = await _db.PricingRuleComponents.AsNoTracking()
+                .Where(component => ruleIds.Contains(component.PricingRuleId) && component.DeletedAt == null)
+                .ToListAsync(cancellationToken);
+            var finance = draftRules
+                .Where(rule => rule.DeletedAt == null && rule.IsActive)
+                .Select(rule =>
+                {
+                    var rows = components.Where(component => component.PricingRuleId == rule.Id).ToList();
+                    return new ExplicitRuleFinance(
+                        rule.ChargeCode,
+                        rule.LineRole ?? (RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) ? RateLineRoles.BaseRate : null),
+                        rows.Select(component => component.CostTypeCode).FirstOrDefault(code => !string.IsNullOrWhiteSpace(code)),
+                        rows.Select(component => component.RevenueTypeCode).FirstOrDefault(code => !string.IsNullOrWhiteSpace(code)));
+                })
+                .ToList();
+            var publishBlock = RateFieldPolicy.PublishBlock(
+                string.Equals(card.PartyType, "vendor", StringComparison.OrdinalIgnoreCase),
+                card.SupplierPartyId is not null,
+                finance);
+            if (publishBlock is not null)
+            {
+                throw new ConflictAppException(publishBlock, "invalid_rate_field");
+            }
+        }
+
         var inferred = RateDeclarationPolicy.Infer(hasMatrix, hasBasic);
         if (string.IsNullOrWhiteSpace(card.DeclarationMode))
         {

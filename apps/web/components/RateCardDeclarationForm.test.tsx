@@ -122,12 +122,12 @@ describe("rate card declaration form", () => {
   it("asks before dropping basic rules, and cancel keeps them", async () => {
     const user = userEvent.setup();
     renderForm();
-    await user.type(screen.getByLabelText("Mã quy tắc 1"), "FRT");
+    await user.type(screen.getByLabelText("Tên quy tắc 1"), "FRT");
     await user.click(screen.getByRole("radio", { name: /Bảng giá nâng cao/ }));
     expect(screen.getByRole("dialog")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Hủy" }));
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect((screen.getByLabelText("Mã quy tắc 1") as HTMLInputElement).value).toBe("FRT");
+    expect((screen.getByLabelText("Tên quy tắc 1") as HTMLInputElement).value).toBe("FRT");
     expect((screen.getByRole("radio", { name: /Bảng giá cơ bản/ }) as HTMLInputElement).checked).toBe(true);
   });
 
@@ -137,8 +137,8 @@ describe("rate card declaration form", () => {
     await user.type(screen.getByLabelText("Mã"), "RC-UI");
     await user.type(screen.getByLabelText("Tên"), "Bảng giao diện");
     await user.selectOptions(screen.getByLabelText("Tuyến 1").parentElement!.querySelector("select")!, "route-1");
-    await user.type(screen.getByLabelText("Mã quy tắc 1"), "FRT");
     await user.type(screen.getByLabelText("Tên quy tắc 1"), "Cước");
+    await user.type(screen.getByLabelText("Nhóm cạnh tranh 1"), "CUOC");
     await user.type(screen.getByLabelText("Số tiền cố định 1"), "10");
     await user.click(screen.getByRole("radio", { name: /Bảng giá nâng cao/ }));
     await user.click(screen.getByRole("button", { name: "Đồng ý" }));

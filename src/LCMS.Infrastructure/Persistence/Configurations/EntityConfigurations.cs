@@ -1010,6 +1010,7 @@ internal sealed class RateVersionConfiguration : IEntityTypeConfiguration<RateVe
         builder.Property(e => e.Status).HasMaxLength(32).IsRequired();
         builder.Property(e => e.Note).HasMaxLength(1024);
         builder.Property(e => e.VatRate).HasPrecision(9, 4);
+        builder.Property(e => e.ExplicitChargeGroups).HasDefaultValue(false).IsRequired();
         builder.Ignore(e => e.IsPublished);
 
         builder.HasIndex(e => new { e.TenantId, e.RateCardId, e.VersionNo }).IsUnique();
@@ -1049,6 +1050,7 @@ internal sealed class PricingRuleConfiguration : IEntityTypeConfiguration<Pricin
         builder.Property(e => e.MinAmount).HasPrecision(18, 4);
         builder.Property(e => e.MaxAmount).HasPrecision(18, 4);
         builder.Property(e => e.ChargeCode).HasMaxLength(64);
+        builder.Property(e => e.LineRole).HasMaxLength(32);
         builder.Property(e => e.TransportMode).HasMaxLength(32);
         builder.Property(e => e.OriginCode).HasMaxLength(64);
         builder.Property(e => e.DestinationCode).HasMaxLength(64);

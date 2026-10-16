@@ -31,7 +31,11 @@ public sealed record BasicRateRuleInput(
     string? WeightBasis = null,
     decimal? WeightMin = null,
     decimal? WeightMax = null,
-    string? ChargeCode = null);
+    string? ChargeCode = null,
+    string? LineRole = null,
+    string? CostTypeCode = null,
+    string? RevenueTypeCode = null,
+    Guid? EconomicChargeTypeId = null);
 
 public sealed record TariffMatrixGroupInput(
     string? Code,
@@ -41,7 +45,10 @@ public sealed record TariffMatrixGroupInput(
     string? CarrierName,
     string? TransportMode,
     IReadOnlyList<ComposeTariffColumn> Columns,
-    IReadOnlyList<ComposeTariffBand> Bands);
+    IReadOnlyList<ComposeTariffBand> Bands,
+    string? CostTypeCode = null,
+    string? RevenueTypeCode = null,
+    Guid? EconomicChargeTypeId = null);
 
 public sealed record SaveRateCardDeclarationCommand(
     Guid? RateCardId,
@@ -69,7 +76,8 @@ public sealed record SaveRateCardDeclarationCommand(
     ComposeRemoteFee? Remote,
     Guid? RateVersionId,
     string? RowVersion = null,
-    IReadOnlyList<TariffMatrixGroupInput>? Groups = null) : IRequest<ComposeTariffResult>;
+    IReadOnlyList<TariffMatrixGroupInput>? Groups = null,
+    bool ExplicitChargeGroups = false) : IRequest<ComposeTariffResult>;
 
 public sealed class SaveRateCardDeclarationCommandValidator : AbstractValidator<SaveRateCardDeclarationCommand>
 {
@@ -176,12 +184,17 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         }
 
         card.DeclarationMode = decision.Mode;
+        if (request.ExplicitChargeGroups)
+        {
+            version.ExplicitChargeGroups = true;
+        }
+
         if (mode == RateDeclarationModes.Advanced)
         {
             return await SaveAdvancedAsync(request, version.Id, cancellationToken);
         }
 
-        await ReplaceBasicRulesAsync(card, version, request.Rules, tenantId, cancellationToken);
+        var warnings = await ReplaceBasicRulesAsync(card, version, request.Rules, tenantId, request.ExplicitChargeGroups, cancellationToken);
         _audit.Append(
             AuditActions.RateCardDeclaration,
             AuditObjectTypes.RateCard,
@@ -198,7 +211,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             throw new ConflictAppException("Không lưu được bảng giá. Mã bảng hoặc mã quy tắc đã tồn tại.");
         }
 
-        return new ComposeTariffResult(card.Id, version.Id);
+        return new ComposeTariffResult(card.Id, version.Id, warnings);
     }
 
     private async Task<RateCard> LoadOrCreateCardAsync(
@@ -324,23 +337,73 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         version.VatRate = request.VatRate;
     }
 
-    private async Task ReplaceBasicRulesAsync(
+    private async Task<IReadOnlyList<string>> ReplaceBasicRulesAsync(
         RateCard card,
         RateVersion version,
         IReadOnlyList<BasicRateRuleInput> rules,
         Guid tenantId,
+        bool explicitGroups,
         CancellationToken cancellationToken)
     {
+        var serviceCodes = explicitGroups
+            ? await ActiveCatalogCodesAsync(tenantId, MasterCatalogKinds.ServiceType, cancellationToken)
+            : null;
+        var modeCodes = explicitGroups
+            ? await ActiveCatalogCodesAsync(tenantId, MasterCatalogKinds.TransportMode, cancellationToken)
+            : null;
+        var commodityCodes = explicitGroups
+            ? await _db.CommodityTypes.AsNoTracking()
+                .Where(c => c.TenantId == tenantId && c.IsActive)
+                .Select(c => c.Code)
+                .ToListAsync(cancellationToken)
+            : null;
+        var warnings = new List<string>();
         var normalized = new List<BasicRateRuleInput>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rule in rules)
         {
-            var code = rule.Code.Trim();
-            var name = rule.Name.Trim();
+            var code = string.IsNullOrWhiteSpace(rule.Code)
+                ? RateFieldPolicy.NextBasicCode(seen)
+                : rule.Code.Trim();
+            var name = string.IsNullOrWhiteSpace(rule.Name)
+                ? RateFieldPolicy.SuggestName(rule.ChargeCode, rule.RouteCode, rule.WeightMin, rule.WeightMax)
+                : rule.Name.Trim();
             var method = rule.CalcMethod.Trim().ToLowerInvariant();
             if (code.Length == 0 || name.Length == 0)
             {
-                throw new ConflictAppException("Nhập mã và tên quy tắc.");
+                throw new ConflictAppException("Nhập tên quy tắc và số tiền. Mã quy tắc do hệ thống cấp khi chưa có.");
+            }
+
+            if (explicitGroups)
+            {
+                var fieldError = await ExplicitRuleErrorAsync(
+                    rule with { Code = code, Name = name },
+                    card,
+                    tenantId,
+                    serviceCodes!,
+                    modeCodes!,
+                    commodityCodes!,
+                    cancellationToken);
+                if (fieldError is not null)
+                {
+                    throw new ConflictAppException(fieldError, "invalid_rate_field");
+                }
+
+                var buy = string.Equals(card.PartyType, "vendor", StringComparison.OrdinalIgnoreCase);
+                var financial = buy ? rule.CostTypeCode : rule.RevenueTypeCode;
+                if (string.IsNullOrWhiteSpace(financial) && warnings.Count == 0)
+                {
+                    warnings.Add(RateFieldPolicy.DraftFinancialWarning);
+                }
+            }
+            else
+            {
+                var legacyBlock = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false)
+                    ?? RateFieldPolicy.NewModeBlock(rule.TransportMode);
+                if (legacyBlock is not null)
+                {
+                    throw new ConflictAppException(legacyBlock, "invalid_rate_field");
+                }
             }
 
             if (!seen.Add(code))
@@ -424,10 +487,11 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 ServiceTypeCode = Clean(rule.ServiceTypeCode),
                 PartyTypeCode = Clean(rule.PartyTypeCode)?.ToLowerInvariant(),
                 CommodityCode = Clean(rule.CommodityCode)?.ToUpperInvariant(),
-                TransportMode = Clean(rule.TransportMode)?.ToLowerInvariant(),
+                TransportMode = RateFieldPolicy.ToStoredMode(rule.TransportMode),
                 MinAmount = rule.MinAmount,
                 MaxAmount = rule.MaxAmount,
                 ChargeCode = rule.ChargeCode,
+                LineRole = Clean(rule.LineRole)?.ToLowerInvariant(),
                 WeightBasis = rule.WeightBasis,
                 WeightMin = rule.WeightMin,
                 WeightMax = rule.WeightMax,
@@ -437,6 +501,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 IsActive = true
             };
             await ApplyRuleRouteAsync(entity, rule, card, tenantId, cancellationToken);
+            AddFinanceComponent(entity, rule, card, tenantId);
             staged.Add(entity);
             sort += 10;
         }
@@ -457,6 +522,8 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         {
             _db.PricingRules.Add(entity);
         }
+
+        return warnings;
     }
 
     private async Task<ComposeTariffResult> SaveAdvancedAsync(
@@ -465,6 +532,20 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         CancellationToken cancellationToken)
     {
         var groups = request.Groups ?? [];
+        if (request.ExplicitChargeGroups)
+        {
+            var overlap = RateFieldPolicy.MatrixGroupOverlapError(groups.Select(group => new MatrixGroupScope(
+                group.RouteId?.ToString(),
+                group.AppliesAnyRoute,
+                group.TransportMode,
+                group.CarrierPartyId?.ToString() ?? group.CarrierName,
+                group.Columns.Select(column => column.Code).ToList())));
+            if (overlap is not null)
+            {
+                throw new ConflictAppException(overlap, "invalid_rate_field");
+            }
+        }
+
         if (groups.Count == 0)
         {
             return await _sender.Send(MapCompose(request, versionId, null, versionId is not null), cancellationToken);
@@ -490,11 +571,180 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 MapCompose(request, versionId, group with { Code = code }, replace),
                 cancellationToken);
             versionId = last.RateVersionId;
+            if (request.ExplicitChargeGroups && versionId is Guid savedVersion)
+            {
+                var saved = await _db.RateVersions.FirstAsync(v => v.Id == savedVersion, cancellationToken);
+                saved.ExplicitChargeGroups = true;
+                await AttachGroupFinanceAsync(savedVersion, code, group, request.PartyType, cancellationToken);
+            }
+
             replace = false;
             index++;
         }
 
         return last!;
+    }
+
+    private async Task<List<string>> ActiveCatalogCodesAsync(Guid tenantId, string kind, CancellationToken cancellationToken) =>
+        await _db.MasterCatalogItems.AsNoTracking()
+            .Where(item => item.TenantId == tenantId && item.Kind == kind && item.IsActive)
+            .Select(item => item.Code)
+            .ToListAsync(cancellationToken);
+
+    private async Task<string?> ExplicitRuleErrorAsync(
+        BasicRateRuleInput rule,
+        RateCard card,
+        Guid tenantId,
+        IReadOnlyList<string> serviceCodes,
+        IReadOnlyList<string> modeCodes,
+        IReadOnlyList<string> commodityCodes,
+        CancellationToken cancellationToken)
+    {
+        if (RateLineRoles.IsSurcharge(rule.LineRole))
+        {
+            return RateFieldPolicy.SurchargeRedirect;
+        }
+
+        if (!RateLineRoles.IsBaseFamily(rule.LineRole))
+        {
+            return "Chọn bản chất dòng: cước chính cạnh tranh, hoặc khoản cộng thêm độc lập.";
+        }
+
+        if (string.IsNullOrWhiteSpace(rule.ChargeCode))
+        {
+            return RateFieldPolicy.ChargeRequired;
+        }
+
+        var serviceBlock = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false);
+        if (serviceBlock is not null)
+        {
+            return serviceBlock;
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.ServiceTypeCode))
+        {
+            if (serviceCodes.Count == 0)
+            {
+                return RateFieldPolicy.CatalogEmpty;
+            }
+
+            if (!serviceCodes.Any(code => string.Equals(code, rule.ServiceTypeCode.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return RateFieldPolicy.ServiceNotInCatalog;
+            }
+        }
+
+        var modeBlock = RateFieldPolicy.NewModeBlock(rule.TransportMode);
+        if (modeBlock is not null)
+        {
+            return modeBlock;
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.TransportMode))
+        {
+            if (modeCodes.Count == 0)
+            {
+                return RateFieldPolicy.CatalogEmpty;
+            }
+
+            var canonical = RateFieldPolicy.ToCanonicalMode(rule.TransportMode);
+            if (!modeCodes.Any(code => string.Equals(code, canonical, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(code, RateFieldPolicy.ToStoredMode(rule.TransportMode), StringComparison.OrdinalIgnoreCase)))
+            {
+                return RateFieldPolicy.ModeNotInCatalog;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(rule.CommodityCode))
+        {
+            if (commodityCodes.Count == 0)
+            {
+                return RateFieldPolicy.CatalogEmpty;
+            }
+
+            if (!commodityCodes.Any(code => string.Equals(code, rule.CommodityCode.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return RateFieldPolicy.CommodityNotInCatalog;
+            }
+        }
+
+        if (rule.RouteId is Guid routeId && !rule.AppliesAnyRoute)
+        {
+            var routeMode = await _db.Routes.AsNoTracking()
+                .Where(route => route.Id == routeId && route.TenantId == tenantId)
+                .Select(route => route.TransportModeCode)
+                .FirstOrDefaultAsync(cancellationToken);
+            var conflict = RateFieldPolicy.RouteModeConflict(routeMode, rule.TransportMode, false);
+            if (conflict is not null)
+            {
+                return conflict;
+            }
+        }
+
+        return null;
+    }
+
+    private void AddFinanceComponent(PricingRule rule, BasicRateRuleInput input, RateCard card, Guid tenantId)
+    {
+        var cost = Clean(input.CostTypeCode);
+        var revenue = Clean(input.RevenueTypeCode);
+        if (cost is null && revenue is null && input.EconomicChargeTypeId is null)
+        {
+            return;
+        }
+
+        var buy = string.Equals(card.PartyType, "vendor", StringComparison.OrdinalIgnoreCase);
+        _db.PricingRuleComponents.Add(new PricingRuleComponent
+        {
+            TenantId = tenantId,
+            PricingRule = rule,
+            Code = (cost ?? revenue ?? "LINE").ToUpperInvariant(),
+            Name = rule.Name,
+            FinancialNature = buy ? "cost" : "revenue",
+            CostTypeCode = cost?.ToUpperInvariant(),
+            RevenueTypeCode = revenue?.ToUpperInvariant(),
+            Amount = rule.UnitAmount,
+            CurrencyCode = rule.CurrencyCode,
+            EconomicChargeTypeId = input.EconomicChargeTypeId,
+            SortOrder = 1
+        });
+    }
+
+    private async Task AttachGroupFinanceAsync(
+        Guid versionId,
+        string groupCode,
+        TariffMatrixGroupInput group,
+        string partyType,
+        CancellationToken cancellationToken)
+    {
+        var cost = Clean(group.CostTypeCode);
+        var revenue = Clean(group.RevenueTypeCode);
+        if (cost is null && revenue is null && group.EconomicChargeTypeId is null)
+        {
+            return;
+        }
+
+        var rules = await _db.PricingRules
+            .Where(rule => rule.RateVersionId == versionId && rule.MatrixGroupCode == groupCode && rule.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+        var buy = string.Equals(partyType, "vendor", StringComparison.OrdinalIgnoreCase);
+        foreach (var rule in rules)
+        {
+            _db.PricingRuleComponents.Add(new PricingRuleComponent
+            {
+                TenantId = rule.TenantId,
+                PricingRuleId = rule.Id,
+                Code = (cost ?? revenue ?? "LINE").ToUpperInvariant(),
+                Name = rule.Name,
+                FinancialNature = buy ? "cost" : "revenue",
+                CostTypeCode = cost?.ToUpperInvariant(),
+                RevenueTypeCode = revenue?.ToUpperInvariant(),
+                Amount = 0m,
+                CurrencyCode = rule.CurrencyCode,
+                EconomicChargeTypeId = group.EconomicChargeTypeId,
+                SortOrder = 1
+            });
+        }
     }
 
     private async Task ApplyRuleRouteAsync(

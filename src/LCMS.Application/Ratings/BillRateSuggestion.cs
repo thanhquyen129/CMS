@@ -33,7 +33,8 @@ public sealed record RateSuggestionVersion(
     int VersionNo,
     string Status,
     DateTimeOffset? EffectiveFrom,
-    DateTimeOffset? EffectiveTo);
+    DateTimeOffset? EffectiveTo,
+    bool ExplicitChargeGroups = false);
 
 public sealed record RateSuggestionRule(
     Guid RateVersionId,
@@ -46,7 +47,8 @@ public sealed record RateSuggestionRule(
     string? TransportMode,
     string? OriginCode,
     string? DestinationCode,
-    string? CommodityCode);
+    string? CommodityCode,
+    bool AppliesAnyRoute = false);
 
 public sealed record BillRateMatchContext(
     string? RouteCode,
@@ -178,13 +180,14 @@ public static class BillRateSuggestion
             return BillRateNotices.OutsideDate;
         }
 
-        var rulesCarryRoute = rules.Any(r => !string.IsNullOrWhiteSpace(r.RouteCode));
+        var rulesCarryRoute = rules.Any(r => r.AppliesAnyRoute || !string.IsNullOrWhiteSpace(r.RouteCode));
+        var rulesCarryMode = rules.Any(r => !string.IsNullOrWhiteSpace(r.TransportMode));
         if (!rulesCarryRoute && !string.IsNullOrWhiteSpace(card.RouteCode) && string.IsNullOrWhiteSpace(bill.RouteCode))
         {
             return BillRateNotices.MissingBillNotice;
         }
 
-        if (!string.IsNullOrWhiteSpace(card.TransportMode) && string.IsNullOrWhiteSpace(bill.TransportMode))
+        if (!rulesCarryMode && !string.IsNullOrWhiteSpace(card.TransportMode) && string.IsNullOrWhiteSpace(bill.TransportMode))
         {
             return BillRateNotices.MissingBillNotice;
         }
@@ -196,8 +199,9 @@ public static class BillRateSuggestion
             return BillRateNotices.RouteMismatch;
         }
 
-        if (!string.IsNullOrWhiteSpace(card.TransportMode)
-            && !string.Equals(card.TransportMode.Trim(), bill.TransportMode?.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (!rulesCarryMode
+            && !string.IsNullOrWhiteSpace(card.TransportMode)
+            && !LCMS.Domain.Pricing.RateFieldPolicy.SameMode(card.TransportMode, bill.TransportMode))
         {
             return BillRateNotices.ModeMismatch;
         }

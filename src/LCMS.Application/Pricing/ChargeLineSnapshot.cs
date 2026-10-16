@@ -53,4 +53,32 @@ public static class ChargeLineSnapshot
 
     public static string MapKey(string kind, string code) =>
         $"{kind.Trim().ToLowerInvariant()}:{code.Trim().ToUpperInvariant()}";
+
+    /// <summary>Returns a mapped id only. Never invents an economic charge type.</summary>
+    public static Guid? MappedEconomicCharge(
+        string? costTypeCode,
+        string? revenueTypeCode,
+        string? componentCode,
+        IReadOnlyDictionary<string, Guid> mappingByKey)
+    {
+        if (!string.IsNullOrWhiteSpace(costTypeCode)
+            && mappingByKey.TryGetValue(MapKey(ChargeTypeMappingKinds.CostType, costTypeCode), out var byCost))
+        {
+            return byCost;
+        }
+
+        if (!string.IsNullOrWhiteSpace(revenueTypeCode)
+            && mappingByKey.TryGetValue(MapKey(ChargeTypeMappingKinds.RevenueType, revenueTypeCode), out var byRevenue))
+        {
+            return byRevenue;
+        }
+
+        if (!string.IsNullOrWhiteSpace(componentCode)
+            && mappingByKey.TryGetValue(MapKey(ChargeTypeMappingKinds.Component, componentCode), out var byComponent))
+        {
+            return byComponent;
+        }
+
+        return null;
+    }
 }

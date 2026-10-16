@@ -211,12 +211,13 @@ public sealed class RatingContextResolver
             .OrderBy(r => r.SortOrder)
             .ThenBy(r => r.Code)
             .ToListAsync(cancellationToken);
+        var explicitGroups = version.ExplicitChargeGroups;
         var excludedLegacy = storedRules
-            .Where(r => LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
+            .Where(r => RateChargeSelection.ExcludeFromBase(r.Code, r.Name, r.ChargeCode, r.LineRole, explicitGroups))
             .Select(r => r.Code)
             .ToList();
         var rules = storedRules
-            .Where(r => !LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode))
+            .Where(r => !RateChargeSelection.ExcludeFromBase(r.Code, r.Name, r.ChargeCode, r.LineRole, explicitGroups))
             .ToList();
         var routeId = legContext ? null : bill.RouteId;
         var carrierPartyId = legContext ? shipment?.CarrierPartyId : null;
@@ -262,7 +263,9 @@ public sealed class RatingContextResolver
             .OrderBy(c => c.SortOrder)
             .ThenBy(c => c.Code)
             .ToListAsync(cancellationToken);
-        var surchargeOnlyRuleIds = rawComponents
+        var surchargeOnlyRuleIds = explicitGroups
+            ? []
+            : rawComponents
             .GroupBy(c => c.PricingRuleId)
             .Where(g => g.All(c => LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null)))
             .Select(g => g.Key)
@@ -283,12 +286,14 @@ public sealed class RatingContextResolver
                 RatingReadinessActions.RateCard));
         }
 
-        excludedLegacy.AddRange(rawComponents
+        excludedLegacy.AddRange(explicitGroups
+            ? []
+            : rawComponents
             .Where(c => LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
             .Select(c => c.Code));
         var components = rawComponents
             .Where(c => ruleIds.Contains(c.PricingRuleId)
-                        && !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null))
+                        && (explicitGroups || !LegacyComponentClassifier.IsAdditionalCharge(c.Code, c.Name, null)))
             .ToList();
         var componentsByRule = components.GroupBy(c => c.PricingRuleId).ToDictionary(g => g.Key, g => g.ToList());
         var breaks = await _db.RateBreaks.AsNoTracking()

@@ -20,7 +20,10 @@ public sealed record ComposeDeliveryFee(decimal UnderQuantity, decimal Amount);
 
 public sealed record ComposeRemoteFee(decimal AmountPerKg, string CurrencyCode, IReadOnlyList<string> Destinations);
 
-public sealed record ComposeTariffResult(Guid RateCardId, Guid RateVersionId);
+public sealed record ComposeTariffResult(
+    Guid RateCardId,
+    Guid RateVersionId,
+    IReadOnlyList<string>? Warnings = null);
 
 /// <summary>
 /// Creates a draft rate card (or fills an empty draft version) as a weight-band matrix:
@@ -244,6 +247,25 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
         var air = mode is not null && mode.Equals("air", StringComparison.OrdinalIgnoreCase);
         var sea = mode is not null && (mode.Equals("sea", StringComparison.OrdinalIgnoreCase) || mode.Equals("ocean", StringComparison.OrdinalIgnoreCase));
         var currency = card.CurrencyCode;
+        var groupCodePreview = Clean(request.MatrixGroupCode);
+        var matrixCodes = new List<string>();
+        for (var col = 0; col < columns.Count; col++)
+        {
+            if (expanded.All(band => band.Prices[col] is null))
+            {
+                continue;
+            }
+
+            matrixCodes.Add(groupCodePreview is null
+                ? columns[col].Code.Trim()
+                : groupCodePreview + "-" + columns[col].Code.Trim());
+        }
+
+        var matrixCodeError = RateFieldPolicy.MatrixCodeError(matrixCodes);
+        if (matrixCodeError is not null)
+        {
+            throw new ConflictAppException(matrixCodeError, "invalid_rate_field");
+        }
 
         for (var col = 0; col < columns.Count; col++)
         {
@@ -255,7 +277,12 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
 
             var minAmount = MinimumCharge(request.MinimumQuantity, expanded, col);
             var groupCode = Clean(request.MatrixGroupCode);
-            var ruleCode = groupCode is null ? columns[col].Code : FitCode(groupCode + "-" + columns[col].Code);
+            var ruleCode = groupCode is null ? columns[col].Code.Trim() : groupCode + "-" + columns[col].Code.Trim();
+            var codeError = RateFieldPolicy.MatrixCodeError([ruleCode]);
+            if (codeError is not null)
+            {
+                throw new ConflictAppException(codeError, "invalid_rate_field");
+            }
             var rule = new PricingRule
             {
                 TenantId = tenantId,

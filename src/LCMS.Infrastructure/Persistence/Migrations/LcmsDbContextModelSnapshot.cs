@@ -7144,6 +7144,11 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
+                    b.Property<string>("LineRole")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("line_role");
+
                     b.Property<string>("MatrixGroupCode")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)")
@@ -7683,6 +7688,12 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("EffectiveTo")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("effective_to");
+
+                    b.Property<bool>("ExplicitChargeGroups")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("explicit_charge_groups");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1024)

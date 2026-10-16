@@ -90,6 +90,7 @@ export type PricingRule = {
   maxAmount: number | null;
   sortOrder: number;
   chargeCode?: string | null;
+  lineRole?: string | null;
   transportMode?: string | null;
   commodityCode?: string | null;
   destinationCode?: string | null;
@@ -241,7 +242,9 @@ export function rateTransportLabel(mode: string | null | undefined): string {
     case "rail":
       return "Đường sắt";
     case "water":
-      return "Đường thủy";
+      return "Đường thủy (dữ liệu cũ)";
+    case "express":
+      return "Chuyển phát nhanh";
     case "multimodal":
       return "Đa phương thức";
     default:

@@ -1,3 +1,7 @@
+## 2026-10-16 — Bảng giá: nhóm cạnh tranh tường minh, mã chuẩn dịch vụ/phương thức
+- Phiên bản nháp mới có cờ `explicit_charge_groups`. Rule mới bắt buộc nhóm cạnh tranh và bản chất dòng; phụ phí không nằm trên rule. Classifier theo tên chỉ còn cho phiên bản cũ. Mode AIR/SEA/ROAD/RAIL map hai chiều; WATER và EXPRESS không bị đổi thành SEA/AIR và không chọn mới. Service AIR không chọn cho rule mới. Publish phiên bản mới chặn khi thiếu loại chi phí/doanh thu hoặc nhà cung cấp bảng mua. Rating không gán khoản mục kinh tế khi chưa có mapping.
+- Files: `RateFieldPolicy.cs`, `RateVersion.cs`, `PricingRule.cs`, `SaveRateCardDeclarationCommand.cs`, `RatingReadiness.cs`, `BillRateSuggestion.cs`, `CreateRatingCommand.cs`, `RateCardDeclarationForm.tsx`, migration `20261016091917_RateExplicitChargeGroups`.
+
 ## 2026-10-16 — Chính sách quyền riêng tư (Privacy Policy) Web & Mobile
 - Triển khai trang Chính sách về Quyền riêng tư tiếng Việt tại `/privacy` và `/cms/policies/privacy`, mở truy cập public không cần đăng nhập trên middleware (phục vụ Apple App Store & Google Play Store). Thêm màn hình native `/privacy` trên Mobile, link truy cập tại Login và Settings.
 - Files: `apps/web/middleware.ts`, `apps/web/app/privacy/page.tsx`, `apps/web/app/privacy/PrivacyPolicyView.tsx`, `apps/web/app/cms/policies/privacy/page.tsx`, `apps/web/app/login/page.tsx`, `apps/mobile/app/privacy.tsx`, `apps/mobile/app/login.tsx`, `apps/mobile/app/modules/settings.tsx`.

@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { RateCardDeclarationForm } from "@/components/RateCardDeclarationForm";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
+import { listCatalog } from "@/lib/catalog";
 import { listCurrencies } from "@/lib/master-data";
 import { listCommodities, listRoutes } from "@/lib/reference-masters";
 import { getTenantProfile } from "@/lib/tenant-admin";
@@ -15,12 +16,16 @@ export default async function NewRateCardPage() {
     redirect("/login");
   }
 
-  const [terms, routes, currencies, profile, commodities] = await Promise.all([
+  const [terms, routes, currencies, profile, commodities, services, modes, costs, revenues] = await Promise.all([
     fetchTerminology(),
     listRoutes(false),
     listCurrencies(),
     getTenantProfile(),
     listCommodities(true),
+    listCatalog("service_type"),
+    listCatalog("transport_mode"),
+    listCatalog("cost_type"),
+    listCatalog("revenue_type"),
   ]);
   const active = currencies.ok ? currencies.data.filter((c) => c.isActive) : [];
   const preferred = (profile.ok ? profile.data.defaultCurrencyCode : "VND").toUpperCase();
@@ -44,6 +49,10 @@ export default async function NewRateCardPage() {
           currencies={currencies.ok ? currencies.data : []}
           routes={routes.ok ? routes.data : []}
           commodities={commodities.ok ? commodities.data : []}
+          serviceTypes={services.ok ? services.data : []}
+          transportModes={modes.ok ? modes.data : []}
+          costTypes={costs.ok ? costs.data : []}
+          revenueTypes={revenues.ok ? revenues.data : []}
           routeError={routes.ok ? null : routes.message}
           currencyError={currencies.ok ? null : currencies.message}
         />

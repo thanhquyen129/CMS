@@ -2,6 +2,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Ratings;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,7 +35,11 @@ public sealed record RateImportRule(
     int? SortOrder,
     IReadOnlyList<RateImportBreak>? Breaks,
     IReadOnlyList<RateImportComponent>? Components,
-    IReadOnlyList<RateImportContainer>? Containers);
+    IReadOnlyList<RateImportContainer>? Containers,
+    string? ServiceTypeCode = null,
+    string? TransportMode = null,
+    string? CommodityCode = null,
+    string? LineRole = null);
 
 public sealed record RateImportCard(
     string Code,
@@ -142,6 +147,12 @@ public sealed class RateImportBatch
                 issues.Add(new RateImportIssue(row, "currencyCode", "Mã tiền tệ phải gồm 3 ký tự."));
             }
 
+            var headerMode = RateFieldPolicy.NewModeBlock(card.TransportMode);
+            if (headerMode is not null)
+            {
+                issues.Add(new RateImportIssue(row, "transportMode", headerMode));
+            }
+
             var rules = card.Rules ?? [];
             var ruleCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var rule in rules)
@@ -154,6 +165,12 @@ public sealed class RateImportBatch
                 if (!PricingCalcMethods.All.Contains(rule.CalcMethod ?? ""))
                 {
                     issues.Add(new RateImportIssue(row, "calcMethod", "Phương pháp tính giá không hợp lệ."));
+                }
+
+                var fieldIssue = ImportFieldIssue(rule);
+                if (fieldIssue is not null)
+                {
+                    issues.Add(new RateImportIssue(row, fieldIssue.Value.Field, fieldIssue.Value.Message));
                 }
 
                 var sequences = new HashSet<int>();
@@ -234,7 +251,8 @@ public sealed class RateImportBatch
                 Status = RateVersionStatuses.Draft,
                 EffectiveFrom = card.EffectiveFrom,
                 EffectiveTo = card.EffectiveTo,
-                Note = Trim(card.Note)
+                Note = Trim(card.Note),
+                ExplicitChargeGroups = true
             };
             _db.RateCards.Add(entity);
             _db.RateVersions.Add(version);
@@ -252,7 +270,13 @@ public sealed class RateImportBatch
                     CurrencyCode = string.IsNullOrWhiteSpace(rule.CurrencyCode)
                         ? entity.CurrencyCode
                         : rule.CurrencyCode.Trim().ToUpperInvariant(),
-                    ChargeCode = Trim(rule.ChargeCode),
+                    ChargeCode = Trim(rule.ChargeCode) ?? (RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) ? "FREIGHT" : null),
+                    LineRole = RateLineRoles.IsBaseFamily(rule.LineRole)
+                        ? rule.LineRole!.Trim().ToLowerInvariant()
+                        : RateLineRoles.BaseRate,
+                    ServiceTypeCode = Trim(rule.ServiceTypeCode),
+                    TransportMode = RateFieldPolicy.ToStoredMode(rule.TransportMode),
+                    CommodityCode = Trim(rule.CommodityCode)?.ToUpperInvariant(),
                     MinAmount = rule.MinAmount,
                     RoundingStep = rule.RoundingStep,
                     VolumetricFactor = rule.VolumetricFactor,
@@ -306,6 +330,33 @@ public sealed class RateImportBatch
 
         await _db.SaveChangesAsync(cancellationToken);
         return cards.Count;
+    }
+
+    private static (string Field, string Message)? ImportFieldIssue(RateImportRule rule)
+    {
+        var service = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false);
+        if (service is not null)
+        {
+            return ("serviceTypeCode", service);
+        }
+
+        var mode = RateFieldPolicy.NewModeBlock(rule.TransportMode);
+        if (mode is not null)
+        {
+            return ("transportMode", mode);
+        }
+
+        if (RateLineRoles.IsSurcharge(rule.LineRole))
+        {
+            return ("lineRole", RateFieldPolicy.SurchargeRedirect);
+        }
+
+        if (!RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) && string.IsNullOrWhiteSpace(rule.ChargeCode))
+        {
+            return ("chargeCode", RateFieldPolicy.ChargeRequired);
+        }
+
+        return null;
     }
 
     private static string? Trim(string? value) =>

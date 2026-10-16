@@ -1,3 +1,7 @@
+## 2026-10-16 — Import bảng giá dùng cùng hợp đồng explicit; thêm UAT-03/05/14/17
+- Import từ chối dịch vụ AIR, phương thức WATER/EXPRESS và rule cơ bản thiếu nhóm cạnh tranh. Bản nháp import bật explicit_charge_groups. Ca API UAT-03 (hai tuyến basic và advanced), UAT-05 (hãng khác nhà cung cấp), UAT-14 (4×10 theo chặng, retry không nhân chi phí), UAT-17 (rate.buy.write / rate.sell.write). PostgreSQL kiểm tra Up/Down/Up không đổi 350/500 USD.
+- Files: `ImportRateCardsCommand.cs`, `SaveRateCardDeclarationCommand.cs`, `RateRatingBaselineApiTests.cs`, `RateScopeMigrationPostgresTests.cs`.
+
 ## 2026-10-16 — Bảng giá: nhóm cạnh tranh tường minh, mã chuẩn dịch vụ/phương thức
 - Phiên bản nháp mới có cờ `explicit_charge_groups`. Rule mới bắt buộc nhóm cạnh tranh và bản chất dòng; phụ phí không nằm trên rule. Classifier theo tên chỉ còn cho phiên bản cũ. Mode AIR/SEA/ROAD/RAIL map hai chiều; WATER và EXPRESS không bị đổi thành SEA/AIR và không chọn mới. Service AIR không chọn cho rule mới. Publish phiên bản mới chặn khi thiếu loại chi phí/doanh thu hoặc nhà cung cấp bảng mua. Rating không gán khoản mục kinh tế khi chưa có mapping.
 - Files: `RateFieldPolicy.cs`, `RateVersion.cs`, `PricingRule.cs`, `SaveRateCardDeclarationCommand.cs`, `RatingReadiness.cs`, `BillRateSuggestion.cs`, `CreateRatingCommand.cs`, `RateCardDeclarationForm.tsx`, migration `20261016091917_RateExplicitChargeGroups`.

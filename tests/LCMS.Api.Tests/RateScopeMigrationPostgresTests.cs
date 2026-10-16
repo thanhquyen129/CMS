@@ -124,6 +124,141 @@ public sealed class RateScopeMigrationPostgresTests
         Assert.Equal(1, await ScalarAsync<long>(check, "SELECT COUNT(*) FROM ratings"));
     }
 
+    [Fact]
+    public async Task Baseline_UpDownUp_KeepsNullChargeCodes_AndHistoricalAmounts()
+    {
+        const string user = "lcms";
+        const string password = "lcms";
+        const int port = 5433;
+        var admin = $"Host=127.0.0.1;Port={port};Database=postgres;Username={user};Password={password}";
+        const string name = "lcms_rate_baseline_audit";
+        const string previous = "20261014100816_RateRuleScopeWeightBand";
+        await using (var adminConn = new NpgsqlConnection(admin))
+        {
+            await adminConn.OpenAsync();
+            await using (var kill = new NpgsqlCommand(
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @name AND pid <> pg_backend_pid()",
+                adminConn))
+            {
+                kill.Parameters.AddWithValue("name", name);
+                await kill.ExecuteNonQueryAsync();
+            }
+
+            await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS {name}", adminConn);
+            await drop.ExecuteNonQueryAsync();
+            await using var create = new NpgsqlCommand($"CREATE DATABASE {name}", adminConn);
+            await create.ExecuteNonQueryAsync();
+        }
+
+        var cs = $"Host=127.0.0.1;Port={port};Database={name};Username={user};Password={password}";
+        await using (var db = NewContext(cs))
+        {
+            await db.GetService<IMigrator>()!.MigrateAsync(previous);
+        }
+
+        var tenantId = Guid.NewGuid();
+        var cardId = Guid.NewGuid();
+        var versionId = Guid.NewGuid();
+        var billId = Guid.NewGuid();
+        var buyId = Guid.NewGuid();
+        var sellId = Guid.NewGuid();
+        await using (var conn = new NpgsqlConnection(cs))
+        {
+            await conn.OpenAsync();
+            await InsertAsync(conn, "tenants", new Dictionary<string, object?>
+            {
+                ["id"] = tenantId,
+                ["code"] = "BASE",
+                ["name"] = "BASE",
+                ["is_active"] = true,
+                ["time_zone_id"] = "Asia/Ho_Chi_Minh",
+                ["date_format"] = "dd/MM/yyyy",
+                ["default_currency_code"] = "USD"
+            });
+            await InsertCardAsync(conn, tenantId, cardId, "NSE", null, null, null);
+            await InsertAsync(conn, "rate_versions", Row(
+                tenantId,
+                versionId,
+                ("rate_card_id", cardId),
+                ("version_no", 1),
+                ("status", "published")));
+            for (var i = 1; i <= 5; i++)
+            {
+                await InsertAsync(conn, "pricing_rules", Row(
+                    tenantId,
+                    Guid.NewGuid(),
+                    ("rate_version_id", versionId),
+                    ("code", i <= 2 ? $"NSE-REMOTE-{i}" : $"NSE-DELIVERY-{i}"),
+                    ("name", i <= 2 ? "REMOTE" : "DELIVERY"),
+                    ("calc_method", "fixed"),
+                    ("unit_amount", 10m * i),
+                    ("currency_code", "USD"),
+                    ("route_code", "SGN-FRA"),
+                    ("sort_order", i),
+                    ("is_active", true)));
+            }
+
+            await InsertAsync(conn, "bills", Row(
+                tenantId,
+                billId,
+                ("bill_no", "BILL26107473"),
+                ("bill_type", "house"),
+                ("operational_status", "active"),
+                ("is_active", true)));
+            await InsertRatingAsync(conn, tenantId, buyId, billId, versionId, 350m);
+            await InsertRatingAsync(conn, tenantId, sellId, billId, versionId, 500m);
+        }
+
+        await using (var db = NewContext(cs))
+        {
+            await db.GetService<IMigrator>()!.MigrateAsync();
+        }
+
+        await using var afterUp = new NpgsqlConnection(cs);
+        await afterUp.OpenAsync();
+        Assert.Equal(350m, await ScalarAsync<decimal>(afterUp, "SELECT total_amount FROM ratings WHERE id = @id", buyId));
+        Assert.Equal(500m, await ScalarAsync<decimal>(afterUp, "SELECT total_amount FROM ratings WHERE id = @id", sellId));
+        Assert.Equal(5, await ScalarAsync<long>(afterUp, "SELECT COUNT(*) FROM pricing_rules WHERE charge_code IS NULL AND deleted_at IS NULL"));
+        Assert.Equal(0, await ScalarAsync<long>(afterUp, "SELECT COUNT(*) FROM rate_versions WHERE explicit_charge_groups = true"));
+
+        await using (var db = NewContext(cs))
+        {
+            await db.GetService<IMigrator>()!.MigrateAsync(previous);
+        }
+
+        await using var afterDown = new NpgsqlConnection(cs);
+        await afterDown.OpenAsync();
+        Assert.Equal(0, await ScalarAsync<long>(afterDown, "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'rate_versions' AND column_name = 'explicit_charge_groups'"));
+        Assert.Equal(350m, await ScalarAsync<decimal>(afterDown, "SELECT total_amount FROM ratings WHERE id = @id", buyId));
+        Assert.Equal(500m, await ScalarAsync<decimal>(afterDown, "SELECT total_amount FROM ratings WHERE id = @id", sellId));
+
+        await using (var db = NewContext(cs))
+        {
+            await db.GetService<IMigrator>()!.MigrateAsync();
+        }
+
+        await using var afterSecondUp = new NpgsqlConnection(cs);
+        await afterSecondUp.OpenAsync();
+        Assert.Equal(350m, await ScalarAsync<decimal>(afterSecondUp, "SELECT total_amount FROM ratings WHERE id = @id", buyId));
+        Assert.Equal(500m, await ScalarAsync<decimal>(afterSecondUp, "SELECT total_amount FROM ratings WHERE id = @id", sellId));
+        Assert.Equal(5, await ScalarAsync<long>(afterSecondUp, "SELECT COUNT(*) FROM pricing_rules WHERE charge_code IS NULL"));
+    }
+
+    private static async Task InsertRatingAsync(NpgsqlConnection conn, Guid tenantId, Guid id, Guid billId, Guid versionId, decimal amount)
+    {
+        await InsertAsync(conn, "ratings", Row(
+            tenantId,
+            id,
+            ("bill_id", billId),
+            ("rate_version_id", versionId),
+            ("context_type", "bill"),
+            ("rated_at", DateTimeOffset.UtcNow),
+            ("currency_code", "USD"),
+            ("total_amount", amount),
+            ("quantity", 1m),
+            ("status", "completed")));
+    }
+
     private static LcmsDbContext NewContext(string connectionString)
     {
         var options = new DbContextOptionsBuilder<LcmsDbContext>()

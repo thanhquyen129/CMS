@@ -470,7 +470,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             });
         }
 
-        var staged = new List<PricingRule>();
+        var staged = new List<(PricingRule Entity, BasicRateRuleInput Input)>();
         var sort = 10;
         foreach (var rule in normalized)
         {
@@ -501,12 +501,11 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 IsActive = true
             };
             await ApplyRuleRouteAsync(entity, rule, card, tenantId, cancellationToken);
-            AddFinanceComponent(entity, rule, card, tenantId);
-            staged.Add(entity);
+            staged.Add((entity, rule));
             sort += 10;
         }
 
-        var conflict = RateRuleConflicts.Find(staged);
+        var conflict = RateRuleConflicts.Find(staged.Select(row => row.Entity).ToList());
         if (conflict is not null)
         {
             throw new ConflictAppException(conflict, RateRuleConflicts.Code);
@@ -518,9 +517,10 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             existing.Where(r => !RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod)).ToList(),
             cancellationToken);
 
-        foreach (var entity in staged)
+        foreach (var (entity, input) in staged)
         {
             _db.PricingRules.Add(entity);
+            AddFinanceComponent(entity, input, card, tenantId);
         }
 
         return warnings;
@@ -580,6 +580,11 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
             replace = false;
             index++;
+        }
+
+        if (request.ExplicitChargeGroups)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
         }
 
         return last!;
@@ -697,6 +702,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         _db.PricingRuleComponents.Add(new PricingRuleComponent
         {
             TenantId = tenantId,
+            PricingRuleId = rule.Id,
             PricingRule = rule,
             Code = (cost ?? revenue ?? "LINE").ToUpperInvariant(),
             Name = rule.Name,

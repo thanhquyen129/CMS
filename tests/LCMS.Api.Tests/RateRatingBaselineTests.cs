@@ -51,6 +51,9 @@ public sealed class RateRatingBaselineTests
         Assert.Equal("QT0001", first);
         Assert.Equal("QT0003", again);
         Assert.Equal("QT0001", first);
+        var afterMiddleDelete = RateFieldPolicy.NextBasicCode(["QT0001", "QT0002~retired", "QT0003"]);
+        Assert.Equal("QT0002", afterMiddleDelete);
+        Assert.DoesNotContain(afterMiddleDelete, new[] { "QT0001", "QT0003", "QT0002~retired" });
     }
 
     [Fact]

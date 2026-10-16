@@ -1,0 +1,11 @@
+LCMS concurrency guard — Two_users_with_the_same_row_version_second_write_is_409
+Command: dotnet test tests/LCMS.Api.Tests/LCMS.Api.Tests.csproj --filter FullyQualifiedName~Two_users_with_the_same_row_version
+Result: Passed! Failed: 0, Passed: 1, Skipped: 0, Total: 1, Duration: 4 s
+
+Scenario:
+- User A and User B read the same draft RateCard row_version = N.
+- User A updates the name to "Bản của A". The write succeeds and row_version changes.
+- User B updates with the original row_version = N.
+- API returns 409 Conflict, code concurrency_conflict.
+- Message: "Dữ liệu đã bị thay đổi bởi người khác. Vui lòng tải lại và thử lại."
+- The stored name remains "Bản của A". User B does not overwrite it.

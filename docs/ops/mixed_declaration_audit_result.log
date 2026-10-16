@@ -1,0 +1,23 @@
+LCMS mixed-declaration census
+Script: docs/ops/rate-card-mixed-declaration.sql
+Mode: read-only SELECT. No UPDATE, DELETE, or declaration_mode assignment.
+Host: 127.0.0.1:5433
+Databases: lcms, lcms_rate_ac30, lcms_rate_baseline_audit, postgres
+
+===== DATABASE lcms =====
+columns: rate_card_id | rate_card_code | version_number | count_rules | count_matrix_bands | status
+row_count: 0
+(empty result: no mixed basic+matrix version)
+
+===== DATABASE lcms_rate_ac30 =====
+columns: rate_card_id | rate_card_code | version_number | count_rules | count_matrix_bands | status
+row_count: 0
+(empty result: no mixed basic+matrix version)
+
+===== DATABASE lcms_rate_baseline_audit =====
+columns: rate_card_id | rate_card_code | version_number | count_rules | count_matrix_bands | status
+row_count: 0
+(empty result: no mixed basic+matrix version)
+
+===== DATABASE postgres =====
+SKIP: no rate_versions table

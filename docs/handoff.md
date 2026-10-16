@@ -1,3 +1,7 @@
+## 2026-10-16 — Mobile: Sửa lỗi chặn đăng nhập trên bản Store Production
+- Bỏ gọi `setApiBaseUrl` không cần thiết khi đăng nhập; `setApiBaseUrl` không báo lỗi nếu URL trùng URL production mặc định (`https://cms.lsslogistics.vn`). Ẩn hoàn toàn nút chọn vai trò demo và cấu hình máy chủ khi `EXPO_PUBLIC_SHOW_DEMO_PERSONAS=false`.
+- Files: `apps/mobile/src/api/client.ts`, `apps/mobile/app/login.tsx`, `apps/mobile/src/api/__tests__/client.test.ts`.
+
 ## 2026-10-16 — Import bảng giá dùng cùng hợp đồng explicit; thêm UAT-03/05/14/17
 - Import từ chối dịch vụ AIR, phương thức WATER/EXPRESS và rule cơ bản thiếu nhóm cạnh tranh. Bản nháp import bật explicit_charge_groups. Ca API UAT-03 (hai tuyến basic và advanced), UAT-05 (hãng khác nhà cung cấp), UAT-14 (4×10 theo chặng, retry không nhân chi phí), UAT-17 (rate.buy.write / rate.sell.write). PostgreSQL kiểm tra Up/Down/Up không đổi 350/500 USD.
 - Files: `ImportRateCardsCommand.cs`, `SaveRateCardDeclarationCommand.cs`, `RateRatingBaselineApiTests.cs`, `RateScopeMigrationPostgresTests.cs`.

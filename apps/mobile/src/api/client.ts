@@ -104,27 +104,35 @@ export async function getStoredSessionTokens(): Promise<AuthSessionTokens | null
 }
 
 export async function getApiBaseUrl(): Promise<string> {
-  const custom = await getSecureItem(STORAGE_KEYS.API_BASE_URL);
-  if (custom) {
-    return custom.replace(/\/+$/, "");
-  }
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl) {
-    return envUrl.replace(/\/+$/, "");
-  }
-  return "https://cms.lsslogistics.vn";
-}
-
-export async function setApiBaseUrl(url: string): Promise<void> {
+  const defaultUrl = (process.env.EXPO_PUBLIC_API_URL ?? "https://cms.lsslogistics.vn").replace(/\/+$/, "");
   if (
     process.env.NODE_ENV === "production" &&
     process.env.EXPO_PUBLIC_SHOW_DEMO_PERSONAS === "false"
   ) {
+    return defaultUrl;
+  }
+  const custom = await getSecureItem(STORAGE_KEYS.API_BASE_URL);
+  if (custom) {
+    return custom.replace(/\/+$/, "");
+  }
+  return defaultUrl;
+}
+
+export async function setApiBaseUrl(url: string): Promise<void> {
+  const normalized = url.trim().replace(/\/+$/, "");
+  const defaultUrl = (process.env.EXPO_PUBLIC_API_URL ?? "https://cms.lsslogistics.vn").replace(/\/+$/, "");
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.EXPO_PUBLIC_SHOW_DEMO_PERSONAS === "false"
+  ) {
+    if (normalized === defaultUrl) {
+      return;
+    }
     throw new Error(
       "Không được phép thay đổi API Base URL trong môi trường Store Production thương mại."
     );
   }
-  await setSecureItem(STORAGE_KEYS.API_BASE_URL, url.trim().replace(/\/+$/, ""));
+  await setSecureItem(STORAGE_KEYS.API_BASE_URL, normalized);
 }
 
 export interface ApiRequestOptions {

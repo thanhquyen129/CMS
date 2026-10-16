@@ -93,7 +93,7 @@ export default function LoginScreen() {
 
     setSubmitting(true);
     try {
-      if (apiUrl.trim()) {
+      if (isDemoEnabled && showServerConfig && apiUrl.trim()) {
         await setApiBaseUrl(apiUrl.trim());
       }
       await loginWithCredentials({
@@ -161,18 +161,20 @@ export default function LoginScreen() {
           placeholder="Nhập mật khẩu truy cập"
         />
 
-        <TouchableOpacity
-          style={styles.configToggle}
-          onPress={() => setShowServerConfig((v) => !v)}
-        >
-          <Text style={styles.configToggleText}>
-            {showServerConfig
-              ? "▲ Ẩn cài đặt kết nối máy chủ"
-              : "⚙️ Cài đặt kết nối máy chủ hệ thống"}
-          </Text>
-        </TouchableOpacity>
+        {isDemoEnabled && (
+          <TouchableOpacity
+            style={styles.configToggle}
+            onPress={() => setShowServerConfig((v) => !v)}
+          >
+            <Text style={styles.configToggleText}>
+              {showServerConfig
+                ? "▲ Ẩn cài đặt kết nối máy chủ"
+                : "⚙️ Cài đặt kết nối máy chủ hệ thống"}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        {showServerConfig ? (
+        {isDemoEnabled && showServerConfig ? (
           <View style={styles.serverConfigBox}>
             <Text style={styles.label}>Địa chỉ máy chủ trung tâm (Server URL)</Text>
             <TextInput
@@ -198,37 +200,39 @@ export default function LoginScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.personaSection}>
-        <TouchableOpacity
-          onPress={() => setShowDemoPersonas((v) => !v)}
-          style={{ marginBottom: 8 }}
-        >
-          <Text style={styles.personaHeading}>
-            {showDemoPersonas ? "▼ " : "▶ "}
-            Chọn nhanh tài khoản theo vai trò (Role-Adaptive Demo • Mật khẩu: abc123)
-          </Text>
-        </TouchableOpacity>
-        {showDemoPersonas
-          ? DEMO_ROLES.map((item) => (
-              <TouchableOpacity
-                key={item.email}
-                style={[
-                  styles.personaCard,
-                  email === item.email && styles.personaCardActive,
-                ]}
-                onPress={() => {
-                  setEmail(item.email);
-                  if (!tenantCode.trim()) setTenantCode("ops");
-                  if (!password) setPassword("abc123");
-                }}
-              >
-                <Text style={styles.personaRole}>{item.role}</Text>
-                <Text style={styles.personaEmail}>{item.email}</Text>
-                <Text style={styles.personaDesc}>{item.desc}</Text>
-              </TouchableOpacity>
-            ))
-          : null}
-      </View>
+      {isDemoEnabled && (
+        <View style={styles.personaSection}>
+          <TouchableOpacity
+            onPress={() => setShowDemoPersonas((v) => !v)}
+            style={{ marginBottom: 8 }}
+          >
+            <Text style={styles.personaHeading}>
+              {showDemoPersonas ? "▼ " : "▶ "}
+              Chọn nhanh tài khoản theo vai trò (Role-Adaptive Demo • Mật khẩu: abc123)
+            </Text>
+          </TouchableOpacity>
+          {showDemoPersonas
+            ? DEMO_ROLES.map((item) => (
+                <TouchableOpacity
+                  key={item.email}
+                  style={[
+                    styles.personaCard,
+                    email === item.email && styles.personaCardActive,
+                  ]}
+                  onPress={() => {
+                    setEmail(item.email);
+                    if (!tenantCode.trim()) setTenantCode("ops");
+                    if (!password) setPassword("abc123");
+                  }}
+                >
+                  <Text style={styles.personaRole}>{item.role}</Text>
+                  <Text style={styles.personaEmail}>{item.email}</Text>
+                  <Text style={styles.personaDesc}>{item.desc}</Text>
+                </TouchableOpacity>
+              ))
+            : null}
+        </View>
+      )}
 
       <View style={styles.policyFooter}>
         <Text style={styles.policyFooterText}>

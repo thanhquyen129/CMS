@@ -252,6 +252,38 @@ public sealed class RateRatingBaselineApiTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Two_users_with_the_same_row_version_second_write_is_409()
+    {
+        var tenantId = await CreateTenantAsync();
+        var userA = await UserInRoleAsync(tenantId, "a-cc@example.com", "CostAccountant");
+        var userB = await UserInRoleAsync(tenantId, "b-cc@example.com", "CostAccountant");
+        var routeId = await CreateRouteAsync(tenantId, "SGN-HAN");
+        var created = await PostCreatedAsync(tenantId, "/api/rate-cards", new
+        {
+            code = "RC-CC",
+            name = "Nháp chung",
+            partyType = "vendor",
+            currencyCode = "USD",
+            declarationMode = "basic",
+            rules = new[] { Rule("SGN-HAN", routeId, 10m) }
+        });
+        var before = await GetCardAsync(tenantId, created.Id);
+        var first = await PutCardAsync(tenantId, userA, created.Id, CardBody("Bản của A", routeId, before.RowVersion));
+        var firstText = await first.Content.ReadAsStringAsync();
+        Assert.True(first.IsSuccessStatusCode, firstText);
+
+        var stale = await PutCardAsync(tenantId, userB, created.Id, CardBody("Bản của B", routeId, before.RowVersion));
+        var problem = await stale.Content.ReadFromJsonAsync<ProblemRow>(Json);
+        Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+        Assert.Equal("concurrency_conflict", problem!.Code);
+        Assert.Contains("thay đổi", problem.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Exception", problem.Message, StringComparison.OrdinalIgnoreCase);
+        var after = await GetCardAsync(tenantId, created.Id);
+        Assert.Equal("Bản của A", after.Name);
+        Assert.NotEqual(before.RowVersion, after.RowVersion);
+    }
+
+    [Fact]
     public async Task Val12_ImportRejectsServiceAir_Water_AndBlankChargeCode()
     {
         var tenantId = await CreateTenantAsync();
@@ -412,6 +444,32 @@ public sealed class RateRatingBaselineApiTests : IAsyncLifetime
         return JsonSerializer.Deserialize<Created>(text, Json)!.Id;
     }
 
+    private async Task<CardRow> GetCardAsync(Guid tenantId, Guid id)
+    {
+        using var req = Tenant(HttpMethod.Get, $"/api/rate-cards/{id}", tenantId);
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<CardRow>(Json))!;
+    }
+
+    private async Task<HttpResponseMessage> PutCardAsync(Guid tenantId, Guid userId, Guid cardId, object body)
+    {
+        using var req = Tenant(HttpMethod.Put, $"/api/rate-cards/{cardId}", tenantId);
+        req.Headers.Add("X-User-Id", userId.ToString());
+        req.Content = JsonContent.Create(body);
+        return await _client.SendAsync(req);
+    }
+
+    private static object CardBody(string name, Guid routeId, string? rowVersion) => new
+    {
+        name,
+        partyType = "vendor",
+        currencyCode = "USD",
+        declarationMode = "basic",
+        rowVersion,
+        rules = new[] { Rule("SGN-HAN", routeId, 10m) }
+    };
+
     private async Task<HttpResponseMessage> SendCardAsync(Guid tenantId, Guid userId, string partyType, string code)
     {
         using var req = Tenant(HttpMethod.Post, "/api/rate-cards", tenantId);
@@ -482,6 +540,8 @@ public sealed class RateRatingBaselineApiTests : IAsyncLifetime
     private sealed record RuleRow(Guid? CarrierPartyId);
     private sealed record CostRow(decimal? ExpectedAmount);
     private sealed record RoleRow(Guid Id, string Code);
+    private sealed record CardRow(string Name, string? RowVersion);
+    private sealed record ProblemRow(string Code, string Message);
     private sealed record PreviewBody(bool CanCommit, List<IssueRow> Issues);
     private sealed record IssueRow(string Field, string Message);
 }

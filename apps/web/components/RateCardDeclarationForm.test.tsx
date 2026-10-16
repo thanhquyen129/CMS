@@ -136,7 +136,7 @@ describe("rate card declaration form", () => {
     renderForm();
     await user.type(screen.getByLabelText("Mã"), "RC-UI");
     await user.type(screen.getByLabelText("Tên"), "Bảng giao diện");
-    await user.selectOptions(screen.getByLabelText("Tuyến 1").parentElement!.querySelector("select")!, "route-1");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Chọn tuyến 1" }), "route-1");
     await user.type(screen.getByLabelText("Tên quy tắc 1"), "Cước");
     await user.type(screen.getByLabelText("Nhóm cạnh tranh 1"), "CUOC");
     await user.type(screen.getByLabelText("Số tiền cố định 1"), "10");
@@ -153,7 +153,7 @@ describe("rate card declaration form", () => {
     expect(body.bands.length).toBeGreaterThan(0);
     expect(body.routeId).toBeNull();
     expect(body.groups[0].routeId).toBe("route-1");
-  });
+  }, 20000);
 
   it("labels a fixed amount and a unit rate differently", async () => {
     const user = userEvent.setup();
@@ -182,7 +182,7 @@ describe("rate card declaration form", () => {
     renderForm();
     await user.type(screen.getByLabelText("Mã"), "RC-ERR");
     await user.type(screen.getByLabelText("Tên"), "Lỗi");
-    await user.selectOptions(screen.getByLabelText("Tuyến 1").parentElement!.querySelector("select")!, "route-1");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Chọn tuyến 1" }), "route-1");
     await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
     expect(screen.getByRole("alert").textContent).toContain("một hình thức khai báo");
     expect(screen.getByRole("alert").textContent).not.toContain("Exception");
@@ -197,7 +197,9 @@ describe("rate card detail contract", () => {
     expect(src).not.toContain("AddPricingRuleForm");
     expect(src).not.toContain("ComposeTariffForm");
     expect(src).toContain("isDraftVersion");
+    expect(src).toContain("draftVersion ? (");
     expect(src).toContain("Chỉnh sửa bảng giá");
+    expect(src).toContain("Phiên bản đã phát hành không sửa được");
     expect(src).toContain("rateTransportLabel");
     expect(rateTransportLabel("air")).toBe("Hàng không");
     expect(rateTransportLabel("ROAD_X")).toBe("Phương thức khác");

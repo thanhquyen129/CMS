@@ -48,7 +48,8 @@ public sealed record TariffMatrixGroupInput(
     IReadOnlyList<ComposeTariffBand> Bands,
     string? CostTypeCode = null,
     string? RevenueTypeCode = null,
-    Guid? EconomicChargeTypeId = null);
+    Guid? EconomicChargeTypeId = null,
+    string? ChargeCode = null);
 
 public sealed record SaveRateCardDeclarationCommand(
     Guid? RateCardId,
@@ -561,10 +562,24 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
         if (groups.Count == 0)
         {
-            return await _sender.Send(MapCompose(request, versionId, null, versionId is not null), cancellationToken);
+            var single = await _sender.Send(MapCompose(request, versionId, null, versionId is not null), cancellationToken);
+            if (request.ExplicitChargeGroups)
+            {
+                var saved = await _db.RateVersions.FirstAsync(v => v.Id == single.RateVersionId, cancellationToken);
+                saved.ExplicitChargeGroups = true;
+                await _db.SaveChangesAsync(cancellationToken);
+                return single with { Warnings = [RateFieldPolicy.DraftFinancialWarning, RateFieldPolicy.DraftChargeWarning] };
+            }
+
+            return single;
         }
 
         ComposeTariffResult? last = null;
+        var warnings = new List<string>();
+        var tenantId = _tenantContext.TenantId!.Value;
+        var chargeCatalog = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => t.TenantId == tenantId && t.IsActive)
+            .ToListAsync(cancellationToken);
         var replace = versionId is not null;
         var index = 1;
         foreach (var group in groups)
@@ -579,16 +594,38 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 throw new ConflictAppException("Chọn tuyến hoặc Tất cả tuyến cho nhóm ma trận.", "invalid_route");
             }
 
+            var charge = ResolveGroupCharge(group, chargeCatalog);
+            if (request.ExplicitChargeGroups)
+            {
+                var buy = string.Equals(request.PartyType, "vendor", StringComparison.OrdinalIgnoreCase);
+                var financial = buy ? group.CostTypeCode : group.RevenueTypeCode;
+                if (string.IsNullOrWhiteSpace(financial) && !warnings.Contains(RateFieldPolicy.DraftFinancialWarning))
+                {
+                    warnings.Add(RateFieldPolicy.DraftFinancialWarning);
+                }
+
+                if (charge is null && !warnings.Contains(RateFieldPolicy.DraftChargeWarning))
+                {
+                    warnings.Add(RateFieldPolicy.DraftChargeWarning);
+                }
+            }
+
             var code = string.IsNullOrWhiteSpace(group.Code) ? $"G{index}" : group.Code.Trim();
+            var resolvedGroup = group with
+            {
+                Code = code,
+                ChargeCode = charge?.Code.Trim().ToUpperInvariant(),
+                EconomicChargeTypeId = group.EconomicChargeTypeId ?? charge?.Id
+            };
             last = await _sender.Send(
-                MapCompose(request, versionId, group with { Code = code }, replace),
+                MapCompose(request, versionId, resolvedGroup, replace),
                 cancellationToken);
             versionId = last.RateVersionId;
             if (request.ExplicitChargeGroups && versionId is Guid savedVersion)
             {
                 var saved = await _db.RateVersions.FirstAsync(v => v.Id == savedVersion, cancellationToken);
                 saved.ExplicitChargeGroups = true;
-                await AttachGroupFinanceAsync(savedVersion, code, group, request.PartyType, cancellationToken);
+                await AttachGroupFinanceAsync(savedVersion, code, resolvedGroup, request.PartyType, cancellationToken);
             }
 
             replace = false;
@@ -600,7 +637,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        return last!;
+        return last! with { Warnings = warnings };
     }
 
     private async Task<List<string>> ActiveCatalogCodesAsync(Guid tenantId, string kind, CancellationToken cancellationToken) =>
@@ -830,7 +867,9 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             group?.AppliesAnyRoute ?? false,
             group?.CarrierPartyId,
             group?.Code,
-            ScopeOnRules: group is not null || request.RouteId is null);
+            ScopeOnRules: group is not null || request.RouteId is null,
+            group?.EconomicChargeTypeId,
+            group?.ChargeCode);
 
     private async Task EnsureWriteAsync(string partyType, CancellationToken cancellationToken)
     {
@@ -846,6 +885,32 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
     {
         var sent = Clean(rule.ChargeCode);
         if (rule.EconomicChargeTypeId is Guid id && id != Guid.Empty)
+        {
+            var picked = catalog.FirstOrDefault(t => t.Id == id)
+                ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+            if (sent is not null && !string.Equals(sent, picked.Code.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnprocessableAppException(RateFieldPolicy.ChargeCodeMismatch, "invalid_charge_item");
+            }
+
+            return picked;
+        }
+
+        if (sent is null)
+        {
+            return null;
+        }
+
+        return catalog.FirstOrDefault(t => string.Equals(t.Code.Trim(), sent, StringComparison.OrdinalIgnoreCase))
+            ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+    }
+
+    private static EconomicChargeType? ResolveGroupCharge(
+        TariffMatrixGroupInput group,
+        IReadOnlyList<EconomicChargeType> catalog)
+    {
+        var sent = Clean(group.ChargeCode);
+        if (group.EconomicChargeTypeId is Guid id && id != Guid.Empty)
         {
             var picked = catalog.FirstOrDefault(t => t.Id == id)
                 ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");

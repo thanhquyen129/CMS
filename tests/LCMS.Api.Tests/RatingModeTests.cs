@@ -334,6 +334,7 @@ public sealed class RatingModeTests : IAsyncLifetime
                             name = "Air",
                             calcMethod = "weight_break_pivot",
                             unitAmount = 0,
+                            chargeCode = "FREIGHT",
                             breaks = new object[]
                             {
                                 new { sequenceNo = 1, minQuantity = 0, maxQuantity = 100, unitAmount = 2 },
@@ -715,7 +716,11 @@ public sealed class RatingModeTests : IAsyncLifetime
     {
         var response = await _client.PostAsJsonAsync("/api/tenants", new { code = "TN-" + Guid.NewGuid().ToString("N")[..8], name = "Rate" });
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+        var tenantId = (await response.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+        using var charge = Tenant(HttpMethod.Post, "/api/economic-charge-types", tenantId);
+        charge.Content = JsonContent.Create(new { code = "FREIGHT", name = "Cước vận tải" });
+        (await _client.SendAsync(charge)).EnsureSuccessStatusCode();
+        return tenantId;
     }
 
     private static HttpRequestMessage Tenant(HttpMethod method, string url, Guid tenantId)

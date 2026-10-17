@@ -356,6 +356,7 @@ public sealed class RateRatingBaselineApiTests : IAsyncLifetime
         code,
         routeId,
         appliesAnyRoute = false,
+        chargeCode = "FREIGHT",
         costTypeCode = "FREIGHT",
         columns = new[] { new { code = "GENERAL", name = "Hàng thường" } },
         bands = new[] { new { minQuantity = 0m, maxQuantity = 100m, prices = new decimal?[] { price } } }

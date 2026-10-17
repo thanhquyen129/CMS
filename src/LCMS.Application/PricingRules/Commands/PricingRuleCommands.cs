@@ -32,7 +32,11 @@ public sealed record AddPricingRuleCommand(
     string? DestinationCode = null,
     string? CommodityCode = null,
     decimal? VolumetricFactor = null,
-    decimal? RoundingStep = null) : IRequest<Guid>;
+    decimal? RoundingStep = null,
+    string? WeightBasis = null,
+    decimal? WeightMin = null,
+    decimal? WeightMax = null,
+    Guid? EconomicChargeTypeId = null) : IRequest<Guid>;
 
 public sealed class AddPricingRuleCommandValidator : AbstractValidator<AddPricingRuleCommand>
 {
@@ -138,13 +142,10 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             throw new UnprocessableAppException(partyError, "party_type_conflict");
         }
 
-        if (version.ExplicitChargeGroups
-            && !string.IsNullOrWhiteSpace(request.ChargeCode)
-            && !await _db.EconomicChargeTypes.AnyAsync(
-                t => t.TenantId == tenantId && t.IsActive && t.Code == request.ChargeCode.Trim().ToUpper(),
-                cancellationToken))
+        var weightError = WeightBand.DeclarationError(request.WeightBasis, request.WeightMin, request.WeightMax);
+        if (weightError is not null)
         {
-            throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+            throw new UnprocessableAppException(weightError, "invalid_weight_band");
         }
 
         if (!version.ExplicitChargeGroups
@@ -154,6 +155,27 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
                 "Phụ phí không đặt trên phiên bản bảng giá. Tạo và phát hành tại Quản lý phụ phí.");
         }
 
+        EconomicChargeType? resolvedCharge = null;
+        var sentChargeCode = string.IsNullOrWhiteSpace(request.ChargeCode) ? null : request.ChargeCode.Trim();
+        if (request.EconomicChargeTypeId is Guid chargeTypeId && chargeTypeId != Guid.Empty)
+        {
+            resolvedCharge = await _db.EconomicChargeTypes.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.IsActive && t.Id == chargeTypeId, cancellationToken)
+                ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+            if (sentChargeCode is not null
+                && !string.Equals(sentChargeCode, resolvedCharge.Code.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnprocessableAppException(RateFieldPolicy.ChargeCodeMismatch, "invalid_charge_item");
+            }
+        }
+        else if (sentChargeCode is not null)
+        {
+            var upper = sentChargeCode.ToUpperInvariant();
+            resolvedCharge = await _db.EconomicChargeTypes.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.IsActive && t.Code == upper, cancellationToken)
+                ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+        }
+
         var code = request.Code.Trim();
         if (await _db.PricingRules.AnyAsync(
                 r => r.RateVersionId == version.Id && r.Code == code, cancellationToken))
@@ -161,6 +183,9 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             throw new ConflictAppException("Mã quy tắc đã tồn tại trên phiên bản này.");
         }
 
+        var basis = string.IsNullOrWhiteSpace(request.WeightBasis)
+            ? null
+            : request.WeightBasis.Trim().ToLowerInvariant();
         var rule = new PricingRule
         {
             TenantId = tenantId,
@@ -172,11 +197,14 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
             Applicability = string.IsNullOrWhiteSpace(request.Applicability) ? null : request.Applicability.Trim(),
             ServiceTypeCode = string.IsNullOrWhiteSpace(request.ServiceTypeCode) ? null : request.ServiceTypeCode.Trim(),
-            PartyTypeCode = string.IsNullOrWhiteSpace(request.PartyTypeCode) ? null : request.PartyTypeCode.Trim().ToLowerInvariant(),
+            PartyTypeCode = null,
             RouteCode = string.IsNullOrWhiteSpace(request.RouteCode) ? null : request.RouteCode.Trim(),
             MinAmount = request.MinAmount,
             MaxAmount = request.MaxAmount,
-            ChargeCode = string.IsNullOrWhiteSpace(request.ChargeCode) ? null : request.ChargeCode.Trim(),
+            ChargeCode = resolvedCharge?.Code.Trim().ToUpperInvariant(),
+            WeightBasis = basis,
+            WeightMin = basis is null ? null : request.WeightMin,
+            WeightMax = basis is null ? null : request.WeightMax,
             TransportMode = string.IsNullOrWhiteSpace(request.TransportMode) ? null : request.TransportMode.Trim(),
             OriginCode = string.IsNullOrWhiteSpace(request.OriginCode) ? null : request.OriginCode.Trim(),
             DestinationCode = string.IsNullOrWhiteSpace(request.DestinationCode) ? null : request.DestinationCode.Trim(),
@@ -188,6 +216,23 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
         };
 
         _db.PricingRules.Add(rule);
+        if (resolvedCharge is not null && request.EconomicChargeTypeId is not null)
+        {
+            var buy = string.Equals(card.PartyType, "vendor", StringComparison.OrdinalIgnoreCase);
+            _db.PricingRuleComponents.Add(new PricingRuleComponent
+            {
+                TenantId = tenantId,
+                PricingRuleId = rule.Id,
+                PricingRule = rule,
+                Code = resolvedCharge.Code.Trim().ToUpperInvariant(),
+                Name = rule.Name,
+                FinancialNature = buy ? "cost" : "revenue",
+                Amount = rule.UnitAmount,
+                CurrencyCode = rule.CurrencyCode,
+                EconomicChargeTypeId = resolvedCharge.Id,
+                SortOrder = 1
+            });
+        }
         try
         {
             await _db.SaveChangesAsync(cancellationToken);

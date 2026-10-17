@@ -1,3 +1,10 @@
+## 2026-10-17 — RATE-UI-05..07 (Hardening sau tái thẩm định): đóng 7 lỗ hổng API con, Advanced, Import, Mobile & Responsive
+- `AddPricingRuleCommand`: bổ sung `WeightBasis`/`WeightMin`/`WeightMax`/`EconomicChargeTypeId`, gọi `WeightBand.DeclarationError`, bắt buộc `ChargeCode`/`EconomicChargeTypeId` thuộc `economic_charge_types`, và luôn lưu `party_type_code = NULL` (kể cả khi gửi trùng header).
+- Bảng giá nâng cao (`ComposeTariffCommand`, `SaveRateCardDeclarationCommand`, `RateFieldPolicy.PublishBlock`): xóa hoàn toàn hardcode `ReferenceCharge.Freight` và bỏ miễn trừ `!rule.Matrix` khi publish; mỗi nhóm ma trận nhận `EconomicChargeTypeId`/`ChargeCode` từ danh mục master và bị chặn publish nếu thiếu khoản giá.
+- `ImportRateCardsCommand`: bổ sung bộ ba trọng lượng và `EconomicChargeTypeId` vào `RateImportRule`, validate `WeightBand.DeclarationError` và khoản giá trên mọi quy tắc (không tự gán `FREIGHT`).
+- Mobile (`apps/mobile/app/modules/rates.tsx`) & Web UI (`RateCardDeclarationForm.tsx`, `rate-cards/[id]/page.tsx`, `globals.css`): đồng bộ chọn Khoản giá + Điều kiện trọng lượng trên Mobile (chặn lưu khi thiếu danh mục), thêm nút điều hướng `/rate-cards/charge-types` khi gặp GAP DATA-01, và đảm bảo responsive trên 768px/375px.
+- Files: `PricingRuleCommands.cs`, `ComposeTariffCommand.cs`, `SaveRateCardDeclarationCommand.cs`, `ImportRateCardsCommand.cs`, `RateVersionCommands.cs`, `RateFieldPolicy.cs`, `RatePricingEndpoints.cs`, `RateCardDeclarationForm.tsx`, `ImportRateCardsForm.tsx`, `rate-cards/[id]/page.tsx`, `globals.css`, `apps/mobile/app/modules/rates.tsx`, `RateUi0507UatTests.cs`.
+
 ## 2026-10-17 — RATE-UI-05..07: Loại giá chỉ ở header, Điều kiện trọng lượng, ẩn nhóm cạnh tranh
 - Rule không còn Loại giá riêng: API bỏ qua `partyTypeCode` trống, trái header trả 422 `party_type_conflict` (khai báo, AddPricingRule, import, publish); rule mới lưu `party_type_code = NULL`; rating lấy chiều giá từ header.
 - Bộ ba weight basis/min/max: không lọc nấc thì min/max phải trống, có basis thì phải đủ Từ < Đến, sai trả 422 `invalid_weight_band` khi lưu và khi publish. UI đổi nhãn "Điều kiện trọng lượng", khóa và xóa Từ/Đến khi chọn Không lọc nấc.

@@ -206,6 +206,13 @@ export default async function RateCardDetailPage({
                     {published ? " Phiên bản đã phát hành không sửa thuế suất." : " Sửa thuế suất trên màn khai báo bảng giá."}
                   </p>
                   {v.note ? <p className="note">{v.note}</p> : null}
+                  {draft && rules.some((r) => !r.chargeCode) ? (
+                    <div className="alert alert-warning" role="status">
+                      Bản nháp còn quy tắc chưa có khoản giá chuẩn nên chưa phát hành được.{" "}
+                      <Link href="/rate-cards/charge-types">Mở Khoản mục kinh tế</Link> để khai báo khoản giá, sau đó{" "}
+                      <Link href={`/rate-cards/${card.id}/edit`}>Chỉnh sửa bảng giá</Link>.
+                    </div>
+                  ) : null}
                   {(ruleBag?.warnings ?? []).map((w) => (
                     <div key={w.code} className="alert alert-warning" role="status">
                       {w.message} Quy tắc: {w.ruleCodes.join(", ")}.

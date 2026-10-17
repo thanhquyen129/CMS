@@ -77,6 +77,14 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         });
         Assert.Equal((HttpStatusCode)422, legacy.StatusCode);
 
+        await PostOkAsync(t.Id, $"/api/rate-versions/{versionId}/rules", new
+        {
+            code = "SAME", name = "Cước cùng chiều", calcMethod = "fixed", unitAmount = 1m, currencyCode = "USD", partyTypeCode = "vendor", economicChargeTypeId = t.Freight, sortOrder = 1
+        });
+        var addedSame = (await RulesAsync(t.Id, versionId)).Single(r => r.Code == "SAME");
+        Assert.Null(addedSame.PartyTypeCode);
+        Assert.Equal("FREIGHT", addedSame.ChargeCode);
+
         var preview = await PostAsync(t.Id, "/api/rate-imports/preview", new
         {
             cards = new[]
@@ -126,8 +134,9 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         var versionId = await LegacyVersionAsync(t.Id, cardId);
         await PostOkAsync(t.Id, $"/api/rate-versions/{versionId}/rules", new
         {
-            code = "OLD", name = "Cước cũ", calcMethod = "fixed", unitAmount = 70m, currencyCode = "USD", partyTypeCode = "vendor", sortOrder = 1
+            code = "OLD", name = "Cước cũ", calcMethod = "fixed", unitAmount = 70m, currencyCode = "USD", sortOrder = 1
         });
+        await MutateRuleAsync(versionId, r => r.PartyTypeCode = "vendor");
         await PublishOkAsync(t.Id, versionId);
         var before = await RowAsync(versionId, "OLD");
 
@@ -153,11 +162,15 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
             ["currencyCode"] = "USD",
             ["declarationMode"] = "advanced",
             ["explicitChargeGroups"] = true,
-            ["groups"] = new[] { Group("G1", t.Route, 2m, 3m, revenue: true) }
+            ["groups"] = new[] { Group("G1", t.Route, 2m, 3m, revenue: true, t.Freight) }
         });
         var rules = await RulesAsync(t.Id, created.RateVersionId);
         Assert.NotEmpty(rules);
-        Assert.All(rules, rule => Assert.Null(rule.PartyTypeCode));
+        Assert.All(rules, rule =>
+        {
+            Assert.Null(rule.PartyTypeCode);
+            Assert.Equal("FREIGHT", rule.ChargeCode);
+        });
     }
 
     [Fact]
@@ -187,6 +200,31 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         Assert.Equal((HttpStatusCode)422, res.StatusCode);
         Assert.Equal("invalid_weight_band", problem.Code);
         Assert.Contains("Không lọc nấc", problem.Message);
+
+        var cardId = await LegacyCardAsync(t.Id, "RC-U07-ADD", "vendor");
+        var versionId = await LegacyVersionAsync(t.Id, cardId);
+        var addRes = await PostAsync(t.Id, $"/api/rate-versions/{versionId}/rules", new
+        {
+            code = "R1", name = "Cước", calcMethod = "fixed", unitAmount = 10m, currencyCode = "USD",
+            weightBasis = (string?)null, weightMin = 0m, weightMax = 5m, economicChargeTypeId = t.Freight, sortOrder = 1
+        });
+        Assert.Equal((HttpStatusCode)422, addRes.StatusCode);
+        Assert.Equal("invalid_weight_band", (await ProblemAsync(addRes)).Code);
+
+        var impPreview = await PostAsync(t.Id, "/api/rate-imports/preview", new
+        {
+            cards = new[]
+            {
+                new
+                {
+                    code = "RC-U07-IMP", name = "Nhập", partyType = "vendor", currencyCode = "USD",
+                    rules = new[] { new { code = "R1", name = "Cước", calcMethod = "fixed", unitAmount = 10m, chargeCode = "FREIGHT", weightBasis = (string?)null, weightMin = (decimal?)0m, weightMax = (decimal?)5m } }
+                }
+            }
+        });
+        var previewBody = await impPreview.Content.ReadFromJsonAsync<PreviewBody>(Json);
+        Assert.False(previewBody!.CanCommit);
+        Assert.Contains(previewBody.Issues, i => i.Field == "weightBasis");
     }
 
     [Fact]
@@ -199,6 +237,8 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         }));
         await PublishOkAsync(t.Id, created.RateVersionId);
         var billId = await BillAsync(t.Id, "BL-U08");
+        var zero = await RatingAsync(t.Id, await RateOkAsync(t.Id, new { billId, rateVersionId = created.RateVersionId, quantity = 1m, grossWeightKg = 0m }));
+        Assert.Equal(10m, zero.TotalAmount);
         var hit = await RatingAsync(t.Id, await RateOkAsync(t.Id, new { billId, rateVersionId = created.RateVersionId, quantity = 1m, grossWeightKg = 4.999m }));
         Assert.Equal(10m, hit.TotalAmount);
         var miss = await PostAsync(t.Id, "/api/ratings", new { billId, rateVersionId = created.RateVersionId, quantity = 1m, grossWeightKg = 5.000m });
@@ -239,6 +279,36 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         }));
         Assert.Equal((HttpStatusCode)422, open.StatusCode);
         Assert.Contains("nhập đủ Từ và Đến", (await ProblemAsync(open)).Message);
+
+        var negative = await PostAsync(t.Id, "/api/rate-cards", Card("RC-U10-NEG", "vendor", t.Supplier, new[]
+        {
+            Rule("A", t.Freight, 10m, routeId: t.Route, basis: "gross", min: -0.001m, max: 5m)
+        }));
+        Assert.Equal((HttpStatusCode)422, negative.StatusCode);
+
+        var cardId = await LegacyCardAsync(t.Id, "RC-U10-ADD", "vendor");
+        var verId = await LegacyVersionAsync(t.Id, cardId);
+        var addReversed = await PostAsync(t.Id, $"/api/rate-versions/{verId}/rules", new
+        {
+            code = "A", name = "Cước", calcMethod = "fixed", unitAmount = 10m, currencyCode = "USD",
+            weightBasis = "gross", weightMin = 10m, weightMax = 5m, economicChargeTypeId = t.Freight, sortOrder = 1
+        });
+        Assert.Equal((HttpStatusCode)422, addReversed.StatusCode);
+
+        var impReversed = await PostAsync(t.Id, "/api/rate-imports/preview", new
+        {
+            cards = new[]
+            {
+                new
+                {
+                    code = "RC-U10-IMP", name = "Nhập", partyType = "vendor", currencyCode = "USD",
+                    rules = new[] { new { code = "R1", name = "Cước", calcMethod = "fixed", unitAmount = 10m, chargeCode = "FREIGHT", weightBasis = "gross", weightMin = (decimal?)10m, weightMax = (decimal?)5m } }
+                }
+            }
+        });
+        var impBody = await impReversed.Content.ReadFromJsonAsync<PreviewBody>(Json);
+        Assert.False(impBody!.CanCommit);
+        Assert.Contains(impBody.Issues, i => i.Field == "weightBasis");
 
         var created = await DeclareAsync(t.Id, Card("RC-U10-C", "vendor", t.Supplier, new[] { Rule("A", t.Freight, 10m, routeId: t.Route) }));
         await MutateRuleAsync(created.RateVersionId, rule =>
@@ -288,7 +358,7 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
             ["declarationMode"] = "advanced",
             ["explicitChargeGroups"] = true,
             ["supplierPartyId"] = t.Supplier,
-            ["groups"] = new[] { Group("G1", t.Route, 2m, null, revenue: false) }
+            ["groups"] = new[] { Group("G1", t.Route, 2m, null, revenue: false, t.Freight) }
         });
         await PublishOkAsync(t.Id, created.RateVersionId);
         var billId = await BillAsync(t.Id, "BL-U12", "SGN-HAN");
@@ -384,6 +454,32 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         Assert.Contains("chưa có khoản giá chuẩn", problem.Message);
         Assert.Equal("draft", await StatusAsync(created.RateVersionId));
         Assert.Null((await RulesAsync(tenantId, created.RateVersionId)).Single().ChargeCode);
+
+        var route = await RouteAsync(tenantId, "SGN-HAN");
+        var advRes = await PostAsync(tenantId, "/api/rate-cards", new Dictionary<string, object?>
+        {
+            ["code"] = "RC-U16-ADV",
+            ["name"] = "Nâng cao thiếu danh mục",
+            ["partyType"] = "vendor",
+            ["currencyCode"] = "USD",
+            ["declarationMode"] = "advanced",
+            ["explicitChargeGroups"] = true,
+            ["supplierPartyId"] = supplier,
+            ["groups"] = new[] { Group("G1", route, 2m, null, revenue: false) }
+        });
+        var advText = await advRes.Content.ReadAsStringAsync();
+        Assert.True(advRes.IsSuccessStatusCode, advText);
+        var advCreated = JsonSerializer.Deserialize<Created>(advText, Json)!;
+        Assert.Contains(advCreated.Warnings!, w => w.Contains("chưa có khoản giá chuẩn", StringComparison.Ordinal));
+        var advRules = await RulesAsync(tenantId, advCreated.RateVersionId);
+        Assert.NotEmpty(advRules);
+        Assert.All(advRules, r => Assert.Null(r.ChargeCode));
+
+        var advPublish = await PostAsync(tenantId, $"/api/rate-versions/{advCreated.RateVersionId}/publish", new { });
+        var advProblem = await ProblemAsync(advPublish);
+        Assert.Equal(HttpStatusCode.Conflict, advPublish.StatusCode);
+        Assert.Contains("chưa có khoản giá chuẩn", advProblem.Message);
+        Assert.Equal("draft", await StatusAsync(advCreated.RateVersionId));
     }
 
     [Fact]
@@ -565,11 +661,12 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         ["revenueTypeCode"] = sell ? costType : null
     };
 
-    private static object Group(string code, Guid routeId, decimal low, decimal? high, bool revenue) => new
+    private static object Group(string code, Guid routeId, decimal low, decimal? high, bool revenue, Guid? economicChargeTypeId = null) => new
     {
         code,
         routeId,
         appliesAnyRoute = false,
+        economicChargeTypeId,
         costTypeCode = revenue ? null : "FREIGHT",
         revenueTypeCode = revenue ? "FREIGHT" : null,
         columns = new[] { new { code = "GENERAL", name = "Hàng thường" } },

@@ -206,7 +206,11 @@ public static class RatePricingEndpoints
                     body.DestinationCode,
                     body.CommodityCode,
                     body.VolumetricFactor,
-                    body.RoundingStep),
+                    body.RoundingStep,
+                    body.WeightBasis,
+                    body.WeightMin,
+                    body.WeightMax,
+                    body.EconomicChargeTypeId),
                 ct);
             return Results.Created($"/api/pricing-rules/{id}", new { id });
         });
@@ -600,7 +604,11 @@ public sealed record AddPricingRuleRequest(
     string? DestinationCode = null,
     string? CommodityCode = null,
     decimal? VolumetricFactor = null,
-    decimal? RoundingStep = null);
+    decimal? RoundingStep = null,
+    string? WeightBasis = null,
+    decimal? WeightMin = null,
+    decimal? WeightMax = null,
+    Guid? EconomicChargeTypeId = null);
 
 public sealed record AddPricingRuleComponentRequest(
     string Code,

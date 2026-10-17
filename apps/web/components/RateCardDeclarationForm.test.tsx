@@ -302,10 +302,45 @@ describe("UAT RATE-UI-05..07", () => {
     expect(rule).not.toHaveProperty("chargeCode");
   }, 20000);
 
-  it("UAT-16: an empty charge catalog says so instead of inventing a code", () => {
+  it("UAT-16: an empty charge catalog says so instead of inventing a code, and links to Khoản mục kinh tế", () => {
     renderForm({ chargeItems: [] });
     const charge = screen.getByLabelText("Khoản giá 1") as HTMLSelectElement;
     expect(Array.from(charge.options).map((o) => o.textContent)).toEqual(["Chưa có danh mục khoản giá"]);
+    const link = screen.getAllByRole("link", { name: "Mở Khoản mục kinh tế" })[0] as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe("/rate-cards/charge-types");
+  });
+
+  it("Advanced mode requires selecting Khoản giá per matrix group without hardcoding FREIGHT, and parses decimal bounds", async () => {
+    const user = userEvent.setup();
+    renderForm({ chargeItems });
+    await fillHeader(user, "RC-DEC");
+    await user.selectOptions(screen.getByLabelText("Điều kiện trọng lượng 1"), "gross");
+    await user.type(screen.getByLabelText("Trọng lượng từ 1"), "0");
+    await user.type(screen.getByLabelText("Trọng lượng đến 1"), "4,999");
+    await user.selectOptions(screen.getByLabelText("Khoản giá 1"), "ct-freight");
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    expect(lastBody().rules[0].weightMin).toBe(0);
+    expect(lastBody().rules[0].weightMax).toBe(4.999);
+
+    await user.click(screen.getByRole("radio", { name: /Bảng giá nâng cao/ }));
+    await user.click(screen.getByRole("button", { name: "Đồng ý" }));
+    const advCharge = screen.getByLabelText("Khoản giá nhóm 1") as HTMLSelectElement;
+    expect(advCharge.value).toBe("");
+    await user.selectOptions(advCharge, "ct-freight");
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    const advBody = lastBody();
+    expect(advBody.declarationMode).toBe("advanced");
+    expect(advBody.groups[0].economicChargeTypeId).toBe("ct-freight");
+  }, 20000);
+
+  it("Mobile rates module enforces Khoản giá, weight triple, and null partyTypeCode", () => {
+    const mobileSrc = readFileSync(path.join(process.cwd(), "../mobile/app/modules/rates.tsx"), "utf8");
+    expect(mobileSrc).toContain("/api/economic-charge-types");
+    expect(mobileSrc).toContain("validateMobilePricingRule");
+    expect(mobileSrc).toContain("buildMobilePricingRulePayload");
+    expect(mobileSrc).toContain("partyTypeCode: null");
+    expect(mobileSrc).toContain("economicChargeTypeId: charge?.id ?? null");
+    expect(mobileSrc).toContain("Điều kiện trọng lượng");
   });
 });
 

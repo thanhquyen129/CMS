@@ -69,6 +69,9 @@ type MatrixGroup = {
   carrierPartyId: string;
   carrierName: string;
   transportMode: string;
+  economicChargeTypeId: string;
+  costTypeCode: string;
+  revenueTypeCode: string;
   columns: Col[];
   rows: Band[];
   cells: Record<string, Record<string, string>>;
@@ -207,6 +210,9 @@ function emptyGroup(preset: "air" | "sea", routeId = "", appliesAnyRoute = false
     carrierPartyId: "",
     carrierName: "",
     transportMode: preset,
+    economicChargeTypeId: "",
+    costTypeCode: "",
+    revenueTypeCode: "",
     columns: preset === "sea" ? seaCols(id) : airCols(id),
     rows: preset === "sea" ? seaBands(id) : airBands(id),
     cells: {},
@@ -299,7 +305,12 @@ function matrixFromRules(rules: PricingRule[]): { columns: Col[]; rows: Band[]; 
   return { columns, rows, cells };
 }
 
-function groupsFromRules(rules: PricingRule[], preset: "air" | "sea", fallbackRouteId: string): MatrixGroup[] {
+function groupsFromRules(
+  rules: PricingRule[],
+  preset: "air" | "sea",
+  fallbackRouteId: string,
+  chargeItems: ChargeItem[]
+): MatrixGroup[] {
   const matrix = rules.filter((r) => isWeightBreakMethod(r.calcMethod) && (r.breaks?.length ?? 0) > 0);
   if (matrix.length === 0) return [emptyGroup(preset, fallbackRouteId, false, "group-1")];
   const order: string[] = [];
@@ -324,6 +335,10 @@ function groupsFromRules(rules: PricingRule[], preset: "air" | "sea", fallbackRo
       carrierPartyId: head.carrierPartyId ?? "",
       carrierName: head.carrierName ?? "",
       transportMode: head.transportMode || preset,
+      economicChargeTypeId:
+        chargeItems.find((item) => head.chargeCode && item.code.toUpperCase() === head.chargeCode.toUpperCase())?.id ?? "",
+      costTypeCode: head.components?.find((c) => c.costTypeCode)?.costTypeCode ?? "",
+      revenueTypeCode: head.components?.find((c) => c.revenueTypeCode)?.revenueTypeCode ?? "",
       columns: shaped?.columns ?? airCols(head.id),
       rows: shaped?.rows ?? airBands(head.id),
       cells: shaped?.cells ?? {},
@@ -354,7 +369,9 @@ export function RateCardDeclarationForm(props: Props) {
     return rows;
   });
   const [preset, setPreset] = useState<"air" | "sea">(startPreset);
-  const [groups, setGroups] = useState<MatrixGroup[]>(() => groupsFromRules(props.rules ?? [], startPreset, props.routeId ?? ""));
+  const [groups, setGroups] = useState<MatrixGroup[]>(() =>
+    groupsFromRules(props.rules ?? [], startPreset, props.routeId ?? "", props.chargeItems ?? [])
+  );
   const [minQty, setMinQty] = useState(startPreset === "sea" ? "1" : "");
   const [deliveryOn, setDeliveryOn] = useState(false);
   const [deliveryUnder, setDeliveryUnder] = useState("2");
@@ -610,6 +627,9 @@ export function RateCardDeclarationForm(props: Props) {
         carrierPartyId: group.carrierPartyId || null,
         carrierName: group.carrierName.trim() || null,
         transportMode: group.transportMode || preset,
+        economicChargeTypeId: group.economicChargeTypeId || null,
+        costTypeCode: sell ? null : group.costTypeCode.trim() || null,
+        revenueTypeCode: sell ? group.revenueTypeCode.trim() || null : null,
         columns: group.columns.map((c) => ({ code: c.code.trim(), name: c.name.trim() })),
         bands: group.rows.map((row) => ({
           minQuantity: parseNum(row.min),
@@ -807,6 +827,14 @@ export function RateCardDeclarationForm(props: Props) {
         <section className="rate-block rate-block-rules">
           <h2 className="section-title">3. Bảng giá cơ bản</h2>
           <p className="note">Nhóm A là điều kiện áp dụng, nhóm B là trọng lượng, nhóm C là tính tiền. Mã quy tắc do hệ thống cấp và không đổi khi sửa nháp. Nấc cơ bản là [từ, đến).</p>
+          {chargeItems.length === 0 ? (
+            <div className="alert alert-warning" role="status">
+              Danh mục khoản giá chuẩn đang trống — có thể lưu nháp nhưng chưa phát hành được.{" "}
+              <Link className="btn btn-ghost" href="/rate-cards/charge-types" style={{ display: "inline-flex", marginLeft: "0.35rem" }}>
+                Mở Khoản mục kinh tế
+              </Link>
+            </div>
+          ) : null}
           {rules.some((rule) => (rule.name.trim() || rule.unitAmount.trim()) && !(sell ? rule.revenueTypeCode : rule.costTypeCode).trim()) ? (
             <p className="alert alert-warning" role="status">{draftFinancialWarning}</p>
           ) : null}
@@ -847,7 +875,12 @@ export function RateCardDeclarationForm(props: Props) {
                         {chargeItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                       </select>
                       {!rule.economicChargeTypeId && (rule.name.trim() || rule.unitAmount.trim()) ? (
-                        <p className="alert alert-warning" role="status">{chargeRequired}</p>
+                        <p className="alert alert-warning" role="status">
+                          {chargeRequired}{" "}
+                          <Link className="btn btn-ghost" href="/rate-cards/charge-types" style={{ display: "inline-flex", marginTop: "0.25rem" }}>
+                            Mở Khoản mục kinh tế
+                          </Link>
+                        </p>
                       ) : null}
                     </td>
                     <td><input aria-label={`Tên quy tắc ${index + 1}`} value={rule.name} maxLength={256} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, name: ev.target.value } : r))} /></td>
@@ -1000,12 +1033,58 @@ export function RateCardDeclarationForm(props: Props) {
             Đơn giá theo khung {unit} và loại hàng. Ô trống nghĩa là khung đó không có giá.
             Mức Đến trùng mức Từ của khung sau thì số lẻ thuộc khung dưới.
           </p>
+          {chargeItems.length === 0 ? (
+            <div className="alert alert-warning" role="status">
+              Danh mục khoản giá chuẩn đang trống — có thể lưu nháp nhưng chưa phát hành được.{" "}
+              <Link className="btn btn-ghost" href="/rate-cards/charge-types" style={{ display: "inline-flex", marginLeft: "0.35rem" }}>
+                Mở Khoản mục kinh tế
+              </Link>
+            </div>
+          ) : null}
           {groups.map((group, groupIndex) => {
             const groupUnit = group.transportMode === "sea" ? "CBM" : "kg";
             return (
               <section key={group.key} className="rate-block rate-block-rules">
                 <h3 className="section-title sm">Nhóm ma trận {groupIndex + 1}</h3>
                 <div className="form-grid">
+                  <div className="field">
+                    <label htmlFor={`group-charge-${group.key}`}>Khoản giá nhóm {groupIndex + 1}</label>
+                    <select
+                      id={`group-charge-${group.key}`}
+                      aria-label={`Khoản giá nhóm ${groupIndex + 1}`}
+                      value={group.economicChargeTypeId}
+                      onChange={(ev) => patchGroup(group.key, { economicChargeTypeId: ev.target.value })}
+                    >
+                      <option value="">{chargeItems.length === 0 ? "Chưa có danh mục khoản giá" : "Chọn khoản giá"}</option>
+                      {chargeItems.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))}
+                    </select>
+                    {!group.economicChargeTypeId ? (
+                      <p className="alert alert-warning" role="status">
+                        {chargeRequired}{" "}
+                        <Link className="btn btn-ghost" href="/rate-cards/charge-types" style={{ display: "inline-flex", marginTop: "0.25rem" }}>
+                          Mở Khoản mục kinh tế
+                        </Link>
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="field">
+                    <label htmlFor={`group-finance-${group.key}`}>{sell ? "Loại doanh thu" : "Loại chi phí"} nhóm {groupIndex + 1}</label>
+                    <select
+                      id={`group-finance-${group.key}`}
+                      aria-label={`${sell ? "Loại doanh thu" : "Loại chi phí"} nhóm ${groupIndex + 1}`}
+                      value={sell ? group.revenueTypeCode : group.costTypeCode}
+                      onChange={(ev) =>
+                        patchGroup(group.key, sell ? { revenueTypeCode: ev.target.value } : { costTypeCode: ev.target.value })
+                      }
+                    >
+                      <option value="">{financeOptions.length === 0 ? "Chưa có danh mục" : sell ? "Chọn loại doanh thu" : "Chọn loại chi phí"}</option>
+                      {financeOptions.filter((item) => item.isActive !== false).map((item) => (
+                        <option key={item.code} value={item.code}>{catalogLabel(item.code, item.name)}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="field">
                     <label htmlFor={`group-route-${group.key}`}>Tuyến nhóm {groupIndex + 1}</label>
                     <select

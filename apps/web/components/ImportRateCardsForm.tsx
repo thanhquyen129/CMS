@@ -24,6 +24,10 @@ type RateImportCard = {
     unitAmount: number;
     currencyCode?: string | null;
     chargeCode?: string | null;
+    economicChargeTypeId?: string | null;
+    weightBasis?: string | null;
+    weightMin?: number | null;
+    weightMax?: number | null;
   }>;
 };
 
@@ -41,7 +45,11 @@ const SAMPLE = `{
           "code": "FREIGHT",
           "name": "Cước chính",
           "calcMethod": "fixed",
-          "unitAmount": 100
+          "unitAmount": 100,
+          "chargeCode": "FREIGHT",
+          "weightBasis": null,
+          "weightMin": null,
+          "weightMax": null
         }
       ]
     }

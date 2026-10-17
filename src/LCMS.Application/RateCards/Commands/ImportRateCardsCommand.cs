@@ -40,7 +40,11 @@ public sealed record RateImportRule(
     string? TransportMode = null,
     string? CommodityCode = null,
     string? LineRole = null,
-    string? PartyTypeCode = null);
+    string? PartyTypeCode = null,
+    string? WeightBasis = null,
+    decimal? WeightMin = null,
+    decimal? WeightMax = null,
+    Guid? EconomicChargeTypeId = null);
 
 public sealed record RateImportCard(
     string Code,
@@ -120,12 +124,9 @@ public sealed class RateImportBatch
         var existing = await _db.RateCards.AsNoTracking().Select(c => c.Code).ToListAsync(cancellationToken);
         var owned = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
         var tenantId = _tenant.TenantId!.Value;
-        var chargeCatalog = new HashSet<string>(
-            await _db.EconomicChargeTypes.AsNoTracking()
-                .Where(t => t.TenantId == tenantId && t.IsActive)
-                .Select(t => t.Code)
-                .ToListAsync(cancellationToken),
-            StringComparer.OrdinalIgnoreCase);
+        var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => t.TenantId == tenantId && t.IsActive)
+            .ToListAsync(cancellationToken);
         for (var i = 0; i < cards.Count; i++)
         {
             var row = i + 1;
@@ -175,7 +176,7 @@ public sealed class RateImportBatch
                     issues.Add(new RateImportIssue(row, "calcMethod", "Phương pháp tính giá không hợp lệ."));
                 }
 
-                var fieldIssue = ImportFieldIssue(rule, party is "customer" or "vendor" ? party : null, chargeCatalog);
+                var fieldIssue = ImportFieldIssue(rule, party is "customer" or "vendor" ? party : null, chargeTypes);
                 if (fieldIssue is not null)
                 {
                     issues.Add(new RateImportIssue(row, fieldIssue.Value.Field, fieldIssue.Value.Message));
@@ -237,6 +238,9 @@ public sealed class RateImportBatch
         }
 
         var tenantId = _tenant.TenantId!.Value;
+        var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => t.TenantId == tenantId && t.IsActive)
+            .ToListAsync(cancellationToken);
         foreach (var card in cards)
         {
             var entity = new RateCard
@@ -267,6 +271,8 @@ public sealed class RateImportBatch
             var sort = 1;
             foreach (var rule in card.Rules ?? [])
             {
+                var resolvedCharge = ResolveImportCharge(rule, chargeTypes);
+                var basis = Trim(rule.WeightBasis)?.ToLowerInvariant();
                 var pricing = new PricingRule
                 {
                     TenantId = tenantId,
@@ -278,7 +284,11 @@ public sealed class RateImportBatch
                     CurrencyCode = string.IsNullOrWhiteSpace(rule.CurrencyCode)
                         ? entity.CurrencyCode
                         : rule.CurrencyCode.Trim().ToUpperInvariant(),
-                    ChargeCode = Trim(rule.ChargeCode)?.ToUpperInvariant() ?? (RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) ? "FREIGHT" : null),
+                    PartyTypeCode = null,
+                    ChargeCode = resolvedCharge?.Code.Trim().ToUpperInvariant(),
+                    WeightBasis = basis,
+                    WeightMin = basis is null ? null : rule.WeightMin,
+                    WeightMax = basis is null ? null : rule.WeightMax,
                     LineRole = RateLineRoles.IsBaseFamily(rule.LineRole)
                         ? rule.LineRole!.Trim().ToLowerInvariant()
                         : RateLineRoles.BaseRate,
@@ -343,7 +353,7 @@ public sealed class RateImportBatch
     private static (string Field, string Message)? ImportFieldIssue(
         RateImportRule rule,
         string? partyType,
-        IReadOnlySet<string> chargeCatalog)
+        IReadOnlyList<EconomicChargeType> chargeTypes)
     {
         if (partyType is not null)
         {
@@ -353,6 +363,16 @@ public sealed class RateImportBatch
                 return ("partyTypeCode", party);
             }
         }
+
+        if (!RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod))
+        {
+            var weightError = WeightBand.DeclarationError(rule.WeightBasis, rule.WeightMin, rule.WeightMax);
+            if (weightError is not null)
+            {
+                return ("weightBasis", weightError);
+            }
+        }
+
         var service = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false);
         if (service is not null)
         {
@@ -370,17 +390,48 @@ public sealed class RateImportBatch
             return ("lineRole", RateFieldPolicy.SurchargeRedirect);
         }
 
-        if (!RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) && string.IsNullOrWhiteSpace(rule.ChargeCode))
+        if (rule.EconomicChargeTypeId is Guid id && id != Guid.Empty)
+        {
+            var picked = chargeTypes.FirstOrDefault(t => t.Id == id);
+            if (picked is null)
+            {
+                return ("economicChargeTypeId", RateFieldPolicy.ChargeNotInCatalog);
+            }
+
+            if (!string.IsNullOrWhiteSpace(rule.ChargeCode)
+                && !string.Equals(rule.ChargeCode.Trim(), picked.Code.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                return ("chargeCode", RateFieldPolicy.ChargeCodeMismatch);
+            }
+
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(rule.ChargeCode))
         {
             return ("chargeCode", RateFieldPolicy.ChargeRequired);
         }
 
-        if (!RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) && !chargeCatalog.Contains(rule.ChargeCode!.Trim()))
+        if (!chargeTypes.Any(t => string.Equals(t.Code.Trim(), rule.ChargeCode.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
             return ("chargeCode", RateFieldPolicy.ChargeNotInCatalog);
         }
 
         return null;
+    }
+
+    private static EconomicChargeType? ResolveImportCharge(
+        RateImportRule rule,
+        IReadOnlyList<EconomicChargeType> chargeTypes)
+    {
+        if (rule.EconomicChargeTypeId is Guid id && id != Guid.Empty)
+        {
+            return chargeTypes.FirstOrDefault(t => t.Id == id);
+        }
+
+        return string.IsNullOrWhiteSpace(rule.ChargeCode)
+            ? null
+            : chargeTypes.FirstOrDefault(t => string.Equals(t.Code.Trim(), rule.ChargeCode.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     private static string? Trim(string? value) =>

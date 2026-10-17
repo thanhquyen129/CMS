@@ -236,7 +236,6 @@ public static class RateFieldPolicy
         foreach (var rule in rules)
         {
             if (chargeCatalog is not null
-                && !rule.Matrix
                 && (string.IsNullOrWhiteSpace(rule.ChargeCode)
                     || !chargeCatalog.Contains(rule.ChargeCode.Trim(), StringComparer.OrdinalIgnoreCase)))
             {

@@ -5488,6 +5488,23 @@ html[data-layout="horizontal"] .login-page {
   text-overflow: clip;
   max-width: none;
 }
+.rate-declaration,
+.rate-declaration .rate-block,
+.rate-declaration .table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (max-width: 768px) {
+  .rate-declaration .rate-block {
+    padding: 0.75rem 0.65rem;
+  }
+  .rate-declaration .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .rate-detail-toolbar {
+    flex-wrap: wrap;
+  }
+}
 .opref-editor { display: flex; flex-direction: column; gap: 0.75rem; }
 .opref-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .opref-group { border-top: 1px solid var(--line); padding-top: 0.75rem; }

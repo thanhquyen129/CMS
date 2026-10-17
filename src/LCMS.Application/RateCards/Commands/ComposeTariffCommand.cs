@@ -55,7 +55,9 @@ public sealed record ComposeTariffCommand(
     bool AppliesAnyRoute = false,
     Guid? CarrierPartyId = null,
     string? MatrixGroupCode = null,
-    bool ScopeOnRules = false) : IRequest<ComposeTariffResult>;
+    bool ScopeOnRules = false,
+    Guid? EconomicChargeTypeId = null,
+    string? ChargeCode = null) : IRequest<ComposeTariffResult>;
 
 public sealed class ComposeTariffCommandValidator : AbstractValidator<ComposeTariffCommand>
 {
@@ -243,6 +245,10 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
         card.DeclarationMode = RateDeclarationModes.Advanced;
 
         var scope = await ResolveScopeAsync(request, tenantId, cancellationToken);
+        var chargeCatalog = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => t.TenantId == tenantId && t.IsActive)
+            .ToListAsync(cancellationToken);
+        var resolvedCharge = ResolveCharge(request.EconomicChargeTypeId, request.ChargeCode, chargeCatalog);
         var mode = Clean(request.TransportMode) ?? card.TransportMode;
         var air = mode is not null && mode.Equals("air", StringComparison.OrdinalIgnoreCase);
         var sea = mode is not null && (mode.Equals("sea", StringComparison.OrdinalIgnoreCase) || mode.Equals("ocean", StringComparison.OrdinalIgnoreCase));
@@ -292,7 +298,8 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 CalcMethod = PricingCalcMethods.WeightBreakPivot,
                 UnitAmount = 0m,
                 CurrencyCode = currency,
-                ChargeCode = ReferenceCharge.Freight,
+                ChargeCode = resolvedCharge?.Code.Trim().ToUpperInvariant(),
+                PartyTypeCode = null,
                 CommodityCode = columns[col].Code,
                 TransportMode = Clean(request.TransportMode)?.ToLowerInvariant(),
                 MinAmount = minAmount,
@@ -555,13 +562,33 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
 
     private static string FitCode(string code) =>
         code.Length <= 64 ? code : code[..64];
+
+    private static EconomicChargeType? ResolveCharge(
+        Guid? economicChargeTypeId,
+        string? chargeCode,
+        IReadOnlyList<EconomicChargeType> catalog)
+    {
+        var sent = Clean(chargeCode);
+        if (economicChargeTypeId is Guid id && id != Guid.Empty)
+        {
+            var picked = catalog.FirstOrDefault(t => t.Id == id)
+                ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+            if (sent is not null && !string.Equals(sent, picked.Code.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnprocessableAppException(RateFieldPolicy.ChargeCodeMismatch, "invalid_charge_item");
+            }
+
+            return picked;
+        }
+
+        if (sent is null)
+        {
+            return null;
+        }
+
+        return catalog.FirstOrDefault(t => string.Equals(t.Code.Trim(), sent, StringComparison.OrdinalIgnoreCase))
+            ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+    }
 }
 
 public sealed record ExpandedBand(decimal Min, decimal? Max, decimal?[] Prices);
-
-file static class ReferenceCharge
-{
-    public const string Freight = "FREIGHT";
-    public const string Delivery = "DELIVERY";
-    public const string Remote = "REMOTE";
-}

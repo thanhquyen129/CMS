@@ -202,10 +202,12 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
 
         if (version.ExplicitChargeGroups)
         {
-            foreach (var rule in draftRules.Where(r => r.DeletedAt == null && r.IsActive && !RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod)))
+            foreach (var rule in draftRules.Where(r => r.DeletedAt == null && r.IsActive))
             {
                 var ruleError = RateFieldPolicy.PartyTypeConflict(card.PartyType, rule.PartyTypeCode)
-                    ?? WeightBand.DeclarationError(rule.WeightBasis, rule.WeightMin, rule.WeightMax);
+                    ?? (RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod)
+                        ? null
+                        : WeightBand.DeclarationError(rule.WeightBasis, rule.WeightMin, rule.WeightMax));
                 if (ruleError is not null)
                 {
                     throw new UnprocessableAppException($"Quy tắc {rule.Code}: {ruleError}", "invalid_rate_field");

@@ -43,10 +43,118 @@ interface PricingRuleDto {
   calcMethod: string;
   unitAmount: number;
   currencyCode: string;
+  chargeCode?: string | null;
+  weightBasis?: string | null;
+  weightMin?: number | null;
+  weightMax?: number | null;
   minAmount?: number | null;
   maxAmount?: number | null;
   originCode?: string | null;
   destinationCode?: string | null;
+}
+
+export interface EconomicChargeTypeDto {
+  id: string;
+  code: string;
+  name: string;
+  isActive?: boolean;
+}
+
+export const MOBILE_WEIGHT_BASIS_OPTIONS = [
+  { value: "", label: "Không lọc nấc" },
+  { value: "gross", label: "Trọng lượng thực (Gross)" },
+  { value: "chargeable", label: "Trọng lượng tính cước (Chargeable)" },
+] as const;
+
+export const MOBILE_CALC_METHODS = [
+  { value: "unit_rate", label: "Theo đơn vị" },
+  { value: "fixed", label: "Cố định" },
+] as const;
+
+function parseMobileDecimal(raw: string): number | null {
+  const clean = raw.trim().replace(/\s/g, "").replace(",", ".");
+  if (!clean) return null;
+  const n = Number(clean);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function validateMobilePricingRule(input: {
+  name: string;
+  unitAmountRaw: string;
+  economicChargeTypeId: string;
+  chargeTypes: EconomicChargeTypeDto[];
+  weightBasis: string;
+  weightMinRaw: string;
+  weightMaxRaw: string;
+}): string | null {
+  const activeCharges = input.chargeTypes.filter((c) => c.isActive !== false);
+  if (activeCharges.length === 0) {
+    return "Danh mục Khoản mục kinh tế đang trống. Khai báo khoản giá chuẩn trước khi tạo quy tắc để tránh bản nháp không thể phát hành.";
+  }
+  const picked = activeCharges.find((c) => c.id === input.economicChargeTypeId);
+  if (!picked) {
+    return "Chưa chọn Khoản giá chuẩn từ danh mục. Không tạo quy tắc thiếu khoản giá.";
+  }
+  const unitAmt = parseMobileDecimal(input.unitAmountRaw);
+  if (!input.name.trim() || unitAmt === null || unitAmt <= 0) {
+    return "Vui lòng nhập tên quy tắc và đơn giá > 0.";
+  }
+  if (!input.weightBasis) {
+    if (input.weightMinRaw.trim() || input.weightMaxRaw.trim()) {
+      return "Điều kiện trọng lượng là Không lọc nấc thì không nhập Từ – Đến.";
+    }
+    return null;
+  }
+  if (input.weightBasis !== "gross" && input.weightBasis !== "chargeable") {
+    return "Điều kiện trọng lượng không hợp lệ.";
+  }
+  if (!input.weightMinRaw.trim() || !input.weightMaxRaw.trim()) {
+    return "Đã chọn điều kiện trọng lượng thì phải nhập đủ Từ và Đến.";
+  }
+  const min = parseMobileDecimal(input.weightMinRaw);
+  const max = parseMobileDecimal(input.weightMaxRaw);
+  if (min === null || max === null || min < 0 || max <= min) {
+    return "Trọng lượng Từ phải ≥ 0 và Đến phải lớn hơn Từ.";
+  }
+  return null;
+}
+
+export function buildMobilePricingRulePayload(input: {
+  codeRaw: string;
+  name: string;
+  calcMethod: "unit_rate" | "fixed";
+  unitAmountRaw: string;
+  minAmountRaw: string;
+  currencyCode: string;
+  transportMode?: string | null;
+  routeCode?: string | null;
+  economicChargeTypeId: string;
+  chargeTypes: EconomicChargeTypeDto[];
+  weightBasis: string;
+  weightMinRaw: string;
+  weightMaxRaw: string;
+  sortOrder: number;
+}) {
+  const charge = input.chargeTypes.find((c) => c.id === input.economicChargeTypeId);
+  const basis = input.weightBasis.trim() || null;
+  const minAmt = parseMobileDecimal(input.minAmountRaw);
+  return {
+    code: input.codeRaw.trim() || `RULE-${Math.floor(100 + Math.random() * 900)}`,
+    name: input.name.trim(),
+    calcMethod: input.calcMethod,
+    unitAmount: parseMobileDecimal(input.unitAmountRaw) ?? 0,
+    currencyCode: input.currencyCode,
+    minAmount: minAmt !== null && minAmt > 0 ? minAmt : null,
+    transportMode: (input.transportMode ?? "AIR").toLowerCase(),
+    routeCode: input.routeCode ?? null,
+    partyTypeCode: null,
+    economicChargeTypeId: charge?.id ?? null,
+    chargeCode: charge?.code ?? null,
+    weightBasis: basis,
+    weightMin: basis ? parseMobileDecimal(input.weightMinRaw) : null,
+    weightMax: basis ? parseMobileDecimal(input.weightMaxRaw) : null,
+    sortOrder: input.sortOrder,
+  };
 }
 
 interface RateComparisonQuoteDto {
@@ -122,11 +230,17 @@ export default function RatesModuleScreen() {
   const [showAddRule, setShowAddRule] = useState<boolean>(false);
   const [ruleCode, setRuleCode] = useState<string>("");
   const [ruleName, setRuleName] = useState<string>("");
-  const [ruleMethod, setRuleMethod] = useState<"PER_KG" | "FLAT" | "PER_CBM">(
-    "PER_KG"
+  const [ruleMethod, setRuleMethod] = useState<"unit_rate" | "fixed">(
+    "unit_rate"
   );
   const [ruleUnitAmt, setRuleUnitAmt] = useState<string>("");
   const [ruleMinAmt, setRuleMinAmt] = useState<string>("");
+  const [chargeTypes, setChargeTypes] = useState<EconomicChargeTypeDto[]>([]);
+  const [ruleChargeTypeId, setRuleChargeTypeId] = useState<string>("");
+  const [ruleWeightBasis, setRuleWeightBasis] = useState<string>("");
+  const [ruleWeightMin, setRuleWeightMin] = useState<string>("");
+  const [ruleWeightMax, setRuleWeightMax] = useState<string>("");
+  const [ruleBandCleared, setRuleBandCleared] = useState<boolean>(false);
 
   // Compare & Calculate
   const [bills, setBills] = useState<BillListItemDto[]>([]);
@@ -149,7 +263,7 @@ export default function RatesModuleScreen() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [cardsRes, billsRes, surRes, histRes] = await Promise.all([
+      const [cardsRes, billsRes, surRes, histRes, chargeRes] = await Promise.all([
         apiRequest<RateCardDto[] | { items: RateCardDto[] }>(
           "/api/rate-cards"
         ).catch(() => [] as RateCardDto[]),
@@ -162,6 +276,9 @@ export default function RatesModuleScreen() {
         apiRequest<RatingHistoryDto[] | { items: RatingHistoryDto[] }>(
           "/api/rating-history"
         ).catch(() => [] as RatingHistoryDto[]),
+        apiRequest<EconomicChargeTypeDto[] | { items: EconomicChargeTypeDto[] }>(
+          "/api/economic-charge-types"
+        ).catch(() => [] as EconomicChargeTypeDto[]),
       ]);
 
       const rawCards = Array.isArray(cardsRes)
@@ -188,6 +305,13 @@ export default function RatesModuleScreen() {
       }
       setSurcharges(Array.isArray(surRes) ? surRes : surRes?.items ?? []);
       setHistory(Array.isArray(histRes) ? histRes : histRes?.items ?? []);
+      const activeCharges = (Array.isArray(chargeRes) ? chargeRes : chargeRes?.items ?? []).filter(
+        (c) => c.isActive !== false
+      );
+      setChargeTypes(activeCharges);
+      if (activeCharges.length > 0 && !ruleChargeTypeId) {
+        setRuleChargeTypeId(activeCharges[0].id);
+      }
     } finally {
       setLoading(false);
     }
@@ -323,40 +447,52 @@ export default function RatesModuleScreen() {
   };
 
   const handleAddPricingRule = async () => {
-    if (!selectedVersionId || ! selectedCard) return;
-    const unitAmt = Number(ruleUnitAmt);
-    if (!ruleName.trim() || !unitAmt || unitAmt <= 0) {
-      Alert.alert(
-        "Thiếu thông tin quy tắc giá",
-        "Vui lòng nhập tên quy tắc và đơn giá > 0."
-      );
+    if (!selectedVersionId || !selectedCard) return;
+    const validationError = validateMobilePricingRule({
+      name: ruleName,
+      unitAmountRaw: ruleUnitAmt,
+      economicChargeTypeId: ruleChargeTypeId,
+      chargeTypes,
+      weightBasis: ruleWeightBasis,
+      weightMinRaw: ruleWeightMin,
+      weightMaxRaw: ruleWeightMax,
+    });
+    if (validationError) {
+      Alert.alert("Không thể lưu quy tắc giá", validationError);
       return;
     }
 
     setSubmitting(true);
     try {
+      const payload = buildMobilePricingRulePayload({
+        codeRaw: ruleCode,
+        name: ruleName,
+        calcMethod: ruleMethod,
+        unitAmountRaw: ruleUnitAmt,
+        minAmountRaw: ruleMinAmt,
+        currencyCode: selectedCard.currencyCode,
+        transportMode: selectedCard.transportMode,
+        routeCode: selectedCard.routeCode,
+        economicChargeTypeId: ruleChargeTypeId,
+        chargeTypes,
+        weightBasis: ruleWeightBasis,
+        weightMinRaw: ruleWeightMin,
+        weightMaxRaw: ruleWeightMax,
+        sortOrder: rules.length + 1,
+      });
       await apiRequest(`/api/rate-versions/${selectedVersionId}/rules`, {
         method: "POST",
-        body: {
-          code:
-            ruleCode.trim() ||
-            `RULE-${Math.floor(100 + Math.random() * 900)}`,
-          name: ruleName.trim(),
-          calcMethod: ruleMethod,
-          unitAmount: unitAmt,
-          currencyCode: selectedCard.currencyCode,
-          minAmount: Number(ruleMinAmt) > 0 ? Number(ruleMinAmt) : null,
-          transportMode: selectedCard.transportMode ?? "ROAD",
-          routeCode: selectedCard.routeCode ?? null,
-          applicability: "ALL",
-          sortOrder: rules.length + 1,
-        },
+        body: payload,
       });
       setShowAddRule(false);
       setRuleCode("");
       setRuleName("");
       setRuleUnitAmt("");
       setRuleMinAmt("");
+      setRuleWeightBasis("");
+      setRuleWeightMin("");
+      setRuleWeightMax("");
+      setRuleBandCleared(false);
       await loadVersionRules(selectedVersionId);
       Alert.alert("Đã thêm quy tắc", "Đã bổ sung đơn giá vào phiên bản biểu giá.");
     } catch (err) {
@@ -822,6 +958,42 @@ export default function RatesModuleScreen() {
 
                   {showAddRule ? (
                     <View style={styles.ruleFormBox}>
+                      <Text style={styles.metaText}>
+                        Loại giá kế thừa từ bảng giá:{" "}
+                        {selectedCard.partyType.toLowerCase() === "vendor"
+                          ? "Giá mua (Chi phí)"
+                          : "Giá bán (Doanh thu)"}
+                      </Text>
+
+                      <Text style={styles.label}>Khoản giá chuẩn (Khoản mục kinh tế)</Text>
+                      {chargeTypes.length === 0 ? (
+                        <Text style={[styles.metaText, { color: "#B45309" }]}>
+                          Danh mục Khoản mục kinh tế đang trống — vui lòng khai báo Khoản giá chuẩn trước khi tạo quy tắc để phiên bản có thể phát hành.
+                        </Text>
+                      ) : (
+                        <View style={styles.chipRow}>
+                          {chargeTypes.map((ct) => (
+                            <TouchableOpacity
+                              key={ct.id}
+                              style={[
+                                styles.chip,
+                                ruleChargeTypeId === ct.id && styles.chipActive,
+                              ]}
+                              onPress={() => setRuleChargeTypeId(ct.id)}
+                            >
+                              <Text
+                                style={[
+                                  styles.chipText,
+                                  ruleChargeTypeId === ct.id && styles.chipTextActive,
+                                ]}
+                              >
+                                {ct.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+
                       <View style={styles.twoCol}>
                         <View style={{ flex: 1 }}>
                           <Text style={styles.label}>Mã quy tắc</Text>
@@ -829,44 +1001,108 @@ export default function RatesModuleScreen() {
                             style={styles.input}
                             value={ruleCode}
                             onChangeText={setRuleCode}
-                            placeholder="VD: FREIGHT-KG"
+                            placeholder="Hệ thống tự cấp nếu trống"
                           />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.label}>Phương pháp tính</Text>
+                          <Text style={styles.label}>Cách tính</Text>
                           <View style={styles.chipRow}>
-                            {(["PER_KG", "FLAT", "PER_CBM"] as const).map(
-                              (m) => (
-                                <TouchableOpacity
-                                  key={m}
+                            {MOBILE_CALC_METHODS.map((m) => (
+                              <TouchableOpacity
+                                key={m.value}
+                                style={[
+                                  styles.chip,
+                                  ruleMethod === m.value && styles.chipActive,
+                                ]}
+                                onPress={() => setRuleMethod(m.value)}
+                              >
+                                <Text
                                   style={[
-                                    styles.chip,
-                                    ruleMethod === m && styles.chipActive,
+                                    styles.chipText,
+                                    ruleMethod === m.value && styles.chipTextActive,
                                   ]}
-                                  onPress={() => setRuleMethod(m)}
                                 >
-                                  <Text
-                                    style={[
-                                      styles.chipText,
-                                      ruleMethod === m && styles.chipTextActive,
-                                    ]}
-                                  >
-                                    {m}
-                                  </Text>
-                                </TouchableOpacity>
-                              )
-                            )}
+                                  {m.label}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
                           </View>
                         </View>
                       </View>
 
-                      <Text style={styles.label}>Tên dòng cước</Text>
+                      <Text style={styles.label}>Tên quy tắc</Text>
                       <TextInput
                         style={styles.input}
                         value={ruleName}
                         onChangeText={setRuleName}
-                        placeholder="VD: Cước chính theo Kg tính cước (CW)"
+                        placeholder="VD: Cước chính theo Kg tính cước"
                       />
+
+                      <Text style={styles.label}>Điều kiện trọng lượng</Text>
+                      <View style={styles.chipRow}>
+                        {MOBILE_WEIGHT_BASIS_OPTIONS.map((opt) => (
+                          <TouchableOpacity
+                            key={opt.value || "none"}
+                            style={[
+                              styles.chip,
+                              ruleWeightBasis === opt.value && styles.chipActive,
+                            ]}
+                            onPress={() => {
+                              if (!opt.value) {
+                                const hadValues = Boolean(
+                                  ruleWeightMin.trim() || ruleWeightMax.trim()
+                                );
+                                setRuleBandCleared(hadValues);
+                                setRuleWeightBasis("");
+                                setRuleWeightMin("");
+                                setRuleWeightMax("");
+                              } else {
+                                setRuleBandCleared(false);
+                                setRuleWeightBasis(opt.value);
+                              }
+                            }}
+                          >
+                            <Text
+                              style={[
+                                styles.chipText,
+                                ruleWeightBasis === opt.value && styles.chipTextActive,
+                              ]}
+                            >
+                              {opt.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {ruleBandCleared ? (
+                        <Text style={[styles.metaText, { color: "#B45309" }]}>
+                          Đã chọn Không lọc nấc: giá trị Từ – Đến đã nhập được xóa.
+                        </Text>
+                      ) : null}
+
+                      <View style={styles.twoCol}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.label}>Nấc từ (kg)</Text>
+                          <TextInput
+                            style={styles.input}
+                            keyboardType="numeric"
+                            editable={Boolean(ruleWeightBasis)}
+                            value={ruleWeightMin}
+                            onChangeText={setRuleWeightMin}
+                            placeholder={ruleWeightBasis ? "Từ (≥ 0)" : "Không lọc nấc"}
+                          />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.label}>Nấc đến (kg)</Text>
+                          <TextInput
+                            style={styles.input}
+                            keyboardType="numeric"
+                            editable={Boolean(ruleWeightBasis)}
+                            value={ruleWeightMax}
+                            onChangeText={setRuleWeightMax}
+                            placeholder={ruleWeightBasis ? "Đến (> Từ)" : "Không lọc nấc"}
+                          />
+                        </View>
+                      </View>
 
                       <View style={styles.twoCol}>
                         <View style={{ flex: 1 }}>
@@ -894,7 +1130,7 @@ export default function RatesModuleScreen() {
                       <TouchableOpacity
                         style={styles.submitBtn}
                         onPress={handleAddPricingRule}
-                        disabled={submitting}
+                        disabled={submitting || chargeTypes.length === 0}
                       >
                         <Text style={styles.submitBtnText}>
                           + Lưu Quy tắc Đơn giá
@@ -915,7 +1151,13 @@ export default function RatesModuleScreen() {
                             {r.code} • {r.name}
                           </Text>
                           <Text style={styles.metaText}>
-                            Cách tính: {r.calcMethod}
+                            Cách tính:{" "}
+                            {r.calcMethod === "fixed" ? "Cố định" : "Theo đơn vị"}
+                            {r.weightBasis === "gross"
+                              ? ` • Trọng lượng thực (${r.weightMin ?? 0} – < ${r.weightMax ?? "∞"} kg)`
+                              : r.weightBasis === "chargeable"
+                                ? ` • Trọng lượng tính cước (${r.weightMin ?? 0} – < ${r.weightMax ?? "∞"} kg)`
+                                : ""}
                             {r.minAmount
                               ? ` • Min: ${formatMoney(
                                   r.minAmount,

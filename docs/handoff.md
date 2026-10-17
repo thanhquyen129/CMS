@@ -1,3 +1,9 @@
+## 2026-10-17 — RATE-UI-05..07: Loại giá chỉ ở header, Điều kiện trọng lượng, ẩn nhóm cạnh tranh
+- Rule không còn Loại giá riêng: API bỏ qua `partyTypeCode` trống, trái header trả 422 `party_type_conflict` (khai báo, AddPricingRule, import, publish); rule mới lưu `party_type_code = NULL`; rating lấy chiều giá từ header.
+- Bộ ba weight basis/min/max: không lọc nấc thì min/max phải trống, có basis thì phải đủ Từ < Đến, sai trả 422 `invalid_weight_band` khi lưu và khi publish. UI đổi nhãn "Điều kiện trọng lượng", khóa và xóa Từ/Đến khi chọn Không lọc nấc.
+- Bỏ ô nhập nhóm cạnh tranh: UI chọn "Khoản giá" từ `economic_charge_types`; backend suy ra `charge_code` từ master. Mã tự do trả 422 `invalid_charge_item`; nháp lưu được nhưng publish bị chặn nếu thiếu khoản giá; không có fallback FREIGHT. POST/PUT `/api/rate-cards` trả thêm `warnings`. Endpoint mới `GET /api/rate-versions/{id}/rule-warnings` báo rule REMOTE/DELIVERY cũ bị tách và nấc legacy lệch. Không có migration, không ghi đè bản đã phát hành.
+- Files: `SaveRateCardDeclarationCommand.cs`, `PricingRuleCommands.cs`, `RateVersionCommands.cs`, `ImportRateCardsCommand.cs`, `RatingReadiness.cs`, `RateFieldPolicy.cs`, `WeightBand.cs`, `AppException.cs`, `RatePricingEndpoints.cs`, `RateCardDeclarationForm.tsx`, `rate-cards/[id]/page.tsx`, `RateUi0507UatTests.cs`.
+
 ## 2026-10-16 — Mobile: Sửa lỗi chặn đăng nhập trên bản Store Production
 - Bỏ gọi `setApiBaseUrl` không cần thiết khi đăng nhập; `setApiBaseUrl` không báo lỗi nếu URL trùng URL production mặc định (`https://cms.lsslogistics.vn`). Ẩn hoàn toàn nút chọn vai trò demo và cấu hình máy chủ khi `EXPO_PUBLIC_SHOW_DEMO_PERSONAS=false`.
 - Files: `apps/mobile/src/api/client.ts`, `apps/mobile/app/login.tsx`, `apps/mobile/src/api/__tests__/client.test.ts`.

@@ -6,6 +6,7 @@ using LCMS.Application.EconomicCharges;
 using LCMS.Application.Ratings;
 using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,7 +132,23 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             card.DeclarationMode = RateDeclarationModes.Basic;
         }
 
-        if (LegacyComponentClassifier.IsAdditionalCharge(request.Code, request.Name, request.ChargeCode))
+        var partyError = RateFieldPolicy.PartyTypeConflict(card.PartyType, request.PartyTypeCode);
+        if (partyError is not null)
+        {
+            throw new UnprocessableAppException(partyError, "party_type_conflict");
+        }
+
+        if (version.ExplicitChargeGroups
+            && !string.IsNullOrWhiteSpace(request.ChargeCode)
+            && !await _db.EconomicChargeTypes.AnyAsync(
+                t => t.TenantId == tenantId && t.IsActive && t.Code == request.ChargeCode.Trim().ToUpper(),
+                cancellationToken))
+        {
+            throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+        }
+
+        if (!version.ExplicitChargeGroups
+            && LegacyComponentClassifier.IsAdditionalCharge(request.Code, request.Name, request.ChargeCode))
         {
             throw new ConflictAppException(
                 "Phụ phí không đặt trên phiên bản bảng giá. Tạo và phát hành tại Quản lý phụ phí.");
@@ -530,6 +547,62 @@ public sealed record PricingRuleDto(
     string? LineRole = null);
 
 public sealed record ListPricingRulesQuery(Guid RateVersionId) : IRequest<IReadOnlyList<PricingRuleDto>>;
+
+public sealed record RateRuleWarningDto(string Code, string Message, IReadOnlyList<string> RuleCodes);
+
+/// <summary>Read-only flags on stored rules. Never rewrites the version.</summary>
+public sealed record GetRateVersionRuleWarningsQuery(Guid RateVersionId) : IRequest<IReadOnlyList<RateRuleWarningDto>>;
+
+public sealed class GetRateVersionRuleWarningsQueryHandler : IRequestHandler<GetRateVersionRuleWarningsQuery, IReadOnlyList<RateRuleWarningDto>>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public GetRateVersionRuleWarningsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<IReadOnlyList<RateRuleWarningDto>> Handle(GetRateVersionRuleWarningsQuery request, CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var tenantId = _tenantContext.TenantId!.Value;
+        var version = await _db.RateVersions.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.Id == request.RateVersionId && v.TenantId == tenantId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy phiên bản bảng giá.");
+        var rules = await _db.PricingRules.AsNoTracking()
+            .Where(r => r.RateVersionId == version.Id && r.TenantId == tenantId && r.IsActive)
+            .OrderBy(r => r.SortOrder)
+            .ThenBy(r => r.Code)
+            .ToListAsync(cancellationToken);
+        var warnings = new List<RateRuleWarningDto>();
+        var excluded = rules
+            .Where(r => RateChargeSelection.ExcludeFromBase(r.Code, r.Name, r.ChargeCode, r.LineRole, version.ExplicitChargeGroups))
+            .Select(r => r.Code)
+            .ToList();
+        if (excluded.Count > 0)
+        {
+            warnings.Add(new RateRuleWarningDto("legacy_surcharge_excluded", RateFieldPolicy.LegacySurchargeWarning, excluded));
+        }
+
+        var inconsistent = rules
+            .Where(r => !RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod)
+                        && WeightBand.DeclarationError(r.WeightBasis, r.WeightMin, r.WeightMax) is not null)
+            .Select(r => r.Code)
+            .ToList();
+        if (inconsistent.Count > 0)
+        {
+            warnings.Add(new RateRuleWarningDto("legacy_weight_band", WeightBand.LegacyInconsistent, inconsistent));
+        }
+
+        return warnings;
+    }
+}
 
 public sealed class ListPricingRulesQueryHandler : IRequestHandler<ListPricingRulesQuery, IReadOnlyList<PricingRuleDto>>
 {

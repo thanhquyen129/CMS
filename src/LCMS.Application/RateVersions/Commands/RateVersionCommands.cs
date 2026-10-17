@@ -202,6 +202,20 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
 
         if (version.ExplicitChargeGroups)
         {
+            foreach (var rule in draftRules.Where(r => r.DeletedAt == null && r.IsActive && !RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod)))
+            {
+                var ruleError = RateFieldPolicy.PartyTypeConflict(card.PartyType, rule.PartyTypeCode)
+                    ?? WeightBand.DeclarationError(rule.WeightBasis, rule.WeightMin, rule.WeightMax);
+                if (ruleError is not null)
+                {
+                    throw new UnprocessableAppException($"Quy tắc {rule.Code}: {ruleError}", "invalid_rate_field");
+                }
+            }
+
+            var chargeCatalog = await _db.EconomicChargeTypes.AsNoTracking()
+                .Where(t => t.TenantId == card.TenantId && t.IsActive)
+                .Select(t => t.Code)
+                .ToListAsync(cancellationToken);
             var ruleIds = draftRules.Select(rule => rule.Id).ToList();
             var components = await _db.PricingRuleComponents.AsNoTracking()
                 .Where(component => ruleIds.Contains(component.PricingRuleId) && component.DeletedAt == null)
@@ -215,13 +229,16 @@ public sealed class PublishRateVersionCommandHandler : IRequestHandler<PublishRa
                         rule.ChargeCode,
                         rule.LineRole ?? (RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) ? RateLineRoles.BaseRate : null),
                         rows.Select(component => component.CostTypeCode).FirstOrDefault(code => !string.IsNullOrWhiteSpace(code)),
-                        rows.Select(component => component.RevenueTypeCode).FirstOrDefault(code => !string.IsNullOrWhiteSpace(code)));
+                        rows.Select(component => component.RevenueTypeCode).FirstOrDefault(code => !string.IsNullOrWhiteSpace(code)),
+                        rule.Code,
+                        RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod));
                 })
                 .ToList();
             var publishBlock = RateFieldPolicy.PublishBlock(
                 string.Equals(card.PartyType, "vendor", StringComparison.OrdinalIgnoreCase),
                 card.SupplierPartyId is not null,
-                finance);
+                finance,
+                chargeCatalog);
             if (publishBlock is not null)
             {
                 throw new ConflictAppException(publishBlock, "invalid_rate_field");

@@ -39,7 +39,8 @@ public sealed record RateImportRule(
     string? ServiceTypeCode = null,
     string? TransportMode = null,
     string? CommodityCode = null,
-    string? LineRole = null);
+    string? LineRole = null,
+    string? PartyTypeCode = null);
 
 public sealed record RateImportCard(
     string Code,
@@ -118,6 +119,13 @@ public sealed class RateImportBatch
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var existing = await _db.RateCards.AsNoTracking().Select(c => c.Code).ToListAsync(cancellationToken);
         var owned = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+        var tenantId = _tenant.TenantId!.Value;
+        var chargeCatalog = new HashSet<string>(
+            await _db.EconomicChargeTypes.AsNoTracking()
+                .Where(t => t.TenantId == tenantId && t.IsActive)
+                .Select(t => t.Code)
+                .ToListAsync(cancellationToken),
+            StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < cards.Count; i++)
         {
             var row = i + 1;
@@ -167,7 +175,7 @@ public sealed class RateImportBatch
                     issues.Add(new RateImportIssue(row, "calcMethod", "Phương pháp tính giá không hợp lệ."));
                 }
 
-                var fieldIssue = ImportFieldIssue(rule);
+                var fieldIssue = ImportFieldIssue(rule, party is "customer" or "vendor" ? party : null, chargeCatalog);
                 if (fieldIssue is not null)
                 {
                     issues.Add(new RateImportIssue(row, fieldIssue.Value.Field, fieldIssue.Value.Message));
@@ -270,7 +278,7 @@ public sealed class RateImportBatch
                     CurrencyCode = string.IsNullOrWhiteSpace(rule.CurrencyCode)
                         ? entity.CurrencyCode
                         : rule.CurrencyCode.Trim().ToUpperInvariant(),
-                    ChargeCode = Trim(rule.ChargeCode) ?? (RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) ? "FREIGHT" : null),
+                    ChargeCode = Trim(rule.ChargeCode)?.ToUpperInvariant() ?? (RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) ? "FREIGHT" : null),
                     LineRole = RateLineRoles.IsBaseFamily(rule.LineRole)
                         ? rule.LineRole!.Trim().ToLowerInvariant()
                         : RateLineRoles.BaseRate,
@@ -332,8 +340,19 @@ public sealed class RateImportBatch
         return cards.Count;
     }
 
-    private static (string Field, string Message)? ImportFieldIssue(RateImportRule rule)
+    private static (string Field, string Message)? ImportFieldIssue(
+        RateImportRule rule,
+        string? partyType,
+        IReadOnlySet<string> chargeCatalog)
     {
+        if (partyType is not null)
+        {
+            var party = RateFieldPolicy.PartyTypeConflict(partyType, rule.PartyTypeCode);
+            if (party is not null)
+            {
+                return ("partyTypeCode", party);
+            }
+        }
         var service = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false);
         if (service is not null)
         {
@@ -354,6 +373,11 @@ public sealed class RateImportBatch
         if (!RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) && string.IsNullOrWhiteSpace(rule.ChargeCode))
         {
             return ("chargeCode", RateFieldPolicy.ChargeRequired);
+        }
+
+        if (!RateDeclarationPolicy.IsMatrixMethod(rule.CalcMethod) && !chargeCatalog.Contains(rule.ChargeCode!.Trim()))
+        {
+            return ("chargeCode", RateFieldPolicy.ChargeNotInCatalog);
         }
 
         return null;

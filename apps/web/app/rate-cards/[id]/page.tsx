@@ -29,7 +29,9 @@ import {
 import {
   getRateCard,
   listPricingRules,
+  listRateRuleWarnings,
   listRateVersions,
+  type RateRuleWarning,
 } from "@/lib/rate-cards-server";
 
 type Params = Promise<{ id: string }>;
@@ -37,10 +39,11 @@ type Params = Promise<{ id: string }>;
 async function loadRulesForVersions(versions: RateVersion[]) {
   const entries = await Promise.all(
     versions.map(async (v) => {
-      const rulesRes = await listPricingRules(v.id);
+      const [rulesRes, warningsRes] = await Promise.all([listPricingRules(v.id), listRateRuleWarnings(v.id)]);
       return {
         versionId: v.id,
         rules: rulesRes.ok ? rulesRes.data : ([] as PricingRule[]),
+        warnings: warningsRes.ok ? warningsRes.data : ([] as RateRuleWarning[]),
         error: rulesRes.ok ? null : rulesRes.message,
       };
     })
@@ -203,6 +206,11 @@ export default async function RateCardDetailPage({
                     {published ? " Phiên bản đã phát hành không sửa thuế suất." : " Sửa thuế suất trên màn khai báo bảng giá."}
                   </p>
                   {v.note ? <p className="note">{v.note}</p> : null}
+                  {(ruleBag?.warnings ?? []).map((w) => (
+                    <div key={w.code} className="alert alert-warning" role="status">
+                      {w.message} Quy tắc: {w.ruleCodes.join(", ")}.
+                    </div>
+                  ))}
 
                   {ruleBag?.error ? (
                     <div className="alert alert-error" role="alert">
@@ -276,7 +284,7 @@ export default async function RateCardDetailPage({
                                       ? weightBandLabel(r.weightMin, r.weightMax)
                                       : null,
                                     r.serviceTypeCode,
-                                    r.partyTypeCode,
+                                    r.partyTypeCode ? partyTypeLabel(r.partyTypeCode) : null,
                                   ]
                                     .filter(Boolean)
                                     .join(" · ") || "—"}

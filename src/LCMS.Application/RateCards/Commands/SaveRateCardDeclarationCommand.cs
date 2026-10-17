@@ -357,16 +357,32 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 .Select(c => c.Code)
                 .ToListAsync(cancellationToken)
             : null;
+        var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
+            .Where(t => t.TenantId == tenantId && t.IsActive)
+            .ToListAsync(cancellationToken);
         var warnings = new List<string>();
         var normalized = new List<BasicRateRuleInput>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rule in rules)
         {
+            var partyError = RateFieldPolicy.PartyTypeConflict(card.PartyType, rule.PartyTypeCode);
+            if (partyError is not null)
+            {
+                throw new UnprocessableAppException(partyError, "party_type_conflict");
+            }
+
+            var weightError = WeightBand.DeclarationError(rule.WeightBasis, rule.WeightMin, rule.WeightMax);
+            if (weightError is not null)
+            {
+                throw new UnprocessableAppException(weightError, "invalid_weight_band");
+            }
+
+            var charge = ResolveCharge(rule, chargeTypes);
             var code = string.IsNullOrWhiteSpace(rule.Code)
                 ? RateFieldPolicy.NextBasicCode(seen)
                 : rule.Code.Trim();
             var name = string.IsNullOrWhiteSpace(rule.Name)
-                ? RateFieldPolicy.SuggestName(rule.ChargeCode, rule.RouteCode, rule.WeightMin, rule.WeightMax)
+                ? RateFieldPolicy.SuggestName(charge?.Name, rule.RouteCode, rule.WeightMin, rule.WeightMax)
                 : rule.Name.Trim();
             var method = rule.CalcMethod.Trim().ToLowerInvariant();
             if (code.Length == 0 || name.Length == 0)
@@ -391,9 +407,14 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
                 var buy = string.Equals(card.PartyType, "vendor", StringComparison.OrdinalIgnoreCase);
                 var financial = buy ? rule.CostTypeCode : rule.RevenueTypeCode;
-                if (string.IsNullOrWhiteSpace(financial) && warnings.Count == 0)
+                if (string.IsNullOrWhiteSpace(financial) && !warnings.Contains(RateFieldPolicy.DraftFinancialWarning))
                 {
                     warnings.Add(RateFieldPolicy.DraftFinancialWarning);
+                }
+
+                if (charge is null && !warnings.Contains(RateFieldPolicy.DraftChargeWarning))
+                {
+                    warnings.Add(RateFieldPolicy.DraftChargeWarning);
                 }
             }
             else
@@ -419,17 +440,6 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             if (rule.UnitAmount < 0 || rule.MinAmount < 0 || rule.MaxAmount < 0)
             {
                 throw new ConflictAppException("Số tiền / đơn giá không được âm.", "invalid_amount");
-            }
-
-            var bandError = WeightBand.InvalidReason(rule.WeightMin, rule.WeightMax);
-            if (bandError is not null)
-            {
-                throw new ConflictAppException(bandError, "invalid_weight_band");
-            }
-
-            if (!WeightBand.IsKnownBasis(rule.WeightBasis))
-            {
-                throw new ConflictAppException("Loại trọng lượng phải là trọng lượng thực hoặc trọng lượng tính cước.", "invalid_weight_band");
             }
 
             if (rule.RouteId is null
@@ -465,7 +475,10 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 CalcMethod = method,
                 CurrencyCode = card.CurrencyCode,
                 WeightBasis = Clean(rule.WeightBasis)?.ToLowerInvariant(),
-                ChargeCode = Clean(rule.ChargeCode)?.ToUpperInvariant(),
+                ChargeCode = charge?.Code.Trim().ToUpperInvariant(),
+                EconomicChargeTypeId = rule.EconomicChargeTypeId
+                    ?? (Clean(rule.CostTypeCode) is not null || Clean(rule.RevenueTypeCode) is not null ? charge?.Id : null),
+                PartyTypeCode = null,
                 CarrierName = Clean(rule.CarrierName)
             });
         }
@@ -485,7 +498,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 CurrencyCode = card.CurrencyCode,
                 Applicability = Clean(rule.Applicability),
                 ServiceTypeCode = Clean(rule.ServiceTypeCode),
-                PartyTypeCode = Clean(rule.PartyTypeCode)?.ToLowerInvariant(),
+                PartyTypeCode = null,
                 CommodityCode = Clean(rule.CommodityCode)?.ToUpperInvariant(),
                 TransportMode = RateFieldPolicy.ToStoredMode(rule.TransportMode),
                 MinAmount = rule.MinAmount,
@@ -613,11 +626,6 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         if (!RateLineRoles.IsBaseFamily(rule.LineRole))
         {
             return "Chọn bản chất dòng: cước chính cạnh tranh, hoặc khoản cộng thêm độc lập.";
-        }
-
-        if (string.IsNullOrWhiteSpace(rule.ChargeCode))
-        {
-            return RateFieldPolicy.ChargeRequired;
         }
 
         var serviceBlock = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false);
@@ -828,6 +836,34 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
     {
         var writeCode = partyType == "customer" ? PermissionCodes.RateSellWrite : PermissionCodes.RateBuyWrite;
         await _permissions.EnsureAsync(writeCode, "Bạn không có quyền sửa bảng giá này.", cancellationToken);
+    }
+
+    /// <summary>
+    /// The charge group is the code of the selected tenant charge item. A client code is only accepted
+    /// when it names an active item; it is never stored as free text and never defaults to freight.
+    /// </summary>
+    private static EconomicChargeType? ResolveCharge(BasicRateRuleInput rule, IReadOnlyList<EconomicChargeType> catalog)
+    {
+        var sent = Clean(rule.ChargeCode);
+        if (rule.EconomicChargeTypeId is Guid id && id != Guid.Empty)
+        {
+            var picked = catalog.FirstOrDefault(t => t.Id == id)
+                ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
+            if (sent is not null && !string.Equals(sent, picked.Code.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnprocessableAppException(RateFieldPolicy.ChargeCodeMismatch, "invalid_charge_item");
+            }
+
+            return picked;
+        }
+
+        if (sent is null)
+        {
+            return null;
+        }
+
+        return catalog.FirstOrDefault(t => string.Equals(t.Code.Trim(), sent, StringComparison.OrdinalIgnoreCase))
+            ?? throw new UnprocessableAppException(RateFieldPolicy.ChargeNotInCatalog, "invalid_charge_item");
     }
 
     private static string? Clean(string? value) =>

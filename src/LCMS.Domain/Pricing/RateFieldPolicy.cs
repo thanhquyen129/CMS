@@ -19,7 +19,19 @@ public static class RateFieldPolicy
         "Phương thức không khớp tuyến đã chọn. Chọn đúng phương thức của tuyến, hoặc chọn Tất cả tuyến.";
 
     public const string ChargeRequired =
-        "Quy tắc mới phải có nhóm cạnh tranh. Không để trống nhóm tính giá.";
+        "Dòng quy tắc chưa có khoản giá chuẩn. Chọn khoản giá từ danh mục; hệ thống tự xác định nhóm tính giá.";
+
+    public const string ChargeNotInCatalog =
+        "Khoản giá không có trong danh mục khoản giá đang dùng. Không nhập mã tự do; khai báo khoản giá tại Khoản mục kinh tế trước.";
+
+    public const string ChargeCodeMismatch =
+        "Nhóm tính giá do hệ thống xác định từ khoản giá đã chọn. Không gửi mã nhóm khác khoản giá.";
+
+    public const string DraftChargeWarning =
+        "Bản nháp còn dòng chưa có khoản giá chuẩn. Có thể lưu nháp, chưa phát hành được.";
+
+    public const string LegacySurchargeWarning =
+        "Phiên bản cũ có quy tắc phụ phí giao hàng / vùng xa bị tách khỏi cước chính khi tính giá. Có nguy cơ bỏ sót phụ phí. Dữ liệu đã phát hành giữ nguyên; khai báo lại ở Quản lý phụ phí hoặc phiên bản mới.";
 
     public const string SurchargeRedirect =
         "Phụ phí không khai trên quy tắc giá. Hãy tạo ở Quản lý phụ phí.";
@@ -186,10 +198,35 @@ public static class RateFieldPolicy
         return string.Join(" · ", parts);
     }
 
+    public static string PartyLabel(string? partyType) =>
+        string.Equals(partyType?.Trim(), "customer", StringComparison.OrdinalIgnoreCase) ? "Giá bán" : "Giá mua";
+
+    /// <summary>The header is the only price direction. A blank rule value inherits; a different one is rejected.</summary>
+    public static string? PartyTypeConflict(string headerPartyType, string? rulePartyType)
+    {
+        if (string.IsNullOrWhiteSpace(rulePartyType)
+            || string.Equals(rulePartyType.Trim(), headerPartyType.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var rule = rulePartyType.Trim().ToLowerInvariant() switch
+        {
+            "customer" => "Giá bán",
+            "vendor" => "Giá mua",
+            _ => "không xác định"
+        };
+        return $"Loại giá của quy tắc ({rule}) trái với Loại giá ở Thông tin chung ({PartyLabel(headerPartyType)}). Quy tắc kế thừa Loại giá của bảng giá; bỏ Loại giá ở dòng quy tắc.";
+    }
+
+    public static string PublishChargeMissing(string ruleCode) =>
+        $"Chưa phát hành được: quy tắc {ruleCode} chưa có khoản giá chuẩn trong danh mục nên hệ thống chưa xác định được nhóm tính giá. Bản nháp vẫn được giữ; hệ thống không tự gán cước vận tải mặc định.";
+
     public static string? PublishBlock(
         bool buy,
         bool hasSupplier,
-        IReadOnlyList<ExplicitRuleFinance> rules)
+        IReadOnlyList<ExplicitRuleFinance> rules,
+        IReadOnlyCollection<string>? chargeCatalog = null)
     {
         if (buy && !hasSupplier)
         {
@@ -198,6 +235,14 @@ public static class RateFieldPolicy
 
         foreach (var rule in rules)
         {
+            if (chargeCatalog is not null
+                && !rule.Matrix
+                && (string.IsNullOrWhiteSpace(rule.ChargeCode)
+                    || !chargeCatalog.Contains(rule.ChargeCode.Trim(), StringComparer.OrdinalIgnoreCase)))
+            {
+                return PublishChargeMissing(rule.RuleCode ?? "");
+            }
+
             if (string.IsNullOrWhiteSpace(rule.ChargeCode))
             {
                 return ChargeRequired;
@@ -275,7 +320,9 @@ public readonly record struct ExplicitRuleFinance(
     string? ChargeCode,
     string? LineRole,
     string? CostTypeCode,
-    string? RevenueTypeCode);
+    string? RevenueTypeCode,
+    string? RuleCode = null,
+    bool Matrix = false);
 
 public readonly record struct MatrixGroupScope(
     string? RouteKey,

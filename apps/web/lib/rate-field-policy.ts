@@ -8,7 +8,11 @@ export const expressBlocked =
   "Chuyển phát nhanh (EXPRESS) chưa được bật vì Bill và Chặng chưa có quy tắc trọng lượng riêng. Không đổi thành hàng không.";
 export const modeRouteConflict =
   "Phương thức không khớp tuyến đã chọn. Chọn đúng phương thức của tuyến, hoặc chọn Tất cả tuyến.";
-export const chargeRequired = "Quy tắc mới phải có nhóm cạnh tranh. Không để trống nhóm tính giá.";
+export const chargeRequired =
+  "Chưa chọn khoản giá chuẩn. Có thể lưu nháp; chưa phát hành được cho tới khi chọn khoản giá từ danh mục.";
+export const weightBandRequired = "Đã chọn điều kiện trọng lượng thì phải nhập đủ Từ và Đến.";
+export const weightBandOrder = "Trọng lượng Từ phải ≥ 0 và Đến phải lớn hơn Từ.";
+export const weightBandCleared = "Đã chọn Không lọc nấc: giá trị Từ – Đến đã nhập được xóa.";
 export const surchargeRedirect = "Phụ phí không khai trên quy tắc giá. Hãy tạo ở Quản lý phụ phí.";
 export const draftFinancialWarning =
   "Bản nháp còn dòng chưa có loại chi phí hoặc loại doanh thu. Có thể lưu, chưa phát hành được.";

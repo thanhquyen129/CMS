@@ -7,6 +7,7 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listCatalog } from "@/lib/catalog";
 import { listCurrencies } from "@/lib/master-data";
+import { listEconomicChargeTypes } from "@/lib/rate-cards-server";
 import { listCommodities, listRoutes } from "@/lib/reference-masters";
 import { getTenantProfile } from "@/lib/tenant-admin";
 
@@ -16,7 +17,7 @@ export default async function NewRateCardPage() {
     redirect("/login");
   }
 
-  const [terms, routes, currencies, profile, commodities, services, modes, costs, revenues] = await Promise.all([
+  const [terms, routes, currencies, profile, commodities, services, modes, costs, revenues, charges] = await Promise.all([
     fetchTerminology(),
     listRoutes(false),
     listCurrencies(),
@@ -26,6 +27,7 @@ export default async function NewRateCardPage() {
     listCatalog("transport_mode"),
     listCatalog("cost_type"),
     listCatalog("revenue_type"),
+    listEconomicChargeTypes(),
   ]);
   const active = currencies.ok ? currencies.data.filter((c) => c.isActive) : [];
   const preferred = (profile.ok ? profile.data.defaultCurrencyCode : "VND").toUpperCase();
@@ -53,6 +55,7 @@ export default async function NewRateCardPage() {
           transportModes={modes.ok ? modes.data : []}
           costTypes={costs.ok ? costs.data : []}
           revenueTypes={revenues.ok ? revenues.data : []}
+          chargeItems={charges.ok ? charges.data : []}
           routeError={routes.ok ? null : routes.message}
           currencyError={currencies.ok ? null : currencies.message}
         />

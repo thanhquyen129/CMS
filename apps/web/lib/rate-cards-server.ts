@@ -95,6 +95,12 @@ export function listPricingRules(
   );
 }
 
+export type RateRuleWarning = { code: string; message: string; ruleCodes: string[] };
+
+export function listRateRuleWarnings(versionId: string): Promise<ApiResult<RateRuleWarning[]>> {
+  return apiGet<RateRuleWarning[]>(`/api/rate-versions/${encodeURIComponent(versionId)}/rule-warnings`);
+}
+
 export function listRatingsByBill(
   billId: string
 ): Promise<ApiResult<RatingHistoryItem[]>> {

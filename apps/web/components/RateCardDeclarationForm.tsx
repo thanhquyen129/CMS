@@ -24,6 +24,9 @@ import {
   suggestRuleName,
   surchargeRedirect,
   chargeRequired,
+  weightBandRequired,
+  weightBandOrder,
+  weightBandCleared,
   draftFinancialWarning,
   catalogEmpty,
   storedMode,
@@ -42,7 +45,6 @@ type RuleRow = {
   serviceTypeCode: string;
   commodityCode: string;
   transportMode: string;
-  partyTypeCode: string;
   routeId: string;
   appliesAnyRoute: boolean;
   carrierPartyId: string;
@@ -50,7 +52,7 @@ type RuleRow = {
   weightBasis: string;
   weightMin: string;
   weightMax: string;
-  chargeCode: string;
+  economicChargeTypeId: string;
   lineRole: string;
   costTypeCode: string;
   revenueTypeCode: string;
@@ -73,6 +75,7 @@ type MatrixGroup = {
 };
 
 type CommodityChoice = { code: string; name: string; isActive?: boolean };
+type ChargeItem = { id: string; code: string; name: string; isActive?: boolean };
 
 function commodityOptions(items: CommodityChoice[] | undefined): CommodityChoice[] {
   return (items ?? []).filter((item) => item.isActive !== false && item.code.trim());
@@ -93,6 +96,7 @@ type Props = {
   transportModes?: CatalogChoice[];
   costTypes?: CatalogChoice[];
   revenueTypes?: CatalogChoice[];
+  chargeItems?: ChargeItem[];
   routeError?: string | null;
   currencyError?: string | null;
   cardId?: string;
@@ -147,7 +151,6 @@ function emptyRule(key?: string): RuleRow {
     serviceTypeCode: "",
     commodityCode: "",
     transportMode: "",
-    partyTypeCode: "",
     routeId: "",
     appliesAnyRoute: false,
     carrierPartyId: "",
@@ -155,7 +158,7 @@ function emptyRule(key?: string): RuleRow {
     weightBasis: "",
     weightMin: "",
     weightMax: "",
-    chargeCode: "",
+    economicChargeTypeId: "",
     lineRole: "base_rate",
     costTypeCode: "",
     revenueTypeCode: "",
@@ -165,7 +168,7 @@ function emptyRule(key?: string): RuleRow {
   };
 }
 
-function rulesFromSaved(rules: PricingRule[]): RuleRow[] {
+function rulesFromSaved(rules: PricingRule[], chargeItems: ChargeItem[]): RuleRow[] {
   const basic = rules.filter((r) => !isWeightBreakMethod(r.calcMethod));
   if (basic.length === 0) return [emptyRule("rule-1")];
   return basic.map((r) => ({
@@ -177,7 +180,6 @@ function rulesFromSaved(rules: PricingRule[]): RuleRow[] {
     serviceTypeCode: r.serviceTypeCode ?? "",
     commodityCode: r.commodityCode ?? "",
     transportMode: r.transportMode ?? "",
-    partyTypeCode: r.partyTypeCode ?? "",
     routeId: r.routeId ?? "",
     appliesAnyRoute: r.appliesAnyRoute === true,
     carrierPartyId: r.carrierPartyId ?? "",
@@ -185,7 +187,7 @@ function rulesFromSaved(rules: PricingRule[]): RuleRow[] {
     weightBasis: r.weightBasis ?? "",
     weightMin: r.weightMin == null ? "" : String(r.weightMin),
     weightMax: r.weightMax == null ? "" : String(r.weightMax),
-    chargeCode: r.chargeCode ?? "",
+    economicChargeTypeId: chargeItems.find((item) => r.chargeCode && item.code.toUpperCase() === r.chargeCode.toUpperCase())?.id ?? "",
     lineRole: r.lineRole ?? "base_rate",
     costTypeCode: r.components?.find((c) => c.costTypeCode)?.costTypeCode ?? "",
     revenueTypeCode: r.components?.find((c) => c.revenueTypeCode)?.revenueTypeCode ?? "",
@@ -345,7 +347,7 @@ export function RateCardDeclarationForm(props: Props) {
   const [mode, setMode] = useState<"basic" | "advanced">(initialMode);
   const [pendingMode, setPendingMode] = useState<"basic" | "advanced" | null>(null);
   const [rules, setRules] = useState<RuleRow[]>(() => {
-    const rows = rulesFromSaved(props.rules ?? []);
+    const rows = rulesFromSaved(props.rules ?? [], props.chargeItems ?? []);
     if (!rows[0].routeId && !rows[0].appliesAnyRoute && props.routeId) {
       rows[0] = { ...rows[0], routeId: props.routeId };
     }
@@ -361,8 +363,10 @@ export function RateCardDeclarationForm(props: Props) {
   const [remoteAmount, setRemoteAmount] = useState("85000");
   const [remoteCurrency, setRemoteCurrency] = useState(currency);
   const [remoteDestinations, setRemoteDestinations] = useState("");
+  const [bandCleared, setBandCleared] = useState<Record<string, boolean>>({});
 
   const sell = partyType === "customer";
+  const chargeItems = (props.chargeItems ?? []).filter((item) => item.isActive !== false);
   const activeCurrencies = props.currencies.filter((c) => c.isActive);
   const currencyChoices = useMemo(() => {
     const codes = activeCurrencies.map((c) => c.code.toUpperCase());
@@ -476,20 +480,17 @@ export function RateCardDeclarationForm(props: Props) {
     }
 
     if (mode === "basic") {
-      const filled = rules.filter((r) => r.name.trim() || r.unitAmount.trim() || r.chargeCode.trim());
+      const filled = rules.filter((r) => r.name.trim() || r.unitAmount.trim() || r.economicChargeTypeId);
       for (const rule of filled) {
         const amount = parseNum(rule.unitAmount);
         const route = props.routes.find((item) => item.id === rule.routeId);
         const routeLabel = route ? routeOptionLabel(route) : rule.appliesAnyRoute ? "Tất cả tuyến" : "";
+        const charge = chargeItems.find((item) => item.id === rule.economicChargeTypeId);
         if (!rule.name.trim()) {
-          rule.name = suggestRuleName(rule.chargeCode, routeLabel, rule.weightMin, rule.weightMax);
+          rule.name = suggestRuleName(charge?.name ?? "", routeLabel, rule.weightMin, rule.weightMax);
         }
         if (rule.lineRole === "surcharge") {
           setError(surchargeRedirect);
-          return;
-        }
-        if (!rule.chargeCode.trim()) {
-          setError(chargeRequired);
           return;
         }
         const serviceError = serviceBlock(rule.serviceTypeCode, false);
@@ -517,11 +518,17 @@ export function RateCardDeclarationForm(props: Props) {
             : "Chọn tuyến từ danh mục hoặc Tất cả tuyến.");
           return;
         }
-        const min = parseNum(rule.weightMin);
-        const max = rule.weightMax.trim() ? parseNum(rule.weightMax) : null;
-        if ((rule.weightMin.trim() || rule.weightMax.trim()) && (min === null || min < 0 || (rule.weightMax.trim() && (max === null || max <= min)))) {
-          setError("Nấc trọng lượng cần mức từ không âm và mức đến lớn hơn mức từ.");
-          return;
+        if (rule.weightBasis) {
+          const min = parseNum(rule.weightMin);
+          const max = parseNum(rule.weightMax);
+          if (!rule.weightMin.trim() || !rule.weightMax.trim()) {
+            setError(weightBandRequired);
+            return;
+          }
+          if (min === null || max === null || min < 0 || max <= min) {
+            setError(weightBandOrder);
+            return;
+          }
         }
         if (rule.calcMethod === "min_max_clamp" && !rule.minAmount.trim() && !rule.maxAmount.trim()) {
           setError("Cách tính kẹp min/max cần số tiền tối thiểu hoặc tối đa.");
@@ -537,15 +544,14 @@ export function RateCardDeclarationForm(props: Props) {
         serviceTypeCode: rule.serviceTypeCode.trim() || null,
         commodityCode: rule.commodityCode.trim() || null,
         transportMode: rule.transportMode.trim() || null,
-        partyTypeCode: rule.partyTypeCode.trim() || null,
         routeId: rule.appliesAnyRoute ? null : rule.routeId || null,
         appliesAnyRoute: rule.appliesAnyRoute,
         carrierPartyId: rule.carrierPartyId || null,
         carrierName: rule.carrierName.trim() || null,
         weightBasis: rule.weightBasis || null,
-        weightMin: parseNum(rule.weightMin),
-        weightMax: rule.weightMax.trim() ? parseNum(rule.weightMax) : null,
-        chargeCode: rule.chargeCode.trim() || null,
+        weightMin: rule.weightBasis ? parseNum(rule.weightMin) : null,
+        weightMax: rule.weightBasis ? parseNum(rule.weightMax) : null,
+        economicChargeTypeId: rule.economicChargeTypeId || null,
         lineRole: rule.lineRole || "base_rate",
         costTypeCode: rule.costTypeCode.trim() || null,
         revenueTypeCode: rule.revenueTypeCode.trim() || null,
@@ -815,7 +821,7 @@ export function RateCardDeclarationForm(props: Props) {
                   <th className="col-name" scope="col">Tên quy tắc</th>
                   <th className="col-route" scope="col">Tuyến</th>
                   <th className="col-carrier" scope="col">Hãng vận chuyển</th>
-                  <th className="col-basis" scope="col">Loại trọng lượng</th>
+                  <th className="col-basis" scope="col">Điều kiện trọng lượng</th>
                   <th className="col-weight" scope="col">Nấc trọng lượng (Từ – Đến)</th>
                   <th className="col-method" scope="col">Cách tính</th>
                   <th className="col-amount" scope="col">Số tiền / Đơn giá</th>
@@ -836,7 +842,13 @@ export function RateCardDeclarationForm(props: Props) {
                         <option value="independent">Khoản cộng thêm — nhóm riêng</option>
                         <option value="surcharge">Phụ phí — sang Quản lý phụ phí</option>
                       </select>
-                      <input aria-label={`Nhóm cạnh tranh ${index + 1}`} placeholder="Nhóm cạnh tranh" value={rule.chargeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, chargeCode: ev.target.value } : r))} />
+                      <select aria-label={`Khoản giá ${index + 1}`} value={rule.economicChargeTypeId} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, economicChargeTypeId: ev.target.value } : r))}>
+                        <option value="">{chargeItems.length === 0 ? "Chưa có danh mục khoản giá" : "Chọn khoản giá"}</option>
+                        {chargeItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                      </select>
+                      {!rule.economicChargeTypeId && (rule.name.trim() || rule.unitAmount.trim()) ? (
+                        <p className="alert alert-warning" role="status">{chargeRequired}</p>
+                      ) : null}
                     </td>
                     <td><input aria-label={`Tên quy tắc ${index + 1}`} value={rule.name} maxLength={256} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, name: ev.target.value } : r))} /></td>
                     <td className="col-route">
@@ -882,16 +894,28 @@ export function RateCardDeclarationForm(props: Props) {
                       />
                     </td>
                     <td className="col-basis">
-                      <select aria-label={`Loại trọng lượng ${index + 1}`} value={rule.weightBasis} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightBasis: ev.target.value } : r))}>
+                      <select
+                        aria-label={`Điều kiện trọng lượng ${index + 1}`}
+                        value={rule.weightBasis}
+                        onChange={(ev) => {
+                          const value = ev.target.value;
+                          const cleared = !value && Boolean(rule.weightMin.trim() || rule.weightMax.trim());
+                          setBandCleared((prev) => ({ ...prev, [rule.key]: cleared }));
+                          setRules((prev) => prev.map((r) => r.key === rule.key
+                            ? (value ? { ...r, weightBasis: value } : { ...r, weightBasis: "", weightMin: "", weightMax: "" })
+                            : r));
+                        }}
+                      >
                         {weightBasisOptions.map((item) => <option key={item.value || "none"} value={item.value}>{item.label}</option>)}
                       </select>
                     </td>
                     <td className="col-weight">
                       <div className="rate-band">
-                        <input aria-label={`Trọng lượng từ ${index + 1}`} placeholder="Từ" inputMode="decimal" value={rule.weightMin} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMin: ev.target.value } : r))} />
+                        <input aria-label={`Trọng lượng từ ${index + 1}`} placeholder="Từ" inputMode="decimal" disabled={!rule.weightBasis} required={Boolean(rule.weightBasis)} value={rule.weightMin} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMin: ev.target.value } : r))} />
                         <span aria-hidden="true">–</span>
-                        <input aria-label={`Trọng lượng đến ${index + 1}`} placeholder="Không giới hạn" inputMode="decimal" value={rule.weightMax} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMax: ev.target.value } : r))} />
+                        <input aria-label={`Trọng lượng đến ${index + 1}`} placeholder="Đến" inputMode="decimal" disabled={!rule.weightBasis} required={Boolean(rule.weightBasis)} value={rule.weightMax} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, weightMax: ev.target.value } : r))} />
                       </div>
+                      {bandCleared[rule.key] ? <p className="alert alert-warning" role="status">{weightBandCleared}</p> : null}
                     </td>
                     <td className="col-method">
                       <select aria-label={`Cách tính ${index + 1}`} value={rule.calcMethod} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, calcMethod: ev.target.value } : r))}>
@@ -955,11 +979,6 @@ export function RateCardDeclarationForm(props: Props) {
                         {rule.transportMode && !modes.some((item) => item.value === storedMode(rule.transportMode)) ? (
                           <option value={rule.transportMode}>{catalogLabel(rule.transportMode)} — dữ liệu đã lưu</option>
                         ) : null}
-                      </select>
-                      <select aria-label={`Lọc chiều giá ${index + 1}`} value={rule.partyTypeCode} onChange={(ev) => setRules((prev) => prev.map((r) => r.key === rule.key ? { ...r, partyTypeCode: ev.target.value } : r))}>
-                        <option value="">Mọi chiều giá</option>
-                        <option value="vendor">Giá mua</option>
-                        <option value="customer">Giá bán</option>
                       </select>
                     </td>
                     <td>

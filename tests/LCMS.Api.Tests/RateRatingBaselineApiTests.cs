@@ -525,7 +525,9 @@ public sealed class RateRatingBaselineApiTests : IAsyncLifetime
     {
         var res = await _client.PostAsJsonAsync("/api/tenants", new { code = "TN-" + Guid.NewGuid().ToString("N")[..8], name = "Baseline" });
         res.EnsureSuccessStatusCode();
-        return (await res.Content.ReadFromJsonAsync<Created>(Json))!.Id;
+        var tenantId = (await res.Content.ReadFromJsonAsync<Created>(Json))!.Id;
+        await PostCreatedAsync(tenantId, "/api/economic-charge-types", new { code = "FREIGHT", name = "Cước vận tải" });
+        return tenantId;
     }
 
     private static HttpRequestMessage Tenant(HttpMethod method, string path, Guid tenantId)

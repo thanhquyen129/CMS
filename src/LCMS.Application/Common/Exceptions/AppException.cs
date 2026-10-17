@@ -25,6 +25,15 @@ public sealed class ValidationAppException : AppException
     }
 }
 
+/// <summary>Well-formed request whose field combination breaks a business rule (HTTP 422).</summary>
+public sealed class UnprocessableAppException : AppException
+{
+    public UnprocessableAppException(string vietnameseMessage, string errorCode)
+        : base(vietnameseMessage, StatusCodes.UnprocessableEntity, errorCode)
+    {
+    }
+}
+
 public sealed class NotFoundAppException : AppException
 {
     public NotFoundAppException(string vietnameseMessage = "Không tìm thấy dữ liệu.")
@@ -78,4 +87,5 @@ internal static class StatusCodes
     public const int Forbidden = 403;
     public const int NotFound = 404;
     public const int Conflict = 409;
+    public const int UnprocessableEntity = 422;
 }

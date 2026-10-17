@@ -8,7 +8,7 @@ import { fetchTerminology } from "@/lib/api";
 import { listCatalog } from "@/lib/catalog";
 import { listCurrencies } from "@/lib/master-data";
 import { listCommodities, listRoutes } from "@/lib/reference-masters";
-import { getRateCard, listPricingRules, listRateVersions } from "@/lib/rate-cards-server";
+import { getRateCard, listEconomicChargeTypes, listPricingRules, listRateVersions } from "@/lib/rate-cards-server";
 import { isDraftVersion, isWeightBreakMethod } from "@/lib/rate-cards";
 
 type Params = Promise<{ id: string }>;
@@ -18,7 +18,7 @@ export default async function EditRateCardPage({ params }: { params: Params }) {
   if (!jar.get(AUTH_COOKIE)?.value) redirect("/login");
 
   const { id } = await params;
-  const [terms, cardRes, versionsRes, routes, currencies, commodities, services, modes, costs, revenues] = await Promise.all([
+  const [terms, cardRes, versionsRes, routes, currencies, commodities, services, modes, costs, revenues, charges] = await Promise.all([
     fetchTerminology(),
     getRateCard(id),
     listRateVersions(id),
@@ -29,6 +29,7 @@ export default async function EditRateCardPage({ params }: { params: Params }) {
     listCatalog("transport_mode"),
     listCatalog("cost_type"),
     listCatalog("revenue_type"),
+    listEconomicChargeTypes(),
   ]);
 
   if (!cardRes.ok) {
@@ -100,6 +101,7 @@ export default async function EditRateCardPage({ params }: { params: Params }) {
           transportModes={modes.ok ? modes.data : []}
           costTypes={costs.ok ? costs.data : []}
           revenueTypes={revenues.ok ? revenues.data : []}
+          chargeItems={charges.ok ? charges.data : []}
           routeError={routes.ok ? null : routes.message}
           currencyError={currencies.ok ? null : currencies.message}
         />

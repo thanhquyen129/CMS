@@ -464,7 +464,14 @@ public sealed class RateCardRemainingAcceptanceTests : IAsyncLifetime
         };
         var res = await _client.SendAsync(req);
         res.EnsureSuccessStatusCode();
-        return (await res.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+        var tenantId = (await res.Content.ReadFromJsonAsync<IdBody>(Json))!.Id;
+        using var charge = new HttpRequestMessage(HttpMethod.Post, "/api/economic-charge-types")
+        {
+            Content = JsonContent.Create(new { code = "FREIGHT", name = "Cước vận tải" })
+        };
+        charge.Headers.Add("X-Tenant-Id", tenantId.ToString());
+        (await _client.SendAsync(charge)).EnsureSuccessStatusCode();
+        return tenantId;
     }
 
     private async Task<Guid> CreateRouteAsync(Guid tenantId, string code)

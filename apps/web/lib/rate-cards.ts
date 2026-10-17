@@ -215,8 +215,8 @@ export function weightBandLabel(min: number | null | undefined, max: number | nu
 
 export const weightBasisOptions = [
   { value: "", label: "Không lọc nấc" },
-  { value: "gross", label: "Trọng lượng thực" },
-  { value: "chargeable", label: "Trọng lượng tính cước" },
+  { value: "gross", label: "Trọng lượng thực (Gross)" },
+  { value: "chargeable", label: "Trọng lượng tính cước (Chargeable)" },
 ] as const;
 
 export const basicCalcMethods = [

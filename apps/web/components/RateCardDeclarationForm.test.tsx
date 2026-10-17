@@ -138,7 +138,6 @@ describe("rate card declaration form", () => {
     await user.type(screen.getByLabelText("Tên"), "Bảng giao diện");
     await user.selectOptions(screen.getByRole("combobox", { name: "Chọn tuyến 1" }), "route-1");
     await user.type(screen.getByLabelText("Tên quy tắc 1"), "Cước");
-    await user.type(screen.getByLabelText("Nhóm cạnh tranh 1"), "CUOC");
     await user.type(screen.getByLabelText("Số tiền cố định 1"), "10");
     await user.click(screen.getByRole("radio", { name: /Bảng giá nâng cao/ }));
     await user.click(screen.getByRole("button", { name: "Đồng ý" }));
@@ -187,6 +186,126 @@ describe("rate card declaration form", () => {
     expect(screen.getByRole("alert").textContent).toContain("một hình thức khai báo");
     expect(screen.getByRole("alert").textContent).not.toContain("Exception");
     expect(screen.getByRole("alert").textContent).not.toContain("invalid_declaration_mode");
+  });
+});
+
+describe("UAT RATE-UI-05..07", () => {
+  afterEach(() => cleanup());
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: true, status: 201, json: async () => ({ id: "card-1", rateCardId: "card-1" }) }))
+    );
+  });
+
+  const chargeItems = [
+    { id: "ct-freight", code: "FREIGHT", name: "Cước vận tải", isActive: true },
+    { id: "ct-pickup", code: "PICKUP", name: "Phí lấy hàng", isActive: true },
+  ];
+
+  async function fillHeader(user: ReturnType<typeof userEvent.setup>, code: string) {
+    await user.type(screen.getByLabelText("Mã"), code);
+    await user.type(screen.getByLabelText("Tên"), "Bảng UAT");
+    await user.selectOptions(screen.getByRole("combobox", { name: "Chọn tuyến 1" }), "route-1");
+    await user.type(screen.getByLabelText("Tên quy tắc 1"), "Cước");
+    await user.type(screen.getByLabelText("Số tiền cố định 1"), "10");
+  }
+
+  function lastBody() {
+    const fetchMock = fetch as unknown as { mock: { calls: unknown[][] } };
+    const init = fetchMock.mock.calls.at(-1)?.[1] as RequestInit;
+    return JSON.parse(String(init.body));
+  }
+
+  it("UAT-01/05: no rule-level price direction in basic or advanced; payload inherits the header", async () => {
+    const user = userEvent.setup();
+    renderForm({ chargeItems, partyType: "customer" });
+    expect(screen.queryByLabelText(/Lọc chiều giá/)).toBeNull();
+    expect(screen.queryByText("Mọi chiều giá")).toBeNull();
+    await fillHeader(user, "RC-U01");
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    const body = lastBody();
+    expect(body.partyType).toBe("customer");
+    expect(body.rules[0]).not.toHaveProperty("partyTypeCode");
+    cleanup();
+    renderForm({ chargeItems, declarationMode: "advanced", cardId: "card-1", code: "RC-A", name: "Nâng cao" });
+    expect(screen.queryByLabelText(/Lọc chiều giá/)).toBeNull();
+    expect(screen.queryByText("Mọi chiều giá")).toBeNull();
+  }, 20000);
+
+  it("UAT-06: Không lọc nấc disables and clears Từ/Đến with a notice, payload sends three nulls", async () => {
+    const user = userEvent.setup();
+    renderForm({ chargeItems });
+    const basis = screen.getByLabelText("Điều kiện trọng lượng 1") as HTMLSelectElement;
+    expect(Array.from(basis.options).map((o) => o.textContent)).toEqual([
+      "Không lọc nấc",
+      "Trọng lượng thực (Gross)",
+      "Trọng lượng tính cước (Chargeable)",
+    ]);
+    const from = screen.getByLabelText("Trọng lượng từ 1") as HTMLInputElement;
+    const to = screen.getByLabelText("Trọng lượng đến 1") as HTMLInputElement;
+    expect(from.disabled).toBe(true);
+    expect(to.disabled).toBe(true);
+    await user.selectOptions(basis, "gross");
+    expect(from.disabled).toBe(false);
+    await user.type(from, "0");
+    await user.type(to, "5");
+    await user.selectOptions(basis, "");
+    expect(from.value).toBe("");
+    expect(to.value).toBe("");
+    expect(from.disabled).toBe(true);
+    expect(screen.getByText(/giá trị Từ – Đến đã nhập được xóa/)).toBeTruthy();
+    await fillHeader(user, "RC-U06");
+    await user.selectOptions(screen.getByLabelText("Khoản giá 1"), "ct-freight");
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    const rule = lastBody().rules[0];
+    expect(rule.weightBasis).toBeNull();
+    expect(rule.weightMin).toBeNull();
+    expect(rule.weightMax).toBeNull();
+  }, 20000);
+
+  it("UAT-10: gross needs both bounds and Đến > Từ before any request", async () => {
+    const user = userEvent.setup();
+    renderForm({ chargeItems });
+    await fillHeader(user, "RC-U10");
+    await user.selectOptions(screen.getByLabelText("Điều kiện trọng lượng 1"), "gross");
+    await user.type(screen.getByLabelText("Trọng lượng từ 1"), "0");
+    const fetchMock = fetch as unknown as { mock: { calls: unknown[][] } };
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    expect(screen.getByRole("alert").textContent).toContain("nhập đủ Từ và Đến");
+    await user.clear(screen.getByLabelText("Trọng lượng từ 1"));
+    await user.type(screen.getByLabelText("Trọng lượng từ 1"), "10");
+    await user.type(screen.getByLabelText("Trọng lượng đến 1"), "5");
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    expect(screen.getByRole("alert").textContent).toContain("Đến phải lớn hơn Từ");
+    expect(fetchMock.mock.calls.length).toBe(0);
+  }, 20000);
+
+  it("UAT-13/16: charge item comes from master data; no free charge code; draft without it warns", async () => {
+    const user = userEvent.setup();
+    renderForm({ chargeItems });
+    expect(screen.queryByLabelText(/Nhóm cạnh tranh/)).toBeNull();
+    const charge = screen.getByLabelText("Khoản giá 1") as HTMLSelectElement;
+    expect(charge.tagName).toBe("SELECT");
+    expect(Array.from(charge.options).map((o) => o.textContent)).toEqual(["Chọn khoản giá", "Cước vận tải", "Phí lấy hàng"]);
+    await fillHeader(user, "RC-U16");
+    expect(screen.getByText(/Có thể lưu nháp; chưa phát hành được/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    let rule = lastBody().rules[0];
+    expect(rule.economicChargeTypeId).toBeNull();
+    expect(rule).not.toHaveProperty("chargeCode");
+    await user.selectOptions(charge, "ct-freight");
+    await user.click(screen.getByRole("button", { name: "Lưu nháp" }));
+    rule = lastBody().rules[0];
+    expect(rule.economicChargeTypeId).toBe("ct-freight");
+    expect(rule).not.toHaveProperty("chargeCode");
+  }, 20000);
+
+  it("UAT-16: an empty charge catalog says so instead of inventing a code", () => {
+    renderForm({ chargeItems: [] });
+    const charge = screen.getByLabelText("Khoản giá 1") as HTMLSelectElement;
+    expect(Array.from(charge.options).map((o) => o.textContent)).toEqual(["Chưa có danh mục khoản giá"]);
   });
 });
 

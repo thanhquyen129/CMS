@@ -23,7 +23,7 @@ public static class RatePricingEndpoints
             if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands, body.Groups))
             {
                 var saved = await sender.Send(MapDeclaration(null, body), ct);
-                return Results.Created($"/api/rate-cards/{saved.RateCardId}", new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId });
+                return Results.Created($"/api/rate-cards/{saved.RateCardId}", new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId, saved.Warnings });
             }
 
             var id = await sender.Send(
@@ -109,7 +109,7 @@ public static class RatePricingEndpoints
             if (IsDeclaration(body.DeclarationMode, body.Rules, body.Columns, body.Bands, body.Groups))
             {
                 var saved = await sender.Send(MapDeclaration(id, body), ct);
-                return Results.Ok(new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId });
+                return Results.Ok(new { id = saved.RateCardId, saved.RateCardId, saved.RateVersionId, saved.Warnings });
             }
 
             await sender.Send(
@@ -218,6 +218,11 @@ public static class RatePricingEndpoints
             var list = await sender.Send(new ListPricingRulesQuery(versionId), ct);
             return Results.Ok(list);
         });
+        versions.MapGet("/{versionId:guid}/rule-warnings", async (
+            Guid versionId,
+            ISender sender,
+            CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetRateVersionRuleWarningsQuery(versionId), ct)));
 
         var rules = app.MapGroup("/api/pricing-rules").WithTags("PricingRules");
         rules.MapPost("/{ruleId:guid}/components", async (

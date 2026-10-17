@@ -38,6 +38,42 @@ public static class WeightBand
         return null;
     }
 
+    public const string UnknownBasis =
+        "Điều kiện trọng lượng chỉ gồm Không lọc nấc, Trọng lượng thực hoặc Trọng lượng tính cước.";
+
+    public const string NoFilterWithBand =
+        "Điều kiện trọng lượng là Không lọc nấc thì không nhập Từ – Đến. Chọn Trọng lượng thực hoặc Trọng lượng tính cước nếu cần lọc nấc.";
+
+    public const string BandRequired =
+        "Đã chọn điều kiện trọng lượng thì phải nhập đủ Từ và Đến. Nếu không lọc theo nấc, chọn Không lọc nấc.";
+
+    public const string LegacyInconsistent =
+        "Phiên bản này có nấc trọng lượng cũ không nhất quán. Dữ liệu đã phát hành giữ nguyên; điều chỉnh bằng phiên bản mới.";
+
+    /// <summary>
+    /// New declarations: no basis means no tier at all; a basis needs both bounds with 0 ≤ min &lt; max.
+    /// Published rows are not re-validated.
+    /// </summary>
+    public static string? DeclarationError(string? basis, decimal? min, decimal? max)
+    {
+        if (!IsKnownBasis(basis))
+        {
+            return UnknownBasis;
+        }
+
+        if (string.IsNullOrWhiteSpace(basis))
+        {
+            return min is null && max is null ? null : NoFilterWithBand;
+        }
+
+        if (min is null || max is null)
+        {
+            return BandRequired;
+        }
+
+        return InvalidReason(min, max);
+    }
+
     public static bool Contains(decimal weight, decimal min, decimal? max) =>
         weight >= min && (max is null || weight < max);
 

@@ -1,3 +1,7 @@
+## 2026-10-17 — DATA-01: Seed idempotent danh mục Khoản mục kinh tế chuẩn (FREIGHT, PICKUP, DELIVERY, REMOTE, HANDLING, FUEL)
+- Bổ sung `EconomicChargeCatalogSeeder` (gọi trong `MigrateDatabaseAsync` cho tenant `ops`/`demo` và trong `DemoDataSeeder.EnsureDefaultCatalogAsync`) kèm script SQL idempotent `infra/sql/seed_economic_charge_types_ops_demo.sql` để đóng GAP DATA-01.
+- Files: `EconomicChargeCommands.cs`, `DemoDataSeeder.cs`, `Program.cs`, `infra/sql/seed_economic_charge_types_ops_demo.sql`, `RateUi0507UatTests.cs`.
+
 ## 2026-10-17 — RATE-UI-05..07 (Hardening sau tái thẩm định): đóng 7 lỗ hổng API con, Advanced, Import, Mobile & Responsive
 - `AddPricingRuleCommand`: bổ sung `WeightBasis`/`WeightMin`/`WeightMax`/`EconomicChargeTypeId`, gọi `WeightBand.DeclarationError`, bắt buộc `ChargeCode`/`EconomicChargeTypeId` thuộc `economic_charge_types`, và luôn lưu `party_type_code = NULL` (kể cả khi gửi trùng header).
 - Bảng giá nâng cao (`ComposeTariffCommand`, `SaveRateCardDeclarationCommand`, `RateFieldPolicy.PublishBlock`): xóa hoàn toàn hardcode `ReferenceCharge.Freight` và bỏ miễn trừ `!rule.Matrix` khi publish; mỗi nhóm ma trận nhận `EconomicChargeTypeId`/`ChargeCode` từ danh mục master và bị chặn publish nếu thiếu khoản giá.

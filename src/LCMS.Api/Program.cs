@@ -5,6 +5,7 @@ using LCMS.Application;
 using LCMS.Application.Attachments;
 using LCMS.Application.Currencies;
 using LCMS.Application.Demo;
+using LCMS.Application.EconomicCharges;
 using LCMS.Application.Identity;
 using LCMS.Application.Licenses;
 using LCMS.Infrastructure;
@@ -189,6 +190,7 @@ static async Task MigrateDatabaseAsync(WebApplication app)
     await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
     await TenantAccessSeeder.SeedSystemRolesForAllTenantsAsync(db, CancellationToken.None);
     await TenantLicenseSeeder.EnsureForAllTenantsAsync(db, CancellationToken.None);
+    await EconomicChargeCatalogSeeder.EnsureForDemoAndOpsTenantsAsync(db, CancellationToken.None);
 }
 
 static async Task SeedDemoIfEnabledAsync(WebApplication app)

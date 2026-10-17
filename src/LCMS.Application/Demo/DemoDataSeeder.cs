@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using LCMS.Application.Abstractions;
+using LCMS.Application.EconomicCharges;
 using LCMS.Application.Ratings;
 using LCMS.Application.Surcharges;
 using LCMS.Domain.Entities;
@@ -772,6 +773,8 @@ public sealed class DemoDataSeeder
         {
             await _db.SaveChangesAsync(cancellationToken);
         }
+
+        await EconomicChargeCatalogSeeder.EnsureForTenantAsync(_db, tenantId, cancellationToken);
     }
 
     private static Bill Bill(Guid tid, string no, Guid? orgId, string? _) => new()

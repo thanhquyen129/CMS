@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using LCMS.Application.EconomicCharges;
 using LCMS.Domain.Entities;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -595,6 +596,45 @@ public sealed class RateUi0507UatTests : IAsyncLifetime
         Assert.Equal(oldLine.Amount, newLine.Amount);
         Assert.Equal(created.RateVersionId, newLine.SourceVersionId);
         Assert.Equal(oldRules, await RowsAsync(created.RateVersionId));
+    }
+
+    [Fact]
+    public async Task Data01_EconomicChargeCatalogSeeder_SeedsOpsAndDemoIdempotently()
+    {
+        Guid opsId;
+        Guid demoId;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
+            var ops = await db.Tenants.FirstOrDefaultAsync(t => t.Code.ToLower() == "ops");
+            if (ops is null)
+            {
+                ops = new Tenant { Code = "ops", Name = "Vận hành", IsActive = true };
+                db.Tenants.Add(ops);
+            }
+
+            var demo = await db.Tenants.FirstOrDefaultAsync(t => t.Code.ToLower() == "demo");
+            if (demo is null)
+            {
+                demo = new Tenant { Code = "demo", Name = "Demo", IsActive = true };
+                db.Tenants.Add(demo);
+            }
+
+            await db.SaveChangesAsync();
+            opsId = ops.Id;
+            demoId = demo.Id;
+
+            await EconomicChargeCatalogSeeder.EnsureForDemoAndOpsTenantsAsync(db);
+            await EconomicChargeCatalogSeeder.EnsureForDemoAndOpsTenantsAsync(db);
+        }
+
+        var expected = new[] { "DELIVERY", "FREIGHT", "FUEL", "HANDLING", "PICKUP", "REMOTE" };
+        foreach (var tid in new[] { opsId, demoId })
+        {
+            var items = await GetListAsync<EconomicChargeTypeDto>(tid, "/api/economic-charge-types");
+            Assert.Equal(expected, items.Select(i => i.Code).OrderBy(c => c).ToArray());
+            Assert.All(items, i => Assert.True(i.IsActive));
+        }
     }
 
     private sealed record TenantSetup(Guid Id, Guid Supplier, Guid Route, Guid Freight, Guid Pickup, Guid Commodity);

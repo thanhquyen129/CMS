@@ -203,3 +203,73 @@ internal static class EconomicChargeTypeRules
         return row.Id;
     }
 }
+
+/// <summary>
+/// Idempotent baseline economic charge catalog for demo and ops tenants (closes GAP DATA-01).
+/// </summary>
+public static class EconomicChargeCatalogSeeder
+{
+    public static readonly (string Code, string Name)[] Baseline =
+    [
+        ("FREIGHT", "Cước vận tải chính (Base freight)"),
+        ("PICKUP", "Phí lấy hàng tận nơi"),
+        ("DELIVERY", "Phí giao hàng"),
+        ("REMOTE", "Phụ phí vùng xa / hải đảo"),
+        ("HANDLING", "Phí bốc xếp / nâng hạ"),
+        ("FUEL", "Phụ phí nhiên liệu")
+    ];
+
+    public static async Task EnsureForTenantAsync(
+        ILcmsDbContext db,
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await db.EconomicChargeTypes.IgnoreQueryFilters()
+            .Where(t => t.TenantId == tenantId && t.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+        var byCode = existing.ToDictionary(t => t.Code, StringComparer.OrdinalIgnoreCase);
+        var changed = false;
+
+        foreach (var (code, name) in Baseline)
+        {
+            if (byCode.TryGetValue(code, out var row))
+            {
+                if (!row.IsActive)
+                {
+                    row.IsActive = true;
+                    changed = true;
+                }
+
+                continue;
+            }
+
+            db.EconomicChargeTypes.Add(new EconomicChargeType
+            {
+                TenantId = tenantId,
+                Code = code,
+                Name = name,
+                IsActive = true
+            });
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public static async Task EnsureForDemoAndOpsTenantsAsync(
+        ILcmsDbContext db,
+        CancellationToken cancellationToken = default)
+    {
+        var tenantIds = await db.Tenants.AsNoTracking()
+            .Where(t => t.DeletedAt == null && (t.Code.ToLower() == "ops" || t.Code.ToLower() == "demo"))
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
+        foreach (var tenantId in tenantIds)
+        {
+            await EnsureForTenantAsync(db, tenantId, cancellationToken);
+        }
+    }
+}

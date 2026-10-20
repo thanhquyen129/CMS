@@ -116,6 +116,27 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
         {
             await SurchargeWriteGuard.EnsureDirectionAsync(_db, _permissions, direction, write: false, cancellationToken);
         }
+        if (request.Rule.RateCardId.HasValue)
+        {
+            var rateCard = await _db.RateCards.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.Id == request.Rule.RateCardId.Value, cancellationToken);
+            if (rateCard != null)
+            {
+                if (string.Equals(rateCard.PartyType, "vendor", StringComparison.OrdinalIgnoreCase) && direction == SurchargeDirections.Sell)
+                {
+                    throw new ConflictAppException("Phụ phí gắn với Bảng giá MUA (vendor) không thể khai báo chiều SELL.");
+                }
+                if (string.Equals(rateCard.PartyType, "customer", StringComparison.OrdinalIgnoreCase) && direction == SurchargeDirections.Buy)
+                {
+                    throw new ConflictAppException("Phụ phí gắn với Bảng giá BÁN (customer) không thể khai báo chiều BUY.");
+                }
+                if (!string.Equals(rateCard.CurrencyCode, request.Rule.CurrencyCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ConflictAppException($"Đơn vị tiền tệ của Phụ phí ({request.Rule.CurrencyCode}) phải trùng với Bảng giá ({rateCard.CurrencyCode}).");
+                }
+            }
+        }
+
         var code = request.Code.Trim();
         if (await _db.Surcharges.AnyAsync(s => s.Code == code, cancellationToken))
         {

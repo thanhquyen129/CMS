@@ -24,6 +24,11 @@ public static class TenantBillEndpoints
         });
 
         var bills = app.MapGroup("/api/bills").WithTags("Bills");
+        bills.MapPost("/prefill-from-orders", async (PrefillBillFromOrdersRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new PrefillBillFromOrdersQuery(body.OrderIds), ct);
+            return Results.Ok(result);
+        });
         bills.MapPost("/", async (CreateBillRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
@@ -130,6 +135,8 @@ public static class TenantBillEndpoints
 }
 
 public sealed record CreateTenantRequest(string Code, string Name);
+
+public sealed record PrefillBillFromOrdersRequest(IReadOnlyList<Guid> OrderIds);
 
 public sealed record CreateBillRequest(
     string BillNo,

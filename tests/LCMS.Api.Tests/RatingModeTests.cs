@@ -610,7 +610,7 @@ public sealed class RatingModeTests : IAsyncLifetime
                     name = rule.Name,
                     direction = "buy",
                     calculationMode = delivery ? "fixed_rate" : "unit_rate",
-                    currencyCode = rule.CurrencyCode,
+                    currencyCode = card.CurrencyCode,
                     rateAmountPercent = delivery ? band?.UnitAmount ?? rule.UnitAmount : rule.UnitAmount,
                     basis = delivery
                         ? null
@@ -649,7 +649,11 @@ public sealed class RatingModeTests : IAsyncLifetime
         using var req = Tenant(HttpMethod.Post, "/api/rate-cards/compose", tenantId);
         req.Content = JsonContent.Create(body);
         var res = await _client.SendAsync(req);
-        res.EnsureSuccessStatusCode();
+        if (!res.IsSuccessStatusCode)
+        {
+            var err = await res.Content.ReadAsStringAsync();
+            throw new Exception($"RateAsync failed with {res.StatusCode}: {err}");
+        }
         return (await res.Content.ReadFromJsonAsync<ComposeBody>(Json))!;
     }
 

@@ -153,7 +153,28 @@ public static class CostEndpoints
             return Results.Created($"/api/cost-allocations/{allocationId}", new { id = allocationId });
         });
 
+        costs.MapGet("/shared/allocation-context", async (
+            Guid? shipmentId,
+            Guid? transportLegId,
+            Guid? transportMovementId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetSharedCostAllocationContextQuery(shipmentId, transportLegId, transportMovementId), ct);
+            return Results.Ok(result);
+        });
+
         var allocations = app.MapGroup("/api/cost-allocations").WithTags("CostAllocations");
+        allocations.MapGet("/context", async (
+            Guid? shipmentId,
+            Guid? transportLegId,
+            Guid? transportMovementId,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetSharedCostAllocationContextQuery(shipmentId, transportLegId, transportMovementId), ct);
+            return Results.Ok(result);
+        });
         allocations.MapPost("/{id:guid}/finalize", async (Guid id, HttpRequest http, ISender sender, CancellationToken ct) =>
         {
             http.Headers.TryGetValue("If-Match", out var ifMatch);

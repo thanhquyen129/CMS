@@ -15,6 +15,8 @@ public static class EconomicChargeEndpoints
             var id = await sender.Send(new UpsertEconomicChargeTypeCommand(body.Code, body.Name), ct);
             return Results.Created($"/api/economic-charge-types/{id}", new { id });
         });
+        group.MapGet("/{id:guid}/accounting-mapping", async (Guid id, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetEconomicChargeAccountingMappingQuery(id), ct)));
         group.MapPost("/mappings", async (MapChargeTypeRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(new MapChargeTypeCommand(body.SourceKind, body.SourceCode, body.EconomicChargeTypeId), ct);

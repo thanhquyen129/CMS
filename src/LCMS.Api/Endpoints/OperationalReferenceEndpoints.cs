@@ -87,6 +87,16 @@ public static class OperationalReferenceEndpoints
         });
 
         var shipments = app.MapGroup("/api/shipments").WithTags("Shipments");
+        shipments.MapPost("/preview-rollup", async (PreviewShipmentRollupRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new PreviewShipmentRollupQuery(body.BillIds), ct);
+            return Results.Ok(result);
+        });
+        shipments.MapGet("/{id:guid}/next-leg-context", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetNextLegContextQuery(id), ct);
+            return Results.Ok(result);
+        });
         shipments.MapPut("/", async (UpsertShipmentRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
@@ -204,6 +214,11 @@ public static class OperationalReferenceEndpoints
         });
 
         var movements = app.MapGroup("/api/transport-movements").WithTags("TransportMovements");
+        movements.MapPost("/prefill-from-legs", async (PrefillMovementFromLegsRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new PrefillMovementFromLegsQuery(body.LegIds), ct);
+            return Results.Ok(result);
+        });
         movements.MapPut("/", async (UpsertTransportMovementRequest body, ISender sender, CancellationToken ct) =>
         {
             var id = await sender.Send(
@@ -369,6 +384,9 @@ public sealed record UpsertOrderRequest(
     string? Description = null,
     OperationalContextDocument? Context = null,
     bool ApplyContext = false);
+
+public sealed record PreviewShipmentRollupRequest(IReadOnlyList<Guid> BillIds);
+public sealed record PrefillMovementFromLegsRequest(IReadOnlyList<Guid> LegIds);
 
 public sealed record UpsertShipmentRequest(
     string ShipmentNo,

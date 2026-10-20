@@ -273,3 +273,58 @@ public static class EconomicChargeCatalogSeeder
         }
     }
 }
+
+
+public sealed record EconomicChargeAccountingMappingDto(
+    Guid EconomicChargeTypeId,
+    string Code,
+    string Name,
+    string? CostTypeCode,
+    string? RevenueTypeCode,
+    string NoticeMessage
+);
+
+public sealed record GetEconomicChargeAccountingMappingQuery(Guid Id) : IRequest<EconomicChargeAccountingMappingDto>;
+
+public sealed class GetEconomicChargeAccountingMappingQueryHandler : IRequestHandler<GetEconomicChargeAccountingMappingQuery, EconomicChargeAccountingMappingDto>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenant;
+
+    public GetEconomicChargeAccountingMappingQueryHandler(ILcmsDbContext db, ITenantContext tenant)
+    {
+        _db = db;
+        _tenant = tenant;
+    }
+
+    public async Task<EconomicChargeAccountingMappingDto> Handle(GetEconomicChargeAccountingMappingQuery request, CancellationToken cancellationToken)
+    {
+        if (!_tenant.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var chargeType = await _db.EconomicChargeTypes.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy loại phí kinh tế.");
+
+        var mappings = await _db.ChargeTypeMappings.AsNoTracking()
+            .Where(m => m.EconomicChargeTypeId == request.Id)
+            .ToListAsync(cancellationToken);
+
+        var costType = mappings.FirstOrDefault(m => string.Equals(m.SourceKind, ChargeTypeMappingKinds.CostType, StringComparison.OrdinalIgnoreCase))?.SourceCode;
+        var revType = mappings.FirstOrDefault(m => string.Equals(m.SourceKind, ChargeTypeMappingKinds.RevenueType, StringComparison.OrdinalIgnoreCase))?.SourceCode;
+        var comp = mappings.FirstOrDefault(m => string.Equals(m.SourceKind, ChargeTypeMappingKinds.Component, StringComparison.OrdinalIgnoreCase))?.SourceCode;
+        costType ??= comp;
+        revType ??= comp;
+
+        return new EconomicChargeAccountingMappingDto(
+            chargeType.Id,
+            chargeType.Code,
+            chargeType.Name,
+            costType,
+            revType,
+            $"Tự động ánh xạ: BUY -> {costType ?? "chưa ánh xạ"}, SELL -> {revType ?? "chưa ánh xạ"}."
+        );
+    }
+}

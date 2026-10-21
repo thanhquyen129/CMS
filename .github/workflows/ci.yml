@@ -84,33 +84,22 @@ jobs:
           npm ci
           npm run build
 
-  deploy:
+  deploy-priority-1-lss:
+    name: "Deploy Priority 1 — cms.lsslogistics.vn"
     needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - name: cms-sg-01
-            host_secret: CMS_DEPLOY_HOST
-            key_secret: CMS_DEPLOY_SSH_KEY
-            default_host: "194.233.89.26"
-          - name: cms-lss-01
-            host_secret: CMS_LSS_HOST
-            key_secret: CMS_LSS_SSH_KEY
-            default_host: "169.58.47.30"
     steps:
       - uses: actions/checkout@v4
 
       - name: Resolve deploy target
         env:
-          HOST_FROM_SECRET: ${{ secrets[matrix.target.host_secret] }}
-          DEFAULT_HOST: ${{ matrix.target.default_host }}
+          HOST_FROM_SECRET: ${{ secrets.CMS_LSS_HOST }}
+          DEFAULT_HOST: "169.58.47.30"
         run: |
           RESOLVED="${HOST_FROM_SECRET:-$DEFAULT_HOST}"
           if [ -z "$RESOLVED" ]; then
-            echo "::notice::${{ matrix.target.name }}: no host configured (secret ${{ matrix.target.host_secret }} empty). Skipping."
+            echo "::notice::cms-lss-01: no host configured. Skipping."
             echo "SKIP_DEPLOY=true" >> "$GITHUB_ENV"
             exit 0
           fi
@@ -122,17 +111,125 @@ jobs:
       - name: Require deploy SSH key
         if: env.SKIP_DEPLOY != 'true'
         env:
-          SSH_KEY: ${{ secrets[matrix.target.key_secret] }}
+          SSH_KEY: ${{ secrets.CMS_LSS_SSH_KEY }}
         run: |
           if [ -z "$SSH_KEY" ]; then
-            echo "::error::Missing secret ${{ matrix.target.key_secret }} for ${{ matrix.target.name }}."
+            echo "::error::Missing secret CMS_LSS_SSH_KEY for cms-lss-01."
             exit 1
           fi
 
       - name: Setup SSH
         if: env.SKIP_DEPLOY != 'true'
         env:
-          SSH_KEY: ${{ secrets[matrix.target.key_secret] }}
+          SSH_KEY: ${{ secrets.CMS_LSS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/cms_deploy_key
+          chmod 600 ~/.ssh/cms_deploy_key
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Sync release to /opt/cms (never overwrite infra/.env)
+        if: env.SKIP_DEPLOY != 'true'
+        run: |
+          # CMS only — never a1logex / /opt/alogex
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'infra/.env' \
+            --exclude 'hailybato.txt' \
+            --exclude 'docs/hailybato.txt' \
+            --exclude '.secrets/' \
+            --exclude '**/bin/' \
+            --exclude '**/obj/' \
+            --exclude 'node_modules/' \
+            -e "ssh -i ~/.ssh/cms_deploy_key -o IdentitiesOnly=yes" \
+            ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
+
+      - name: Compose up on host
+        if: env.SKIP_DEPLOY != 'true'
+        run: |
+          ssh -i ~/.ssh/cms_deploy_key -o IdentitiesOnly=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            'set -euo pipefail
+             cd /opt/cms
+             if [ -f infra/.env ]; then
+               COMPOSE=(docker compose -f infra/docker-compose.host.yml --env-file infra/.env)
+             else
+               COMPOSE=(docker compose -f infra/docker-compose.host.yml)
+             fi
+             "${COMPOSE[@]}" up -d --build
+             # Proxy keeps stale upstream IPs unless recreated / Docker DNS re-resolve.
+             "${COMPOSE[@]}" up -d --force-recreate --no-deps proxy'
+
+      - name: Health check (Priority 1: cms.lsslogistics.vn)
+        if: env.SKIP_DEPLOY != 'true'
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if (curl -fsS "https://cms.lsslogistics.vn/health" || curl -fsS "http://${DEPLOY_HOST}/health") \
+              && (curl -fsS "https://cms.lsslogistics.vn/ready" || curl -fsS "http://${DEPLOY_HOST}/ready") \
+              && (curl -fsS "https://cms.lsslogistics.vn/api/terminology" >/tmp/cms-terms.json || curl -fsS "http://${DEPLOY_HOST}/api/terminology" >/tmp/cms-terms.json) \
+              && (curl -fsSL "https://cms.lsslogistics.vn/" >/tmp/cms-root.html || curl -fsSL "http://${DEPLOY_HOST}/" >/tmp/cms-root.html); then
+              if ! grep -qi '<html\|<!doctype html' /tmp/cms-root.html; then
+                echo "::error::Root / (follow redirects) did not return HTML UI"
+                head -c 400 /tmp/cms-root.html || true
+                exit 1
+              fi
+              if ! grep -qi 'Đăng nhập\|CMS\|login' /tmp/cms-root.html; then
+                echo "::error::UI HTML missing login/CMS markers"
+                head -c 400 /tmp/cms-root.html || true
+                exit 1
+              fi
+              if ! grep -q 'BILL\|Chi phí\|Bill' /tmp/cms-terms.json; then
+                echo "::error::/api/terminology payload unexpected"
+                head -c 400 /tmp/cms-terms.json || true
+                exit 1
+              fi
+              echo "cms-lss-01 (cms.lsslogistics.vn) smoke OK: /health /ready /api/terminology /→login (HTML)"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::cms-lss-01 (cms.lsslogistics.vn) post-deploy smoke failed"
+          exit 1
+
+  deploy-secondary-sg:
+    name: "Deploy Secondary — cms-sg-01"
+    needs: deploy-priority-1-lss
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve deploy target
+        env:
+          HOST_FROM_SECRET: ${{ secrets.CMS_DEPLOY_HOST }}
+          DEFAULT_HOST: "194.233.89.26"
+        run: |
+          RESOLVED="${HOST_FROM_SECRET:-$DEFAULT_HOST}"
+          if [ -z "$RESOLVED" ]; then
+            echo "::notice::cms-sg-01: no host configured. Skipping."
+            echo "SKIP_DEPLOY=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "DEPLOY_HOST=$RESOLVED" >> "$GITHUB_ENV"
+          echo "DEPLOY_USER=deploy" >> "$GITHUB_ENV"
+          echo "DEPLOY_PATH=/opt/cms" >> "$GITHUB_ENV"
+          echo "SKIP_DEPLOY=false" >> "$GITHUB_ENV"
+
+      - name: Require deploy SSH key
+        if: env.SKIP_DEPLOY != 'true'
+        env:
+          SSH_KEY: ${{ secrets.CMS_DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::Missing secret CMS_DEPLOY_SSH_KEY for cms-sg-01."
+            exit 1
+          fi
+
+      - name: Setup SSH
+        if: env.SKIP_DEPLOY != 'true'
+        env:
+          SSH_KEY: ${{ secrets.CMS_DEPLOY_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/cms_deploy_key
@@ -195,10 +292,10 @@ jobs:
                 head -c 400 /tmp/cms-terms.json || true
                 exit 1
               fi
-              echo "${{ matrix.target.name }} smoke OK: /health /ready /api/terminology /→login (HTML)"
+              echo "cms-sg-01 smoke OK: /health /ready /api/terminology /→login (HTML)"
               exit 0
             fi
             sleep 10
           done
-          echo "::error::${{ matrix.target.name }} post-deploy smoke failed"
+          echo "::error::cms-sg-01 post-deploy smoke failed"
           exit 1

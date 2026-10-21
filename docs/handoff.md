@@ -1,3 +1,9 @@
+## 2026-10-21 — Thay đổi URL ứng dụng & Thiết lập Ưu tiên 1 deploy cho cms.lsslogistics.vn
+- Thiết lập URL ứng dụng chính thức là https://cms.lsslogistics.vn (máy chủ cms-lss-01 tại 169.58.47.30).
+- Cập nhật quy trình CI/CD (.github/workflows/ci.yml) phân tách 2 job tuần tự: job deploy-priority-1-lss (Ưu tiên 1) luôn triển khai và verify smoke test trước; job deploy-secondary-sg (cms-sg-01) chỉ chạy sau khi Ưu tiên 1 thành công.
+- Đồng bộ cấu hình URL mặc định mobile sang https://cms.lsslogistics.vn và cập nhật các quy tắc sản xuất.
+- Files: .github/workflows/ci.yml, .cursor/rules/05-product-cms.mdc, .cursor/rules/06-ship-after-task.mdc, README.md, docs/ops/github-actions.md, apps/mobile/.env.example, apps/mobile/app/login.tsx.
+
 ## 2026-10-21 — Hoàn thiện nghiệm thu Giai đoạn 2 đạt 100/100 Commercial-Ready
 - Đồng bộ chính xác 100% đề bài gốc của PO/BA cho 7 ca UAT (UT-12, 16, 17, 18, 22, 23, 29) và khôi phục đúng nội dung 6 mã GAP (GAP-03, 10, 11, 12, 13, 14) cùng commit SHA thật ở GAP-02.
 - Kiểm tra danh mục active khi khai báo service_type trên Tuyến (RouteCommands.cs), bổ sung ánh xạ StaleAt/StaleReason trên RatingDto (GetRatingByIdQuery.cs), kích hoạt đánh dấu stale rating khi thay đổi trọng lượng Bill có chargeable weight bases (RatingStalenessService.cs).

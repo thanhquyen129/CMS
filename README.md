@@ -6,7 +6,9 @@ Private repo for **Cost Management System** (LCMS when logistics-focused): Bill-
 - Backend: ASP.NET Core (.NET 8) Clean Architecture + PostgreSQL
   - `LCMS.Domain` / `LCMS.Application` / `LCMS.Infrastructure` / `LCMS.Api`
 - Web/admin: Next.js
-- Host: Contabo VPS `194.233.89.26` → `/opt/cms`
+- Hosts:
+  - **Ưu tiên 1 (Production chính / luôn cập nhật & deploy trước)**: `https://cms.lsslogistics.vn` (host `cms-lss-01` tại `169.58.47.30`) → `/opt/cms`
+  - Dự phòng / Secondary: Contabo VPS `cms-sg-01` (`194.233.89.26`) → `/opt/cms`
 
 ## Docs
 - BA/TD package index: `LCMS_BA_docs/`

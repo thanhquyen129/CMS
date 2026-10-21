@@ -5,7 +5,8 @@ Repo: https://github.com/thanhquyen129/CMS/actions
 ## Pipeline
 Workflow `CI` (`.github/workflows/ci.yml`):
 1. **test** — restore, build, `dotnet test`, local health/ready smoke against Postgres service.
-2. **deploy** (push to `main` only) — SSH sync to both CMS hosts, then `docker compose -f infra/docker-compose.host.yml up -d --build` on each. Hosts: `deploy@194.233.89.26` (cms-sg-01) and `deploy@169.58.47.30` (cms-lss-01, cms.lsslogistics.vn). Path on both is `/opt/cms`.
+2. **deploy-priority-1-lss** (push to `main` only) — **Ưu tiên 1 (luôn cập nhật và deploy lên trước)**: SSH sync và compose up trên host `cms-lss-01` (`deploy@169.58.47.30`, domain `https://cms.lsslogistics.vn`). Xác minh smoke test health/ready/terminology/login.
+3. **deploy-secondary-sg** (push to `main` only) — Chạy sau khi Ưu tiên 1 thành công: SSH sync và compose up trên host secondary `cms-sg-01` (`deploy@194.233.89.26`). Path trên cả 2 host là `/opt/cms`.
 
 ## Required secrets
 | Secret | Required | Purpose |

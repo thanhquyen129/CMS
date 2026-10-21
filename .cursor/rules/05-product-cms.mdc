@@ -5,7 +5,8 @@ alwaysApply: false
 
 # CMS product and host
 - Cost Management System (CMS / LCMS): financial control, Bill-centric, tenant-configurable later. BA/TD: `LCMS_BA_docs/`.
-- Production: `cms-sg-01`, `deploy@194.233.89.26`, Ubuntu 24.04, app `/opt/cms`, Compose `infra/docker-compose.host.yml`. SSH key-only port 22. IPv6 `2407:3640:2352:1700::1` (DNS later).
+- Production (Priority 1 — luôn cập nhật và deploy lên trước): `https://cms.lsslogistics.vn`, host `cms-lss-01` (`deploy@169.58.47.30`), Ubuntu 24.04, app `/opt/cms`, Compose `infra/docker-compose.host.yml`, reverse proxy SSL Let's Encrypt.
+- Production Secondary: `cms-sg-01`, `deploy@194.233.89.26`, Ubuntu 24.04, app `/opt/cms`. SSH key-only port 22. IPv6 `2407:3640:2352:1700::1` (DNS later).
 - Never deploy onto `a1logex-sg-01` / `/opt/alogex`. Deleting leftover stacks on this VPS needs explicit confirmation.
 - No passwords, VNC, or private keys in rules, ADRs, or tracked docs. Local secrets: gitignored `hailybato.txt`. Ops: `docs/ops/vps-bootstrap.md`.
 - Repo: `https://github.com/thanhquyen129/CMS`.

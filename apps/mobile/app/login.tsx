@@ -182,7 +182,7 @@ export default function LoginScreen() {
               value={apiUrl}
               onChangeText={setApiUrl}
               autoCapitalize="none"
-              placeholder="http://194.233.89.26"
+              placeholder="https://cms.lsslogistics.vn"
             />
           </View>
         ) : null}

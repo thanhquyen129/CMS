@@ -7,7 +7,7 @@ alwaysApply: true
 - App change done: commit with a why-message and push the current branch. Do not ask. This overrides "ask before production deploy".
 - Still ask before force-push, dropping a database, or deleting production data.
 - Never commit secrets (`.env`, `hailybato.txt`, `docs/hailybato.txt`, `.secrets/`, keys). Never `--no-verify`. Never force-push `main`. No empty commit.
-- Production is `cms-sg-01` (`deploy@194.233.89.26`), `/opt/cms`, GitHub Actions on `origin/main`. Never deploy to `a1logex-sg-01` / `/opt/alogex`.
+- Production is Priority 1: `https://cms.lsslogistics.vn` (`cms-lss-01`, `deploy@169.58.47.30`), secondary `cms-sg-01` (`deploy@194.233.89.26`), `/opt/cms`, GitHub Actions on `origin/main` (deploy Priority 1 first). Never deploy to `a1logex-sg-01` / `/opt/alogex`.
 - Do not tar/scp unless the Actions deploy job failed. The host is not a git clone: no `git pull`, never overwrite `infra/.env`.
 - Do not deploy a diff that cannot affect the running app (rules, docs, handoff). If money, auth, or cost-financial tests fail, do not deploy.
 - Handoff only when behavior, API, schema, or permissions change: prepend a few lines to `docs/handoff.md` (date, change, files). Do not paste the question, reasoning, or a test log. Do not read the rest of that file.

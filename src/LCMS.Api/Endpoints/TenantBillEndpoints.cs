@@ -26,7 +26,7 @@ public static class TenantBillEndpoints
         var bills = app.MapGroup("/api/bills").WithTags("Bills");
         bills.MapPost("/prefill-from-orders", async (PrefillBillFromOrdersRequest body, ISender sender, CancellationToken ct) =>
         {
-            var result = await sender.Send(new PrefillBillFromOrdersQuery(body.OrderIds), ct);
+            var result = await sender.Send(new PrefillBillFromOrdersQuery(body.OrderIds, body.UserOverriddenFields), ct);
             return Results.Ok(result);
         });
         bills.MapPost("/", async (CreateBillRequest body, ISender sender, CancellationToken ct) =>
@@ -136,7 +136,9 @@ public static class TenantBillEndpoints
 
 public sealed record CreateTenantRequest(string Code, string Name);
 
-public sealed record PrefillBillFromOrdersRequest(IReadOnlyList<Guid> OrderIds);
+public sealed record PrefillBillFromOrdersRequest(
+    IReadOnlyList<Guid> OrderIds,
+    IReadOnlyDictionary<string, string>? UserOverriddenFields = null);
 
 public sealed record CreateBillRequest(
     string BillNo,

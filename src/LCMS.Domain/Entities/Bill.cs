@@ -68,8 +68,9 @@ public sealed class Bill : TenantEntityBase
     public string? RateDatePolicy { get; set; }
     public Guid? VendorPartyId { get; set; }
 
-    /// <summary>Canonical carrier party ID (alias to VendorPartyId on Bill for operational-carrier linkage).</summary>
-    public Guid? CarrierPartyId { get => VendorPartyId; set => VendorPartyId = value; }
+    /// <summary>Canonical carrier party ID (distinct from VendorPartyId - INH-11 / GAP-09).</summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public Guid? CarrierPartyId { get; set; }
 
     public Tenant? Tenant { get; set; }
 }

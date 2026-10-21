@@ -95,6 +95,17 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                 continue;
             }
 
+            // UT-26 / DO-10 / GAP-04: Kiểm tra mapping khoản mục kinh tế trên master trước khi seed
+            if (detail.EconomicChargeTypeId is Guid ectId)
+            {
+                var active = await _db.EconomicChargeTypes.AsNoTracking()
+                    .AnyAsync(e => e.TenantId == tenantId && e.Id == ectId && e.IsActive, cancellationToken);
+                if (!active)
+                {
+                    throw new ValidationAppException($"Khoản mục kinh tế '{ectId}' cho dòng '{detail.ComponentCode}' không tồn tại hoặc đã bị vô hiệu hóa trên master. Không thể seed chi phí.");
+                }
+            }
+
             var amount = decimal.Round(detail.Amount, 4, MidpointRounding.AwayFromZero);
             var cost = new Cost
             {

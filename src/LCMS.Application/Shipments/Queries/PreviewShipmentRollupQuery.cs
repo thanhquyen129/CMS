@@ -7,7 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Shipments.Queries;
 
-public sealed record PreviewShipmentRollupQuery(IReadOnlyList<Guid> BillIds) : IRequest<ShipmentRollupPreviewDto>;
+public sealed record BillRollupAllocationItem(
+    Guid BillId,
+    decimal? AllocationRatio = null,
+    decimal? AllocatedGrossWeightKg = null,
+    decimal? AllocatedVolumeCbm = null,
+    int? AllocatedPackageCount = null
+);
+
+public sealed record PreviewShipmentRollupQuery(
+    IReadOnlyList<Guid>? BillIds = null,
+    IReadOnlyList<BillRollupAllocationItem>? AllocationItems = null
+) : IRequest<ShipmentRollupPreviewDto>;
 
 public sealed record ShipmentRollupPreviewDto(
     string? TransportMode,
@@ -21,6 +32,7 @@ public sealed record ShipmentRollupPreviewDto(
     DateTimeOffset? EtdAt,
     DateTimeOffset? EtaAt,
     Guid? CommodityTypeId,
+    bool IsMixedCommodity,
     int TotalPackageCount,
     decimal TotalGrossWeightKg,
     decimal TotalVolumeCbm,
@@ -49,23 +61,28 @@ public sealed class PreviewShipmentRollupQueryHandler : IRequestHandler<PreviewS
         }
 
         var tenantId = _tenantContext.TenantId;
-        if (request.BillIds == null || request.BillIds.Count == 0)
+        var requestedIds = (request.BillIds ?? Array.Empty<Guid>())
+            .Concat((request.AllocationItems ?? Array.Empty<BillRollupAllocationItem>()).Select(i => i.BillId))
+            .Distinct()
+            .ToList();
+
+        if (requestedIds.Count == 0)
         {
             return new ShipmentRollupPreviewDto(
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, false,
                 0, 0, 0, 0,
                 Array.Empty<string>(), Array.Empty<string>(), "Không có vận đơn nào được chọn.");
         }
 
         var bills = await _db.Bills
-            .Where(b => b.TenantId == tenantId && request.BillIds.Contains(b.Id))
+            .Where(b => b.TenantId == tenantId && requestedIds.Contains(b.Id))
             .OrderBy(b => b.Id)
             .ToListAsync(cancellationToken);
 
         if (bills.Count == 0)
         {
             return new ShipmentRollupPreviewDto(
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, false,
                 0, 0, 0, 0,
                 Array.Empty<string>(), Array.Empty<string>(), "Không tìm thấy thông tin vận đơn.");
         }
@@ -74,6 +91,10 @@ public sealed class PreviewShipmentRollupQueryHandler : IRequestHandler<PreviewS
         var measurements = await _db.OperationalMeasurements.AsNoTracking()
             .Where(m => m.TenantId == tenantId && m.ObjectType == OperationalObjectTypes.Bill && billGuids.Contains(m.ObjectId))
             .ToListAsync(cancellationToken);
+
+        var allocationMap = (request.AllocationItems ?? Array.Empty<BillRollupAllocationItem>())
+            .GroupBy(i => i.BillId)
+            .ToDictionary(g => g.Key, g => g.First());
 
         int totalPackages = 0;
         decimal totalGross = 0;
@@ -93,54 +114,165 @@ public sealed class PreviewShipmentRollupQueryHandler : IRequestHandler<PreviewS
             var c = measurements.FirstOrDefault(m => m.ObjectId == bill.Id && m.MeasureCode == MeasureCodes.ChargeableWeightKg)?.Quantity
                 ?? ctx?.ChargeableWeightKg;
 
-            totalPackages += p ?? 0;
-            totalGross += g ?? 0;
-            totalVol += v ?? 0;
-            totalCw += c ?? 0;
-        }
+            // UT-07: Handle partial allocation ratio / explicit allocated amounts when bill is split
+            decimal ratio = 1.0m;
+            int? allocatedPkg = null;
+            decimal? allocatedG = null;
+            decimal? allocatedV = null;
 
-        var firstBill = bills[0];
-        var firstCtx = OperationalContextJson.Deserialize(firstBill.ContextJson);
+            if (allocationMap.TryGetValue(bill.Id, out var alloc))
+            {
+                if (alloc.AllocationRatio.HasValue && alloc.AllocationRatio > 0 && alloc.AllocationRatio <= 1.0m)
+                {
+                    ratio = alloc.AllocationRatio.Value;
+                }
+                allocatedPkg = alloc.AllocatedPackageCount;
+                allocatedG = alloc.AllocatedGrossWeightKg;
+                allocatedV = alloc.AllocatedVolumeCbm;
+            }
+
+            var effP = allocatedPkg ?? (p.HasValue ? (int)Math.Round(p.Value * ratio, MidpointRounding.AwayFromZero) : (int?)null);
+            var effG = allocatedG ?? (g.HasValue ? g.Value * ratio : (decimal?)null);
+            var effV = allocatedV ?? (v.HasValue ? v.Value * ratio : (decimal?)null);
+
+            totalPackages += effP ?? 0;
+            totalGross += effG ?? 0;
+            totalVol += effV ?? 0;
+            totalCw += (c.HasValue ? c.Value * ratio : (effG ?? 0));
+        }
 
         var conflicts = new List<string>();
 
-        var distinctModes = bills.Where(b => !string.IsNullOrWhiteSpace(b.TransportMode)).Select(b => b.TransportMode!.Trim().ToLowerInvariant()).Distinct().ToList();
+        // 1. Transport Mode (UT-08): Different modes -> suggest "multimodal"
+        string? suggestedMode;
+        var distinctModes = bills.Where(b => !string.IsNullOrWhiteSpace(b.TransportMode))
+            .Select(b => b.TransportMode!.Trim().ToLowerInvariant())
+            .Distinct().ToList();
+
         if (distinctModes.Count > 1)
         {
-            conflicts.Add($"Khác biệt Phương thức vận chuyển ({string.Join(", ", distinctModes)}).");
+            suggestedMode = "multimodal";
+            conflicts.Add($"Lô hàng gom các Bill có nhiều phương thức ({string.Join(", ", distinctModes)}). Đã gợi ý chế độ MULTIMODAL.");
         }
-
-        var distinctOrigins = bills.Where(b => !string.IsNullOrWhiteSpace(b.OriginCode)).Select(b => b.OriginCode!.Trim().ToUpperInvariant()).Distinct().ToList();
-        if (distinctOrigins.Count > 1)
+        else
         {
-            conflicts.Add($"Khác biệt Cảng đi ({string.Join(", ", distinctOrigins)}).");
+            suggestedMode = distinctModes.FirstOrDefault();
         }
 
-        var distinctDests = bills.Where(b => !string.IsNullOrWhiteSpace(b.DestinationCode)).Select(b => b.DestinationCode!.Trim().ToUpperInvariant()).Distinct().ToList();
-        if (distinctDests.Count > 1)
+        // 2. Origins & Destinations
+        var distinctOrigins = bills.Where(b => !string.IsNullOrWhiteSpace(b.OriginCode))
+            .Select(b => b.OriginCode!.Trim().ToUpperInvariant())
+            .Distinct().ToList();
+
+        var distinctDests = bills.Where(b => !string.IsNullOrWhiteSpace(b.DestinationCode))
+            .Select(b => b.DestinationCode!.Trim().ToUpperInvariant())
+            .Distinct().ToList();
+
+        // 3. Opposite Routes Check (UT-09)
+        // e.g. Bill 1: SGN -> LAX and Bill 2: LAX -> SGN
+        bool hasOppositeRoutes = false;
+        if (distinctOrigins.Count > 1 && distinctDests.Count > 1)
         {
-            conflicts.Add($"Khác biệt Cảng đến ({string.Join(", ", distinctDests)}).");
+            // check if origin of one is dest of another
+            foreach (var b1 in bills)
+            {
+                foreach (var b2 in bills)
+                {
+                    if (!string.IsNullOrWhiteSpace(b1.OriginCode) && !string.IsNullOrWhiteSpace(b1.DestinationCode)
+                        && !string.IsNullOrWhiteSpace(b2.OriginCode) && !string.IsNullOrWhiteSpace(b2.DestinationCode))
+                    {
+                        if (string.Equals(b1.OriginCode, b2.DestinationCode, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(b1.DestinationCode, b2.OriginCode, StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasOppositeRoutes = true;
+                            break;
+                        }
+                    }
+                }
+                if (hasOppositeRoutes) break;
+            }
         }
 
-        var carrierId = bills.FirstOrDefault(b => b.CarrierPartyId.HasValue)?.CarrierPartyId;
-        var carrierName = firstCtx?.CarrierName;
+        string? suggestedOrigin = null;
+        string? suggestedDest = null;
+        string? suggestedRoute = null;
+
+        if (hasOppositeRoutes)
+        {
+            conflicts.Add("Xung đột tuyến ngược hướng giữa các Bill gom (ví dụ SGN-LAX và LAX-SGN). Không tự động gán tuyến cho Shipment.");
+        }
+        else
+        {
+            if (distinctOrigins.Count == 1) suggestedOrigin = distinctOrigins[0];
+            else if (distinctOrigins.Count > 1) conflicts.Add($"Khác biệt Cảng đi ({string.Join(", ", distinctOrigins)}).");
+
+            if (distinctDests.Count == 1) suggestedDest = distinctDests[0];
+            else if (distinctDests.Count > 1) conflicts.Add($"Khác biệt Cảng đến ({string.Join(", ", distinctDests)}).");
+
+            if (suggestedOrigin != null && suggestedDest != null)
+            {
+                suggestedRoute = $"{suggestedOrigin}-{suggestedDest}";
+            }
+            else
+            {
+                var distinctRoutes = bills.Where(b => !string.IsNullOrWhiteSpace(b.RouteCode))
+                    .Select(b => b.RouteCode!.Trim().ToUpperInvariant())
+                    .Distinct().ToList();
+                if (distinctRoutes.Count == 1) suggestedRoute = distinctRoutes[0];
+            }
+        }
+
+        // 4. Commodities (UT-10, GAP-07)
+        var distinctCommodities = bills
+            .Select(b => b.CommodityTypeId ?? OperationalContextJson.Deserialize(b.ContextJson)?.CommodityTypeId)
+            .Where(c => c.HasValue)
+            .Select(c => c!.Value)
+            .Distinct().ToList();
+
+        Guid? suggestedCommodity = null;
+        bool isMixed = false;
+        if (distinctCommodities.Count == 1)
+        {
+            suggestedCommodity = distinctCommodities[0];
+        }
+        else if (distinctCommodities.Count > 1)
+        {
+            isMixed = true;
+            suggestedCommodity = null; // Do NOT pick first commodity!
+            conflicts.Add($"Lô hàng chứa nhiều loại hàng hóa khác nhau ({distinctCommodities.Count} loại hàng). Đặt cờ hàng hỗn hợp (Mixed Commodity).");
+        }
+
+        // 5. Carrier (GAP-09, INH-11): Do NOT take VendorPartyId!
+        // Carrier is distinct from Vendor. Only extract if explicit operational carrier exists in ContextJson.
+        Guid? carrierId = null;
+        string? carrierName = null;
+        foreach (var b in bills)
+        {
+            var ctx = OperationalContextJson.Deserialize(b.ContextJson);
+            if (!string.IsNullOrWhiteSpace(ctx?.CarrierName))
+            {
+                carrierName = ctx.CarrierName;
+                break;
+            }
+        }
 
         var summary = conflicts.Count > 0
-            ? $"Đã cộng dồn {bills.Count} vận đơn: {totalPackages} kiện, {totalGross:N2} kg, {totalVol:N2} CBM (lưu ý: có {conflicts.Count} điểm khác biệt về tuyến/mode)."
-            : $"Đã tự động cộng dồn thông số từ {bills.Count} vận đơn (Tổng kiện: {totalPackages}, Trọng lượng: {totalGross:N2} kg, Thể tích: {totalVol:N2} CBM, Tính cước: {totalCw:N2} kg).";
+            ? $"Đã cộng dồn {bills.Count} vận đơn: {totalPackages} kiện, {totalGross:N2} kg, {totalVol:N2} CBM (lưu ý: có {conflicts.Count} điểm khác biệt cần kiểm tra)."
+            : $"Đã tự động cộng dồn thông số từ {bills.Count} vận đơn (Tổng kiện: {totalPackages}, Trọng lượng: {totalGross:N2} kg, Thể tích: {totalVol:N2} CBM).";
 
         return new ShipmentRollupPreviewDto(
-            TransportMode: bills.FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.TransportMode))?.TransportMode,
-            OriginCode: bills.FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.OriginCode))?.OriginCode,
-            DestinationCode: bills.FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.DestinationCode))?.DestinationCode,
-            RouteCode: bills.FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.RouteCode))?.RouteCode,
-            RouteId: bills.FirstOrDefault(b => b.RouteId.HasValue)?.RouteId,
+            TransportMode: suggestedMode,
+            OriginCode: suggestedOrigin,
+            DestinationCode: suggestedDest,
+            RouteCode: suggestedRoute,
+            RouteId: null,
             CarrierPartyId: carrierId,
             CarrierName: carrierName,
-            ServiceTypeCode: bills.FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.ServiceTypeCode))?.ServiceTypeCode ?? firstCtx?.ServiceType,
+            ServiceTypeCode: bills.FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.ServiceTypeCode))?.ServiceTypeCode,
             EtdAt: bills.Where(b => b.EtdAt.HasValue).Min(b => b.EtdAt),
             EtaAt: bills.Where(b => b.EtaAt.HasValue).Max(b => b.EtaAt),
-            CommodityTypeId: bills.FirstOrDefault(b => b.CommodityTypeId.HasValue)?.CommodityTypeId ?? firstCtx?.CommodityTypeId,
+            CommodityTypeId: suggestedCommodity,
+            IsMixedCommodity: isMixed,
             TotalPackageCount: totalPackages,
             TotalGrossWeightKg: totalGross,
             TotalVolumeCbm: totalVol,

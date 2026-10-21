@@ -1,0 +1,14 @@
+paras_bad=False fail=[] images=6 rows=37
+LCMS — Kết quả triển khai bảng giá đa tuyến, nấc trọng lượng và tương phản UI
+Mã: LCMS-RATE-CR-20261014-02  |  Phiên bản: v1.1  |  Ngày: 14/10/2026
+Căn cứ: Specification.docx và AC_Traceability.xlsx. 36/36 AC PASS trong phiên 14/10/2026.
+1. Đã làm
+Giữ một Rating Engine. Lọc quy tắc theo tuyến có hướng, hãng, loại trọng lượng và nấc [min, max). Không tạo engine thứ hai.
+Header bảng giá khi tạo/sửa không còn Tuyến và Hãng vận chuyển. Tiền tệ duy nhất ở header; quy tắc gửi khác tiền tệ bị từ chối.
+Quy tắc cơ bản lưu route_id hoặc Tất cả tuyến, carrier_party_id, weight_basis, weight_min, weight_max. Ma trận nâng cao lưu nhiều nhóm, mỗi nhóm có tuyến, hãng và phương thức.
+Đổi hình thức khi đã có dữ liệu vẫn mở hộp xác nhận. Không xóa dữ liệu đã lưu trước khi người dùng bấm Lưu nháp.
+Phát hành chặn hai quy tắc cùng khoản mục, cùng điều kiện và nấc chồng nhau (RATE_CONFLICT). Khác khoản mục thì không chặn. Cùng khoản mục và cùng nấc khi tính giá vẫn báo AMBIGUOUS_RATE_RULE, không cộng trùng và không chọn ngẫu nhiên.
+Migration 20261014100816_RateRuleScopeWeightBand thêm cột trên pricing_rules, bảng rate_scope_migration_logs, copy route/carrier từ header xuống quy tắc và đánh dấu mọi tuyến khi dữ liệu cũ để trống. Không cập nhật bảng rating.
+Form khai báo dùng lớp rate-declaration: viền, nền khối và chữ/placeholder đo được trên ngưỡng WCAG AA. Không đổi sidebar và không thay icon SVG.
+2. Kiểm thử đã chạy trong phiên này
+dotnet test RateCardRemainingAcceptanceTests + RateCardCommercial

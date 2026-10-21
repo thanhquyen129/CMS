@@ -1,0 +1,4432 @@
+{
+  "accountspayable": {
+    "entity": "LCMS.Domain.Entities.AccountsPayable",
+    "properties": {}
+  },
+  "accountspayableadjustment": {
+    "entity": "LCMS.Domain.Entities.AccountsPayableAdjustment",
+    "properties": {}
+  },
+  "accountsreceivable": {
+    "entity": "LCMS.Domain.Entities.AccountsReceivable",
+    "properties": {}
+  },
+  "accountsreceivableadjustment": {
+    "entity": "LCMS.Domain.Entities.AccountsReceivableAdjustment",
+    "properties": {}
+  },
+  "approval": {
+    "entity": "LCMS.Domain.Entities.Approval",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "CurrentLevel": {
+        "clr_type": "int",
+        "column_name": "current_level",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "DecidedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "decided_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DecidedBy": {
+        "clr_type": "Guid?",
+        "column_name": "decided_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DecisionReason": {
+        "clr_type": "string",
+        "column_name": "decision_reason",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Notes": {
+        "clr_type": "string",
+        "column_name": "notes",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "ObjectFingerprint": {
+        "clr_type": "string",
+        "column_name": "object_fingerprint",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RequestReason": {
+        "clr_type": "string",
+        "column_name": "request_reason",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "RequestedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "requested_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "RequestedBy": {
+        "clr_type": "Guid?",
+        "column_name": "requested_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "RequiredLevel": {
+        "clr_type": "int",
+        "column_name": "required_level",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Status": {
+        "clr_type": "string",
+        "column_name": "status",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "auditevent": {
+    "entity": "LCMS.Domain.Entities.AuditEvent",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Action": {
+        "clr_type": "string",
+        "column_name": "action",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "ActorId": {
+        "clr_type": "Guid?",
+        "column_name": "actor_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "AfterJson": {
+        "clr_type": "string",
+        "column_name": "after_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "BeforeJson": {
+        "clr_type": "string",
+        "column_name": "before_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "CorrelationId": {
+        "clr_type": "string",
+        "column_name": "correlation_id",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "OccurredAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "occurred_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "Reason": {
+        "clr_type": "string",
+        "column_name": "reason",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "bankfeedline": {
+    "entity": "LCMS.Domain.Entities.BankFeedLine",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Amount": {
+        "clr_type": "decimal",
+        "column_name": "amount",
+        "column_type": "numeric(18,4)",
+        "nullable": false
+      },
+      "BankReference": {
+        "clr_type": "string",
+        "column_name": "bank_reference",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "CounterpartyName": {
+        "clr_type": "string",
+        "column_name": "counterparty_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "CurrencyCode": {
+        "clr_type": "string",
+        "column_name": "currency_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Description": {
+        "clr_type": "string",
+        "column_name": "description",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "Direction": {
+        "clr_type": "string",
+        "column_name": "direction",
+        "column_type": "character varying(16)",
+        "nullable": false
+      },
+      "IgnoreReason": {
+        "clr_type": "string",
+        "column_name": "ignore_reason",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "IgnoredAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "ignored_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "MatchedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "matched_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "MatchedReconciliationDetailId": {
+        "clr_type": "Guid?",
+        "column_name": "matched_reconciliation_detail_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Status": {
+        "clr_type": "string",
+        "column_name": "status",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "ValueDate": {
+        "clr_type": "DateOnly",
+        "column_name": "value_date",
+        "column_type": "date",
+        "nullable": false
+      }
+    }
+  },
+  "bill": {
+    "entity": "LCMS.Domain.Entities.Bill",
+    "properties": {}
+  },
+  "billleglink": {
+    "entity": "LCMS.Domain.Entities.BillLegLink",
+    "properties": {}
+  },
+  "billmovementlink": {
+    "entity": "LCMS.Domain.Entities.BillMovementLink",
+    "properties": {}
+  },
+  "billshipmentlink": {
+    "entity": "LCMS.Domain.Entities.BillShipmentLink",
+    "properties": {}
+  },
+  "billwaybill": {
+    "entity": "LCMS.Domain.Entities.BillWaybill",
+    "properties": {}
+  },
+  "businessparty": {
+    "entity": "LCMS.Domain.Entities.BusinessParty",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "AddressLine1": {
+        "clr_type": "string",
+        "column_name": "address_line1",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "AddressLine2": {
+        "clr_type": "string",
+        "column_name": "address_line2",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "AssignedUserId": {
+        "clr_type": "Guid?",
+        "column_name": "assigned_user_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "BlockedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "blocked_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "BlockedReason": {
+        "clr_type": "string",
+        "column_name": "blocked_reason",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "City": {
+        "clr_type": "string",
+        "column_name": "city",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CountryCode": {
+        "clr_type": "string",
+        "column_name": "country_code",
+        "column_type": "character varying(2)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "CreditControlMode": {
+        "clr_type": "string",
+        "column_name": "credit_control_mode",
+        "column_type": "character varying(16)",
+        "nullable": false
+      },
+      "CreditLimit": {
+        "clr_type": "decimal?",
+        "column_name": "credit_limit",
+        "column_type": "numeric(18,4)",
+        "nullable": true
+      },
+      "CreditLimitCurrencyCode": {
+        "clr_type": "string",
+        "column_name": "credit_limit_currency_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "DefaultCurrencyCode": {
+        "clr_type": "string",
+        "column_name": "default_currency_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "District": {
+        "clr_type": "string",
+        "column_name": "district",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "Email": {
+        "clr_type": "string",
+        "column_name": "email",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "ExternalCode": {
+        "clr_type": "string",
+        "column_name": "external_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "GroupCode": {
+        "clr_type": "string",
+        "column_name": "group_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "IndustryCode": {
+        "clr_type": "string",
+        "column_name": "industry_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "InvoiceEmail": {
+        "clr_type": "string",
+        "column_name": "invoice_email",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "IsBlocked": {
+        "clr_type": "bool",
+        "column_name": "is_blocked",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "LegalName": {
+        "clr_type": "string",
+        "column_name": "legal_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "LegalType": {
+        "clr_type": "string",
+        "column_name": "legal_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "Notes": {
+        "clr_type": "string",
+        "column_name": "notes",
+        "column_type": "character varying(2000)",
+        "nullable": false
+      },
+      "ParentPartyId": {
+        "clr_type": "Guid?",
+        "column_name": "parent_party_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "PartyKind": {
+        "clr_type": "string",
+        "column_name": "party_kind",
+        "column_type": "character varying(16)",
+        "nullable": false
+      },
+      "PaymentTermDays": {
+        "clr_type": "int?",
+        "column_name": "payment_term_days",
+        "column_type": "integer",
+        "nullable": true
+      },
+      "Phone": {
+        "clr_type": "string",
+        "column_name": "phone",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "PostalCode": {
+        "clr_type": "string",
+        "column_name": "postal_code",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Province": {
+        "clr_type": "string",
+        "column_name": "province",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "ShortName": {
+        "clr_type": "string",
+        "column_name": "short_name",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "TaxId": {
+        "clr_type": "string",
+        "column_name": "tax_id",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "VatRegistered": {
+        "clr_type": "bool?",
+        "column_name": "vat_registered",
+        "column_type": "boolean",
+        "nullable": true
+      },
+      "Ward": {
+        "clr_type": "string",
+        "column_name": "ward",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "Website": {
+        "clr_type": "string",
+        "column_name": "website",
+        "column_type": "character varying(256)",
+        "nullable": false
+      }
+    }
+  },
+  "cargocontainer": {
+    "entity": "LCMS.Domain.Entities.CargoContainer",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ContainerNo": {
+        "clr_type": "string",
+        "column_name": "container_no",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "ContainerType": {
+        "clr_type": "string",
+        "column_name": "container_type",
+        "column_type": "character varying(16)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Quantity": {
+        "clr_type": "int",
+        "column_name": "quantity",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SequenceNo": {
+        "clr_type": "int",
+        "column_name": "sequence_no",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Teu": {
+        "clr_type": "decimal",
+        "column_name": "teu",
+        "column_type": "numeric(18,4)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "cargopackage": {
+    "entity": "LCMS.Domain.Entities.CargoPackage",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "HeightCm": {
+        "clr_type": "decimal?",
+        "column_name": "height_cm",
+        "column_type": "numeric(18,4)",
+        "nullable": true
+      },
+      "LengthCm": {
+        "clr_type": "decimal?",
+        "column_name": "length_cm",
+        "column_type": "numeric(18,4)",
+        "nullable": true
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "PackageCount": {
+        "clr_type": "int",
+        "column_name": "package_count",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SequenceNo": {
+        "clr_type": "int",
+        "column_name": "sequence_no",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "WeightKg": {
+        "clr_type": "decimal?",
+        "column_name": "weight_kg",
+        "column_type": "numeric(18,4)",
+        "nullable": true
+      },
+      "WidthCm": {
+        "clr_type": "decimal?",
+        "column_name": "width_cm",
+        "column_type": "numeric(18,4)",
+        "nullable": true
+      }
+    }
+  },
+  "chargetypemapping": {
+    "entity": "LCMS.Domain.Entities.ChargeTypeMapping",
+    "properties": {}
+  },
+  "collection": {
+    "entity": "LCMS.Domain.Entities.Collection",
+    "properties": {}
+  },
+  "collectionallocation": {
+    "entity": "LCMS.Domain.Entities.CollectionAllocation",
+    "properties": {}
+  },
+  "commoditytype": {
+    "entity": "LCMS.Domain.Entities.CommodityType",
+    "properties": {}
+  },
+  "containerrateprice": {
+    "entity": "LCMS.Domain.Entities.ContainerRatePrice",
+    "properties": {}
+  },
+  "cost": {
+    "entity": "LCMS.Domain.Entities.Cost",
+    "properties": {}
+  },
+  "costadjustment": {
+    "entity": "LCMS.Domain.Entities.CostAdjustment",
+    "properties": {}
+  },
+  "costallocation": {
+    "entity": "LCMS.Domain.Entities.CostAllocation",
+    "properties": {}
+  },
+  "costallocationdetail": {
+    "entity": "LCMS.Domain.Entities.CostAllocationDetail",
+    "properties": {}
+  },
+  "currency": {
+    "entity": "LCMS.Domain.Entities.Currency",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DecimalPlaces": {
+        "clr_type": "int",
+        "column_name": "decimal_places",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "documentattachment": {
+    "entity": "LCMS.Domain.Entities.DocumentAttachment",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ContentType": {
+        "clr_type": "string",
+        "column_name": "content_type",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeleteReason": {
+        "clr_type": "string",
+        "column_name": "delete_reason",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "FileName": {
+        "clr_type": "string",
+        "column_name": "file_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "Notes": {
+        "clr_type": "string",
+        "column_name": "notes",
+        "column_type": "character varying(1024)",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Sha256Hash": {
+        "clr_type": "string",
+        "column_name": "sha256hash",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "SizeBytes": {
+        "clr_type": "long",
+        "column_name": "size_bytes",
+        "column_type": "bigint",
+        "nullable": false
+      },
+      "StorageRelativePath": {
+        "clr_type": "string",
+        "column_name": "storage_relative_path",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "UploadedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "uploaded_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "UploadedBy": {
+        "clr_type": "Guid?",
+        "column_name": "uploaded_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "documentmatch": {
+    "entity": "LCMS.Domain.Entities.DocumentMatch",
+    "properties": {}
+  },
+  "documentmatchdetail": {
+    "entity": "LCMS.Domain.Entities.DocumentMatchDetail",
+    "properties": {}
+  },
+  "economicchargetype": {
+    "entity": "LCMS.Domain.Entities.EconomicChargeType",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "fieldownership": {
+    "entity": "LCMS.Domain.Entities.FieldOwnership",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "FieldName": {
+        "clr_type": "string",
+        "column_name": "field_name",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "OwnerSystem": {
+        "clr_type": "string",
+        "column_name": "owner_system",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "financialclose": {
+    "entity": "LCMS.Domain.Entities.FinancialClose",
+    "properties": {}
+  },
+  "financialclosesnapshot": {
+    "entity": "LCMS.Domain.Entities.FinancialCloseSnapshot",
+    "properties": {}
+  },
+  "financialclosesnapshotdetail": {
+    "entity": "LCMS.Domain.Entities.FinancialCloseSnapshotDetail",
+    "properties": {}
+  },
+  "financialdocument": {
+    "entity": "LCMS.Domain.Entities.FinancialDocument",
+    "properties": {}
+  },
+  "financialdocumentline": {
+    "entity": "LCMS.Domain.Entities.FinancialDocumentLine",
+    "properties": {}
+  },
+  "financialexception": {
+    "entity": "LCMS.Domain.Entities.FinancialException",
+    "properties": {}
+  },
+  "fxrate": {
+    "entity": "LCMS.Domain.Entities.FxRate",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "FromCurrencyCode": {
+        "clr_type": "string",
+        "column_name": "from_currency_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "Note": {
+        "clr_type": "string",
+        "column_name": "note",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "Rate": {
+        "clr_type": "decimal",
+        "column_name": "rate",
+        "column_type": "numeric(18,8)",
+        "nullable": false
+      },
+      "RateDate": {
+        "clr_type": "DateOnly",
+        "column_name": "rate_date",
+        "column_type": "date",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Source": {
+        "clr_type": "string",
+        "column_name": "source",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ToCurrencyCode": {
+        "clr_type": "string",
+        "column_name": "to_currency_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Version": {
+        "clr_type": "int",
+        "column_name": "version",
+        "column_type": "integer",
+        "nullable": false
+      }
+    }
+  },
+  "idempotencyrecord": {
+    "entity": "LCMS.Domain.Entities.IdempotencyRecord",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Key": {
+        "clr_type": "string",
+        "column_name": "key",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Scope": {
+        "clr_type": "string",
+        "column_name": "scope",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "inappnotification": {
+    "entity": "LCMS.Domain.Entities.InAppNotification",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Body": {
+        "clr_type": "string",
+        "column_name": "body",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "EventType": {
+        "clr_type": "string",
+        "column_name": "event_type",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "Href": {
+        "clr_type": "string",
+        "column_name": "href",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "IsRead": {
+        "clr_type": "bool",
+        "column_name": "is_read",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid?",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "ReadAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "read_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Title": {
+        "clr_type": "string",
+        "column_name": "title",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "UserId": {
+        "clr_type": "Guid",
+        "column_name": "user_id",
+        "column_type": "uuid",
+        "nullable": false
+      }
+    }
+  },
+  "integrationerror": {
+    "entity": "LCMS.Domain.Entities.IntegrationError",
+    "properties": {}
+  },
+  "integrationrecord": {
+    "entity": "LCMS.Domain.Entities.IntegrationRecord",
+    "properties": {}
+  },
+  "legmovementlink": {
+    "entity": "LCMS.Domain.Entities.LegMovementLink",
+    "properties": {}
+  },
+  "location": {
+    "entity": "LCMS.Domain.Entities.Location",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "City": {
+        "clr_type": "string",
+        "column_name": "city",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(30)",
+        "nullable": false
+      },
+      "CountryCode": {
+        "clr_type": "string",
+        "column_name": "country_code",
+        "column_type": "character varying(2)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IataCode": {
+        "clr_type": "string",
+        "column_name": "iata_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "LocationType": {
+        "clr_type": "string",
+        "column_name": "location_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Subdivision": {
+        "clr_type": "string",
+        "column_name": "subdivision",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "TerminalCode": {
+        "clr_type": "string",
+        "column_name": "terminal_code",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Unlocode": {
+        "clr_type": "string",
+        "column_name": "unlocode",
+        "column_type": "character varying(5)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "locationalias": {
+    "entity": "LCMS.Domain.Entities.LocationAlias",
+    "properties": {}
+  },
+  "mastercatalogitem": {
+    "entity": "LCMS.Domain.Entities.MasterCatalogItem",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "AttributesJson": {
+        "clr_type": "string",
+        "column_name": "attributes_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Description": {
+        "clr_type": "string",
+        "column_name": "description",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "Kind": {
+        "clr_type": "string",
+        "column_name": "kind",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SortOrder": {
+        "clr_type": "int",
+        "column_name": "sort_order",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "operationalfieldoverride": {
+    "entity": "LCMS.Domain.Entities.OperationalFieldOverride",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "FieldCode": {
+        "clr_type": "string",
+        "column_name": "field_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "OverriddenAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "overridden_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "OverriddenBy": {
+        "clr_type": "Guid?",
+        "column_name": "overridden_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "OverrideValue": {
+        "clr_type": "string",
+        "column_name": "override_value",
+        "column_type": "character varying(2000)",
+        "nullable": false
+      },
+      "Reason": {
+        "clr_type": "string",
+        "column_name": "reason",
+        "column_type": "character varying(500)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SourceChannel": {
+        "clr_type": "string",
+        "column_name": "source_channel",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "SourceValue": {
+        "clr_type": "string",
+        "column_name": "source_value",
+        "column_type": "character varying(2000)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "operationalmeasurement": {
+    "entity": "LCMS.Domain.Entities.OperationalMeasurement",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ConfirmedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "confirmed_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IsConfirmed": {
+        "clr_type": "bool",
+        "column_name": "is_confirmed",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "MeasureCode": {
+        "clr_type": "string",
+        "column_name": "measure_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Quantity": {
+        "clr_type": "decimal",
+        "column_name": "quantity",
+        "column_type": "numeric(18,4)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "RuleCode": {
+        "clr_type": "string",
+        "column_name": "rule_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "SourceChannel": {
+        "clr_type": "string",
+        "column_name": "source_channel",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Uom": {
+        "clr_type": "string",
+        "column_name": "uom",
+        "column_type": "character varying(16)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "operationalpartysnapshot": {
+    "entity": "LCMS.Domain.Entities.OperationalPartySnapshot",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "AddressLine1": {
+        "clr_type": "string",
+        "column_name": "address_line1",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "CapturedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "captured_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "City": {
+        "clr_type": "string",
+        "column_name": "city",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "ContactEmail": {
+        "clr_type": "string",
+        "column_name": "contact_email",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "ContactName": {
+        "clr_type": "string",
+        "column_name": "contact_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "ContactPhone": {
+        "clr_type": "string",
+        "column_name": "contact_phone",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CountryCode": {
+        "clr_type": "string",
+        "column_name": "country_code",
+        "column_type": "character varying(2)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DisplayName": {
+        "clr_type": "string",
+        "column_name": "display_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "Email": {
+        "clr_type": "string",
+        "column_name": "email",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "IsWalkIn": {
+        "clr_type": "bool",
+        "column_name": "is_walk_in",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "LegalName": {
+        "clr_type": "string",
+        "column_name": "legal_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "ObjectId": {
+        "clr_type": "Guid",
+        "column_name": "object_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ObjectType": {
+        "clr_type": "string",
+        "column_name": "object_type",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "PartyId": {
+        "clr_type": "Guid?",
+        "column_name": "party_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Phone": {
+        "clr_type": "string",
+        "column_name": "phone",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RoleCode": {
+        "clr_type": "string",
+        "column_name": "role_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SourceChannel": {
+        "clr_type": "string",
+        "column_name": "source_channel",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "SupersededAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "superseded_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "TaxId": {
+        "clr_type": "string",
+        "column_name": "tax_id",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "order": {
+    "entity": "LCMS.Domain.Entities.Order",
+    "properties": {}
+  },
+  "orderbilllink": {
+    "entity": "LCMS.Domain.Entities.OrderBillLink",
+    "properties": {}
+  },
+  "organization": {
+    "entity": "LCMS.Domain.Entities.Organization",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "ParentId": {
+        "clr_type": "Guid?",
+        "column_name": "parent_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "outboxmessage": {
+    "entity": "LCMS.Domain.Entities.OutboxMessage",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "AttemptNo": {
+        "clr_type": "int",
+        "column_name": "attempt_no",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "EnqueuedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "enqueued_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "LastError": {
+        "clr_type": "string",
+        "column_name": "last_error",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "PayloadJson": {
+        "clr_type": "string",
+        "column_name": "payload_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "ProcessedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "processed_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Status": {
+        "clr_type": "string",
+        "column_name": "status",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Topic": {
+        "clr_type": "string",
+        "column_name": "topic",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "partybankaccount": {
+    "entity": "LCMS.Domain.Entities.PartyBankAccount",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "AccountName": {
+        "clr_type": "string",
+        "column_name": "account_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "AccountNumber": {
+        "clr_type": "string",
+        "column_name": "account_number",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "BankBranch": {
+        "clr_type": "string",
+        "column_name": "bank_branch",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "BankCode": {
+        "clr_type": "string",
+        "column_name": "bank_code",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "BankName": {
+        "clr_type": "string",
+        "column_name": "bank_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "CurrencyCode": {
+        "clr_type": "string",
+        "column_name": "currency_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "IsDefault": {
+        "clr_type": "bool",
+        "column_name": "is_default",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "Note": {
+        "clr_type": "string",
+        "column_name": "note",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "PartyId": {
+        "clr_type": "Guid",
+        "column_name": "party_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SwiftBic": {
+        "clr_type": "string",
+        "column_name": "swift_bic",
+        "column_type": "character varying(16)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "partycontact": {
+    "entity": "LCMS.Domain.Entities.PartyContact",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Email": {
+        "clr_type": "string",
+        "column_name": "email",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "FullName": {
+        "clr_type": "string",
+        "column_name": "full_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "FunctionCode": {
+        "clr_type": "string",
+        "column_name": "function_code",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "IsPrimary": {
+        "clr_type": "bool",
+        "column_name": "is_primary",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "Note": {
+        "clr_type": "string",
+        "column_name": "note",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "PartyId": {
+        "clr_type": "Guid",
+        "column_name": "party_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Phone": {
+        "clr_type": "string",
+        "column_name": "phone",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Title": {
+        "clr_type": "string",
+        "column_name": "title",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "partyrole": {
+    "entity": "LCMS.Domain.Entities.PartyRole",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "PartyId": {
+        "clr_type": "Guid",
+        "column_name": "party_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RoleCode": {
+        "clr_type": "string",
+        "column_name": "role_code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "payableexposure": {
+    "entity": "LCMS.Domain.Entities.PayableExposure",
+    "properties": {}
+  },
+  "payment": {
+    "entity": "LCMS.Domain.Entities.Payment",
+    "properties": {}
+  },
+  "paymentallocation": {
+    "entity": "LCMS.Domain.Entities.PaymentAllocation",
+    "properties": {}
+  },
+  "permission": {
+    "entity": "LCMS.Domain.Entities.Permission",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ActionCode": {
+        "clr_type": "string",
+        "column_name": "action_code",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "policy": {
+    "entity": "LCMS.Domain.Entities.Policy",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "BodyJson": {
+        "clr_type": "string",
+        "column_name": "body_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "EffectiveFrom": {
+        "clr_type": "DateOnly",
+        "column_name": "effective_from",
+        "column_type": "date",
+        "nullable": false
+      },
+      "EffectiveTo": {
+        "clr_type": "DateOnly?",
+        "column_name": "effective_to",
+        "column_type": "date",
+        "nullable": true
+      },
+      "Notes": {
+        "clr_type": "string",
+        "column_name": "notes",
+        "column_type": "character varying(2048)",
+        "nullable": false
+      },
+      "OwnerUserId": {
+        "clr_type": "Guid?",
+        "column_name": "owner_user_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "PolicyKey": {
+        "clr_type": "string",
+        "column_name": "policy_key",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Status": {
+        "clr_type": "string",
+        "column_name": "status",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Title": {
+        "clr_type": "string",
+        "column_name": "title",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Version": {
+        "clr_type": "int",
+        "column_name": "version",
+        "column_type": "integer",
+        "nullable": false
+      }
+    }
+  },
+  "pricingrule": {
+    "entity": "LCMS.Domain.Entities.PricingRule",
+    "properties": {}
+  },
+  "pricingrulecomponent": {
+    "entity": "LCMS.Domain.Entities.PricingRuleComponent",
+    "properties": {}
+  },
+  "ratebreak": {
+    "entity": "LCMS.Domain.Entities.RateBreak",
+    "properties": {}
+  },
+  "ratecard": {
+    "entity": "LCMS.Domain.Entities.RateCard",
+    "properties": {}
+  },
+  "ratescopemigrationlog": {
+    "entity": "LCMS.Domain.Entities.RateScopeMigrationLog",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Action": {
+        "clr_type": "string",
+        "column_name": "action",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Detail": {
+        "clr_type": "string",
+        "column_name": "detail",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "PricingRuleId": {
+        "clr_type": "Guid?",
+        "column_name": "pricing_rule_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "RateCardId": {
+        "clr_type": "Guid",
+        "column_name": "rate_card_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "rateversion": {
+    "entity": "LCMS.Domain.Entities.RateVersion",
+    "properties": {}
+  },
+  "rating": {
+    "entity": "LCMS.Domain.Entities.Rating",
+    "properties": {}
+  },
+  "ratingdetail": {
+    "entity": "LCMS.Domain.Entities.RatingDetail",
+    "properties": {}
+  },
+  "receivableexposure": {
+    "entity": "LCMS.Domain.Entities.ReceivableExposure",
+    "properties": {}
+  },
+  "reconciliation": {
+    "entity": "LCMS.Domain.Entities.Reconciliation",
+    "properties": {}
+  },
+  "reconciliationdetail": {
+    "entity": "LCMS.Domain.Entities.ReconciliationDetail",
+    "properties": {}
+  },
+  "refreshtoken": {
+    "entity": "LCMS.Domain.Entities.RefreshToken",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "ExpiresAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "expires_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "ReplacedByTokenHash": {
+        "clr_type": "string",
+        "column_name": "replaced_by_token_hash",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "RevokedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "revoked_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "TokenHash": {
+        "clr_type": "string",
+        "column_name": "token_hash",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "UserId": {
+        "clr_type": "Guid",
+        "column_name": "user_id",
+        "column_type": "uuid",
+        "nullable": false
+      }
+    }
+  },
+  "revenue": {
+    "entity": "LCMS.Domain.Entities.Revenue",
+    "properties": {}
+  },
+  "revenueadjustment": {
+    "entity": "LCMS.Domain.Entities.RevenueAdjustment",
+    "properties": {}
+  },
+  "revenuemapping": {
+    "entity": "LCMS.Domain.Entities.RevenueMapping",
+    "properties": {}
+  },
+  "revenuemappingdetail": {
+    "entity": "LCMS.Domain.Entities.RevenueMappingDetail",
+    "properties": {}
+  },
+  "role": {
+    "entity": "LCMS.Domain.Entities.Role",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IsSystem": {
+        "clr_type": "bool",
+        "column_name": "is_system",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "rolepermission": {
+    "entity": "LCMS.Domain.Entities.RolePermission",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DataScope": {
+        "clr_type": "string",
+        "column_name": "data_scope",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "PermissionId": {
+        "clr_type": "Guid",
+        "column_name": "permission_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RoleId": {
+        "clr_type": "Guid",
+        "column_name": "role_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "routemaster": {
+    "entity": "LCMS.Domain.Entities.RouteMaster",
+    "properties": {}
+  },
+  "routestop": {
+    "entity": "LCMS.Domain.Entities.RouteStop",
+    "properties": {}
+  },
+  "shipment": {
+    "entity": "LCMS.Domain.Entities.Shipment",
+    "properties": {}
+  },
+  "surcharge": {
+    "entity": "LCMS.Domain.Entities.Surcharge",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Direction": {
+        "clr_type": "string",
+        "column_name": "direction",
+        "column_type": "character varying(16)",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SourceLegacyComponentId": {
+        "clr_type": "Guid?",
+        "column_name": "source_legacy_component_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Status": {
+        "clr_type": "string",
+        "column_name": "status",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "surchargebreak": {
+    "entity": "LCMS.Domain.Entities.SurchargeBreak",
+    "properties": {}
+  },
+  "surchargecondition": {
+    "entity": "LCMS.Domain.Entities.SurchargeCondition",
+    "properties": {}
+  },
+  "surchargemigrationlog": {
+    "entity": "LCMS.Domain.Entities.SurchargeMigrationLog",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "Classification": {
+        "clr_type": "string",
+        "column_name": "classification",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Outcome": {
+        "clr_type": "string",
+        "column_name": "outcome",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "PricingRuleComponentId": {
+        "clr_type": "Guid",
+        "column_name": "pricing_rule_component_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SurchargeId": {
+        "clr_type": "Guid?",
+        "column_name": "surcharge_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "surchargerule": {
+    "entity": "LCMS.Domain.Entities.SurchargeRule",
+    "properties": {}
+  },
+  "surchargescope": {
+    "entity": "LCMS.Domain.Entities.SurchargeScope",
+    "properties": {}
+  },
+  "surchargeversion": {
+    "entity": "LCMS.Domain.Entities.SurchargeVersion",
+    "properties": {}
+  },
+  "tenant": {
+    "entity": "LCMS.Domain.Entities.Tenant",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "AddressLine1": {
+        "clr_type": "string",
+        "column_name": "address_line1",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "AddressLine2": {
+        "clr_type": "string",
+        "column_name": "address_line2",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "City": {
+        "clr_type": "string",
+        "column_name": "city",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "Code": {
+        "clr_type": "string",
+        "column_name": "code",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CountryCode": {
+        "clr_type": "string",
+        "column_name": "country_code",
+        "column_type": "character varying(2)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DateFormat": {
+        "clr_type": "string",
+        "column_name": "date_format",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "DefaultCurrencyCode": {
+        "clr_type": "string",
+        "column_name": "default_currency_code",
+        "column_type": "character varying(3)",
+        "nullable": false
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "District": {
+        "clr_type": "string",
+        "column_name": "district",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "Email": {
+        "clr_type": "string",
+        "column_name": "email",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "LegalName": {
+        "clr_type": "string",
+        "column_name": "legal_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "LogoBytes": {
+        "clr_type": "byte[]",
+        "column_name": "logo_bytes",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "LogoContentType": {
+        "clr_type": "string",
+        "column_name": "logo_content_type",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "Name": {
+        "clr_type": "string",
+        "column_name": "name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "Phone": {
+        "clr_type": "string",
+        "column_name": "phone",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "PostalCode": {
+        "clr_type": "string",
+        "column_name": "postal_code",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Province": {
+        "clr_type": "string",
+        "column_name": "province",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TaxId": {
+        "clr_type": "string",
+        "column_name": "tax_id",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TimeZoneId": {
+        "clr_type": "string",
+        "column_name": "time_zone_id",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Ward": {
+        "clr_type": "string",
+        "column_name": "ward",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "Website": {
+        "clr_type": "string",
+        "column_name": "website",
+        "column_type": "character varying(256)",
+        "nullable": false
+      }
+    }
+  },
+  "tenantbackup": {
+    "entity": "LCMS.Domain.Entities.TenantBackup",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ByteSize": {
+        "clr_type": "int",
+        "column_name": "byte_size",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "ChecksumSha256": {
+        "clr_type": "string",
+        "column_name": "checksum_sha256",
+        "column_type": "character varying(64)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Kind": {
+        "clr_type": "string",
+        "column_name": "kind",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "Note": {
+        "clr_type": "string",
+        "column_name": "note",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "PayloadJson": {
+        "clr_type": "string",
+        "column_name": "payload_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "RestoredAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "restored_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "RestoredBy": {
+        "clr_type": "Guid?",
+        "column_name": "restored_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "Status": {
+        "clr_type": "string",
+        "column_name": "status",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "tenantlicense": {
+    "entity": "LCMS.Domain.Entities.TenantLicense",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "Notes": {
+        "clr_type": "string",
+        "column_name": "notes",
+        "column_type": "character varying(1024)",
+        "nullable": false
+      },
+      "PlanCode": {
+        "clr_type": "string",
+        "column_name": "plan_code",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "PlanName": {
+        "clr_type": "string",
+        "column_name": "plan_name",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "SeatLimit": {
+        "clr_type": "int",
+        "column_name": "seat_limit",
+        "column_type": "integer",
+        "nullable": false
+      },
+      "Status": {
+        "clr_type": "string",
+        "column_name": "status",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "ValidFrom": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "valid_from",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "ValidUntil": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "valid_until",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      }
+    }
+  },
+  "tenantlicensemodule": {
+    "entity": "LCMS.Domain.Entities.TenantLicenseModule",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "IncludedInPlan": {
+        "clr_type": "bool",
+        "column_name": "included_in_plan",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "IsEnabled": {
+        "clr_type": "bool",
+        "column_name": "is_enabled",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "LicenseId": {
+        "clr_type": "Guid",
+        "column_name": "license_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "ModuleCode": {
+        "clr_type": "string",
+        "column_name": "module_code",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "tenantnotificationsetting": {
+    "entity": "LCMS.Domain.Entities.TenantNotificationSetting",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "EmailEnabled": {
+        "clr_type": "bool",
+        "column_name": "email_enabled",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "EventsJson": {
+        "clr_type": "string",
+        "column_name": "events_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "InAppEnabled": {
+        "clr_type": "bool",
+        "column_name": "in_app_enabled",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "tenantsetting": {
+    "entity": "LCMS.Domain.Entities.TenantSetting",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "BillPartyPolicyJson": {
+        "clr_type": "string",
+        "column_name": "bill_party_policy_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "FinancialJson": {
+        "clr_type": "string",
+        "column_name": "financial_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UiJson": {
+        "clr_type": "string",
+        "column_name": "ui_json",
+        "column_type": "text",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "transportleg": {
+    "entity": "LCMS.Domain.Entities.TransportLeg",
+    "properties": {}
+  },
+  "transportmovement": {
+    "entity": "LCMS.Domain.Entities.TransportMovement",
+    "properties": {}
+  },
+  "user": {
+    "entity": "LCMS.Domain.Entities.User",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DisplayName": {
+        "clr_type": "string",
+        "column_name": "display_name",
+        "column_type": "character varying(256)",
+        "nullable": false
+      },
+      "Email": {
+        "clr_type": "string",
+        "column_name": "email",
+        "column_type": "character varying(320)",
+        "nullable": false
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "OrganizationId": {
+        "clr_type": "Guid?",
+        "column_name": "organization_id",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "PasswordHash": {
+        "clr_type": "string",
+        "column_name": "password_hash",
+        "column_type": "character varying(500)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      }
+    }
+  },
+  "userpushdevice": {
+    "entity": "LCMS.Domain.Entities.UserPushDevice",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "AppVersion": {
+        "clr_type": "string",
+        "column_name": "app_version",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeviceName": {
+        "clr_type": "string",
+        "column_name": "device_name",
+        "column_type": "character varying(128)",
+        "nullable": false
+      },
+      "DeviceToken": {
+        "clr_type": "string",
+        "column_name": "device_token",
+        "column_type": "character varying(512)",
+        "nullable": false
+      },
+      "IsActive": {
+        "clr_type": "bool",
+        "column_name": "is_active",
+        "column_type": "boolean",
+        "nullable": false
+      },
+      "LastSeenAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "last_seen_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "Platform": {
+        "clr_type": "string",
+        "column_name": "platform",
+        "column_type": "character varying(32)",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "UserId": {
+        "clr_type": "Guid",
+        "column_name": "user_id",
+        "column_type": "uuid",
+        "nullable": false
+      }
+    }
+  },
+  "userrole": {
+    "entity": "LCMS.Domain.Entities.UserRole",
+    "properties": {
+      "Id": {
+        "clr_type": "Guid",
+        "column_name": "id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "CreatedAt": {
+        "clr_type": "DateTimeOffset",
+        "column_name": "created_at",
+        "column_type": "timestamp with time zone",
+        "nullable": false
+      },
+      "CreatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "created_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "DeletedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "deleted_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "DeletedBy": {
+        "clr_type": "Guid?",
+        "column_name": "deleted_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "RoleId": {
+        "clr_type": "Guid",
+        "column_name": "role_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "RowVersion": {
+        "clr_type": "byte[]",
+        "column_name": "row_version",
+        "column_type": "bytea",
+        "nullable": false
+      },
+      "TenantId": {
+        "clr_type": "Guid",
+        "column_name": "tenant_id",
+        "column_type": "uuid",
+        "nullable": false
+      },
+      "UpdatedAt": {
+        "clr_type": "DateTimeOffset?",
+        "column_name": "updated_at",
+        "column_type": "timestamp with time zone",
+        "nullable": true
+      },
+      "UpdatedBy": {
+        "clr_type": "Guid?",
+        "column_name": "updated_by",
+        "column_type": "uuid",
+        "nullable": true
+      },
+      "UserId": {
+        "clr_type": "Guid",
+        "column_name": "user_id",
+        "column_type": "uuid",
+        "nullable": false
+      }
+    }
+  },
+  "variance": {
+    "entity": "LCMS.Domain.Entities.Variance",
+    "properties": {}
+  }
+}

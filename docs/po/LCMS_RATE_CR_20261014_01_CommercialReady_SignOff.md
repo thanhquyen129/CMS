@@ -1,6 +1,6 @@
 # LCMS-CR-20261014-01 — Biên bản tự chấm 100/100
 
-Ngày: 16/10/2026.
+Ngày: 16/10/2026. Chạy lại census, Vitest và ca 409 trong phiên 18:04–18:07.
 
 | Hạng mục | Điểm | Bằng chứng |
 |---|---|---|

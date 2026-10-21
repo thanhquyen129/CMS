@@ -23,7 +23,8 @@ public sealed record UpsertTransportLegCommand(
     string? OriginCode = null,
     string? DestinationCode = null,
     Guid? OriginLocationId = null,
-    Guid? DestinationLocationId = null) : IRequest<Guid>;
+    Guid? DestinationLocationId = null,
+    string? TransportMode = null) : IRequest<Guid>;
 
 public sealed class UpsertTransportLegCommandValidator : AbstractValidator<UpsertTransportLegCommand>
 {
@@ -111,7 +112,8 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
                 OriginCode = request.OriginCode,
                 DestinationCode = request.DestinationCode,
                 OriginLocationId = request.OriginLocationId,
-                DestinationLocationId = request.DestinationLocationId
+                DestinationLocationId = request.DestinationLocationId,
+                TransportMode = request.TransportMode
             };
             _db.TransportLegs.Add(leg);
             try

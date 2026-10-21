@@ -1,6 +1,7 @@
+using LCMS.Application.OperationalReferences;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
-using LCMS.Application.OperationalReferences;
+using LCMS.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -158,10 +159,158 @@ public sealed class GetTransportLegByIdQueryHandler
     }
 }
 
+public sealed record TransportLegOption(
+    Guid Id,
+    string LegNo,
+    int SequenceNo,
+    string? OriginCode,
+    string? DestinationCode,
+    string? TransportMode,
+    string OperationalStatus,
+    string SourceSystem,
+    string ExternalId,
+    Guid ShipmentId,
+    string? ShipmentNo);
+
+public sealed record GetTransportLegOptionsQuery(Guid? ShipmentId = null, string? TransportMode = null)
+    : IRequest<IReadOnlyList<TransportLegOption>>;
+
+public sealed class GetTransportLegOptionsQueryHandler
+    : IRequestHandler<GetTransportLegOptionsQuery, IReadOnlyList<TransportLegOption>>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public GetTransportLegOptionsQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<IReadOnlyList<TransportLegOption>> Handle(
+        GetTransportLegOptionsQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var tenantId = _tenantContext.TenantId;
+        var query = from l in _db.TransportLegs.AsNoTracking()
+            join s in _db.Shipments.AsNoTracking() on l.ShipmentId equals s.Id
+            where l.TenantId == tenantId && l.IsActive
+            select new { Leg = l, Shipment = s };
+
+        if (request.ShipmentId is Guid sid && sid != Guid.Empty)
+        {
+            query = query.Where(x => x.Leg.ShipmentId == sid);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.TransportMode))
+        {
+            var mode = request.TransportMode.Trim().ToLowerInvariant();
+            query = query.Where(x =>
+                (x.Leg.TransportMode != null && x.Leg.TransportMode.ToLower() == mode) ||
+                (x.Leg.TransportMode == null && x.Shipment.TransportMode != null && x.Shipment.TransportMode.ToLower() == mode));
+        }
+
+        var rows = await query
+            .OrderBy(x => x.Shipment.ShipmentNo)
+            .ThenBy(x => x.Leg.SequenceNo)
+            .Take(200)
+            .ToListAsync(cancellationToken);
+
+        return rows.Select(x => new TransportLegOption(
+            x.Leg.Id,
+            x.Leg.LegNo,
+            x.Leg.SequenceNo,
+            x.Leg.OriginCode ?? x.Shipment.OriginCode,
+            x.Leg.DestinationCode ?? x.Shipment.DestinationCode,
+            x.Leg.TransportMode ?? x.Shipment.TransportMode,
+            x.Leg.OperationalStatus,
+            x.Leg.SourceSystem,
+            x.Leg.ExternalId,
+            x.Leg.ShipmentId,
+            x.Shipment.ShipmentNo)).ToList();
+    }
+}
+
+public sealed record GetShipmentLegSummaryQuery(Guid ShipmentId) : IRequest<ShipmentLegSummaryDto>;
+
+public sealed record ShipmentLegSummaryDto(
+    Guid ShipmentId,
+    string ShipmentNo,
+    int TotalLegs,
+    IReadOnlyList<TransportLegSummaryItem> Legs);
+
+public sealed record TransportLegSummaryItem(
+    Guid LegId,
+    string LegNo,
+    int SequenceNo,
+    string? OriginCode,
+    string? DestinationCode,
+    string? TransportMode,
+    string OperationalStatus,
+    int LinkedBillCount);
+
+public sealed class GetShipmentLegSummaryQueryHandler
+    : IRequestHandler<GetShipmentLegSummaryQuery, ShipmentLegSummaryDto>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public GetShipmentLegSummaryQueryHandler(ILcmsDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    public async Task<ShipmentLegSummaryDto> Handle(
+        GetShipmentLegSummaryQuery request,
+        CancellationToken cancellationToken)
+    {
+        if (!_tenantContext.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var tenantId = _tenantContext.TenantId;
+        var shipment = await _db.Shipments.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.TenantId == tenantId && s.Id == request.ShipmentId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy lô hàng.");
+
+        var legs = await _db.TransportLegs.AsNoTracking()
+            .Where(l => l.TenantId == tenantId && l.ShipmentId == request.ShipmentId)
+            .OrderBy(l => l.SequenceNo)
+            .ToListAsync(cancellationToken);
+
+        var legIds = legs.Select(l => l.Id).ToList();
+        var counts = await _db.BillLegLinks.AsNoTracking()
+            .Where(x => x.TenantId == tenantId && legIds.Contains(x.TransportLegId))
+            .GroupBy(x => x.TransportLegId)
+            .Select(g => new { LegId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.LegId, x => x.Count, cancellationToken);
+
+        var items = legs.Select(l => new TransportLegSummaryItem(
+            l.Id,
+            l.LegNo,
+            l.SequenceNo,
+            l.OriginCode ?? shipment.OriginCode,
+            l.DestinationCode ?? shipment.DestinationCode,
+            l.TransportMode ?? shipment.TransportMode,
+            l.OperationalStatus,
+            counts.TryGetValue(l.Id, out var c) ? c : 0)).ToList();
+
+        return new ShipmentLegSummaryDto(shipment.Id, shipment.ShipmentNo, items.Count, items);
+    }
+}
+
+public sealed record OperationalBillRef(Guid Id, string BillNo, string Status);
 
 public sealed record NextLegContextDto(
     Guid ShipmentId,
-    string? ShipmentNo,
+    string ShipmentNo,
     int NextSequenceNo,
     string? SuggestedOriginCode,
     string? SuggestedDestinationCode,
@@ -177,7 +326,11 @@ public sealed record NextLegContextDto(
     string NoticeMessage
 );
 
-public sealed record GetNextLegContextQuery(Guid ShipmentId) : IRequest<NextLegContextDto>;
+public sealed record GetNextLegContextQuery(
+    Guid ShipmentId,
+    int? ExpectedTotalLegs = null,
+    bool? IsFinalLeg = null
+) : IRequest<NextLegContextDto>;
 
 public sealed class GetNextLegContextQueryHandler : IRequestHandler<GetNextLegContextQuery, NextLegContextDto>
 {
@@ -214,13 +367,23 @@ public sealed class GetNextLegContextQueryHandler : IRequestHandler<GetNextLegCo
         if (existingLegs.Count == 0)
         {
             origCode = shipment.OriginCode;
-            destCode = shipment.DestinationCode;
+            // If total legs > 1, first leg does not end at shipment final destination!
+            destCode = (request.ExpectedTotalLegs.HasValue && request.ExpectedTotalLegs.Value > 1 && request.IsFinalLeg != true)
+                ? null
+                : shipment.DestinationCode;
         }
         else
         {
             var lastLeg = existingLegs.Last();
             origCode = lastLeg.DestinationCode;
-            destCode = shipment.DestinationCode;
+
+            // UT-11: Intermediate legs must NOT copy shipment destination endpoints!
+            bool isIntermediate = request.IsFinalLeg != true && (
+                (request.ExpectedTotalLegs.HasValue && nextSeq < request.ExpectedTotalLegs.Value) ||
+                (request.ExpectedTotalLegs == null && !string.Equals(origCode, shipment.DestinationCode, StringComparison.OrdinalIgnoreCase))
+            );
+
+            destCode = (request.IsFinalLeg == true || !isIntermediate) ? shipment.DestinationCode : null;
         }
 
         var relatedBills = await (
@@ -232,8 +395,10 @@ public sealed class GetNextLegContextQueryHandler : IRequestHandler<GetNextLegCo
             .ToListAsync(cancellationToken);
 
         var notice = existingLegs.Count == 0
-            ? $"Tự động điền chặng đầu tiên từ Lô hàng {shipment.ShipmentNo} (Cảng đi: {origCode}, Cảng đến: {destCode})."
-            : $"Tự động nối chặng {nextSeq} (Daisy-chaining): Cảng đi lấy từ điểm đến của chặng trước ({origCode}).";
+            ? $"Tự động điền chặng đầu tiên từ Lô hàng {shipment.ShipmentNo} (Cảng đi: {origCode}, Cảng đến: {destCode ?? "Chờ chọn điểm chuyển tải"})."
+            : (destCode == null
+                ? $"Tự động nối chặng {nextSeq} (Daisy-chaining): Cảng đi lấy từ điểm đến của chặng trước ({origCode}). Chặng trung gian yêu cầu chọn điểm trung chuyển kế tiếp (không gán ép đích cuối)."
+                : $"Tự động nối chặng {nextSeq} (Daisy-chaining): Cảng đi lấy từ điểm đến chặng trước ({origCode}), đích đến hoàn tất hành trình ({destCode}).");
 
         return new NextLegContextDto(
             ShipmentId: shipment.Id,
@@ -301,6 +466,17 @@ public sealed class PrefillMovementFromLegsQueryHandler : IRequestHandler<Prefil
             return new MovementPrefillFromLegsDto(null, null, null, null, null, Array.Empty<OperationalBillRef>(), "Không tìm thấy thông tin chặng.");
         }
 
+        // UT-13: Validate physical transport modes across combined legs!
+        var distinctModes = legs.Where(l => !string.IsNullOrWhiteSpace(l.TransportMode))
+            .Select(l => l.TransportMode!.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        if (distinctModes.Count > 1)
+        {
+            throw new ValidationAppException($"Không thể gom các chặng có phương thức vận chuyển vật lý khác nhau ({string.Join(", ", distinctModes)}) vào cùng một chuyến vận tải.");
+        }
+
         var firstLeg = legs[0];
         var shipment = await _db.Shipments.AsNoTracking()
             .FirstOrDefaultAsync(s => s.TenantId == tenantId && s.Id == firstLeg.ShipmentId, cancellationToken);
@@ -324,7 +500,7 @@ public sealed class PrefillMovementFromLegsQueryHandler : IRequestHandler<Prefil
             DestinationLocationId: firstLeg.DestinationLocationId ?? shipment?.DestinationLocationId,
             MovementOn: shipment?.EtdAt,
             RelatedBills: relatedBills,
-            NoticeMessage: $"Đã kế thừa thành công phương thức và lộ trình từ {legs.Count} chặng vận chuyển."
+            NoticeMessage: $"Đã kế thừa thành công phương thức và lộ trình đồng nhất từ {legs.Count} chặng vận chuyển."
         );
     }
 }

@@ -1,0 +1,29 @@
+{
+  "href": "http://127.0.0.1:3000/rate-cards/new",
+  "issue": [],
+  "covered": [],
+  "helper": "Đơn giá (theo số lượng cước)",
+  "helperClipped": false,
+  "route": "SGN → HAN (SGN-HAN)",
+  "groups": [],
+  "headers": [
+    "#",
+    "Mã quy tắc",
+    "Tên quy tắc",
+    "Tuyến",
+    "Hãng vận chuyển",
+    "Nấc trọng lượng",
+    "Cách tính",
+    "Số tiền / Đơn giá",
+    "Loại dịch vụ",
+    "Loại hàng",
+    "Phương thức",
+    "Thao tác"
+  ],
+  "wrap": {
+    "scrollWidth": 2380,
+    "clientWidth": 734,
+    "scrollLeft": 383.20001220703125
+  },
+  "error": null
+}

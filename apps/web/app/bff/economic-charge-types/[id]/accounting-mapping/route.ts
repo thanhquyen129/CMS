@@ -5,3 +5,4 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   return forwardApiGet(`/api/economic-charge-types/${encodeURIComponent(id)}/accounting-mapping`);
 }
+

@@ -89,7 +89,7 @@ public static class OperationalReferenceEndpoints
         var shipments = app.MapGroup("/api/shipments").WithTags("Shipments");
         shipments.MapPost("/preview-rollup", async (PreviewShipmentRollupRequest body, ISender sender, CancellationToken ct) =>
         {
-            var result = await sender.Send(new PreviewShipmentRollupQuery(body.BillIds), ct);
+            var result = await sender.Send(new PreviewShipmentRollupQuery(body.BillIds, body.AllocationItems), ct);
             return Results.Ok(result);
         });
         shipments.MapGet("/{id:guid}/next-leg-context", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -180,7 +180,8 @@ public static class OperationalReferenceEndpoints
                     body.OriginCode,
                     body.DestinationCode,
                     body.OriginLocationId,
-                    body.DestinationLocationId),
+                    body.DestinationLocationId,
+                    body.TransportMode),
                 ct);
             return Results.Ok(new { id });
         });
@@ -385,7 +386,9 @@ public sealed record UpsertOrderRequest(
     OperationalContextDocument? Context = null,
     bool ApplyContext = false);
 
-public sealed record PreviewShipmentRollupRequest(IReadOnlyList<Guid> BillIds);
+public sealed record PreviewShipmentRollupRequest(
+    IReadOnlyList<Guid>? BillIds = null,
+    IReadOnlyList<LCMS.Application.Shipments.Queries.BillRollupAllocationItem>? AllocationItems = null);
 public sealed record PrefillMovementFromLegsRequest(IReadOnlyList<Guid> LegIds);
 
 public sealed record UpsertShipmentRequest(
@@ -421,7 +424,8 @@ public sealed record UpsertTransportLegRequest(
     string? OriginCode = null,
     string? DestinationCode = null,
     Guid? OriginLocationId = null,
-    Guid? DestinationLocationId = null);
+    Guid? DestinationLocationId = null,
+    string? TransportMode = null);
 
 public sealed record UpsertTransportMovementRequest(
     string MovementNo,

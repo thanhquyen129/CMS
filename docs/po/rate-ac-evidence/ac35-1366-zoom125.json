@@ -1,0 +1,17 @@
+{
+  "headings": [
+    "1. Thông tin chung",
+    "2. Hình thức khai báo giá",
+    "3. Bảng giá cơ bản"
+  ],
+  "innerWidth": 1366,
+  "innerHeight": 768,
+  "zoom": "1.25",
+  "wrap": {
+    "scrollWidth": 1835,
+    "clientWidth": 734,
+    "overflowX": "auto"
+  },
+  "weight": {},
+  "route": {}
+}

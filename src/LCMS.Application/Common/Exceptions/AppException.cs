@@ -23,6 +23,18 @@ public sealed class ValidationAppException : AppException
     {
         Errors = errors;
     }
+
+    public ValidationAppException(string vietnameseMessage)
+        : base(vietnameseMessage, StatusCodes.BadRequest, "validation_failed")
+    {
+        Errors = new Dictionary<string, string[]> { { string.Empty, new[] { vietnameseMessage } } };
+    }
+
+    public ValidationAppException(string field, string error)
+        : base(error, StatusCodes.BadRequest, "validation_failed")
+    {
+        Errors = new Dictionary<string, string[]> { { field, new[] { error } } };
+    }
 }
 
 /// <summary>Well-formed request whose field combination breaks a business rule (HTTP 422).</summary>

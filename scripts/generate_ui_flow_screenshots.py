@@ -428,3 +428,4 @@ if __name__ == "__main__":
     generate_screen3()
     generate_screen4()
     print("All 4 screens generated successfully!")
+

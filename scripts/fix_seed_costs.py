@@ -44,3 +44,4 @@ if target in text:
     print("Successfully patched SeedExpectedCostsFromRatingCommand.cs")
 else:
     print("Target not found!")
+

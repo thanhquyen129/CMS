@@ -27,3 +27,4 @@ with open('scripts/generate_32_uat_tests.py', 'w', encoding='utf-8') as f:
     f.write(text)
 
 print("Updated generate_32_uat_tests.py successfully")
+

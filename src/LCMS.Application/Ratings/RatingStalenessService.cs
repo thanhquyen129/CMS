@@ -145,8 +145,9 @@ public sealed class RatingStalenessService : IRatingStalenessService
         switch (field)
         {
             case OperationalFieldCodes.GrossWeightKg:
-                return (basis is not null && SystemBases.Contains(basis))
-                    || selected.Any(r => string.Equals(r.Applicability, RatingEngine.PerGrossKg, StringComparison.OrdinalIgnoreCase));
+                return (basis is not null && (SystemBases.Contains(basis) || BillCwBases.Contains(basis)))
+                    || selected.Any(r => string.Equals(r.Applicability, RatingEngine.PerGrossKg, StringComparison.OrdinalIgnoreCase))
+                    || selected.Any(r => string.Equals(r.WeightBasis, "gross", StringComparison.OrdinalIgnoreCase));
             case OperationalFieldCodes.VolumeCbm:
                 return basis is not null && SystemBases.Contains(basis);
             case OperationalFieldCodes.ChargeableWeightKg:
@@ -183,9 +184,24 @@ public sealed class RatingStalenessService : IRatingStalenessService
             using var doc = JsonDocument.Parse(rating.ContextJson);
             if (doc.RootElement.TryGetProperty("rules", out var arr) && arr.ValueKind == JsonValueKind.Array)
             {
-                rules.AddRange(arr.EnumerateArray()
-                    .Where(e => e.ValueKind == JsonValueKind.String)
-                    .Select(e => e.GetString()!));
+                foreach (var el in arr.EnumerateArray())
+                {
+                    if (el.ValueKind == JsonValueKind.String)
+                    {
+                        rules.Add(el.GetString()!);
+                    }
+                    else if (el.ValueKind == JsonValueKind.Object)
+                    {
+                        if (el.TryGetProperty("Code", out var cp) && cp.ValueKind == JsonValueKind.String)
+                        {
+                            rules.Add(cp.GetString()!);
+                        }
+                        else if (el.TryGetProperty("code", out var cp2) && cp2.ValueKind == JsonValueKind.String)
+                        {
+                            rules.Add(cp2.GetString()!);
+                        }
+                    }
+                }
             }
 
             if (basis is null && doc.RootElement.TryGetProperty("basis", out var b) && b.ValueKind == JsonValueKind.String)

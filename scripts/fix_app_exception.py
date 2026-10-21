@@ -48,3 +48,4 @@ if target in text:
     print("Successfully patched AppException.cs")
 else:
     print("Target not found!")
+

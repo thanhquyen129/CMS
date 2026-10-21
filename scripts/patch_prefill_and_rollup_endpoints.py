@@ -64,3 +64,4 @@ text2 = text2.replace(t3, r3).replace(t4, r4)
 with open('src/LCMS.Api/Endpoints/OperationalReferenceEndpoints.cs', 'wb') as f:
     f.write(text2.encode('utf-8'))
 print("Patched OperationalReferenceEndpoints.cs")
+

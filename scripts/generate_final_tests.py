@@ -1190,3 +1190,4 @@ with open('tests/LCMS.Api.Tests/InputOptimizationInheritanceTests.cs', 'w', enco
     f.write(script_content)
 
 print("Regenerated InputOptimizationInheritanceTests.cs with all 32 refined tests")
+

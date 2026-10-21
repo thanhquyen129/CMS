@@ -8,3 +8,4 @@ if pos != -1:
     chunk = text[pos:pos+1200]
     for line in chunk.splitlines()[:25]:
         print(line)
+

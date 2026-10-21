@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using LCMS.Application.Catalog.Queries;
+using LCMS.Application.Settlements.Queries;
 using LCMS.Application.Bills.Queries;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Commands;
@@ -490,6 +492,7 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         var leg1Id = await CreateLegAsync(tenantId, shpId, "LEG-UT12-1", 1, "SGN", "DAD", "road");
         var leg2Id = await CreateLegAsync(tenantId, shpId, "LEG-UT12-2", 2, "SGN", "DAD", "road");
 
+        // Action: Select both legs with identical journey
         using var req = WithTenant(HttpMethod.Post, "/api/transport-movements/prefill-from-legs", tenantId);
         req.Content = JsonContent.Create(new { LegIds = new[] { leg1Id, leg2Id } });
         var res = await _client.SendAsync(req);
@@ -498,6 +501,28 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         var prefill = await res.Content.ReadFromJsonAsync<MovementPrefillFromLegsDto>(JsonOptions);
         Assert.NotNull(prefill);
         Assert.Equal("road", prefill.TransportMode);
+        Assert.Contains("đồng nhất", prefill.NoticeMessage);
+
+        // Expectation: Unified suggestion created as a single movement serving both legs (no duplicate movements)
+        using var mvtReq = WithTenant(HttpMethod.Put, "/api/transport-movements", tenantId);
+        mvtReq.Content = JsonContent.Create(new
+        {
+            MovementNo = "MVT-UT12",
+            SourceSystem = "ops",
+            ExternalId = "ext-mvt-ut12",
+            TransportMode = prefill.TransportMode
+        });
+        var mvtRes = await _client.SendAsync(mvtReq);
+        Assert.Equal(HttpStatusCode.OK, mvtRes.StatusCode);
+        var mvtId = (await mvtRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+
+        using var link1 = WithTenant(HttpMethod.Post, $"/api/transport-legs/{leg1Id}/movements/{mvtId}", tenantId);
+        var resLink1 = await _client.SendAsync(link1);
+        Assert.Equal(HttpStatusCode.OK, resLink1.StatusCode);
+
+        using var link2 = WithTenant(HttpMethod.Post, $"/api/transport-legs/{leg2Id}/movements/{mvtId}", tenantId);
+        var resLink2 = await _client.SendAsync(link2);
+        Assert.Equal(HttpStatusCode.OK, resLink2.StatusCode);
     }
 
     [Fact]
@@ -617,7 +642,7 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         var rcRes = await _client.SendAsync(rcReq);
         var rcId = (await rcRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
 
-        // UT-16 / GAP-10: Surcharge creation on multi-route card allows flexible scope
+        // UT-16 / GAP-10: Surcharge creation on multi-route card leaves routeCode unassigned (null) so user chooses scope
         using var surReq = WithTenant(HttpMethod.Post, "/api/surcharges", tenantId);
         surReq.Content = JsonContent.Create(new
         {
@@ -628,11 +653,23 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
             CurrencyCode = "VND",
             RateAmountPercent = 50000m,
             RateCardId = rcId,
+            RouteCode = (string?)null,
             Publish = false,
             EconomicChargeTypeId = ecId
         });
         var surRes = await _client.SendAsync(surReq);
         Assert.Equal(HttpStatusCode.Created, surRes.StatusCode);
+
+        var surId = (await surRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("surchargeId").GetGuid();
+        using var getSur = WithTenant(HttpMethod.Get, $"/api/surcharges/{surId}", tenantId);
+        var getRes = await _client.SendAsync(getSur);
+        Assert.Equal(HttpStatusCode.OK, getRes.StatusCode);
+        var detail = await getRes.Content.ReadFromJsonAsync<SurchargeDetailDto>(JsonOptions);
+        Assert.NotNull(detail);
+        Assert.Single(detail.Versions);
+        var rule = detail.Versions[0].Rules[0];
+        Assert.Equal(rcId, rule.RateCardId);
+        Assert.Null(rule.RouteCode); // RouteCode is NOT auto-forced when rate card is multi-route
     }
 
     [Fact]
@@ -658,6 +695,16 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         var surRes = await _client.SendAsync(surReq);
         // UT-17: Independent surcharge creates without rate card header constraints
         Assert.Equal(HttpStatusCode.Created, surRes.StatusCode);
+
+        var surId = (await surRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("surchargeId").GetGuid();
+        using var getSur = WithTenant(HttpMethod.Get, $"/api/surcharges/{surId}", tenantId);
+        var getRes = await _client.SendAsync(getSur);
+        Assert.Equal(HttpStatusCode.OK, getRes.StatusCode);
+        var detail = await getRes.Content.ReadFromJsonAsync<SurchargeDetailDto>(JsonOptions);
+        Assert.NotNull(detail);
+        Assert.Equal("buy", detail.Direction);
+        Assert.Null(detail.Versions[0].Rules[0].RateCardId);
+        Assert.Equal("USD", detail.Versions[0].Rules[0].CurrencyCode);
     }
 
     // =========================================================================
@@ -669,10 +716,57 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
     {
         var tenantId = await CreateTenantAsync("TN-UT18", "UT-18 Master Data Validation");
 
-        // Querying non-existent master entity
-        using var req = WithTenant(HttpMethod.Get, $"/api/economic-charge-types/{Guid.NewGuid()}/accounting-mapping", tenantId);
-        var res = await _client.SendAsync(req);
-        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+        // 1. Dropdown query for active service types returns empty list when none active
+        using var listReq = WithTenant(HttpMethod.Get, "/api/master-catalog?kind=service_type&activeOnly=true", tenantId);
+        var listRes = await _client.SendAsync(listReq);
+        Assert.Equal(HttpStatusCode.OK, listRes.StatusCode);
+        var items = await listRes.Content.ReadFromJsonAsync<List<MasterCatalogItemDto>>(JsonOptions);
+        Assert.NotNull(items);
+        Assert.Empty(items);
+
+        // 2. Setting up locations for route test
+        var loc1 = await CreateLocationAsync(tenantId, "LOC-UT18-A", "SGN", "port");
+        var loc2 = await CreateLocationAsync(tenantId, "LOC-UT18-B", "HAN", "port");
+
+        // 3. Attempting to create route with arbitrary free-text serviceTypeCode is strictly blocked (HTTP 400)
+        using var badRouteReq = WithTenant(HttpMethod.Put, "/api/routes", tenantId);
+        badRouteReq.Content = JsonContent.Create(new
+        {
+            Code = "RT-UT18-BAD",
+            Name = "Tuyến kiểm tra service rác",
+            OriginLocationId = loc1,
+            DestinationLocationId = loc2,
+            ServiceTypeCode = "ARBITRARY_FREE_TEXT",
+            IsActive = true
+        });
+        var badRouteRes = await _client.SendAsync(badRouteReq);
+        Assert.Equal(HttpStatusCode.BadRequest, badRouteRes.StatusCode);
+
+        // 4. Adding active service_type to master catalog allows route creation
+        using var catReq = WithTenant(HttpMethod.Put, "/api/master-catalog", tenantId);
+        catReq.Content = JsonContent.Create(new
+        {
+            Kind = "service_type",
+            Code = "AIR_EXP",
+            Name = "Chuyển phát nhanh đường bay",
+            IsActive = true,
+            SortOrder = 1
+        });
+        var catRes = await _client.SendAsync(catReq);
+        Assert.Equal(HttpStatusCode.OK, catRes.StatusCode);
+
+        using var goodRouteReq = WithTenant(HttpMethod.Put, "/api/routes", tenantId);
+        goodRouteReq.Content = JsonContent.Create(new
+        {
+            Code = "RT-UT18-GOOD",
+            Name = "Tuyến chuẩn danh mục",
+            OriginLocationId = loc1,
+            DestinationLocationId = loc2,
+            ServiceTypeCode = "AIR_EXP",
+            IsActive = true
+        });
+        var goodRouteRes = await _client.SendAsync(goodRouteReq);
+        Assert.Equal(HttpStatusCode.OK, goodRouteRes.StatusCode);
     }
 
     [Fact]
@@ -770,23 +864,30 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         var tenantId = await CreateTenantAsync("TN-UT22", "UT-22 Collection Date");
         var bId = await CreateBillWithContextAsync(tenantId, "BL-UT22", "road", "SGN", "HAN", 10, 100m, 1m);
 
+        // 1. Create Receivable Exposure and recognize AR with Due Date 2026-10-20
+        var expId = await CreateReceivableExposureAsync(tenantId, bId, 5000000m);
+        var arId = await RecognizeReceivableAsync(tenantId, expId, 5000000m);
+
+        // 2. Action: Customer pays on 2026-10-22 (ValueDate = 2026-10-22), recorded via Collection
         using var colReq = WithTenant(HttpMethod.Post, "/api/collections", tenantId);
         colReq.Content = JsonContent.Create(new
         {
             billId = bId,
             amount = 5000000m,
-            currencyCode = "VND"
+            currencyCode = "VND",
+            valueDate = new DateOnly(2026, 10, 22)
         });
         var colRes = await _client.SendAsync(colReq);
         Assert.Equal(HttpStatusCode.Created, colRes.StatusCode);
-
         var colId = (await colRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+
+        // 3. Expectation: Collection Date is actual payment date (2026-10-22), never defaulted to AR due date (2026-10-20)
         using var getCol = WithTenant(HttpMethod.Get, $"/api/collections/{colId}", tenantId);
         var getRes = await _client.SendAsync(getCol);
-        var doc = await getRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-
-        // UT-22 / GAP-08: Actual collection amount is recorded, never copied from due_date
-        Assert.Equal(5000000m, doc.GetProperty("amount").GetDecimal());
+        var colDoc = await getRes.Content.ReadFromJsonAsync<CollectionDto>(JsonOptions);
+        Assert.NotNull(colDoc);
+        Assert.Equal(new DateOnly(2026, 10, 22), colDoc.ValueDate);
+        Assert.NotEqual(new DateOnly(2026, 10, 20), colDoc.ValueDate);
     }
 
     [Fact]
@@ -795,18 +896,32 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         var tenantId = await CreateTenantAsync("TN-UT23", "UT-23 Debt Allocation Cap");
         var bId = await CreateBillWithContextAsync(tenantId, "BL-UT23", "road", "SGN", "HAN", 10, 100m, 1m);
 
-        // Create Payment of 500 VND
-        using var payReq = WithTenant(HttpMethod.Post, "/api/payments", tenantId);
-        payReq.Content = JsonContent.Create(new { billId = bId, amount = 500m, currencyCode = "VND" });
-        var payRes = await _client.SendAsync(payReq);
-        Assert.Equal(HttpStatusCode.Created, payRes.StatusCode);
-        var payId = (await payRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+        // 1. Initial debt: AP of 100 VND
+        var expId = await CreatePayableExposureAsync(tenantId, bId, 100m);
+        var apId = await RecognizePayableAsync(tenantId, expId, 100m);
 
-        // Attempting to allocate more than available payment amount throws Conflict or NotFound
-        using var overAlloc = WithTenant(HttpMethod.Post, $"/api/payments/{payId}/allocations", tenantId);
-        overAlloc.Content = JsonContent.Create(new { accountsPayableId = Guid.NewGuid(), amount = 600m });
+        // 2. Previously paid 40 VND -> remaining debt is 60 VND
+        var pay1Id = await CreatePaymentAsync(tenantId, bId, 40m);
+        var alloc1Id = await AllocatePaymentAsync(tenantId, pay1Id, apId, 40m);
+        await FinalizePaymentAllocationAsync(tenantId, alloc1Id);
+
+        var apBefore = await GetAccountsPayableAsync(tenantId, apId);
+        Assert.Equal(60m, apBefore.Outstanding); // Gợi ý số dư mở còn lại là 60
+
+        // 3. New payment/chi of 40 VND -> allocate 40 VND to this AP
+        var pay2Id = await CreatePaymentAsync(tenantId, bId, 40m);
+        var alloc2Id = await AllocatePaymentAsync(tenantId, pay2Id, apId, 40m);
+        await FinalizePaymentAllocationAsync(tenantId, alloc2Id);
+
+        var apAfter = await GetAccountsPayableAsync(tenantId, apId);
+        Assert.Equal(20m, apAfter.Outstanding); // Số dư nợ còn lại đúng 20 (60 - 40 = 20)
+
+        // 4. Attempting to allocate more than the remaining balance (> 20 VND) is strictly blocked (HTTP 409 Conflict)
+        var pay3Id = await CreatePaymentAsync(tenantId, bId, 50m);
+        using var overAlloc = WithTenant(HttpMethod.Post, $"/api/payments/{pay3Id}/allocations", tenantId);
+        overAlloc.Content = JsonContent.Create(new { accountsPayableId = apId, amount = 30m });
         var overRes = await _client.SendAsync(overAlloc);
-        Assert.True(overRes.StatusCode == HttpStatusCode.Conflict || overRes.StatusCode == HttpStatusCode.NotFound);
+        Assert.Equal(HttpStatusCode.Conflict, overRes.StatusCode);
     }
 
     // =========================================================================
@@ -949,23 +1064,48 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
     public async Task UT29_SoT_ExternalUpdateBillWithCost_FlagsRerate()
     {
         var tenantId = await CreateTenantAsync("TN-UT29", "UT-29 SoT Re-rate Flag");
+        var vendorId = await CreateVendorPartyAsync(tenantId, "VEND-UT29", "Nhà cung cấp UT29");
         var bId = await CreateBillWithContextAsync(tenantId, "BL-UT29", "road", "SGN", "HAN", 10, 100m, 1m);
+        var (rcId, vId) = await CreateAndPublishBuyRateCardAsync(tenantId, "RC-UT29", vendorId);
 
-        using var costReq = WithTenant(HttpMethod.Post, "/api/costs", tenantId);
-        costReq.Content = JsonContent.Create(new { billId = bId, attributionType = "direct", costTypeCode = "FREIGHT", amount = 1000m, currencyCode = "VND" });
-        var costRes = await _client.SendAsync(costReq);
-        Assert.Equal(HttpStatusCode.Created, costRes.StatusCode);
-        var costId = (await costRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+        // Compute rating and seed Expected Cost
+        using var rateReq = WithTenant(HttpMethod.Post, "/api/ratings", tenantId);
+        rateReq.Content = JsonContent.Create(new { billId = bId, rateVersionId = vId, quantity = 100m, seedExpectedCosts = true });
+        var rateRes = await _client.SendAsync(rateReq);
+        Assert.Equal(HttpStatusCode.Created, rateRes.StatusCode);
+        var ratingId = (await rateRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
 
-        // Sync new operational parameters to Bill
+        using var getCosts = WithTenant(HttpMethod.Get, $"/api/costs?billId={bId}", tenantId);
+        var costsRes = await _client.SendAsync(getCosts);
+        Assert.Equal(HttpStatusCode.OK, costsRes.StatusCode);
+        var costsDoc = await costsRes.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        var initialCost = costsDoc.EnumerateArray().First();
+        var costId = initialCost.GetProperty("id").GetGuid();
+        var initialAmount = initialCost.GetProperty("amount").GetDecimal();
+        Assert.True(initialAmount > 0);
+
+        // External sync updates Bill operational parameters (e.g. gross weight 100 -> 250)
         using var patch = WithTenant(HttpMethod.Patch, $"/api/bills/{bId}/context", tenantId);
-        patch.Content = JsonContent.Create(new { Context = new OperationalContextDocument { GrossWeightKg = 250m } });
-        await _client.SendAsync(patch);
+        patch.Content = JsonContent.Create(new
+        {
+            TransportMode = "road",
+            OriginCode = "SGN",
+            DestinationCode = "HAN",
+            RouteCode = "SGN-HAN",
+            Context = new OperationalContextDocument { PackageCount = 10, GrossWeightKg = 250m, VolumeCbm = 1m, ChargeableWeightKg = 250m }
+        });
+        var patchRes = await _client.SendAsync(patch);
+        Assert.Equal(HttpStatusCode.NoContent, patchRes.StatusCode);
 
-        // UT-29: Existing Cost amount is NOT altered silently
+        // UT-29: Existing Expected Cost amount is NOT altered silently
         using var getCost = WithTenant(HttpMethod.Get, $"/api/costs/{costId}", tenantId);
         var costDoc = await (await _client.SendAsync(getCost)).Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.Equal(1000m, costDoc.GetProperty("amount").GetDecimal());
+        Assert.Equal(initialAmount, costDoc.GetProperty("amount").GetDecimal());
+
+        // Rating record is flagged as stale (StaleAt != null) for re-rate workflow
+        using var getRating = WithTenant(HttpMethod.Get, $"/api/ratings/{ratingId}", tenantId);
+        var ratingDoc = await (await _client.SendAsync(getRating)).Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
+        Assert.True(ratingDoc.TryGetProperty("staleAt", out var staleProp) && staleProp.ValueKind != JsonValueKind.Null);
     }
 
     [Fact]
@@ -1235,4 +1375,105 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
 
         return userId;
     }
+
+    private async Task<Guid> CreateLocationAsync(Guid tenantId, string code, string name, string locationType = "port")
+    {
+        using var locReq = WithTenant(HttpMethod.Put, "/api/locations", tenantId);
+        locReq.Content = JsonContent.Create(new
+        {
+            Code = code,
+            Name = name,
+            LocationType = locationType,
+            CountryCode = "VN",
+            IsActive = true
+        });
+        var res = await _client.SendAsync(locReq);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+    }
+
+    private async Task<Guid> CreateReceivableExposureAsync(Guid tenantId, Guid billId, decimal amount)
+    {
+        using var req = WithTenant(HttpMethod.Post, "/api/receivable-exposures", tenantId);
+        req.Content = JsonContent.Create(new { amount, currencyCode = "VND", billId });
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+    }
+
+    private async Task<Guid> RecognizeReceivableAsync(Guid tenantId, Guid exposureId, decimal amount)
+    {
+        using var req = WithTenant(HttpMethod.Post, $"/api/receivable-exposures/{exposureId}/recognize", tenantId);
+        req.Content = JsonContent.Create(new { amount });
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+    }
+
+    private async Task<Guid> CreatePayableExposureAsync(Guid tenantId, Guid billId, decimal amount)
+    {
+        using var req = WithTenant(HttpMethod.Post, "/api/payable-exposures", tenantId);
+        req.Content = JsonContent.Create(new { amount, currencyCode = "VND", billId });
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+    }
+
+    private async Task<Guid> RecognizePayableAsync(Guid tenantId, Guid exposureId, decimal amount)
+    {
+        using var req = WithTenant(HttpMethod.Post, $"/api/payable-exposures/{exposureId}/recognize", tenantId);
+        req.Content = JsonContent.Create(new { amount });
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+    }
+
+    private async Task<Guid> CreatePaymentAsync(Guid tenantId, Guid billId, decimal amount)
+    {
+        using var req = WithTenant(HttpMethod.Post, "/api/payments", tenantId);
+        req.Content = JsonContent.Create(new { amount, currencyCode = "VND", billId });
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+    }
+
+    private async Task<Guid> AllocatePaymentAsync(Guid tenantId, Guid paymentId, Guid apId, decimal amount)
+    {
+        using var req = WithTenant(HttpMethod.Post, $"/api/payments/{paymentId}/allocations", tenantId);
+        req.Content = JsonContent.Create(new { accountsPayableId = apId, amount });
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
+    }
+
+    private async Task FinalizePaymentAllocationAsync(Guid tenantId, Guid allocationId)
+    {
+        using var req = WithTenant(HttpMethod.Post, $"/api/payment-allocations/{allocationId}/finalize", tenantId);
+        var res = await _client.SendAsync(req);
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+    }
+
+    private async Task<AccountsPayableDto> GetAccountsPayableAsync(Guid tenantId, Guid id)
+    {
+        using var req = WithTenant(HttpMethod.Get, $"/api/accounts-payable/{id}", tenantId);
+        var res = await _client.SendAsync(req);
+        res.EnsureSuccessStatusCode();
+        return (await res.Content.ReadFromJsonAsync<AccountsPayableDto>(JsonOptions))!;
+    }
+
+    private sealed record AccountsPayableDto(
+        Guid Id,
+        Guid PayableExposureId,
+        decimal RecognizedAmount,
+        decimal AdjustmentAmount,
+        decimal FinalizedSettledAmount,
+        decimal Outstanding,
+        string CurrencyCode,
+        DateOnly? DueDate,
+        string SettlementStatus,
+        Guid? BillId,
+        Guid? CounterpartyId,
+        DateTimeOffset RecognizedAt,
+        string? Notes,
+        string RecordStatus);
 }

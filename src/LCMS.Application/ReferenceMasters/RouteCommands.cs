@@ -79,6 +79,17 @@ public sealed class UpsertRouteCommandHandler : IRequestHandler<UpsertRouteComma
         }
 
         var code = request.Code.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(request.ServiceTypeCode))
+        {
+            var sCode = request.ServiceTypeCode.Trim();
+            var serviceExists = await _db.MasterCatalogItems.AnyAsync(
+                m => m.TenantId == _tenant.TenantId!.Value && m.Kind == MasterCatalogKinds.ServiceType && m.Code == sCode && m.IsActive,
+                cancellationToken);
+            if (!serviceExists)
+            {
+                throw new ValidationAppException("serviceTypeCode", $"Mã dịch vụ '{sCode}' không tồn tại hoặc không ở trạng thái hoạt động trong danh mục Master Dịch vụ.");
+            }
+        }
         var row = await _db.Routes.FirstOrDefaultAsync(r => r.Code == code, cancellationToken);
         if (row is null)
         {

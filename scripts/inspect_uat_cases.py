@@ -8,3 +8,4 @@ ws4 = wb['04 UAT Cases']
 for r in range(1, ws4.max_row + 1):
     vals = [str(ws4.cell(r, c).value or '').strip().replace('\n', ' ') for c in range(1, ws4.max_column + 1)]
     print(f"[{vals[0]}] {vals[1]} | ĐK: {vals[2]} | Thao tác: {vals[3]} | KĐ: {vals[4]}")
+

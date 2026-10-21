@@ -99,104 +99,106 @@ def draw_base_layout(active_menu="Bills"):
     draw.rectangle([sw, 0, WIDTH, th], fill=C_TOPBAR)
     draw.line([(sw, th), (WIDTH, th)], fill=C_TOPBAR_BORDER, width=1)
 
-    # Tenant info & breadcrumb
-    draw.text((sw + 32, 22), "DOANH NGHIỆP: CÔNG TY CP LOGISTICS SAO MAI (TENANT: SM-LOGEX)", font=get_font(14, bold=True), fill=C_PRIMARY)
-    draw.text((WIDTH - 280, 24), "Người dùng: Hoàng Quản Trị (Admin)", font=get_font(13), fill=C_TEXT_MUTED)
+    # Tenant & Breadcrumbs
+    draw.text((sw + 36, 24), "🏢 Tenant: CTCP LOGISTICS TOÀN CẦU (TN-PROD-01)   ›   Quản lý vận hành & Kiểm soát tài chính", font=get_font(14, bold=True), fill=C_TEXT_MAIN)
+    
+    # User Profile Pill
+    draw.rounded_rectangle([WIDTH - 240, 16, WIDTH - 36, 54], radius=20, fill=(241, 245, 249))
+    draw.text((WIDTH - 220, 24), "👤  Admin (Finance Lead)", font=get_font(13, bold=True), fill=C_TEXT_MAIN)
 
     return img, draw, sw, th
 
-def draw_input(draw, x, y, w, h, label, value, required=False, readonly=False, badge=None):
-    draw.text((x, y), label + (" *" if required else ""), font=F_LABEL, fill=(220, 38, 38) if required and not value else C_TEXT_MAIN)
-    if badge:
-        bw = draw.textlength(badge, font=F_BADGE) + 16
-        bx = x + w - bw
-        draw.rounded_rectangle([bx, y - 2, bx + bw, y + 18], radius=4, fill=C_INFO_BG, outline=C_INFO_BORDER)
-        draw.text((bx + 8, y + 1), badge, font=F_BADGE, fill=C_INFO_TEXT)
-
-    box_y = y + 24
-    bg = (241, 245, 249) if readonly else C_INPUT_BG
-    draw.rounded_rectangle([x, box_y, x + w, box_y + h], radius=6, fill=bg, outline=C_INPUT_BORDER, width=1)
-    if value:
-        draw.text((x + 12, box_y + (h - 18) // 2), str(value), font=F_VALUE, fill=C_TEXT_MAIN)
-    return box_y + h
-
-def draw_card(draw, x, y, w, h, title, hint=None):
+def draw_card(draw, x, y, w, h, title, subtitle=None):
     draw.rounded_rectangle([x, y, x + w, y + h], radius=8, fill=C_CARD_BG, outline=C_CARD_BORDER, width=1)
     draw.text((x + 24, y + 20), title, font=F_SEC_TITLE, fill=C_TEXT_MAIN)
-    if hint:
-        draw.text((x + 24, y + 46), hint, font=F_SEC_HINT, fill=C_TEXT_MUTED)
-    draw.line([(x, y + 72), (x + w, y + 72)], fill=C_CARD_BORDER, width=1)
+    if subtitle:
+        draw.text((x + 24, y + 46), subtitle, font=F_SEC_HINT, fill=C_TEXT_MUTED)
+    draw.line([(x + 24, y + 72), (x + w - 24, y + 72)], fill=C_CARD_BORDER, width=1)
+
+def draw_input(draw, x, y, w, h, label, value, required=False, readonly=False, badge=None):
+    # Label
+    req_mark = " *" if required else ""
+    draw.text((x, y - 22), f"{label}{req_mark}", font=F_LABEL, fill=(185, 28, 28) if required else C_TEXT_MAIN)
+    
+    # Input box
+    bg = (248, 250, 252) if readonly else C_INPUT_BG
+    draw.rounded_rectangle([x, y, x + w, y + h], radius=6, fill=bg, outline=C_INPUT_BORDER, width=1)
+    draw.text((x + 14, y + 10), str(value), font=F_VALUE, fill=C_TEXT_MUTED if readonly else C_TEXT_MAIN)
+
+    # Optional Badge
+    if badge:
+        bw = len(badge) * 8 + 14
+        bx = x + w - bw - 6
+        by = y + 7
+        draw.rounded_rectangle([bx, by, bx + bw, by + 24], radius=4, fill=(224, 231, 255))
+        draw.text((bx + 7, by + 4), badge, font=F_BADGE, fill=(67, 56, 202))
 
 # -------------------------------------------------------------
-# SCREEN 1: OPT-01 Order to Bill Prefill
+# SCREEN 1: OPT-01 Order to Bill Smart Prefill
 # -------------------------------------------------------------
 def generate_screen1():
     img, draw, sw, th = draw_base_layout(active_menu="Bill vận chuyển")
     
-    # Page Header
     px = sw + 36
     py = th + 24
-    draw.text((px, py), "Tạo mới Bill Vận chuyển (Financial Anchor)", font=F_TOP_TITLE, fill=C_TEXT_MAIN)
-    draw.text((px, py + 30), "Mã nghiệp vụ tài chính - Kế thừa trực tiếp dữ liệu từ Đơn hàng đã chốt", font=F_SEC_HINT, fill=C_TEXT_MUTED)
+    draw.text((px, py), "Tạo mới Bill Vận Chuyển từ Đơn Hàng (Order → Bill Prefill)", font=F_TOP_TITLE, fill=C_TEXT_MAIN)
+    draw.text((px, py + 30), "Tự động kế thừa thông số vận hành và hàng hóa theo quy tắc INH-01 .. INH-04", font=F_SEC_HINT, fill=C_TEXT_MUTED)
 
     # Success Notice Banner (OPT-01 in action)
     ny = py + 60
     draw.rounded_rectangle([px, ny, WIDTH - 36, ny + 56], radius=6, fill=C_SUCCESS_BG, outline=C_SUCCESS_BORDER, width=1)
-    draw.text((px + 20, ny + 12), "✓  ĐỒNG BỘ THÀNH CÔNG TỪ ĐƠN HÀNG ORD-2026-001 (OPT-01)", font=F_ALERT_TITLE, fill=C_SUCCESS_TEXT)
-    draw.text((px + 20, ny + 32), "Đã tự động kế thừa 16 trường: Khách hàng, Shipper, Consignee, Phương thức Air, Điểm đi VNSGN, Điểm đến USLAX, Số kiện 15, Gross Wt 150.5 kg, CBM 1.25, Chargeable Wt 208.33 kg.", font=F_ALERT, fill=C_SUCCESS_TEXT)
+    draw.text((px + 20, ny + 12), "✓  TỰ ĐỘNG ĐIỀN THÔNG TIN TỪ ĐƠN HÀNG: ORD-2026-HCM-001 (OPT-01)", font=F_ALERT_TITLE, fill=C_SUCCESS_TEXT)
+    draw.text((px + 20, ny + 32), "Đã kế thừa 12 thông số phù hợp: Khách hàng, Tuyến SGN-HAN, Hàng bách hóa, Trọng lượng 1,250 kg, Thể tích 6.8 CBM. Không sao chép ngày hết hạn báo giá.", font=F_ALERT, fill=C_SUCCESS_TEXT)
 
-    # Main Card: General Info
+    # Card 1: Bill Basic & Customer Info
     cy = ny + 74
     cw = WIDTH - sw - 72
-    draw_card(draw, px, cy, cw, 270, "1. Thông tin chung & Đối tác", "Dữ liệu kế thừa tự động từ Đơn hàng liên kết")
+    draw_card(draw, px, cy, cw, 230, "1. Thông tin Chung & Khách hàng", "Dữ liệu kế thừa trực tiếp từ hợp đồng và đơn hàng gốc")
 
-    # Fields Row 1
+    # Inputs Row 1
     r1_y = cy + 90
-    draw_input(draw, px + 24, r1_y, 280, 38, "Số Bill", "BL-2026-ORD-001", required=True)
-    draw_input(draw, px + 324, r1_y, 220, 38, "Loại Bill", "House Bill (HBL)", required=True)
-    draw_input(draw, px + 564, r1_y, 240, 38, "Phương thức vận chuyển", "Hàng không (Air)", required=True, badge="Kế thừa: Air")
-    draw_input(draw, px + 824, r1_y, cw - 848, 38, "Khách hàng (Customer Party)", "CUST-009 — Công ty May Mặc Tân Bình", required=True, badge="Kế thừa: CUST-009")
+    draw_input(draw, px + 24, r1_y, 280, 38, "Số Bill", "BL-2026-AUTO-001", required=True)
+    draw_input(draw, px + 324, r1_y, 380, 38, "Đơn hàng liên kết (Order)", "ORD-2026-HCM-001 (Đã chọn)", required=True, badge="Kế thừa SoT")
+    draw_input(draw, px + 724, r1_y, 400, 38, "Khách hàng (Customer)", "CUST-001 — Công ty TNHH Dệt May XK", required=True, badge="Tự động điền")
+    draw_input(draw, px + 1144, r1_y, cw - 1168, 38, "Phương thức vận chuyển", "Đường bộ (Road)", required=True, badge="Kế thừa")
 
-    # Fields Row 2
+    # Inputs Row 2
     r2_y = r1_y + 80
-    draw_input(draw, px + 24, r2_y, 360, 38, "Người gửi hàng (Shipper)", "CUST-009 — Công ty May Mặc Tân Bình", badge="Tự điền")
-    draw_input(draw, px + 404, r2_y, 360, 38, "Người nhận hàng (Consignee)", "GLOBAL-LAX-DIST — Global Los Angeles Dist.", badge="Tự điền")
-    draw_input(draw, px + 784, r2_y, cw - 808, 38, "Đơn hàng liên kết", "ORD-2026-001 (Đã chọn 1 đơn hàng)", badge="Đã đồng bộ")
+    draw_input(draw, px + 24, r2_y, 280, 38, "Tuyến vận chuyển (Route)", "SGN-HAN (TP.HCM → Hà Nội)", required=True, badge="Đồng bộ")
+    draw_input(draw, px + 324, r2_y, 380, 38, "Cảng/Điểm đi (Origin)", "VNSGN — Kho Tân Bình, TP.HCM", badge="Gợi ý")
+    draw_input(draw, px + 724, r2_y, 400, 38, "Cảng/Điểm đến (Destination)", "VNHAN — ICD Mỹ Đình, Hà Nội", badge="Gợi ý")
+    draw_input(draw, px + 1144, r2_y, cw - 1168, 38, "Mã tham chiếu khách", "PO-2026-TEXTILE-99", badge="Kế thừa")
 
-    # Card 2: Cargo & Route Info
-    c2y = cy + 290
-    draw_card(draw, px, c2y, cw, 250, "2. Hành trình & Thông số Hàng hóa (Operational Measurements)", "Tự động trích xuất từ bảng operational_measurements và ContextJson")
+    # Card 2: Cargo Measurements (OPT-01 / DO-01)
+    c2y = cy + 250
+    draw_card(draw, px, c2y, cw, 230, "2. Thông số Hàng hóa & Đo lường (Cargo & Measurement)", "Tự động tính Chargeable Weight theo công thức IATA / Đường bộ")
 
-    # Route Fields
     r3_y = c2y + 90
-    draw_input(draw, px + 24, r3_y, 260, 38, "Điểm đi (Origin)", "VNSGN — Cảng Tân Sơn Nhất", required=True, badge="Kế thừa")
-    draw_input(draw, px + 304, r3_y, 260, 38, "Điểm đến (Destination)", "USLAX — Cảng Los Angeles", required=True, badge="Kế thừa")
-    draw_input(draw, px + 584, r3_y, 240, 38, "Loại dịch vụ", "DOOR_DOOR — Giao tận nơi", badge="Kế thừa")
-    draw_input(draw, px + 844, r3_y, cw - 868, 38, "Loại hàng hóa", "ELECTRONICS — Hàng điện tử & may mặc", badge="Kế thừa")
+    draw_input(draw, px + 24, r3_y, 280, 38, "Loại hàng hóa (Commodity)", "Hàng may mặc xuất khẩu", badge="Kế thừa")
+    draw_input(draw, px + 324, r3_y, 220, 38, "Số kiện (Packages)", "50 kiện", badge="Kế thừa")
+    draw_input(draw, px + 564, r3_y, 240, 38, "Gross Weight (kg)", "1,250.00 kg", badge="Kế thừa")
+    draw_input(draw, px + 824, r3_y, 240, 38, "Thể tích (Volume CBM)", "6.800 m³", badge="Kế thừa")
+    draw_input(draw, px + 1084, r3_y, cw - 1108, 38, "TÍNH CƯỚC (CW KG)", "1,360.00 kg", readonly=True, badge="Tự động tính: MAX")
 
-    # Cargo Measurements Row
     r4_y = r3_y + 80
-    draw_input(draw, px + 24, r4_y, 200, 38, "Số kiện (Packages)", "15 kiện", readonly=True, badge="Kế thừa: 15")
-    draw_input(draw, px + 244, r4_y, 240, 38, "Trọng lượng thực (Gross Wt)", "150.50 kg", readonly=True, badge="Kế thừa: 150.50 kg")
-    draw_input(draw, px + 504, r4_y, 220, 38, "Thể tích (Volume CBM)", "1.250 m³", readonly=True, badge="Kế thừa: 1.250 m³")
-    draw_input(draw, px + 744, r4_y, 260, 38, "Trọng lượng tính cước (CW)", "208.33 kg", readonly=True, badge="Quy đổi IATA (1:6000)")
-    draw_input(draw, px + 1024, r4_y, cw - 1048, 38, "Tiền tệ tính giá", "VND — Việt Nam Đồng")
+    draw_input(draw, px + 24, r4_y, 280, 38, "Ngày dự kiến đi (ETD)", "2026-10-25 08:00", badge="Kế thừa")
+    draw_input(draw, px + 324, r4_y, 280, 38, "Ngày dự kiến đến (ETA)", "2026-10-27 18:00", badge="Kế thừa")
+    draw_input(draw, px + 624, r4_y, cw - 648, 38, "Ghi chú điều hành", "Hàng giao trước 17h, yêu cầu xe tải sàn nâng.")
 
     # Bottom Actions
     by = HEIGHT - 80
     draw.rectangle([sw, by, WIDTH, HEIGHT], fill=C_TOPBAR)
     draw.line([(sw, by), (WIDTH, by)], fill=C_TOPBAR_BORDER, width=1)
     
-    # Buttons
-    btn_w = 200
+    btn_w = 180
     btn_x = WIDTH - btn_w - 36
     draw.rounded_rectangle([btn_x, by + 18, btn_x + btn_w, by + 58], radius=6, fill=C_PRIMARY)
-    draw.text((btn_x + 36, by + 28), "✓  LƯU BILL (F2)", font=F_BTN, fill=(255, 255, 255))
+    draw.text((btn_x + 38, by + 28), "✓  LƯU BILL", font=F_BTN, fill=(255, 255, 255))
 
     btn2_w = 240
     btn2_x = btn_x - btn2_w - 16
-    draw.rounded_rectangle([btn2_x, by + 18, btn2_x + btn2_w, by + 58], radius=6, fill=(241, 245, 249), outline=C_INPUT_BORDER)
-    draw.text((btn2_x + 20, by + 28), "🔄 Đồng bộ lại từ Đơn hàng", font=F_BTN, fill=C_TEXT_MAIN)
+    draw.rounded_rectangle([btn2_x, by + 18, btn2_x + btn2_w, by + 58], radius=6, fill=C_SUCCESS_BG, outline=C_SUCCESS_BORDER)
+    draw.text((btn2_x + 20, by + 28), "⚡ Đã điền trước 12/16 trường", font=F_BTN, fill=C_SUCCESS_TEXT)
 
     out_path = os.path.join(OUTPUT_DIR, "UI-FLOW-01-Order-to-Bill-Prefill.png")
     img.save(out_path, quality=95)
@@ -291,7 +293,7 @@ def generate_screen2():
     print("Generated Screen 2:", out_path)
 
 # -------------------------------------------------------------
-# SCREEN 3: OPT-03 Leg Daisy Chaining
+# SCREEN 3: OPT-03 Leg Daisy Chaining (UT-11: Intermediate destination open)
 # -------------------------------------------------------------
 def generate_screen3():
     img, draw, sw, th = draw_base_layout(active_menu="Chặng vận chuyển")
@@ -299,13 +301,13 @@ def generate_screen3():
     px = sw + 36
     py = th + 24
     draw.text((px, py), "Tạo Chặng Vận Chuyển Kế Tiếp (Transport Leg Daisy-Chaining)", font=F_TOP_TITLE, fill=C_TEXT_MAIN)
-    draw.text((px, py + 30), "Tự động kế thừa liên hoàn: Điểm đến của Chặng 1 trở thành Điểm đi của Chặng 2", font=F_SEC_HINT, fill=C_TEXT_MUTED)
+    draw.text((px, py + 30), "Tự động kế thừa liên hoàn: Điểm đến của Chặng 1 trở thành Điểm đi của Chặng 2 (Cảng đến để trống chọn tiếp)", font=F_SEC_HINT, fill=C_TEXT_MUTED)
 
     # Info Notice Banner (OPT-03 in action)
     ny = py + 60
     draw.rounded_rectangle([px, ny, WIDTH - 36, ny + 56], radius=6, fill=C_INFO_BG, outline=C_INFO_BORDER, width=1)
-    draw.text((px + 20, ny + 12), "🔗  KẾ THỪA CHẶNG LIÊN HOÀN (DAISY-CHAINING PHÁT HIỆN CHẶNG TRƯỚC - OPT-03)", font=F_ALERT_TITLE, fill=C_INFO_TEXT)
-    draw.text((px + 20, ny + 32), "Chặng 1 kết thúc tại NRT (Tokyo). Hệ thống tự động gán Thứ tự chặng = 2, Cảng đi gợi ý = NRT, Cảng đến gợi ý = JFK (Đích cuối của Lô hàng).", font=F_ALERT, fill=C_INFO_TEXT)
+    draw.text((px + 20, ny + 12), "🔗  KẾ THỪA CHẶNG LIÊN HOÀN (DAISY-CHAINING PHÁT HIỆN CHẶNG TRƯỚC - OPT-03 / UT-11)", font=F_ALERT_TITLE, fill=C_INFO_TEXT)
+    draw.text((px + 20, ny + 32), "Chặng 1 kết thúc tại NRT (Tokyo). Hệ thống tự động gán Thứ tự chặng = 2, Cảng đi gợi ý = NRT, Cảng đến để trống chờ user chọn (UT-11: Không gán ép đích cuối).", font=F_ALERT, fill=C_INFO_TEXT)
 
     # Card 1: Existing Leg History
     cy = ny + 74
@@ -331,7 +333,7 @@ def generate_screen3():
 
     # Card 2: Create Next Leg Form
     c2y = cy + 190
-    draw_card(draw, px, c2y, cw, 280, "2. Khai báo Chặng Kế Tiếp (Chặng 2) — Daisy-Chaining Form", "Dữ liệu cảng đi và thứ tự đã tự động điền sẵn theo chuỗi logic")
+    draw_card(draw, px, c2y, cw, 280, "2. Khai báo Chặng Kế Tiếp (Chặng 2) — Daisy-Chaining Form", "Dữ liệu cảng đi và thứ tự đã tự động điền sẵn; cảng đến để mở cho chặng trung gian")
 
     r2_y = c2y + 90
     draw_input(draw, px + 24, r2_y, 220, 38, "Thứ tự chặng (Sequence No)", "2", readonly=True, badge="Tự tăng: 2")
@@ -341,7 +343,7 @@ def generate_screen3():
 
     r3_y = r2_y + 80
     draw_input(draw, px + 24, r3_y, 360, 38, "CẢNG ĐI GỢI Ý (DAISY-CHAINING)", "NRT — Narita Tokyo, JP", readonly=True, badge="= Cảng đến Chặng 1")
-    draw_input(draw, px + 404, r3_y, 360, 38, "CẢNG ĐẾN GỢI Ý (ĐÍCH LÔ HÀNG)", "JFK — John F. Kennedy NY, US", required=True, badge="= Đích cuối Shipment")
+    draw_input(draw, px + 404, r3_y, 360, 38, "CẢNG ĐẾN CHẶNG 2 (ĐÍCH KẾ TIẾP)", "[Chờ chọn điểm trung chuyển / đích chặng 2]", required=True, badge="UT-11: Để trống chọn tiếp")
     draw_input(draw, px + 784, r3_y, cw - 808, 38, "Nhà cung cấp vận chuyển (Carrier)", "JAL — Japan Airlines", badge="Hãng chặng 2")
 
     # Bottom Actions
@@ -359,7 +361,7 @@ def generate_screen3():
     print("Generated Screen 3:", out_path)
 
 # -------------------------------------------------------------
-# SCREEN 4: OPT-04 Surcharge Rate Card Sync & Charge Mapping
+# SCREEN 4: OPT-04 Surcharge Rate Card Sync & Charge Mapping (UT-16 / GAP-04 / GAP-10)
 # -------------------------------------------------------------
 def generate_screen4():
     img, draw, sw, th = draw_base_layout(active_menu="Phụ phí (Surcharges)")
@@ -367,13 +369,13 @@ def generate_screen4():
     px = sw + 36
     py = th + 24
     draw.text((px, py), "Khai báo Phụ phí Giá (Surcharge Rule Declaration)", font=F_TOP_TITLE, fill=C_TEXT_MAIN)
-    draw.text((px, py + 30), "Tự động đồng bộ Chiều BUY/SELL, Tiền tệ từ Bảng giá & Gợi ý tài khoản kế toán từ Khoản mục kinh tế", font=F_SEC_HINT, fill=C_TEXT_MUTED)
+    draw.text((px, py + 30), "Tự động đồng bộ Chiều BUY/SELL, Tiền tệ từ Bảng giá & Chuẩn hóa Khoản mục kinh tế từ Master Data", font=F_SEC_HINT, fill=C_TEXT_MUTED)
 
     # Info Notice Banner (OPT-04 in action)
     ny = py + 60
     draw.rounded_rectangle([px, ny, WIDTH - 36, ny + 56], radius=6, fill=C_SUCCESS_BG, outline=C_SUCCESS_BORDER, width=1)
-    draw.text((px + 20, ny + 12), "✓  TỰ ĐỘNG ĐỒNG BỘ TỪ BẢNG GIÁ MUA 'RC-BUY-VND' (OPT-04)", font=F_ALERT_TITLE, fill=C_SUCCESS_TEXT)
-    draw.text((px + 20, ny + 32), "Đã khóa chiều BUY (Vendor Rate Card), đồng bộ Tiền tệ VND, Phương thức Air. Ánh xạ Khoản mục kinh tế đề xuất: Chi phí = 641_FUEL | Doanh thu = 511_FUEL.", font=F_ALERT, fill=C_SUCCESS_TEXT)
+    draw.text((px + 20, ny + 12), "✓  TỰ ĐỘNG ĐỒNG BỘ TỪ BẢNG GIÁ MUA 'RC-BUY-VND' (OPT-04 / UT-16)", font=F_ALERT_TITLE, fill=C_SUCCESS_TEXT)
+    draw.text((px + 20, ny + 32), "Đã khóa chiều BUY (Vendor Rate Card), đồng bộ Tiền tệ VND, Phương thức Air. Khoản mục: Phụ phí xăng dầu (FUEL) - Đồng bộ từ danh mục Master. Phạm vi tuyến: [Đa tuyến / Chọn phạm vi áp dụng].", font=F_ALERT, fill=C_SUCCESS_TEXT)
 
     # Card 1: Surcharge Header & Synchronization
     cy = ny + 74
@@ -393,15 +395,14 @@ def generate_screen4():
     draw_input(draw, px + 784, r2_y, 260, 38, "Hiệu lực đến", "2026-12-31", badge="Kế thừa từ Rate Card")
     draw_input(draw, px + 1064, r2_y, cw - 1088, 38, "Trạng thái", "Bản nháp (Draft)", badge="Chưa phát hành")
 
-    # Card 2: Calculation & Economic Accounting Mapping
+    # Card 2: Calculation & Economic Charge Master Linkage
     c2y = cy + 270
-    draw_card(draw, px, c2y, cw, 230, "2. Cách tính & Cầu nối Khoản mục kinh tế (Accounting Mapping)", "Hệ thống tự động suy diễn mã tài khoản chi phí/doanh thu mà không can thiệp thủ công")
+    draw_card(draw, px, c2y, cw, 230, "2. Cách tính & Chuẩn hóa Khoản mục kinh tế (Master Data Linkage)", "Liên kết trực tiếp tới Khoản mục kinh tế chuẩn, phạm vi áp dụng đa tuyến")
 
     r3_y = c2y + 90
-    draw_input(draw, px + 24, r3_y, 380, 38, "KHOẢN MỤC KINH TẾ (ECONOMIC CHARGE)", "FUEL_SUR — Phụ phí nhiên liệu xăng dầu", required=True, badge="Master Data")
-    draw_input(draw, px + 424, r3_y, 260, 38, "MÃ TÀI KHOẢN CHI PHÍ (BUY)", "641_FUEL (Chi phí nhiên liệu)", readonly=True, badge="Tự suy diễn")
-    draw_input(draw, px + 704, r3_y, 260, 38, "MÃ TÀI KHOẢN DOANH THU (SELL)", "511_FUEL (Doanh thu nhiên liệu)", readonly=True, badge="Tự suy diễn")
-    draw_input(draw, px + 984, r3_y, cw - 1008, 38, "Thuế suất VAT (%)", "10%", badge="10% VAT")
+    draw_input(draw, px + 24, r3_y, 440, 38, "KHOẢN MỤC KINH TẾ (ECONOMIC CHARGE)", "Phụ phí xăng dầu (FUEL) — Đồng bộ từ danh mục Master", required=True, badge="Master Data")
+    draw_input(draw, px + 484, r3_y, 420, 38, "PHẠM VI TUYẾN ÁP DỤNG (SCOPE)", "[Áp dụng toàn mạng lưới / Đa tuyến]", readonly=True, badge="UT-16: Đa tuyến")
+    draw_input(draw, px + 924, r3_y, cw - 948, 38, "Thuế suất VAT (%)", "10%", badge="10% VAT")
 
     r4_y = r3_y + 80
     draw_input(draw, px + 24, r4_y, 260, 38, "Cách tính (Calc Mode)", "Cố định (fixed_rate)", required=True)
@@ -428,4 +429,3 @@ if __name__ == "__main__":
     generate_screen3()
     generate_screen4()
     print("All 4 screens generated successfully!")
-

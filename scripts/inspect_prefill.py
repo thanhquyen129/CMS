@@ -10,3 +10,4 @@ print('\nNotice Message checks:')
 for l in text.splitlines():
     if 'notice' in l.lower() or 'missing' in l.lower() or 'thiếu' in l.lower():
         print(l.strip())
+

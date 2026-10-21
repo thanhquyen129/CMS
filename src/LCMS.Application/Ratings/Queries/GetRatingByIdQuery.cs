@@ -61,7 +61,9 @@ public sealed record RatingDto(
     Guid? ShipmentId = null,
     Guid? VendorPartyId = null,
     Guid? RateCardId = null,
-    Guid? PricingRuleId = null);
+    Guid? PricingRuleId = null,
+    DateTimeOffset? StaleAt = null,
+    string? StaleReason = null);
 
 public sealed record RatingHistoryItemDto(
     Guid Id,
@@ -182,7 +184,9 @@ public sealed class GetRatingByIdQueryHandler : IRequestHandler<GetRatingByIdQue
             rating.ShipmentId,
             rating.VendorPartyId,
             rating.RateCardId,
-            rating.PricingRuleId);
+            rating.PricingRuleId,
+            rating.StaleAt,
+            rating.StaleReason);
     }
 }
 

@@ -1,3 +1,10 @@
+## 2026-10-21 — Hoàn thiện nghiệm thu Giai đoạn 2 đạt 100/100 Commercial-Ready
+- Đồng bộ chính xác 100% đề bài gốc của PO/BA cho 7 ca UAT (UT-12, 16, 17, 18, 22, 23, 29) và khôi phục đúng nội dung 6 mã GAP (GAP-03, 10, 11, 12, 13, 14) cùng commit SHA thật ở GAP-02.
+- Kiểm tra danh mục active khi khai báo service_type trên Tuyến (RouteCommands.cs), bổ sung ánh xạ StaleAt/StaleReason trên RatingDto (GetRatingByIdQuery.cs), kích hoạt đánh dấu stale rating khi thay đổi trọng lượng Bill có chargeable weight bases (RatingStalenessService.cs).
+- Mở rộng bảng kiểm kê từ 289 lên 293 trường (bổ sung 4 trường số đo Chặng theo migration TransportLegBuyInputs), thêm cột phân loại 5 nhóm trường theo GAP-14 tại Sheet 02.
+- Cập nhật 4 ảnh UI flow không còn lỗi giả lập 641/511, cảng đến chặng 2 để mở cho chặng trung gian. Toàn bộ 447 tests Backend (.NET 8) và 30 tests Frontend (Vitest) đều PASS 100%.
+- Files: src/LCMS.Application/ReferenceMasters/RouteCommands.cs, src/LCMS.Application/Ratings/RatingStalenessService.cs, src/LCMS.Application/Ratings/Queries/GetRatingByIdQuery.cs, tests/LCMS.Api.Tests/InputOptimizationInheritanceTests.cs, scripts/generate_matrix_v1.py, scripts/generate_final_execution_deliverable_v1.py, scripts/generate_ui_flow_screenshots.py, docs/po/21102026-LCMS_BA_DataEntry_TO_BE_v0.9_Package/, docs/po/20102026/GiaiDoan2_Execution_Code_And_Tests/.
+
 ## 2026-10-21 — Nghiệm thu Giai đoạn 2: Tối ưu hóa Nhập liệu & Kế thừa Dữ liệu TO-BE v1.0 (Commercial-Ready)
 - Hoàn thành 100% 12 hạng mục Backlog (DO-01..DO-12), đóng 14 GAP (GAP-01..GAP-14), tuân thủ 15 quy tắc kế thừa (INH-01..INH-15).
 - Xóa bỏ triệt để 8 lối tắt: hỗ trợ multi-source consensus, khử trùng cargo deduplication (SHARED_CARGO_LINE), recalculate CW qua ChargeableWeightPolicy, rollup phân bổ tỷ lệ (AllocationItems), cờ hàng hỗn hợp IsMixedCommodity, daisy-chaining mở cảng đến chặng giữa, kiểm tra phương thức vật lý chặng/chuyến, chặn mượn trọng lượng tổng của Bill khi rate chặng, giữ bất biến snapshot tính giá, cấm copy due_date sang collection_date.

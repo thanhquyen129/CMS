@@ -22,9 +22,9 @@ describe("Input Optimization TO-BE (OPT-01 -> OPT-06)", () => {
         chargeableWeightKg: 208.33,
       };
 
-      // Simulated client-side prefill processor
+      // Simulated client-side prefill processor: billNo is NEVER copied from orderNo (FV-01 / H-002 / H-003)
       const prefill = {
-        billNo: singleOrder.orderNo,
+        sourceOrderNumbers: [singleOrder.orderNo],
         customerPartyId: singleOrder.customerPartyId,
         shipperPartyId: singleOrder.shipperPartyId,
         consigneePartyId: singleOrder.consigneePartyId,
@@ -42,7 +42,8 @@ describe("Input Optimization TO-BE (OPT-01 -> OPT-06)", () => {
         conflicts: [],
       };
 
-      expect(prefill.billNo).toBe("ORD-2026-001");
+      expect(prefill.sourceOrderNumbers).toContain("ORD-2026-001");
+      expect((prefill as Record<string, unknown>).billNo).toBeUndefined();
       expect(prefill.customerPartyId).toBe("cust-1");
       expect(prefill.transportMode).toBe("air");
       expect(prefill.originCode).toBe("VNSGN");

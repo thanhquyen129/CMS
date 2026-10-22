@@ -172,6 +172,8 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         Assert.Equal(208.75m, prefill.ChargeableWeightKg);
         Assert.Empty(prefill.Conflicts);
         Assert.Contains("ORD-UT01-001", prefill.NoticeMessage);
+        // FV-01: billNo is NEVER returned or copied from OrderNo (H-002, H-003, IDX-001)
+        Assert.Contains("ORD-UT01-001", prefill.SourceOrderNumbers);
     }
 
     [Fact]

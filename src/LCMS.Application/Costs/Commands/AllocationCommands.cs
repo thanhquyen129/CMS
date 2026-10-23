@@ -470,6 +470,12 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             throw new ConflictAppException("Không thể chốt phân bổ: chi phí chung cần ít nhất 2 Bill.");
         }
 
+        if (string.Equals(allocation.ConditionCode, "INSUFFICIENT_CONTEXT", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(allocation.ApplicabilityMode, "insufficient_context", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictAppException("Chưa đủ dữ liệu đối chiếu: Thiếu thông tin phần hàng (cargo portion lineage) để đối chiếu đa chặng. Cần bổ sung trước khi chốt phân bổ.");
+        }
+
         var isMeasuredBasis = CostAllocationBases.FromMeasurement.Contains(allocation.AllocationBasis);
 
         if (isMeasuredBasis && details.Any(d => d.BasisValue <= 0))

@@ -8,6 +8,9 @@ import { BillDocumentsApArPanel } from "@/components/BillDocumentsApArPanel";
 import { BillRatingPanel } from "@/components/BillRatingPanel";
 import { BillCashFlowMap } from "@/components/BillCashFlowMap";
 import { ChargeProfitTable } from "@/components/ChargeProfitTable";
+import { BillFinancialViewPanel } from "@/components/BillFinancialViewPanel";
+import { BillRelationsPanel } from "@/components/BillRelationsPanel";
+import { CostAllocationReconciliationPanel } from "@/components/CostAllocationReconciliationPanel";
 import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { OperationalReferenceEditor } from "@/components/OperationalReferenceEditor";
@@ -46,7 +49,9 @@ type BillTab =
   | "documents"
   | "rating"
   | "history"
-  | "cashflow";
+  | "cashflow"
+  | "relations"
+  | "allocations";
 
 function parseTab(raw: string | undefined): BillTab {
   switch (raw) {
@@ -56,6 +61,8 @@ function parseTab(raw: string | undefined): BillTab {
     case "rating":
     case "history":
     case "cashflow":
+    case "relations":
+    case "allocations":
       return raw;
     default:
       return "overview";
@@ -457,6 +464,22 @@ export default async function BillDetailPage({
           >
             Dòng tiền
           </Link>
+          <Link
+            className={tab === "relations" ? "active" : undefined}
+            href={tabHref("relations")}
+            role="tab"
+            aria-selected={tab === "relations"}
+          >
+            Liên kết N:N
+          </Link>
+          <Link
+            className={tab === "allocations" ? "active" : undefined}
+            href={tabHref("allocations")}
+            role="tab"
+            aria-selected={tab === "allocations"}
+          >
+            Đối chiếu & Phân bổ
+          </Link>
         </div>
 
         {tab === "overview" ? (
@@ -656,6 +679,58 @@ export default async function BillDetailPage({
                   </table>
                 </div>
                 {chargeRes.ok ? <ChargeProfitTable data={chargeRes.data} /> : null}
+                <div className="mt-8">
+                  <h3 className="section-title text-base font-semibold mb-3">Hồ sơ chi phí 3 nhóm (Trực tiếp / Phân bổ / Chờ phân bổ)</h3>
+                  <BillFinancialViewPanel
+                    billId={bill.id}
+                    billNo={bill.billNo}
+                    directCosts={(costsRes.ok ? costsRes.data : [])
+                      .filter((c) => c.attributionType === "DIRECT" || (!c.attributionType && !c.sourceCostId))
+                      .map((c) => ({
+                        id: c.id,
+                        costNo: c.costTypeCode || c.id.slice(0, 8),
+                        category: "DIRECT" as const,
+                        name: c.costTypeCode || "Chi phí trực tiếp",
+                        amount: c.amount,
+                        currency: c.currencyCode,
+                        maturity: (c.financialMaturity?.toUpperCase() || "CONFIRMED") as "EXPECTED" | "CONFIRMED" | "ACTUAL",
+                      }))}
+                    allocatedCosts={(costsRes.ok ? costsRes.data : [])
+                      .filter((c) => c.attributionType === "ALLOCATED" || Boolean(c.sourceCostId))
+                      .map((c) => ({
+                        id: c.id,
+                        costNo: c.costTypeCode || c.id.slice(0, 8),
+                        category: "ALLOCATED" as const,
+                        name: c.costTypeCode || "Chi phí phân bổ",
+                        amount: c.amount,
+                        currency: c.currencyCode,
+                        maturity: (c.financialMaturity?.toUpperCase() || "CONFIRMED") as "EXPECTED" | "CONFIRMED" | "ACTUAL",
+                        sourceType: "LEG" as const,
+                        sourceRef: c.legNo || c.transportLegId || undefined,
+                      }))}
+                    pendingSharedCosts={(costsRes.ok ? costsRes.data : [])
+                      .filter((c) => c.attributionType === "SHARED")
+                      .map((c) => ({
+                        id: c.id,
+                        costNo: c.costTypeCode || c.id.slice(0, 8),
+                        category: "PENDING_SHARED" as const,
+                        name: c.costTypeCode || "Chi phí dùng chung chờ phân bổ",
+                        amount: c.amount,
+                        currency: c.currencyCode,
+                        maturity: (c.financialMaturity?.toUpperCase() || "EXPECTED") as "EXPECTED" | "CONFIRMED" | "ACTUAL",
+                        sourceType: "LEG" as const,
+                        sourceRef: c.legNo || c.transportLegId || undefined,
+                      }))}
+                    revenues={(revenuesRes.ok ? revenuesRes.data : []).map((r) => ({
+                      id: r.id,
+                      revenueNo: r.revenueTypeCode || r.id.slice(0, 8),
+                      name: r.revenueTypeCode || "Doanh thu",
+                      amount: r.amount,
+                      currency: r.currencyCode,
+                      maturity: (r.financialMaturity?.toUpperCase() || "CONFIRMED") as "EXPECTED" | "CONFIRMED" | "ACTUAL",
+                    }))}
+                  />
+                </div>
               </>
             )}
           </>
@@ -713,6 +788,58 @@ export default async function BillDetailPage({
                 revenues={revenuesRes.ok ? revenuesRes.data : null}
               />
             )}
+          </section>
+        ) : null}
+
+        {tab === "relations" ? (
+          <section aria-label="Liên kết nghiệp vụ N:N">
+            <BillRelationsPanel
+              billId={bill.id}
+              billNo={bill.billNo}
+              billCustomerName={bill.customerName || "Khách hàng mặc định"}
+              orders={[]}
+              shipments={[]}
+            />
+          </section>
+        ) : null}
+
+        {tab === "allocations" ? (
+          <section aria-label="Đối chiếu và phân bổ chi phí">
+            <CostAllocationReconciliationPanel
+              sourceCost={{
+                id: "cost-sample-01",
+                costNo: "C-LEG-01",
+                name: "Cước thuê xe chặng",
+                amount: 1500000,
+                currency: bill.summaryCurrencyCode || "VND",
+                objectType: "LEG",
+                objectNo: "LEG-2026-001",
+                sourceGrossWeight: 100,
+                sourceCbm: 2.0,
+              }}
+              eligibleBills={[
+                {
+                  id: bill.id,
+                  billNo: bill.billNo,
+                  customerName: bill.customerName || "Khách hàng Bill",
+                  grossWeightKg: 50,
+                  volumeCbm: 1.0,
+                  chargeableWeightKg: 50,
+                  cargoPortionKg: 50,
+                  hasLineage: true,
+                },
+                {
+                  id: "bill-other-02",
+                  billNo: "BILL-2026-OTHER",
+                  customerName: "Khách hàng Beta",
+                  grossWeightKg: 50,
+                  volumeCbm: 1.0,
+                  chargeableWeightKg: 50,
+                  cargoPortionKg: 50,
+                  hasLineage: true,
+                },
+              ]}
+            />
           </section>
         ) : null}
       </section>

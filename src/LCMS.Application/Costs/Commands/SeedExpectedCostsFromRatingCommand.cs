@@ -81,7 +81,35 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
         var linkedBills = rating.TransportLegId is Guid legId
             ? await _db.BillLegLinks.AsNoTracking().CountAsync(l => l.TransportLegId == legId, cancellationToken)
             : 0;
-        var shared = RatingContextTypes.IsLeg(rating.ContextType) && linkedBills >= 2;
+
+        string? costScope = null;
+        if (!string.IsNullOrWhiteSpace(rating.ContextJson))
+        {
+            try
+            {
+                using var jsonDoc = System.Text.Json.JsonDocument.Parse(rating.ContextJson);
+                if (jsonDoc.RootElement.TryGetProperty("costScope", out var csProp))
+                {
+                    costScope = csProp.GetString();
+                }
+            }
+            catch { }
+        }
+
+        var isLeg = RatingContextTypes.IsLeg(rating.ContextType);
+        bool shared;
+        if (string.Equals(costScope, "DIRECT_BILL_LEG", StringComparison.OrdinalIgnoreCase))
+        {
+            shared = false;
+        }
+        else if (string.Equals(costScope, "SHARED_LEG", StringComparison.OrdinalIgnoreCase))
+        {
+            shared = true;
+        }
+        else
+        {
+            shared = isLeg && linkedBills >= 2;
+        }
         var organizationId = await _db.Bills.AsNoTracking()
             .Where(b => b.Id == rating.BillId)
             .Select(b => b.OrganizationId)
@@ -93,6 +121,23 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             {
                 costIds.Add(already.Id);
                 continue;
+            }
+
+            if (shared && rating.TransportLegId is Guid sharedLegId)
+            {
+                var existingLegCost = await _db.Costs
+                    .Where(c => c.TransportLegId == sharedLegId
+                                && c.AttributionType == CostAttributionTypes.Shared
+                                && c.OriginLevel == CostOriginLevels.Leg
+                                && c.PricingRuleId == detail.PricingRuleId
+                                && c.DeletedAt == null)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (existingLegCost is not null)
+                {
+                    costIds.Add(existingLegCost.Id);
+                    continue;
+                }
             }
 
             // UT-26 / DO-10 / GAP-04: Kiểm tra mapping khoản mục kinh tế trên master trước khi seed

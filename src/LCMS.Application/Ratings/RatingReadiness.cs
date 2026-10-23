@@ -390,7 +390,7 @@ public sealed class RatingContextResolver
                     uom == "W/M" ? "Khối tính cước (W/M)" : "Trọng lượng tính cước",
                     needQty,
                     legGap
-                        ? "Chặng chưa có trọng lượng tính cước. Không dùng trọng lượng của cả Bill."
+                        ? "Chặng chưa có trọng lượng tính cước. Không dùng trọng lượng của cả Bill. Vui lòng mở Sửa Chặng để xác nhận."
                         : $"Trọng lượng tính cước chưa xác định — quy tắc {string.Join(", ", needQty)} cần giá trị này. {billCw.MissingReason ?? computed.MissingReason}".Trim(),
                     legGap ? RatingReadinessActions.RatingForm : RatingReadinessActions.EditBill));
             }
@@ -423,11 +423,14 @@ public sealed class RatingContextResolver
         var weighed = selected.Where(r => RatingEngine.WeightMatches(r, gross, quantity)).ToList();
         if (selected.Count > 0 && weighed.Count == 0)
         {
+            var bands = string.Join(", ", selected.Where(r => r.WeightMin.HasValue || r.WeightMax.HasValue)
+                .Select(r => $"[{r.WeightMin ?? 0}, {r.WeightMax?.ToString() ?? "∞"})"));
+            var bandInfo = !string.IsNullOrWhiteSpace(bands) ? $" (các nấc hiện hành: {bands})" : "";
             missing.Add(new RatingMissingFieldDto(
                 "weight_band",
                 "Nấc trọng lượng",
                 selected.Select(r => r.Code).ToList(),
-                "NO_APPLICABLE_RATE: Trọng lượng không thuộc nấc nào. Không chọn nấc gần nhất.",
+                $"NO_APPLICABLE_RATE: Trọng lượng ({quantity:G29} kg) không thuộc nấc nào{bandInfo}. Khoảng nửa mở [từ, đến) không bao gồm cận trên. Hãy tạo phiên bản mới có nấc phù hợp.",
                 RatingReadinessActions.RateCard));
             selected = [];
         }

@@ -102,7 +102,7 @@ public static class OperationalObjectTypes
 
     public static readonly IReadOnlySet<string> CargoParents = new HashSet<string>(StringComparer.Ordinal)
     {
-        Bill, Order, Shipment
+        Bill, Order, Shipment, Leg
     };
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)

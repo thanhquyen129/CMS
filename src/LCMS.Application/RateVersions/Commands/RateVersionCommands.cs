@@ -15,7 +15,8 @@ public sealed record CreateRateVersionCommand(
     DateTimeOffset? EffectiveFrom,
     DateTimeOffset? EffectiveTo,
     string? Note,
-    decimal? VatRate = null) : IRequest<Guid>;
+    decimal? VatRate = null,
+    Guid? CloneFromVersionId = null) : IRequest<Guid>;
 
 public sealed class CreateRateVersionCommandValidator : AbstractValidator<CreateRateVersionCommand>
 {
@@ -67,26 +68,143 @@ public sealed class CreateRateVersionCommandHandler : IRequestHandler<CreateRate
             .Select(v => (int?)v.VersionNo)
             .MaxAsync(cancellationToken) ?? 0;
 
+        RateVersion? sourceVersion = null;
+        if (request.CloneFromVersionId.HasValue)
+        {
+            sourceVersion = await _db.RateVersions
+                .FirstOrDefaultAsync(v => v.Id == request.CloneFromVersionId.Value && v.RateCardId == request.RateCardId, cancellationToken);
+        }
+
+
         var version = new RateVersion
         {
             TenantId = tenantId,
             RateCardId = request.RateCardId,
             VersionNo = nextNo + 1,
             Status = RateVersionStatuses.Draft,
-            EffectiveFrom = request.EffectiveFrom,
-            EffectiveTo = request.EffectiveTo,
-            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
-            VatRate = request.VatRate
+            EffectiveFrom = request.EffectiveFrom ?? sourceVersion?.EffectiveFrom,
+            EffectiveTo = request.EffectiveTo ?? sourceVersion?.EffectiveTo,
+            Note = string.IsNullOrWhiteSpace(request.Note) ? sourceVersion?.Note : request.Note.Trim(),
+            VatRate = request.VatRate ?? sourceVersion?.VatRate,
+            ExplicitChargeGroups = sourceVersion?.ExplicitChargeGroups ?? false
         };
 
         _db.RateVersions.Add(version);
+
+        if (sourceVersion != null)
+        {
+            var sourceRules = await _db.PricingRules
+                .Where(r => r.RateVersionId == sourceVersion.Id && r.DeletedAt == null)
+                .ToListAsync(cancellationToken);
+
+            var sourceRuleIds = sourceRules.Select(r => r.Id).ToList();
+
+            var sourceComponents = await _db.PricingRuleComponents
+                .Where(c => sourceRuleIds.Contains(c.PricingRuleId) && c.DeletedAt == null)
+                .ToListAsync(cancellationToken);
+
+            var sourceBreaks = await _db.RateBreaks
+                .Where(b => sourceRuleIds.Contains(b.PricingRuleId) && b.DeletedAt == null)
+                .ToListAsync(cancellationToken);
+
+            var sourceContainers = await _db.ContainerRatePrices
+                .Where(c => sourceRuleIds.Contains(c.PricingRuleId) && c.DeletedAt == null)
+                .ToListAsync(cancellationToken);
+
+            foreach (var rule in sourceRules)
+            {
+                var newRule = new PricingRule
+                {
+                    TenantId = tenantId,
+                    RateVersionId = version.Id,
+                    Code = rule.Code,
+                    Name = rule.Name,
+                    CalcMethod = rule.CalcMethod,
+                    UnitAmount = rule.UnitAmount,
+                    CurrencyCode = rule.CurrencyCode,
+                    Applicability = rule.Applicability,
+                    ServiceTypeCode = rule.ServiceTypeCode,
+                    PartyTypeCode = rule.PartyTypeCode,
+                    RouteId = rule.RouteId,
+                    AppliesAnyRoute = rule.AppliesAnyRoute,
+                    RouteCode = rule.RouteCode,
+                    CarrierPartyId = rule.CarrierPartyId,
+                    CarrierName = rule.CarrierName,
+                    WeightBasis = rule.WeightBasis,
+                    WeightMin = rule.WeightMin,
+                    WeightMax = rule.WeightMax,
+                    MatrixGroupCode = rule.MatrixGroupCode,
+                    MinAmount = rule.MinAmount,
+                    MaxAmount = rule.MaxAmount,
+                    ChargeCode = rule.ChargeCode,
+                    LineRole = rule.LineRole,
+                    TransportMode = rule.TransportMode,
+                    OriginCode = rule.OriginCode,
+                    DestinationCode = rule.DestinationCode,
+                    CommodityCode = rule.CommodityCode,
+                    VolumetricFactor = rule.VolumetricFactor,
+                    RoundingStep = rule.RoundingStep,
+                    SortOrder = rule.SortOrder,
+                    IsActive = true
+                };
+                _db.PricingRules.Add(newRule);
+
+                var comps = sourceComponents.Where(c => c.PricingRuleId == rule.Id);
+                foreach (var c in comps)
+                {
+                    _db.PricingRuleComponents.Add(new PricingRuleComponent
+                    {
+                        TenantId = tenantId,
+                        PricingRuleId = newRule.Id,
+                        Code = c.Code,
+                        Name = c.Name,
+                        FinancialNature = c.FinancialNature,
+                        CostTypeCode = c.CostTypeCode,
+                        RevenueTypeCode = c.RevenueTypeCode,
+                        Amount = c.Amount,
+                        CurrencyCode = c.CurrencyCode,
+                        SortOrder = c.SortOrder,
+                        CalcMethod = c.CalcMethod,
+                        DependsOnCode = c.DependsOnCode,
+                        EconomicChargeTypeId = c.EconomicChargeTypeId
+                    });
+                }
+
+                var brks = sourceBreaks.Where(b => b.PricingRuleId == rule.Id);
+                foreach (var b in brks)
+                {
+                    _db.RateBreaks.Add(new RateBreak
+                    {
+                        TenantId = tenantId,
+                        PricingRuleId = newRule.Id,
+                        SequenceNo = b.SequenceNo,
+                        MinQuantity = b.MinQuantity,
+                        MaxQuantity = b.MaxQuantity,
+                        UnitAmount = b.UnitAmount
+                    });
+                }
+
+                var cnts = sourceContainers.Where(c => c.PricingRuleId == rule.Id);
+                foreach (var c in cnts)
+                {
+                    _db.ContainerRatePrices.Add(new ContainerRatePrice
+                    {
+                        TenantId = tenantId,
+                        PricingRuleId = newRule.Id,
+                        ContainerType = c.ContainerType,
+                        UnitAmount = c.UnitAmount
+                    });
+                }
+            }
+        }
+
         _audit.Append(
             AuditActions.RateCardVersionCreated,
             AuditObjectTypes.RateCard,
             request.RateCardId,
             null,
             version.VersionNo.ToString(),
-            null);
+            sourceVersion != null ? $"Cloned from v{sourceVersion.VersionNo}" : null);
         await _db.SaveChangesAsync(cancellationToken);
         return version.Id;
     }

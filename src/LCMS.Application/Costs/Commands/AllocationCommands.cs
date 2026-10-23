@@ -360,6 +360,7 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
     private readonly ICostApprovalGate _approvalGate;
     private readonly IAuditWriter _audit;
     private readonly IRowVersionGuard _versions;
+    private readonly LCMS.Application.FinancialCloses.IPeriodLockGate _periodLockGate;
 
     public FinalizeCostAllocationCommandHandler(
         ILcmsDbContext db,
@@ -367,7 +368,8 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
         ICurrentUserContext user,
         ICostApprovalGate approvalGate,
         IAuditWriter audit,
-        IRowVersionGuard versions)
+        IRowVersionGuard versions,
+        LCMS.Application.FinancialCloses.IPeriodLockGate periodLockGate)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -375,6 +377,7 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
         _approvalGate = approvalGate;
         _audit = audit;
         _versions = versions;
+        _periodLockGate = periodLockGate;
     }
 
     public async Task Handle(FinalizeCostAllocationCommand request, CancellationToken cancellationToken)
@@ -448,6 +451,12 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
             }
         }
 
+        await _periodLockGate.EnsureMutationAllowedAsync(
+            cost.BillId,
+            cost.EffectiveDate,
+            "Chốt phân bổ chi phí",
+            cancellationToken);
+
         // Refresh allocatable from current Cost amount (Single Economic Cost).
         allocation.AllocatableAmount = cost.Amount;
 
@@ -459,6 +468,33 @@ public sealed class FinalizeCostAllocationCommandHandler : IRequestHandler<Final
         if (details.Count < 2)
         {
             throw new ConflictAppException("Không thể chốt phân bổ: chi phí chung cần ít nhất 2 Bill.");
+        }
+
+        var isMeasuredBasis = CostAllocationBases.FromMeasurement.Contains(allocation.AllocationBasis);
+
+        if (isMeasuredBasis && details.Any(d => d.BasisValue <= 0))
+        {
+            throw new ConflictAppException("ZERO_ALLOCATION_BASIS: Thiếu cơ sở phân bổ (missing basis) cho Bill trong phiên phân bổ. Không tự động gán 0 hoặc chia đều.");
+        }
+
+        if (cost.TransportLegId is Guid legId)
+        {
+            var legGross = await _db.OperationalMeasurements.AsNoTracking()
+                .Where(m => m.ObjectType == OperationalObjectTypes.Leg && m.ObjectId == legId && m.MeasureCode == MeasureCodes.GrossWeightKg)
+                .Select(m => (decimal?)m.Quantity)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (legGross.HasValue && legGross.Value > 0)
+            {
+                if (allocation.AllocationBasis == CostAllocationBases.GrossKg)
+                {
+                    var sumGross = details.Sum(d => d.BasisValue);
+                    if (sumGross > legGross.Value)
+                    {
+                        throw new ConflictAppException($"Xung đột số đo vật lý (hard conflict): Tổng trọng lượng thực các Bill ({sumGross} kg) vượt quá trọng lượng thực của Chặng ({legGross.Value} kg). Cần giải quyết trước khi chốt phân bổ.");
+                    }
+                }
+            }
         }
 
         AllocationMath.Apply(allocation.AllocationBasis, allocation.AllocatableAmount, details);

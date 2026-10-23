@@ -1,3 +1,9 @@
+## 2026-10-23 — Gói điều chỉnh sau UAT: Liên kết Bill, Số đo Chặng, BUY Rating, Phân bổ & Phiên bản Bảng giá (LCMS-UAT-CR-20261023-01)
+- Cho phép tạo RateVersion draft v2 sao chép toàn bộ quy tắc/nấc giá từ v1 qua CloneFromVersionId; kiểm tra xung đột nấc và chế độ mixed-mode khi publish; bảo toàn tính bất biến của v1.
+- BUY Rating Chặng phân định 2 phạm vi (DIRECT_BILL_LEG vs SHARED_LEG); tái sử dụng chi phí nguồn chung bảo đảm Single Economic Cost (Zero Duplicate Economic Cost); chốt phân bổ tích hợp kiểm tra kỳ đóng sổ (IPeriodLockGate), kiểm tra thiếu cơ sở (Missing Basis) và chặn cứng xung đột số đo vật lý Gross (CASE-F).
+- Hoàn thành bộ 51 test tự động đạt 100% PASS (51/51), bảo toàn hồi quy toàn bộ hệ thống (498/498 test backend, 30/30 vitest frontend); cập nhật ma trận nghiệm thu Excel giữ nguyên NOT RUN cho PO UAT.
+- Files: src/LCMS.Domain/Entities/OperationalCargo.cs, src/LCMS.Application/RateVersions/Commands/RateVersionCommands.cs, src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs, src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs, src/LCMS.Application/Costs/Commands/AllocationCommands.cs, src/LCMS.Application/Ratings/RatingReadiness.cs, src/LCMS.Api/Endpoints/RatePricingEndpoints.cs, tests/LCMS.Api.Tests/Uat01To51CommercialReadyTests.cs, docs/po/20261023-LCMS_UAT_Operational_Rating_Allocation_DEV_Package_v1.0/*.
+
 ## 2026-10-21 — Thay đổi URL ứng dụng & Thiết lập Ưu tiên 1 deploy cho cms.lsslogistics.vn
 - Thiết lập URL ứng dụng chính thức là https://cms.lsslogistics.vn (máy chủ cms-lss-01 tại 169.58.47.30).
 - Cập nhật quy trình CI/CD (.github/workflows/ci.yml) phân tách 2 job tuần tự: job deploy-priority-1-lss (Ưu tiên 1) luôn triển khai và verify smoke test trước; job deploy-secondary-sg (cms-sg-01) chỉ chạy sau khi Ưu tiên 1 thành công.

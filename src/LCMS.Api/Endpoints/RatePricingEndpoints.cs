@@ -145,7 +145,8 @@ public static class RatePricingEndpoints
                     body.EffectiveFrom,
                     body.EffectiveTo,
                     body.Note,
-                    body.VatRate),
+                    body.VatRate,
+                    body.CloneFromVersionId),
                 ct);
             return Results.Created($"/api/rate-versions/{id}", new { id });
         });
@@ -579,7 +580,8 @@ public sealed record CreateRateVersionRequest(
     DateTimeOffset? EffectiveFrom,
     DateTimeOffset? EffectiveTo,
     string? Note,
-    decimal? VatRate = null);
+    decimal? VatRate = null,
+    Guid? CloneFromVersionId = null);
 
 public sealed record SetRateVersionVatRequest(decimal? VatRate);
 

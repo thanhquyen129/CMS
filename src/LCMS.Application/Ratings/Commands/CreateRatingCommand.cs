@@ -38,7 +38,8 @@ public sealed record CreateRatingCommand(
     IReadOnlyList<RatingContainerQty>? Containers = null,
     string? ContextType = null,
     Guid? TransportLegId = null,
-    Guid? VendorPartyId = null) : IRequest<Guid>;
+    Guid? VendorPartyId = null,
+    string? CostScope = null) : IRequest<Guid>;
 
 public sealed class CreateRatingCommandValidator : AbstractValidator<CreateRatingCommand>
 {
@@ -473,6 +474,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             chargeableState = ctx.BillChargeable.State,
             chargeableConfirmed = ctx.BillChargeable.IsConfirmed,
             overrideReason = ctx.RequiresOverride ? request.ChargeableOverrideReason?.Trim() : null,
+            costScope = request.CostScope,
             versionId = version.Id,
             rateCardId = rating.RateCardId,
             contextType = ctx.ContextType,

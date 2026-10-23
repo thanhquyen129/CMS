@@ -128,3 +128,4 @@ describe("BillFinancialViewPanel", () => {
     expect(screen.getByText(/Tạm tính sau phân bổ: 700.000 ₫/i)).toBeTruthy();
   });
 });
+

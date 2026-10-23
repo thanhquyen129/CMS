@@ -77,8 +77,8 @@ npm run test --prefix apps/web
    - Hiển thị thông tin khoản chi phí nguồn và số đo chặng nguồn.
    - Bộ lọc phụ phí hàng nguy hiểm (DG Surcharge): Tự động vô hiệu hóa các Bill không phải DG (`UAT-034`).
    - Lựa chọn tiêu thức phân bổ (Gross Weight, Volume CBM, Chargeable Weight CW, Chia đều 1/N, Phần hàng rời rạc Disjoint Split).
-   - Bảng đối chiếu số đo driver vs số đo nguồn: Cảnh báo thất thoát chi phí 10% khi driver 90kg / nguồn 100kg (`R-08`), cảnh báo dồn tải khi driver 120kg / nguồn 100kg (`R-09`).
-   - Cổng chặn cứng (Hard Blocks): Chặn khi Gross vật lý vượt quá tải trọng chặng nguồn (`BR-18, CASE-A`) và chặn khi thiếu dòng hàng phần hàng (`UAT-042`).
+   - Bảng đối chiếu số đo driver vs số đo nguồn: Cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg) (`CASE-D / UAT-028 / BR-16 / R-08`); cảnh báo khi tổng CW các Bill (120 kg) lớn hơn CW Chặng (100 kg) do khác phương pháp tính hoặc làm tròn riêng (`BR-17, CASE-E, R-04, UAT-029`).
+   - Cổng chặn cứng (Hard Blocks): Chặn khi Gross vật lý vượt quá tải trọng chặng nguồn (`BR-17, CASE-F, R-09, UAT-030`) và chặn khi thiếu dòng hàng phần hàng (`UAT-042`).
 
 ### 3.2. Danh mục 6 ảnh chụp màn hình kiểm chứng (`screenshots/`)
 Tất cả 6 ảnh chụp màn hình thực tế có độ phân giải 1280x900px được lưu trữ tại `docs/po/20261023-LCMS_UAT_Operational_Rating_Allocation_DEV_Package_v1.0/screenshots/`:
@@ -86,7 +86,7 @@ Tất cả 6 ảnh chụp màn hình thực tế có độ phân giải 1280x900
 2. `02_leg_create_and_measurements.png`: Màn hình thiết lập chặng và số đo thực tế Gross/CBM/CW, quy tắc tính CW và ghi nhận audit trail.
 3. `03_rate_card_v2_clone_and_publish.png`: Vòng đời phiên bản bảng giá: Tạo bản nháp v2 từ v1 đã công bố, bảo toàn tính bất biến của v1.
 4. `04_bill_buy_rating_by_leg.png`: Động cơ tính giá mua tự động theo chặng (DIRECT_BILL_LEG), hiển thị quy tắc khớp và số tiền chi phí.
-5. `05_cost_allocation_reconciliation.png`: Bảng đối chiếu phân bổ chi phí dùng chung, cảnh báo thất thoát chi phí 10% (90kg vs 100kg) và chốt phân bổ.
+5. `05_cost_allocation_reconciliation.png`: Bảng đối chiếu phân bổ chi phí dùng chung, cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg) và chốt phân bổ.
 6. `06_bill_profit_view_with_pending_shared.png`: Hồ sơ tài chính 3 nhóm chi phí và banner cảnh báo chi phí dùng chung chờ phân bổ.
 
 ---
@@ -113,7 +113,7 @@ Tất cả 6 ảnh chụp màn hình thực tế có độ phân giải 1280x900
    - Frontend Web: `npm run dev --prefix apps/web` (hoặc chạy test frontend: `npm run test --prefix apps/web`).
 2. **Kịch bản nghiệm thu chính trên trình duyệt:**
    - **Kịch bản 1 (Liên kết N:N):** Truy cập `/bills/{id}?tab=relations` -> Thử thêm đơn hàng khác khách hàng -> Kiểm tra cảnh báo vàng xung đột khách hàng -> Thử gỡ đơn hàng đã có chi phí -> Kiểm tra nút Gỡ bị vô hiệu hóa.
-   - **Kịch bản 2 (Đối chiếu & Phân bổ chi phí):** Truy cập `/bills/{id}?tab=allocations` -> Kiểm tra bảng đối chiếu số đo -> Thay đổi trọng lượng driver thành 90kg vs 100kg nguồn -> Kiểm tra cảnh báo thất thoát 10% -> Chọn phí DG -> Kiểm tra Bill Non-DG bị loại trừ.
+   - **Kịch bản 2 (Đối chiếu & Phân bổ chi phí):** Truy cập `/bills/{id}?tab=allocations` -> Kiểm tra bảng đối chiếu số đo -> Thay đổi trọng lượng driver thành 90kg vs 100kg nguồn -> Kiểm tra Cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg) -> Chọn phí DG -> Kiểm tra Bill Non-DG bị loại trừ.
    - **Kịch bản 3 (Hồ sơ tài chính 3 nhóm):** Truy cập `/bills/{id}?tab=overview` -> Kéo xuống mục "Hồ sơ chi phí 3 nhóm" -> Kiểm tra phân tách rành mạch: Chi phí trực tiếp, Chi phí phân bổ đã xác nhận và Chi phí dùng chung chờ phân bổ.
 3. **Cập nhật kết quả nghiệm thu:**
    - Sau khi kiểm thử trực tiếp trên giao diện, PO tiến hành cập nhật cột `Trạng thái` từ `NOT RUN` sang `PASS` và ký duyệt mục `CK-14` trong Sheet `06_DEV_Checklist`.

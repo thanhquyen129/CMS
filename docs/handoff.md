@@ -1,3 +1,8 @@
+## 2026-10-23 — Hoàn thiện cuối cùng (Micro-polish 100/100): 26 Business Rules & Chuẩn hóa mã trích dẫn
+- Bổ sung Bảng đối soát 26 Business Rules (BR-01..26) vào 03_Architecture_Compliance_Risk_And_Checklist.md; chuẩn hóa mã trích dẫn Single Cost (BR-08, BR-10), Published Version (BR-03, BR-04, R-06), Hard Block Gross (BR-17, CASE-F, R-09, UAT-030).
+- Chuẩn hóa câu chữ kịch bản 90kg vs 100kg: "Cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg)" trong CostAllocationReconciliationPanel.tsx, test và các báo cáo.
+- Files: apps/web/components/CostAllocationReconciliationPanel.tsx, apps/web/components/CostAllocationReconciliationPanel.test.tsx, docs/po/20261023-LCMS_UAT_Operational_Rating_Allocation_DEV_Package_v1.0/*
+
 ## 2026-10-23 — Khắc phục khẩn cấp UAT: Căn chỉnh 1:1 51 kịch bản UAT, Logic đa chặng, Thiếu context & Giao diện Frontend (LCMS-UAT-CR-20261023-01 v1.0)
 - Bổ sung kiểm tra INSUFFICIENT_CONTEXT trong AllocationCommands.cs chặn cứng khi thiếu dòng hàng phần hàng đa chặng (UAT-042); lọc phí hàng nguy hiểm DG chỉ phân bổ cho Bill DG (UAT-034); đối chiếu loại dịch vụ/phương thức AIR vs FREIGHT trong RatingEngine.Matches (UAT-045).
 - Xây dựng 3 components Frontend chuẩn TypeScript: BillRelationsPanel (N:N Order/Shipment, cảnh báo lệch khách hàng, khóa gỡ liên kết có chi phí), BillFinancialViewPanel (3 nhóm chi phí: Trực tiếp, Đã xác nhận, Chờ phân bổ với banner cam chống nhân đôi chi phí), CostAllocationReconciliationPanel (đối chiếu driver vs nguồn, cảnh báo thất thoát 10%, dồn tải, chặn vượt Gross). Tích hợp vào app/bills/[id]/page.tsx.

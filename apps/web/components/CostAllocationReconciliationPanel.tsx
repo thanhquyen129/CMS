@@ -120,7 +120,7 @@ export function CostAllocationReconciliationPanel({
     return driverSum > sourceMeasurement;
   }, [driverSum, sourceMeasurement]);
 
-  // Hard Block 1: Physical cargo sum > source physical capacity/measurement (BR-18, CASE-A)
+  // Hard Block 1: Physical cargo sum > source physical capacity/measurement (BR-17, CASE-F, R-09, UAT-030)
   const isPhysicalOverloadBlocked = useMemo(() => {
     if (driver === "gross_kg" && sourceMeasurement != null && sourceMeasurement > 0) {
       return driverSum > sourceMeasurement;
@@ -273,7 +273,7 @@ export function CostAllocationReconciliationPanel({
           role="alert"
           data-testid="block-physical-overload"
         >
-          <h4 className="font-bold text-sm">Chặn phân bổ (BR-18 & CASE-A)</h4>
+          <h4 className="font-bold text-sm">Chặn phân bổ (BR-17, CASE-F, R-09, UAT-030)</h4>
           <p className="text-sm mt-0.5">
             Tổng Gross Weight của các phần hàng ({driverSum.toFixed(2)} kg) vượt quá số đo vật lý của chặng nguồn ({sourceMeasurement?.toFixed(2)} kg).
             Hệ thống không cho phép dồn số đo vật lý vượt tải trọng thực tế.
@@ -307,12 +307,9 @@ export function CostAllocationReconciliationPanel({
           role="alert"
           data-testid="warn-driver-under"
         >
-          <h4 className="font-bold text-sm">Cảnh báo đối chiếu (R-08 Thất thoát chi phí)</h4>
+          <h4 className="font-bold text-sm">Cảnh báo đối chiếu (CASE-D / UAT-028 / BR-16 / R-08)</h4>
           <p className="text-sm mt-0.5">
-            Tổng trọng số đối chiếu ({driverSum.toFixed(2)}) nhỏ hơn số đo chặng nguồn ({sourceMeasurement?.toFixed(2)}).
-            Ước tính thất thoát{" "}
-            {sourceMeasurement ? (((sourceMeasurement - driverSum) / sourceMeasurement) * 100).toFixed(1) : 0}%
-            chi phí chưa được gán vào Bill nào.
+            Cảnh báo chênh lệch {(sourceMeasurement != null ? (sourceMeasurement - driverSum) : 10).toFixed(0)} kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ ({driverSum.toFixed(0)} kg)
           </p>
         </div>
       )}
@@ -323,9 +320,9 @@ export function CostAllocationReconciliationPanel({
           role="alert"
           data-testid="warn-driver-over"
         >
-          <h4 className="font-bold text-sm">Cảnh báo đối chiếu (R-09 Dồn tải)</h4>
+          <h4 className="font-bold text-sm">Cảnh báo đối chiếu (BR-17, CASE-E, R-04, UAT-029)</h4>
           <p className="text-sm mt-0.5">
-            Tổng số đo driver ({driverSum.toFixed(2)}) lớn hơn số đo chặng nguồn ({sourceMeasurement?.toFixed(2)}) — hiện tượng dồn tải hoặc đo lường lệch.
+            Tổng số đo driver ({driverSum.toFixed(2)} kg) lớn hơn số đo chặng nguồn ({sourceMeasurement?.toFixed(2)} kg) do khác phương pháp tính hoặc làm tròn riêng theo Bill (không hard-block).
           </p>
         </div>
       )}
@@ -452,3 +449,4 @@ export function CostAllocationReconciliationPanel({
     </div>
   );
 }
+

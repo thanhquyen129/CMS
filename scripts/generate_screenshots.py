@@ -181,7 +181,7 @@ SCREENS = {
           <p>Khoản chi phí nguồn: Cước thuê xe chặng HCM-BD (1.000.000 VND) | Số đo nguồn: 100.00 kg</p>
         </div>
         <div class="alert-warning">
-          <strong>⚠️ Cảnh báo đối chiếu (R-08 Thất thoát chi phí):</strong> Tổng trọng số tài xế/phân bổ (90.00 kg) nhỏ hơn số đo chặng nguồn (100.00 kg). Ước tính thất thoát 10.0% chi phí chưa được gán vào Bill nào. Hệ thống ghi nhận cảnh báo kiểm soát để kiểm toán viên rà soát.
+          <strong>⚠️ Cảnh báo đối chiếu (CASE-D / UAT-028 / BR-16 / R-08):</strong> Cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg).
         </div>
         <table>
           <thead><tr><th>Chọn</th><th>Mã Bill</th><th>Khách hàng</th><th>Thuộc tính</th><th class="num">Trọng số Driver</th><th class="num">Tỷ lệ (%)</th><th class="num">Tiền phân bổ</th></tr></thead>
@@ -264,3 +264,4 @@ for filename, html in SCREENS.items():
     print(f"Saved: {output_path}")
 
 print("All 6 screenshots captured successfully!")
+

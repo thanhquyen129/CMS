@@ -104,8 +104,8 @@ describe("CostAllocationReconciliationPanel", () => {
     expect(checkboxNonDg.disabled).toBe(true);
   });
 
-  it("shows warning when driver sum < source measurement (R-08 Cost leakage)", () => {
-    // 40kg + 50kg = 90kg vs Source 100kg -> Leakage 10%
+  it("shows warning when driver sum < source measurement (CASE-D / UAT-028 / BR-16 / R-08)", () => {
+    // 40kg + 50kg = 90kg vs Source 100kg
     const underBills: EligibleBill[] = [
       { ...defaultEligibleBills[0], grossWeightKg: 40 },
       { ...defaultEligibleBills[1], grossWeightKg: 50 },
@@ -120,12 +120,12 @@ describe("CostAllocationReconciliationPanel", () => {
 
     const warn = screen.getByTestId("warn-driver-under");
     expect(warn).toBeTruthy();
-    expect(warn.textContent).toContain("R-08 Thất thoát chi phí");
-    expect(warn.textContent).toContain("90.00");
-    expect(warn.textContent).toContain("10.0%");
+    expect(warn.textContent).toContain("CASE-D / UAT-028 / BR-16 / R-08");
+    expect(warn.textContent).toContain("Cảnh báo chênh lệch 10 kg");
+    expect(warn.textContent).toContain("Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg)");
   });
 
-  it("hard blocks Finalize when Gross Weight driver sum > source physical weight (BR-18, CASE-A)", () => {
+  it("hard blocks Finalize when Gross Weight driver sum > source physical weight (BR-17, CASE-F, R-09, UAT-030)", () => {
     // 60kg + 60kg = 120kg vs Source 100kg -> Physical overload block
     const overBills: EligibleBill[] = [
       { ...defaultEligibleBills[0], grossWeightKg: 60 },
@@ -141,7 +141,7 @@ describe("CostAllocationReconciliationPanel", () => {
 
     const block = screen.getByTestId("block-physical-overload");
     expect(block).toBeTruthy();
-    expect(block.textContent).toContain("BR-18 & CASE-A");
+    expect(block.textContent).toContain("BR-17, CASE-F, R-09, UAT-030");
 
     const finalizeBtn = screen.getByTestId("finalize-allocation-btn") as HTMLButtonElement;
     expect(finalizeBtn.disabled).toBe(true);
@@ -193,3 +193,4 @@ describe("CostAllocationReconciliationPanel", () => {
     });
   });
 });
+

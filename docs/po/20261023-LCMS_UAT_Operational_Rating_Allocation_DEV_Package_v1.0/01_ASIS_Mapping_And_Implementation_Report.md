@@ -17,7 +17,7 @@
 ### 1.2. Frontend (Next.js / TypeScript / React)
 - `apps/web/components/BillRelationsPanel.tsx`: Component quản lý quan hệ liên kết N:N giữa Bill với Đơn hàng (Order) và Lô hàng (Shipment). Tự động phát hiện và cảnh báo lệch thông tin khách hàng, vô hiệu hóa việc gỡ liên kết khi đối tượng đã phát sinh chi phí hoặc Rating (`CR-01`, `UAT-001..005`).
 - `apps/web/components/BillFinancialViewPanel.tsx`: Component hồ sơ tài chính hiển thị phân tách rành mạch 3 nhóm chi phí: Chi phí trực tiếp, Chi phí phân bổ đã xác nhận và Chi phí dùng chung chờ phân bổ (Pending Shared) với banner cảnh báo cam chống nhân đôi chi phí kinh tế (`CR-04`, `CR-08`, `UAT-024`).
-- `apps/web/components/CostAllocationReconciliationPanel.tsx`: Component đối chiếu và phân bổ chi phí dùng chung: Hiển thị số đo nguồn, bộ lọc phụ phí hàng nguy hiểm DG (`UAT-034`), chọn tiêu thức phân bổ, cảnh báo thất thoát chi phí 10% (`R-08`) hoặc dồn tải (`R-09`), cổng chặn cứng vượt tải vật lý (`BR-18, CASE-A`) và thiếu dòng hàng (`UAT-042`).
+- `apps/web/components/CostAllocationReconciliationPanel.tsx`: Component đối chiếu và phân bổ chi phí dùng chung: Hiển thị số đo nguồn, bộ lọc phụ phí hàng nguy hiểm DG (`UAT-034`), chọn tiêu thức phân bổ, cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg) (`CASE-D / UAT-028 / BR-16 / R-08`), cảnh báo chênh lệch CW Bill lớn hơn CW Chặng do khác cách tính (`BR-17, CASE-E, R-04, UAT-029`), cổng chặn cứng vượt tải Gross vật lý (`BR-17, CASE-F, R-09, UAT-030`) và thiếu dòng hàng (`UAT-042`).
 - `apps/web/app/bills/[id]/page.tsx`: Tích hợp các tab mới `relations` (Liên kết N:N), `allocations` (Đối chiếu & Phân bổ) và hiển thị trực tiếp `BillFinancialViewPanel` tại tab `overview`.
 - `apps/web/components/BillRelationsPanel.test.tsx`: 4 bài test Vitest kiểm thử component BillRelationsPanel.
 - `apps/web/components/BillFinancialViewPanel.test.tsx`: 4 bài test Vitest kiểm thử component BillFinancialViewPanel.
@@ -120,9 +120,9 @@ Dưới đây là 9 dòng ma trận truy xuất nguồn gốc từ Sheet `05_Tra
    - Phân định rõ 2 phạm vi chi phí: `DIRECT_BILL_LEG` (chi phí trực tiếp gắn Bill) và `SHARED_LEG` (chi phí dùng chung ở cấp Chặng).
    - Áp dụng cơ chế Idempotency: Khi rating lại từ Bill khác trên cùng Chặng, hệ thống không sinh thêm chi phí nguồn mới, bảo đảm nguyên tắc Single Economic Cost.
 6. **`CR-06` (Đối chiếu số đo Chặng - Bill - `LEG-WEIGHT-RECON-01`):**
-   - Cảnh báo chênh lệch khi tổng driver < số đo nguồn (`R-08`: 90kg vs 100kg -> cảnh báo thất thoát 10%).
-   - Cảnh báo khác biệt ngữ nghĩa khi driver > số đo nguồn do làm tròn (`R-09`: 120kg vs 100kg).
-   - CỔNG CHẶN CỨNG: Chặn chốt phân bổ khi tổng Gross vật lý thực tế vượt quá tải trọng chặng nguồn (`BR-18, CASE-A`) hoặc khi thiếu dữ liệu dòng hàng (`UAT-042`).
+   - Cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg) (`CASE-D / UAT-028 / BR-16 / R-08`).
+   - Cảnh báo khác biệt ngữ nghĩa khi tổng CW các Bill (120 kg) lớn hơn CW Chặng (100 kg) do khác phương pháp tính hoặc làm tròn riêng (`BR-17, CASE-E, R-04, UAT-029`).
+   - CỔNG CHẶN CỨNG: Chặn chốt phân bổ khi tổng Gross vật lý thực tế vượt quá tải trọng chặng nguồn (`BR-17, CASE-F, R-09, UAT-030`) hoặc khi thiếu dữ liệu dòng hàng (`UAT-042`).
    - Lọc phụ phí hàng nguy hiểm (DG Surcharge): Chỉ phân bổ cho các Bill có thuộc tính DG (`UAT-034`).
 7. **`CR-07` (Hợp đồng Tham gia Chặng - `BILL-LEG-PARTICIPATION-01`):**
    - Xử lý chính xác các mô hình vận tải đa chặng: Tách rời (Disjoint Split), Nối tiếp (Sequential Legs), Hỗn hợp (Hybrid).

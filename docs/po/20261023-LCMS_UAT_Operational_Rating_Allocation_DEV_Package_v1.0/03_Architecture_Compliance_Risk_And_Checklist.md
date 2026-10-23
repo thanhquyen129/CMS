@@ -1,11 +1,46 @@
 # BÁO CÁO TUÂN THỦ KIẾN TRÚC, KIỂM SOÁT RỦI RO & BẢNG ĐỐI CHIẾU DEV CHECKLIST
 ## GÓI ĐIỀU CHỈNH SAU UAT: LIÊN KẾT BILL, SỐ ĐO CHẶNG, BUY RATING, PHÂN BỔ CHI PHÍ & PHIÊN BẢN BẢNG GIÁ
 **Mã gói:** `LCMS-UAT-CR-20261023-01` | **Phiên bản:** `v1.0 — DEV HANDOVER BASELINE (23/10/2026)`  
-**Trọng tâm thẩm định:** Khớp 1:1 nguyên văn 12 Rủi ro `R-01..12`, 6 Kịch bản mẫu `CASE-A..F` và 14 Tiêu chí bàn giao `CK-01..14` từ PO Baseline.
+**Trọng tâm thẩm định:** Khớp 1:1 nguyên văn 26 Business Rules `BR-01..26`, 12 Rủi ro `R-01..12`, 6 Kịch bản mẫu `CASE-A..F` và 14 Tiêu chí bàn giao `CK-01..14` từ PO Baseline.
 
 ---
 
-## 1. MA TRẬN 12 RỦI RO NGHIỆP VỤ & QUYẾT ĐỊNH KIỂM SOÁT (07_RISKS_DECISIONS)
+## 1. MA TRẬN 26 QUY TẮC NGHIỆP VỤ ĐỐI SOÁT CHI TIẾT (03_BUSINESS_RULES)
+
+Toàn bộ 26 quy tắc nghiệp vụ cốt lõi từ Sheet `03_Business_Rules` của PO đã được kiểm soát và kiểm chứng tự động trong mã nguồn:
+
+| Mã Quy tắc | Nhóm nghiệp vụ | Quy tắc nghiệp vụ đã khóa / Cụ thể hóa (PO Baseline) | Nguồn / Dấu vết kiểm soát (Trace) | Trạng thái DEV |
+| :---: | :--- | :--- | :--- | :---: |
+| **BR-01** | Relation | Bill↔Order, Bill↔Shipment và Bill↔Leg giữ N:N; Shipment→Leg 1:N; thay đổi quan hệ phải validate tenant/SoT/audit. | `D03 locked baseline` | **PASS** |
+| **BR-02** | Bill Edit | Hiển thị và chỉnh quan hệ trong Bill sau lưu; gỡ quan hệ phải kiểm tra rating, cost, finalized allocation và source-owned field; không xóa tác vụ lịch sử. | `BILL-LINK-EDIT-01` | **PASS** |
+| **BR-03** | Version | Published Rate Version bất biến; bản mới clone cấu hình hợp lệ thành draft khác version_id, cùng rate_card_id; không sửa v1. | `RATE-VERSION-UI-01` | **PASS** |
+| **BR-04** | Publish | Chỉ phát hành draft hợp lệ sau kiểm tra rules/range/conflict/hiệu lực, permission; Rating cũ giữ rate_version_id cũ. | `RATE-VERSION-UI-01` | **PASS** |
+| **BR-05** | Leg measurements | Chặng có thể lưu khi chưa đủ Gross/CBM/CW; nhưng không Rating nếu rule được chọn yêu cầu trường còn thiếu. | `LEG-MEASURE-UI-01/LEG-CW-UI-01` | **PASS** |
+| **BR-06** | Measurement | CW không mặc định bằng Gross/Volume/0 hay tổng CW Bill; phải có source, UOM, calc rule/version nếu derived. | `D03 canonical measurement` | **PASS** |
+| **BR-07** | Rating scope | BUY theo Chặng có hai ý nghĩa chi phí: một phần hàng Bill cụ thể (DIRECT_BILL_LEG) hoặc một khoản chung Chặng (SHARED_LEG). Phải xác định trước khi seed. | `RATING-LEG-ALLOC-UAT-01` | **PASS** |
+| **BR-08** | Single Cost | Rating SHARED_LEG tạo tối đa 1 economic Cost nguồn cho cùng nghĩa vụ; nhiều Bill mở cùng Chặng không làm phát sinh nhiều nguồn; retry idempotent. | `COST-LEG-01 / Single Economic Cost` | **PASS** |
+| **BR-09** | Direct Cost | DIRECT_BILL_LEG chỉ ghi trực tiếp nếu vendor thực sự tính khoản riêng cho Bill/phần hàng trên Leg; có định danh dòng nghĩa vụ riêng. | `COST-LEG-01` | **PASS** |
+| **BR-10** | Allocation | Shared Leg Cost chỉ vào Bill qua cost_allocation_detail đã finalized; trước đó hiển thị chưa phân bổ riêng, không coi toàn nguồn là chi phí Bill. | `D05 / COST-LEG-01 v1.1` | **PASS** |
+| **BR-11** | Eligibility | Chỉ Bill thực sự đi qua Leg và thuộc phạm vi chi phí đủ điều kiện mới có phần phân bổ (VD phí DG chỉ Bill DG). | `D05 Cost allocation` | **PASS** |
+| **BR-12** | Driver | Cơ sở phân bổ chọn từ canonical Bill–Leg participation, có nguồn/UOM: Gross, CW, CBM, kiện, TEU hoặc manual theo policy; không tự dùng toàn Bill nếu chỉ vận chuyển một phần. | `D05 / N:N` | **PASS** |
+| **BR-13** | Conservation | Tổng chi phí đã phân bổ sau làm tròn bằng chính xác Cost nguồn; không nhân đôi economic fact, không cộng chồng maturity Expected/Confirmed/Actual. | `D05 invariant` | **PASS** |
+| **BR-14** | Missing basis | Thiếu basis của một Bill đủ điều kiện hoặc mẫu số = 0 thì chặn finalize; không tự fallback chia đều. | `D05 invariant` | **PASS** |
+| **BR-15** | Different measures | CW Chặng khác tổng CW các Bill không mặc nhiên là lỗi. Chỉ so sánh khi cùng measurement semantics, cùng phạm vi, cùng thời điểm, cùng phương pháp tính. | `LEG-WEIGHT-RECON-01` | **PASS** |
+| **BR-16** | 90 / 100 | Leg CW 100, tổng driver Bill 90: có thể là minimum charge; cảnh báo chênh 10, giải trình, dùng 90 làm mẫu số nếu driver hợp lệ. Không bỏ 10% Cost. | `PO illustrative example` | **PASS** |
+| **BR-17** | 120 / 100 | Leg CW 100, tổng CW Bill 120: có thể là CW tính riêng khác cách gộp; cảnh báo, không tự ép; nếu cùng gross vật lý nhưng vượt sai thực tế thì chặn xác nhận. | `PO illustrative example` | **PASS** |
+| **BR-18** | Disjoint split | Một Bill tách thành phần hàng rời nhau trên các Leg, chỉ đối chiếu tổng số đo cộng được trong cùng phạm vi; không mặc định cộng CW nếu rule minimum/rounding khác. | `Bill split mockup clarification` | **PASS** |
+| **BR-19** | Sequential legs | Cùng 1 phần hàng đi nối tiếp Leg1→Leg2: không cộng 120+120 rồi đối chiếu Bill 120; mỗi Leg là ngữ cảnh vận chuyển/cost riêng. | `Bill split mockup clarification` | **PASS** |
+| **BR-20** | Mixed overlaps | Nếu một phần hàng đi nhiều Leg và phần khác đi riêng, cần nhận diện phần tham gia và dấu vết nguồn; không double count ở nút giao hoặc trên Bill Financial View. | `D03 N:N / D05` | **PASS** |
+| **BR-21** | Stale/immutability | Thay Leg measurement/participation làm stale Rating/Allocation liên quan, yêu cầu rerate/reallocate có kiểm soát; giữ lịch sử immutable, closed scope block. | `D03/D05/Financial Close` | **PASS** |
+| **BR-22** | Ratings boundaries | Nấc [từ, đến) không chứa cận trên; số đo CW=120 không khớp nấc kết thúc <120 là cấu hình dữ liệu, không tự suy lỗi engine. | `RATE-UI-06 / UAT TDNT_SGN_HAN` | **PASS** |
+| **BR-23** | Service master | Loại dịch vụ FREIGHT khác phương thức AIR; không tự đổi mã hoặc hợp nhất chỉ vì cùng nhãn; pick master, preserve canonical mapping. | `Rate baseline service-mode` | **PASS** |
+| **BR-24** | Ratings visibility | UI phải nêu rõ cost scope, số đo nguồn, rule thiếu và đầu mối bổ sung; không hiển thị Cost nguồn shared là Profitability của một Bill trước khi finalized allocation. | `RATING-LEG-UX-01` | **PASS** |
+| **BR-25** | Cost maturity | BUY Rating sinh Expected Cost, không tạo Actual/AP/Payment; source cost/allocations không tạo economic fact trùng khi sinh chứng từ. | `D05/D07/D08` | **PASS** |
+| **BR-26** | Control | SoT Manual/Import/API; server-side permission, reason/audit cho override; bảo toàn tenant isolation và lookup master chuẩn. | `D03 / D12` | **PASS** |
+
+---
+
+## 2. MA TRẬN 12 RỦI RO NGHIỆP VỤ & QUYẾT ĐỊNH KIỂM SOÁT (07_RISKS_DECISIONS)
 
 Toàn bộ 12 rủi ro nghiệp vụ trọng yếu từ Sheet `07_Risks_Decisions` của PO đã được kiểm soát và kiểm chứng tự động:
 
@@ -26,7 +61,7 @@ Toàn bộ 12 rủi ro nghiệp vụ trọng yếu từ Sheet `07_Risks_Decision
 
 ---
 
-## 2. ĐỐI CHIẾU 6 TÌNH HUỐNG MẪU ĐIỂN HÌNH (08_SAMPLE_SCENARIOS)
+## 3. ĐỐI CHIẾU 6 TÌNH HUỐNG MẪU ĐIỂN HÌNH (08_SAMPLE_SCENARIOS)
 
 Toàn bộ 6 kịch bản mẫu từ Sheet `08_Sample_Scenarios` của PO được hiện thực hóa chính xác trong logic miền và các ca kiểm thử:
 
@@ -41,7 +76,7 @@ Toàn bộ 6 kịch bản mẫu từ Sheet `08_Sample_Scenarios` của PO đư�
 
 ---
 
-## 3. BẢNG KIỂM TRA BÀN GIAO KỸ THUẬT (06_DEV_CHECKLIST)
+## 4. BẢNG KIỂM TRA BÀN GIAO KỸ THUẬT (06_DEV_CHECKLIST)
 
 Tiến độ và bằng chứng kiểm chứng cho 14 hạng mục bàn giao từ Sheet `06_DEV_Checklist`:
 
@@ -64,30 +99,31 @@ Tiến độ và bằng chứng kiểm chứng cho 14 hạng mục bàn giao t�
 
 ---
 
-## 4. BÁO CÁO TUÂN THỦ CÁC QUY TẮC KIẾN TRÚC CỐT LÕI (CORE ARCHITECTURAL RULES)
+## 5. BÁO CÁO TUÂN THỦ CÁC QUY TẮC KIẾN TRÚC CỐT LÕI (CORE ARCHITECTURAL RULES)
 
-### 4.1. Nguyên tắc Chi phí kinh tế duy nhất (Single Source Economic Cost) & Zero Duplicate Economic Cost (H-003, BR-20)
-- **Bảo toàn bản ghi nguồn:** Khoản chi phí dùng chung (SHARED Cost) phát sinh trên Chặng vận chuyển được lưu thành **1 bản ghi nguồn duy nhất** ở cấp Chặng, mang mã nhận diện kinh tế riêng (`costs.id`).
-- **Không tự ý gán vào Bill:** Khi người dùng xem Bill hoặc chạy rating từ Bill trên chặng dùng chung, hệ thống **tuyệt đối không gán ngầm toàn bộ chi phí nguồn vào Bill**, tránh làm sai lệch biên lợi nhuận của Bill.
+### 5.1. Nguyên tắc Chi phí kinh tế duy nhất (Single Source Economic Cost) & Zero Duplicate Economic Cost (H-003, BR-08, BR-10)
+- **Bảo toàn bản ghi nguồn (`BR-08`):** Khoản chi phí dùng chung (SHARED Cost) phát sinh trên Chặng vận chuyển được lưu thành **1 bản ghi nguồn duy nhất** ở cấp Chặng, mang mã nhận diện kinh tế riêng (`costs.id`). Khi rating lại từ Bill khác trên cùng chặng, hệ thống bảo đảm tính Idempotent không tạo thêm nguồn.
+- **Không tự ý gán vào Bill (`BR-10`):** Khi người dùng xem Bill hoặc chạy rating từ Bill trên chặng dùng chung, hệ thống **tuyệt đối không gán ngầm toàn bộ chi phí nguồn vào Bill**, tránh làm sai lệch biên lợi nhuận của Bill.
 - **Trạng thái Chờ phân bổ (Pending Shared):** Chi phí dùng chung chưa chốt phân bổ được hiển thị tại mục riêng biệt kèm biểu tượng cảnh báo cam. Số tiền này chỉ mang tính chất thông tin cảnh báo, không được cộng gộp vào tổng chi phí của Bill, bảo đảm nguyên tắc **Zero Duplicate Economic Cost**.
-- **Chốt phân bổ tạo chi phí con:** Khi thực hiện lệnh chốt phân bổ (`FinalizeAllocation`), hệ thống giữ nguyên vẹn bản ghi nguồn và tạo các bản ghi chi phí con loại `ALLOCATED` liên kết chặt chẽ với bản ghi nguồn, gán vào từng Bill tham gia theo tỷ lệ đã được phê duyệt.
+- **Chốt phân bổ tạo chi phí con (`BR-13`):** Khi thực hiện lệnh chốt phân bổ (`FinalizeAllocation`), hệ thống giữ nguyên vẹn bản ghi nguồn và tạo các bản ghi chi phí con loại `ALLOCATED` liên kết chặt chẽ với bản ghi nguồn, gán vào từng Bill tham gia theo tỷ lệ đã được phê duyệt.
 
-### 4.2. Nguyên tắc Bất biến lịch sử & Khóa kỳ tài chính (Immutable History & Financial Close Gate)
-- **Bảng giá đã công bố (PUBLISHED):** Bất biến tuyệt đối. Khi cần điều chỉnh nấc giá, hệ thống bắt buộc tạo bản sao phiên bản mới (Clone to Draft), phê duyệt và xuất bản (`PUBLISHED`) để thay thế phiên bản cũ (`SUPERSEDED`). Phiên bản cũ được lưu trữ nguyên vẹn để phục vụ tra cứu lịch sử tính giá (`BR-23, R-06`).
-- **Phân bổ đã xác nhận (FINALIZED):** Không cho phép sửa đè trực tiếp. Khi có sự thay đổi về số đo hoặc tỷ lệ, hệ thống tạo phiên phân bổ mới thay thế qua cơ chế `SUPERSEDED` (`BR-21, UAT-035`).
-- **Cổng khóa kỳ kế toán (`IPeriodLockGate`):** Mọi hành động can thiệp, tính giá lại hoặc chốt phân bổ rơi vào kỳ tài chính đã đóng đều bị chặn cứng với thông báo lỗi rõ ràng, bảo vệ số liệu kế toán đã khóa sổ (`UAT-051`).
+### 5.2. Nguyên tắc Bất biến lịch sử & Khóa kỳ tài chính (Immutable History & Financial Close Gate)
+- **Bảng giá đã công bố (PUBLISHED) (`BR-03, BR-04, R-06`):** Bất biến tuyệt đối. Khi cần điều chỉnh nấc giá, hệ thống bắt buộc tạo bản sao phiên bản mới (Clone to Draft), phê duyệt và xuất bản (`PUBLISHED`) để thay thế phiên bản cũ (`SUPERSEDED`). Phiên bản cũ được lưu trữ nguyên vẹn để phục vụ tra cứu lịch sử tính giá.
+- **Phân bổ đã xác nhận (FINALIZED) (`BR-21, UAT-035`):** Không cho phép sửa đè trực tiếp. Khi có sự thay đổi về số đo hoặc tỷ lệ, hệ thống tạo phiên phân bổ mới thay thế qua cơ chế `SUPERSEDED`.
+- **Cổng khóa kỳ kế toán (`IPeriodLockGate`) (`UAT-051`):** Mọi hành động can thiệp, tính giá lại hoặc chốt phân bổ rơi vào kỳ tài chính đã đóng đều bị chặn cứng với thông báo lỗi rõ ràng, bảo vệ số liệu kế toán đã khóa sổ.
 
-### 4.3. Nguyên tắc Phân lập Đa khách thuê (Multi-Tenancy Security)
+### 5.3. Nguyên tắc Phân lập Đa khách thuê (Multi-Tenancy Security) (`BR-01, BR-26, UAT-026`)
 - Tất cả các lệnh nghiệp vụ, truy vấn dữ liệu và tích hợp API đều được giải quyết và lọc chặt chẽ theo `tenant_id` từ `ITenantResolver`.
-- Tuyệt đối không cho phép đọc hoặc ghi chéo dữ liệu giữa các khách thuê. Việc chọn Chặng hoặc Nhà vận chuyển thuộc tenant khác bị từ chối ngay lập tức ở tầng dịch vụ (`UAT-026`).
+- Tuyệt đối không cho phép đọc hoặc ghi chéo dữ liệu giữa các khách thuê. Việc chọn Chặng hoặc Nhà vận chuyển thuộc tenant khác bị từ chối ngay lập tức ở tầng dịch vụ.
 
-### 4.4. Chuẩn Trải nghiệm Người dùng Tiếng Việt (UX Standard CP6.5)
+### 5.4. Chuẩn Trải nghiệm Người dùng Tiếng Việt (UX Standard CP6.5) (`BR-24`)
 - Toàn bộ nhãn màn hình, thông điệp hệ thống, cảnh báo và lỗi đều tuân thủ chuẩn thuật ngữ Logistics tiếng Việt chuyên nghiệp:
   - *"Liên kết Đơn hàng & Lô hàng (N:N)"* thay cho quan hệ kỹ thuật.
   - *"Chi phí trực tiếp (Direct Costs)"*, *"Chi phí phân bổ đã xác nhận (Finalized Allocated Costs)"*, *"Chi phí dùng chung chờ phân bổ (Pending Shared Costs)"*.
   - *"Cảnh báo xung đột khách hàng: Có đơn hàng mang thông tin khách hàng khác với khách hàng chính của Bill"*.
-  - *"Cảnh báo thất thoát chi phí: Tổng trọng số driver nhỏ hơn số đo chặng nguồn"*.
-  - *"Chặn phân bổ: Tổng Gross Weight của các phần hàng vượt quá số đo vật lý của chặng nguồn"*.
+  - *"Cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg)"* (`CASE-D / UAT-028 / BR-16 / R-08`).
+  - *"Cảnh báo chênh lệch tổng CW các Bill lớn hơn CW Chặng do khác cách tính hoặc làm tròn riêng (không hard-block)"* (`BR-17, CASE-E, R-04, UAT-029`).
+  - *"Chặn phân bổ: Tổng Gross Weight của các phần hàng vượt quá số đo vật lý của chặng nguồn"* (`BR-17, CASE-F, R-09, UAT-030`).
   - Tuyệt đối không để lộ enum tiếng Anh kỹ thuật thô (`ALLOCATION_DRAFT`, `SHARED_LEG`, `ZERO_ALLOCATION_BASIS`...) trên giao diện người dùng.
 
 ---

@@ -186,7 +186,14 @@ static async Task MigrateDatabaseAsync(WebApplication app)
 
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<LcmsDbContext>();
-    await db.Database.MigrateAsync();
+    if (db.Database.IsSqlite())
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await db.Database.MigrateAsync();
+    }
     await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
     await TenantAccessSeeder.SeedSystemRolesForAllTenantsAsync(db, CancellationToken.None);
     await TenantLicenseSeeder.EnsureForAllTenantsAsync(db, CancellationToken.None);

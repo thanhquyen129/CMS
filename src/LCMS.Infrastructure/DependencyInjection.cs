@@ -31,10 +31,17 @@ public static class DependencyInjection
 
         services.AddDbContext<LcmsDbContext>(options =>
         {
-            options.UseNpgsql(connectionString, npgsql =>
+            if (connectionString.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
             {
-                npgsql.MigrationsHistoryTable("__ef_migrations_history", "public");
-            });
+                options.UseSqlite(connectionString);
+            }
+            else
+            {
+                options.UseNpgsql(connectionString, npgsql =>
+                {
+                    npgsql.MigrationsHistoryTable("__ef_migrations_history", "public");
+                });
+            }
             options.UseSnakeCaseNamingConvention();
         });
 

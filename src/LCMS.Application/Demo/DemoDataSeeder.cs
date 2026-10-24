@@ -631,8 +631,78 @@ public sealed class DemoDataSeeder
             PublishedAt = now.AddDays(-30)
         };
         _db.RateVersions.AddRange(verDraft, verPub);
-
         await _db.SaveChangesAsync(cancellationToken);
+
+        // Seed TDNT_SGN_HAN for UAT RATE-VERSION-UI-01
+        var cardTdnt = await _db.RateCards.FirstOrDefaultAsync(c => c.TenantId == tid && c.Code == "TDNT_SGN_HAN", cancellationToken);
+        if (cardTdnt is null)
+        {
+            cardTdnt = new RateCard
+            {
+                TenantId = tid,
+                Code = "TDNT_SGN_HAN",
+                Name = "Bảng giá TDNT_SGN_HAN",
+                PartyType = "vendor",
+                SupplierPartyId = vendor.Id,
+                CurrencyCode = "VND",
+                DeclarationMode = "basic",
+                TransportMode = "air",
+                RouteCode = "SGN-HAN",
+                CarrierName = "VN Cargo",
+                IsActive = true
+            };
+            _db.RateCards.Add(cardTdnt);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var v1Tdnt = new RateVersion
+            {
+                TenantId = tid,
+                RateCardId = cardTdnt.Id,
+                VersionNo = 1,
+                Status = RateVersionStatuses.Published,
+                PublishedAt = now.AddDays(-1),
+                EffectiveFrom = now.AddDays(-1),
+                VatRate = 8m,
+                Note = "Phiên bản gốc ban hành"
+            };
+            _db.RateVersions.Add(v1Tdnt);
+            await _db.SaveChangesAsync(cancellationToken);
+
+            var ruleTdnt = new PricingRule
+            {
+                TenantId = tid,
+                RateVersionId = v1Tdnt.Id,
+                Code = "QT0001",
+                Name = "Cước hàng không SGN-HAN",
+                CalcMethod = PricingCalcMethods.UnitRate,
+                UnitAmount = 12000m,
+                CurrencyCode = "VND",
+                ServiceTypeCode = "FREIGHT",
+                TransportMode = "air",
+                RouteCode = "SGN-HAN",
+                CarrierName = "VN Cargo",
+                WeightBasis = "chargeable",
+                WeightMin = 1m,
+                WeightMax = 120m,
+                ChargeCode = "FREIGHT",
+                IsActive = true
+            };
+            _db.PricingRules.Add(ruleTdnt);
+
+            var compTdnt = new PricingRuleComponent
+            {
+                TenantId = tid,
+                PricingRuleId = ruleTdnt.Id,
+                Code = "FREIGHT",
+                Name = "Cước chính",
+                FinancialNature = "cost",
+                CostTypeCode = "FREIGHT",
+                Amount = 12000m,
+                CurrencyCode = "VND"
+            };
+            _db.PricingRuleComponents.Add(compTdnt);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
 
         var summary =
             "Seeded: 12 bills, costs/revenues maturity, shared alloc, docs triad, AP/AR+settlement, " +
@@ -738,7 +808,11 @@ public sealed class DemoDataSeeder
             (MasterCatalogKinds.DocumentType, "invoice", "Hóa đơn", 10),
             (MasterCatalogKinds.DocumentType, "debit_note", "Debit note", 20),
             (MasterCatalogKinds.PaymentTerm, "NET15", "Net 15 ngày", 10),
-            (MasterCatalogKinds.PaymentTerm, "NET30", "Net 30 ngày", 20)
+            (MasterCatalogKinds.PaymentTerm, "NET30", "Net 30 ngày", 20),
+            (MasterCatalogKinds.TransportMode, "air", "Đường hàng không", 10),
+            (MasterCatalogKinds.TransportMode, "sea", "Đường biển", 20),
+            (MasterCatalogKinds.TransportMode, "road", "Đường bộ", 30),
+            (MasterCatalogKinds.TransportMode, "rail", "Đường sắt", 40)
         };
 
         var existing = await _db.MasterCatalogItems

@@ -1,3 +1,9 @@
+## 2026-10-24 — Khắc phục triệt để bằng chứng E2E Next.js thực tế & hoàn thiện Rate Version (RATE-VERSION-UI-01 v1.1)
+- Thay thế toàn bộ ảnh mockup bằng 7 ảnh chụp thực tế Chrome CDP trực tiếp từ ứng dụng Next.js (apps/web) kết nối .NET 8 API thật với AppShell LCMS (topbar Ctrl+K, sidebar 14 module) trên bảng giá TDNT_SGN_HAN.
+- Sửa RateVersionCommands.cs giới hạn idempotency guard chỉ khi CloneFromVersionId có giá trị (không nuốt create version thông thường), SaveRateCardDeclarationCommand lưu thay đổi trước khi insert staged rules để tránh lỗi unique constraint SQLite.
+- Cập nhật ma trận Excel LCMS_RATE_VERSION_UI_01_DEV_UAT_Matrix_v1.1_20261024.xlsx (10 FIX = DONE, 14 UI = PASS, bảo toàn PO UAT = NOT RUN) và 3 báo cáo hướng dẫn PO.
+- Files: src/LCMS.Application/RateVersions/Commands/RateVersionCommands.cs, src/LCMS.Application/RateCards/Commands/SaveRateCardDeclarationCommand.cs, docs/po/24102026-LCMS_RATE_VERSION_UI_01_DEV_Fix_v1.1/*
+
 ## 2026-10-24 — Khắc phục khẩn cấp P0 luồng UI/API Tạo phiên bản bảng giá mới (RATE-VERSION-UI-01 v1.1)
 - Tích hợp nút CreateRateVersionButton trên trang chi tiết /rate-cards/[id] (GAP-01), tách biệt CTA góc trên và thêm action trên dòng tại /rate-cards/appendices (GAP-02), nối route tới draft v2 form prefilled với callout "Nhân bản từ v1" và mã read-only (GAP-03).
 - Bổ sung kiểm tra quyền RateBuyWrite/RateSellWrite, double-click guard và idempotency draft check trên backend RateVersionCommands.cs; sửa ListRateAppendicesQueryHandler loại bỏ dòng rỗng mồ côi -v1.

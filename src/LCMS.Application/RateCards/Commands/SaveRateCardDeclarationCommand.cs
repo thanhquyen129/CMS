@@ -182,6 +182,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         {
             var other = draftRules.Where(r => RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod) != (mode == RateDeclarationModes.Advanced)).ToList();
             await RateCardCatalog.RetireRulesAsync(_db, other, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
         }
 
         card.DeclarationMode = decision.Mode;
@@ -207,9 +208,9 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         {
             await _db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex)
         {
-            throw new ConflictAppException("Không lưu được bảng giá. Mã bảng hoặc mã quy tắc đã tồn tại.");
+            throw new ConflictAppException($"DbUpdate: {ex.InnerException?.Message ?? ex.Message}");
         }
 
         return new ComposeTariffResult(card.Id, version.Id, warnings);
@@ -363,7 +364,16 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             .ToListAsync(cancellationToken);
         var warnings = new List<string>();
         var normalized = new List<BasicRateRuleInput>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var tenantRuleCodes = await _db.PricingRules.AsNoTracking()
+            .Where(r => r.TenantId == tenantId && r.RateVersionId != version.Id)
+            .Select(r => r.Code)
+            .ToListAsync(cancellationToken);
+        var usedCodes = new HashSet<string>(tenantRuleCodes, StringComparer.OrdinalIgnoreCase);
+        foreach (var r in rules)
+        {
+            if (!string.IsNullOrWhiteSpace(r.Code)) usedCodes.Add(r.Code.Trim());
+        }
+        var seenInRequest = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var rule in rules)
         {
             var partyError = RateFieldPolicy.PartyTypeConflict(card.PartyType, rule.PartyTypeCode);
@@ -380,8 +390,9 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
             var charge = ResolveCharge(rule, chargeTypes);
             var code = string.IsNullOrWhiteSpace(rule.Code)
-                ? RateFieldPolicy.NextBasicCode(seen)
+                ? RateFieldPolicy.NextBasicCode(usedCodes)
                 : rule.Code.Trim();
+            usedCodes.Add(code);
             var name = string.IsNullOrWhiteSpace(rule.Name)
                 ? RateFieldPolicy.SuggestName(charge?.Name, rule.RouteCode, rule.WeightMin, rule.WeightMax)
                 : rule.Name.Trim();
@@ -428,7 +439,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 }
             }
 
-            if (!seen.Add(code))
+            if (!seenInRequest.Add(code))
             {
                 throw new ConflictAppException("Mã quy tắc bị trùng trên bảng giá.");
             }
@@ -530,6 +541,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             _db,
             existing.Where(r => !RateDeclarationPolicy.IsMatrixMethod(r.CalcMethod)).ToList(),
             cancellationToken);
+        await _db.SaveChangesAsync(cancellationToken);
 
         foreach (var (entity, input) in staged)
         {

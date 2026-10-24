@@ -29,6 +29,9 @@ agent-tools/
 # Office lock / temp
 ~$*
 *.tmp
+*.db
+*.db-shm
+*.db-wal
 
 # Local scratch / articles
 infra/note.txt

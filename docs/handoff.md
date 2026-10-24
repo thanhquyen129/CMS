@@ -1,3 +1,9 @@
+## 2026-10-24 — Khắc phục khẩn cấp P0 luồng UI/API Tạo phiên bản bảng giá mới (RATE-VERSION-UI-01 v1.1)
+- Tích hợp nút CreateRateVersionButton trên trang chi tiết /rate-cards/[id] (GAP-01), tách biệt CTA góc trên và thêm action trên dòng tại /rate-cards/appendices (GAP-02), nối route tới draft v2 form prefilled với callout "Nhân bản từ v1" và mã read-only (GAP-03).
+- Bổ sung kiểm tra quyền RateBuyWrite/RateSellWrite, double-click guard và idempotency draft check trên backend RateVersionCommands.cs; sửa ListRateAppendicesQueryHandler loại bỏ dòng rỗng mồ côi -v1.
+- Hoàn thành 8/8 test tích hợp RateVersionUi01FixTests, 47/47 vitest frontend (PASS 100%), chụp 5 ảnh live browser E2E layout AppShell LCMS (1366x768), cập nhật Excel matrix (PO UAT = NOT RUN).
+- Files: apps/web/components/CreateRateVersionButton.tsx, apps/web/components/CreateRateVersionButton.test.tsx, apps/web/components/RateCardDeclarationForm.tsx, apps/web/app/rate-cards/[id]/page.tsx, apps/web/app/rate-cards/[id]/edit/page.tsx, apps/web/app/rate-cards/appendices/page.tsx, src/LCMS.Application/RateVersions/Commands/RateVersionCommands.cs, src/LCMS.Application/RateCards/Commands/RateCardCommands.cs, src/LCMS.Application/RateCards/Queries/RateCatalogQueries.cs, tests/LCMS.Api.Tests/RateVersionUi01FixTests.cs, docs/po/24102026-LCMS_RATE_VERSION_UI_01_DEV_Fix_v1.1/*
+
 ## 2026-10-23 — Hoàn thiện cuối cùng (Micro-polish 100/100): 26 Business Rules & Chuẩn hóa mã trích dẫn
 - Bổ sung Bảng đối soát 26 Business Rules (BR-01..26) vào 03_Architecture_Compliance_Risk_And_Checklist.md; chuẩn hóa mã trích dẫn Single Cost (BR-08, BR-10), Published Version (BR-03, BR-04, R-06), Hard Block Gross (BR-17, CASE-F, R-09, UAT-030).
 - Chuẩn hóa câu chữ kịch bản 90kg vs 100kg: "Cảnh báo chênh lệch 10 kg (do áp dụng cước tối thiểu / Minimum Charge) — Bảo toàn phân bổ 100% chi phí nguồn trên tổng driver hợp lệ (90 kg)" trong CostAllocationReconciliationPanel.tsx, test và các báo cáo.

@@ -7,3 +7,4 @@ cur.execute("DELETE FROM pricing_rules WHERE code = 'QT0002'")
 con.commit()
 con.close()
 print('Successfully removed conflicting rule QT0002')
+

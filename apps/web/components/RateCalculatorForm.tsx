@@ -53,14 +53,17 @@ export function RateCalculatorForm({
     setBusy(true);
     const fd = new FormData(e.currentTarget);
     const quantity = Number(String(fd.get("chargeable") || ""));
+    const origin = String(fd.get("originCode") ?? "").trim() || null;
+    const destination = String(fd.get("destinationCode") ?? "").trim() || null;
     const body = {
       billId: String(fd.get("billId") ?? ""),
       rateVersionId: String(fd.get("rateVersionId") ?? ""),
       transportMode: String(fd.get("transportMode") ?? ""),
       partyTypeCode: String(fd.get("partyType") ?? ""),
       rateDate: String(fd.get("rateDate") ?? "") || null,
-      originCode: String(fd.get("originCode") ?? "").trim() || null,
-      destinationCode: String(fd.get("destinationCode") ?? "").trim() || null,
+      routeCode: origin && destination ? `${origin}-${destination}` : null,
+      originCode: origin,
+      destinationCode: destination,
       commodityCode: String(fd.get("commodityCode") ?? "").trim() || null,
       grossWeightKg: num(fd.get("gross")),
       quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : null,
@@ -194,7 +197,7 @@ export function RateCalculatorForm({
               <div><dt>Giá cơ bản</dt><dd>{formatMoney(base, result.currencyCode)}</dd></div>
               <div><dt>Tổng sau phụ phí</dt><dd>{formatMoney(result.totalAmount, result.currencyCode)}</dd></div>
               <div><dt>Cơ sở tính cước</dt><dd>{basisLabel(result.chargeableBasis)} · {result.chargeableBasis === "not_required" ? "Không cần" : formatChargeable(result.chargeableWeightKg ?? null)}</dd></div>
-              <div><dt>Tỷ giá</dt><dd>{result.fxSource || "—"} {result.fxRate ?? ""}</dd></div>
+              <div><dt>Tỷ giá</dt><dd>{result.fxSource === "identity" || (!result.fxSource && (result.fxRate === 1 || !result.fxRate)) ? "1 (Cùng tiền tệ)" : `${result.fxRate ?? ""} (${result.fxSource || "—"})`}</dd></div>
             </dl>
             <h3>Cước chính</h3>
             <ChargeTable rows={baseLines} currency={result.currencyCode} />
@@ -229,7 +232,7 @@ function ChargeTable({ rows, currency }: { rows: Detail[]; currency: string }) {
             <td>
               {d.formulaText || "—"}
               {d.lineFxRate && d.originalCurrency && d.originalCurrency !== currency
-                ? ` · ${d.amountOriginal} ${d.originalCurrency} × ${d.lineFxRate} ${d.lineFxSource || ""}`
+                ? ` · ${d.amountOriginal} ${d.originalCurrency} × ${d.lineFxRate} ${d.lineFxSource === "identity" ? "(Cùng tiền tệ)" : d.lineFxSource || ""}`
                 : ""}
             </td>
             <td>{formatMoney(d.reportingAmount ?? d.amount, d.originalCurrency && d.reportingAmount != null && d.originalCurrency !== currency ? currency : d.currencyCode)}</td>

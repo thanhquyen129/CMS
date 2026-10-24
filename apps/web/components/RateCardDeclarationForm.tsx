@@ -355,6 +355,7 @@ export function RateCardDeclarationForm(props: Props) {
   const initialMode = props.declarationMode === "advanced" ? "advanced" : "basic";
   const startPreset = props.transportMode?.toLowerCase() === "sea" ? "sea" : "air";
   const [error, setError] = useState<string | null>(null);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [partyType, setPartyType] = useState(props.partyType === "customer" ? "customer" : "vendor");
@@ -678,10 +679,16 @@ export function RateCardDeclarationForm(props: Props) {
         setError(payload.message || "Không lưu được bảng giá.");
         return;
       }
-      const created = (await res.json().catch(() => ({}))) as { id?: string; rateCardId?: string };
-      const next = `/rate-cards/${created.rateCardId || created.id || props.cardId}`;
-      startTransition(() => router.push(next));
-      router.refresh();
+      if (editing) {
+        setSavedMessage(`Đã lưu bản nháp v${props.versionNo ?? 2} thành công!`);
+        setError(null);
+        router.refresh();
+      } else {
+        const created = (await res.json().catch(() => ({}))) as { id?: string; rateCardId?: string };
+        const next = `/rate-cards/${created.rateCardId || created.id || props.cardId}`;
+        startTransition(() => router.push(next));
+        router.refresh();
+      }
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
@@ -698,6 +705,7 @@ export function RateCardDeclarationForm(props: Props) {
         Nhập thông tin chung và chọn một hình thức khai báo. Mỗi bảng giá chỉ dùng bảng giá cơ bản hoặc bảng giá nâng cao.
       </p>
       {error ? <div className="alert alert-error" role="alert">{error}</div> : null}
+      {savedMessage ? <div className="alert alert-success" role="status">{savedMessage}</div> : null}
       {props.routeError ? <div className="alert alert-error" role="alert">{props.routeError}</div> : null}
       {props.currencyError ? <div className="alert alert-error" role="alert">{props.currencyError}</div> : null}
 

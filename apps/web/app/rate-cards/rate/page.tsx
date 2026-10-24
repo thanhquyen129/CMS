@@ -14,7 +14,7 @@ export default async function RatePage() {
   if (!jar.get(AUTH_COOKIE)?.value) redirect("/login");
   const terms = await fetchTerminology();
   const [bills, versions] = await Promise.all([
-    listBills(undefined, { page: 1, pageSize: 50 }),
+    listBills(),
     listAppendices(),
   ]);
   const billOptions = bills.ok

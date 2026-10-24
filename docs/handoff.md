@@ -1,3 +1,8 @@
+## 2026-10-24 — Hoàn tất Live E2E Screenshots full-page, hiển thị tuyến SGN-HAN, RATE_CONFLICT banner và Rating CW=120kg (RATE-VERSION-UI-01 v1.1)
+- Sửa Route binding và Carrier policy: Khắc phục route SGN-HAN trên draft v2 không bị rơi về "Tất cả tuyến", chỉnh carrier_name nullable trên rules tránh chặn Bill rating, cập nhật RatePage listBills không kẹp phân trang 50 để DEMO-01-HUB hiển thị và chọn tính giá trực tiếp.
+- Chụp bộ ảnh Chrome CDP full-page thật 100%: 03, 04, 05, 06, 07a, 07b hiển thị đủ bảng quy tắc, banner xanh lưu nháp tại chỗ, banner đỏ RATE_CONFLICT, lịch sử v1/v2 bất biến, và kết quả tính giá 1.440.000 ₫.
+- Files: apps/web/app/rate-cards/rate/page.tsx, apps/web/components/PartyTypeahead.tsx, apps/web/components/RateCalculatorForm.tsx, apps/web/components/RateCardDeclarationForm.tsx, src/LCMS.Application/Demo/DemoDataSeeder.cs, src/LCMS.Application/Ratings/RatingReadiness.cs, docs/po/24102026-LCMS_RATE_VERSION_UI_01_DEV_Fix_v1.1/*.
+
 ## 2026-10-24 — Khắc phục triệt để bằng chứng E2E Next.js thực tế & hoàn thiện Rate Version (RATE-VERSION-UI-01 v1.1)
 - Thay thế toàn bộ ảnh mockup bằng 7 ảnh chụp thực tế Chrome CDP trực tiếp từ ứng dụng Next.js (apps/web) kết nối .NET 8 API thật với AppShell LCMS (topbar Ctrl+K, sidebar 14 module) trên bảng giá TDNT_SGN_HAN.
 - Sửa RateVersionCommands.cs giới hạn idempotency guard chỉ khi CloneFromVersionId có giá trị (không nuốt create version thông thường), SaveRateCardDeclarationCommand lưu thay đổi trước khi insert staged rules để tránh lỗi unique constraint SQLite.

@@ -634,6 +634,60 @@ public sealed class DemoDataSeeder
         await _db.SaveChangesAsync(cancellationToken);
 
         // Seed TDNT_SGN_HAN for UAT RATE-VERSION-UI-01
+        var locSgn = await _db.Locations.FirstOrDefaultAsync(l => l.TenantId == tid && l.Code == "SGN", cancellationToken);
+        if (locSgn is null)
+        {
+            locSgn = new Location
+            {
+                TenantId = tid,
+                Code = "SGN",
+                Name = "Hồ Chí Minh (Tân Sơn Nhất)",
+                LocationType = LocationTypes.Airport,
+                CountryCode = "VN",
+                City = "Hồ Chí Minh",
+                IataCode = "SGN",
+                IsActive = true
+            };
+            _db.Locations.Add(locSgn);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        var locHan = await _db.Locations.FirstOrDefaultAsync(l => l.TenantId == tid && l.Code == "HAN", cancellationToken);
+        if (locHan is null)
+        {
+            locHan = new Location
+            {
+                TenantId = tid,
+                Code = "HAN",
+                Name = "Hà Nội (Nội Bài)",
+                LocationType = LocationTypes.Airport,
+                CountryCode = "VN",
+                City = "Hà Nội",
+                IataCode = "HAN",
+                IsActive = true
+            };
+            _db.Locations.Add(locHan);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        var routeSgnHan = await _db.Routes.FirstOrDefaultAsync(r => r.TenantId == tid && r.Code == "SGN-HAN", cancellationToken);
+        if (routeSgnHan is null)
+        {
+            routeSgnHan = new RouteMaster
+            {
+                TenantId = tid,
+                Code = "SGN-HAN",
+                Name = "SGN-HAN",
+                OriginLocationId = locSgn.Id,
+                DestinationLocationId = locHan.Id,
+                TransportModeCode = "air",
+                ServiceTypeCode = "FREIGHT",
+                IsActive = true
+            };
+            _db.Routes.Add(routeSgnHan);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
         var cardTdnt = await _db.RateCards.FirstOrDefaultAsync(c => c.TenantId == tid && c.Code == "TDNT_SGN_HAN", cancellationToken);
         if (cardTdnt is null)
         {
@@ -643,10 +697,11 @@ public sealed class DemoDataSeeder
                 Code = "TDNT_SGN_HAN",
                 Name = "Bảng giá TDNT_SGN_HAN",
                 PartyType = "vendor",
-                SupplierPartyId = vendor.Id,
+                SupplierPartyId = null,
                 CurrencyCode = "VND",
                 DeclarationMode = "basic",
                 TransportMode = "air",
+                RouteId = routeSgnHan.Id,
                 RouteCode = "SGN-HAN",
                 CarrierName = "VN Cargo",
                 IsActive = true
@@ -673,13 +728,15 @@ public sealed class DemoDataSeeder
                 TenantId = tid,
                 RateVersionId = v1Tdnt.Id,
                 Code = "QT0001",
-                Name = "Cước hàng không SGN-HAN",
+                Name = "SGN-HAN",
                 CalcMethod = PricingCalcMethods.UnitRate,
                 UnitAmount = 12000m,
                 CurrencyCode = "VND",
                 ServiceTypeCode = "FREIGHT",
                 TransportMode = "air",
+                RouteId = routeSgnHan.Id,
                 RouteCode = "SGN-HAN",
+                AppliesAnyRoute = false,
                 CarrierName = "VN Cargo",
                 WeightBasis = "chargeable",
                 WeightMin = 1m,

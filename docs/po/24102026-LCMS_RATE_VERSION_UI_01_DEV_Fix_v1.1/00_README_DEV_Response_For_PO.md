@@ -31,37 +31,48 @@
 4. **Kiểm tra hồi quy (Zero Regression)**:
    - Backend Integration Suite: 8/8 tests mới trong [`RateVersionUi01FixTests.cs`](file:///c:/A1/git/cms/tests/LCMS.Api.Tests/RateVersionUi01FixTests.cs) PASS; toàn bộ 54/54 targeted tests (Pricing, Surcharge, VAT, Commercial Ready) PASS 100%.
    - Frontend Unit Suite: 7/7 test files (47/47 unit tests) trong `apps/web` PASS 100%.
+   - Tổng cộng: **101/101 automated test cases PASS 100%**.
    - Next.js Production Build: Thành công không lỗi biên dịch.
 
 ---
 
-### 3. DANH MỤC 7 BẰNG CHỨNG LIVE BROWSER E2E SCREENSHOTS (RENDER BỞI CHROME CDP TRÊN ỨNG DỤNG THỰC TẾ)
+### 3. DANH MỤC BẰNG CHỨNG LIVE BROWSER E2E SCREENSHOTS (RENDER BỞI CHROME CDP TRÊN ỨNG DỤNG NEXT.JS THỰC TẾ)
 
-Toàn bộ 7 ảnh chụp được render trực tiếp từ server Next.js (`apps/web`) và lưu trữ tại thư mục:  
+Toàn bộ ảnh chụp được render trực tiếp từ server Next.js (`apps/web` trên port 3000) kết nối ASP.NET Core API (`src/LCMS.Api` trên port 8080) và lưu trữ tại thư mục:  
 [`docs/po/24102026-LCMS_RATE_VERSION_UI_01_DEV_Fix_v1.1/screenshots/`](file:///c:/A1/git/cms/docs/po/24102026-LCMS_RATE_VERSION_UI_01_DEV_Fix_v1.1/screenshots/)
 
-1. **`01_rate_card_detail_published_v1_with_new_version_cta.png`** (190.3 KB):
+1. **`01_rate_card_detail_published_v1_with_new_version_cta.png`** (190,056 bytes):
    - Màn hình chi tiết bảng giá `TDNT_SGN_HAN` với đầy đủ AppShell LCMS (topbar trắng, search `Ctrl K`, sidebar 14 module).
    - Nút **"Tạo phiên bản mới"** (nền xanh thương hiệu `#1677e8`, icon dấu cộng) đặt nổi bật bên cạnh nút *"Tính giá trên Bill"* và *"Ngừng sử dụng"*.
-2. **`02_appendices_list_separated_cta_and_row_actions.png`** (228.4 KB):
+2. **`02_appendices_list_separated_cta_and_row_actions.png`** (228,422 bytes):
    - Màn hình *"Quản lý phụ lục giá"* với nút CTA góc trên tách biệt rõ ràng: **"＋ Tạo bảng giá mới"**.
-   - 4 thẻ KPI chuẩn LCMS hiển thị đầy đủ. Bảng phụ lục giá có cột **Thao tác** với nút **"Tạo phiên bản mới"** trên dòng `TDNT_SGN_HAN` (v1 Đã phát hành). Hoàn toàn không còn dòng rỗng `-v1`.
-3. **`03_rate_card_v2_draft_edit_form_prefilled.png`** (173.7 KB):
+   - 4 thẻ KPI chuẩn LCMS hiển thị đầy đủ (`Tổng phiên bản: 125`, `Đã Published: 124`, `Nháp / phụ lục: 1`, `Cách tạo phụ lục: Phiên bản mới`). Bảng phụ lục giá có cột **Thao tác** với nút **"Tạo phiên bản mới"** trên dòng `TDNT_SGN_HAN` (v1 Đã phát hành). Hoàn toàn không còn dòng rỗng `-v1`.
+3. **`03_rate_card_v2_draft_edit_form_prefilled.png`** (Chiều cao viewport full-page: 1397px, 280,621 bytes):
    - Màn hình form khai báo bản nháp v2 tại route `/rate-cards/[id]/edit` với đầy đủ 3 khối: `1. Thông tin chung`, `2. Hình thức khai báo giá`, `3. Bảng giá cơ bản`.
    - Tiêu đề ngữ cảnh: **"TDNT_SGN_HAN — Phiên bản v2 (Nháp)"**. Callout: **"Nhân bản từ v1"**.
-   - Ô Mã bảng giá bị khóa (`read-only`); kế thừa trọn vẹn hình thức BASIC, tuyến SGN-HAN, nhà cung cấp `Nhà xe Demo Vận Tải`, nấc trọng lượng ban đầu `[1, 120)` với đơn giá 12,000 VND/kg.
-4. **`04_rate_card_v2_draft_edit_band_cw120_save_draft.png`** (173.0 KB):
+   - Ô Mã bảng giá bị khóa (`read-only`); kế thừa trọn vẹn hình thức BASIC, dropdown tuyến chọn đúng `SGN → HAN (SGN-HAN)`, cột Lọc hiển thị rõ `SGN-HAN · Trọng lượng tính cước · 1 – < 120 · FREIGHT · FREIGHT · Chi phí · 12.000 ₫`.
+4. **`04_rate_card_v2_draft_edit_band_cw120_save_draft.png`** (Chiều cao viewport full-page: 1461px, 285,603 bytes):
    - Nấc trọng lượng được cập nhật mở rộng thành `[1, 200)` kg (bao trọn điểm CW = 120 kg theo quy tắc nửa mở).
-   - Nhấn **"Lưu nháp"** hiển thị banner thông báo xanh: *"Đã lưu bản nháp v2 thành công!"*.
-5. **`05_rate_card_v2_publish_conflict_blocked.png`** (173.0 KB):
-   - Kiểm tra an toàn nghiệp vụ: Khi tồn tại quy tắc xung đột nấc trọng lượng chồng lấn (`RATE_CONFLICT`), nút **"Kiểm tra & Phát hành v2"** chặn phát hành ngay lập tức.
+   - Nhấn **"Lưu nháp"** hiển thị banner thông báo xanh: *"Đã lưu bản nháp v2 thành công!"* ngay trên trang chỉnh sửa mà không bị redirect mất ngữ cảnh.
+5. **`05_rate_card_v2_publish_conflict_blocked.png`** (Chiều cao viewport full-page: 1574px, 312,317 bytes):
+   - Kiểm tra an toàn nghiệp vụ: Khi tồn tại quy tắc xung đột nấc trọng lượng chồng lấn (`QT0001` [1, 200) và `QT0002` [50, 150) cùng xuất hiện trên bảng quy tắc), nút **"Kiểm tra & Phát hành v2"** chặn phát hành ngay lập tức.
    - Banner cảnh báo đỏ xuất hiện: *"RATE_CONFLICT: Hai quy tắc cùng khoản mục, cùng điều kiện và nấc trọng lượng chồng nhau. Không phát hành khi chưa có thứ tự ưu tiên."*. Bản `v1` và dữ liệu hệ thống được bảo vệ an toàn tuyệt đối.
-6. **`06_rate_card_v2_published_and_version_history.png`** (190.1 KB):
+6. **`06_rate_card_v2_published_and_version_history.png`** (Chiều cao viewport full-page: 1300px, 268,434 bytes):
    - Sau khi giải tỏa xung đột, bản nháp v2 được phát hành thành công.
-   - Bảng Lịch sử phiên bản (`#versions`) hiển thị đầy đủ cả `v2` (Đã phát hành, Đang áp dụng) và `v1` (Đã phát hành, Bất biến tuyệt đối). Có nút *"Xem bản này"* cho phép kiểm tra lại dữ liệu `v1` ở chế độ read-only.
-7. **`07_bill_rating_cw120_before_and_after_v2.png`** (199.6 KB):
-   - Màn hình kiểm thử công cụ tính giá trên Bill tại modal *"Tính giá trên Bill"*.
-   - Khớp chính xác với phiên bản `v2` tại trọng lượng tính cước `CW = 120 kg`, tính ra tổng cước phí chuẩn xác **1,440,000 ₫** (120 kg $\times$ 12,000 ₫/kg) với khoản mục Cước chính (FREIGHT). Minh chứng toàn vẹn luồng E2E giải quyết triệt để lỗi tính giá nửa mở của v1.
+   - Hiển thị trọn vẹn cả khối `v2 · Đã phát hành` với quy tắc `[1, 200)` nấc giá `12.000 ₫` và khối bảng `Phiên bản` (`#versions`) hiển thị `v2` (Đã phát hành, Đang áp dụng) cùng `v1` (Đã phát hành, Bất biến tuyệt đối). Có nút *"Xem bản này"* cho phép kiểm tra lại dữ liệu `v1` ở chế độ read-only.
+7. **`07a_bill_rating_cw120_v1_no_match.png`** (Chiều cao viewport full-page: 1300px, 239,402 bytes):
+   - Màn hình Tính giá (`/rate-cards/rate`) chọn Bill `DEMO-01-HUB`, phiên bản `v1` (`TDNT_SGN_HAN · v1`), trọng lượng tính cước `CW = 120 kg`.
+   - Hệ thống chặn tính giá theo chính sách nửa mở `[1, 120)` với banner cảnh báo:  
+     `Chưa đủ dữ liệu: Nấc trọng lượng — Trọng lượng (120 kg) không thuộc nấc nào (các nấc hiện hành: [1.0, 120.0)). Khoảng nửa mở [từ, đến) không bao gồm cận trên. Hãy tạo phiên bản mới có nấc phù hợp.`
+8. **`07b_bill_rating_cw120_v2_matched.png`** (Chiều cao viewport full-page: 1300px, 250,889 bytes):
+   - Màn hình Tính giá chọn Bill `DEMO-01-HUB`, chuyển sang phiên bản `v2` (`TDNT_SGN_HAN · v2`), trọng lượng tính cước `CW = 120 kg`.
+   - Hệ thống khớp chính xác nấc `[1, 200)` của `v2`, tính ra tổng cước phí chuẩn xác **1.440.000 ₫** (120 kg $\times$ 12.000 ₫/kg) với:
+     - Giá cơ bản: **1.440.000 ₫**
+     - Tổng sau phụ phí: **1.440.000 ₫**
+     - Cơ sở tính cước: **Nhập khi tính giá · 120 kg**
+     - Tỷ giá: **1 (Cùng tiền tệ)**
+9. **`07_bill_rating_cw120_before_and_after_v2.png`** (250,889 bytes):
+   - Bản sao của `07b` để đối chiếu kết quả so sánh trước/sau khi phát hành v2.
 
 ---
 
@@ -77,18 +88,18 @@ Toàn bộ 7 ảnh chụp được render trực tiếp từ server Next.js (`ap
   *Quan sát*: Hệ thống tự động gọi API nhân bản và điều hướng sang trang `/rate-cards/{id}/edit`. Tiêu đề hiển thị rõ: **`TDNT_SGN_HAN — Phiên bản v2 (Nháp)`**, có dòng ghi chú **"Nhân bản từ v1"**, ô Mã bảng giá bị khóa mờ không cho sửa. Tuyệt đối không còn chuyển sang form tạo Rate Card trắng.
 - **Bước 3 — Sửa nấc giá và Lưu nháp**:
   Tại bảng quy tắc cước, đổi cận trên nấc trọng lượng từ `120` thành `200` (để nấc cước trở thành `[1, 200) kg`, bao gồm CW = 120 kg). Nhấn nút **"Lưu nháp"**.
-  *Quan sát*: Banner màu xanh thông báo đã lưu nháp thành công; reload lại trang vẫn bảo toàn giá trị nấc vừa sửa.
+  *Quan sát*: Banner màu xanh thông báo *"Đã lưu bản nháp v2 thành công!"*; reload lại trang vẫn bảo toàn giá trị nấc vừa sửa.
 - **Bước 4 — Kiểm tra & Phát hành v2**:
   Nhấn nút **"Kiểm tra & Phát hành v2"**.
   *Quan sát*: Hệ thống kiểm tra conflict và phát hành v2 thành công. Trang tự động điều hướng về màn hình chi tiết với badge trạng thái *"Đã phát hành (Published)"*.
 - **Bước 5 — Kiểm tra Lịch sử phiên bản**:
-  Cuộn xuống phần *Lịch sử phiên bản*.
+  Cuộn xuống phần *Phiên bản* (`#versions`).
   *Quan sát*: Thấy rõ 2 dòng phiên bản: dòng `v2` (mới phát hành, đang áp dụng) và dòng `v1` (phiên bản gốc). Dữ liệu bản `v1` được bảo vệ bất biến.
 - **Bước 6 — Kiểm thử Rating với CW = 120 kg**:
-  Nhấn *"Tính giá trên Bill"* và nhập Bill có trọng lượng tính cước `CW = 120 kg`.
+  Truy cập menu *Tính giá* (`/rate-cards/rate`), chọn Bill **`DEMO-01-HUB`**, chọn `TDNT_SGN_HAN · v1`, nhập trọng lượng tính cước `CW = 120 kg`.
   *Quan sát*:
-  - Trước khi có v2 (tính theo v1): Bị chặn cảnh báo `NO_APPLICABLE_RATE: Trọng lượng 120 kg không thuộc nấc nào [1, 120)`.
-  - Sau khi phát hành v2: Tính giá thành công ngay lập tức với đơn giá `12,000 VND/kg` $\times$ `120 kg` = `1,440,000 VND`. Các snapshot rating cũ của v1 giữ nguyên không bị ghi đè.
+  - Trước khi có v2 (tính theo v1): Bị chặn cảnh báo `Chưa đủ dữ liệu: Nấc trọng lượng — Trọng lượng (120 kg) không thuộc nấc nào (các nấc hiện hành: [1.0, 120.0)). Khoảng nửa mở [từ, đến) không bao gồm cận trên. Hãy tạo phiên bản mới có nấc phù hợp.`.
+  - Chuyển sang phiên bản `v2` (`TDNT_SGN_HAN · v2`): Tính giá thành công ngay lập tức với đơn giá `12.000 VND/kg` $\times$ `120 kg` = `1.440.000 VND`, hiển thị đầy đủ bảng kết quả Rating và tỷ giá. Các snapshot rating cũ của v1 giữ nguyên không bị ghi đè.
 
 ---
 *Tài liệu đính kèm:*

@@ -38,6 +38,7 @@ export function PartyTypeahead({
   const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState(defaultLabel ?? "");
   const [open, setOpen] = useState(false);
+  const [cleared, setCleared] = useState(false);
   const [items, setItems] = useState<PartyLookupItem[]>([]);
   const [selected, setSelected] = useState<PartyLookupItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -67,7 +68,7 @@ export function PartyTypeahead({
     return () => window.clearTimeout(handle);
   }, [query, open, roleCode, usableOnly]);
 
-  const selectedId = selected?.id ?? defaultId ?? "";
+  const selectedId = cleared ? "" : (selected?.id ?? defaultId ?? "");
 
   const warning = useMemo(() => {
     const status = selected?.creditStatus;
@@ -78,6 +79,7 @@ export function PartyTypeahead({
   }, [selected]);
 
   function pick(item: PartyLookupItem) {
+    setCleared(false);
     setSelected(item);
     setQuery(partyLabel(item));
     setOpen(false);
@@ -85,6 +87,7 @@ export function PartyTypeahead({
   }
 
   function clear() {
+    setCleared(true);
     setSelected(null);
     setQuery("");
     onSelect?.(null);
@@ -107,11 +110,13 @@ export function PartyTypeahead({
           onChange={(e) => {
             setQuery(e.target.value);
             setSelected(null);
+            if (!e.target.value) setCleared(true);
+            else setCleared(false);
             setOpen(true);
             onSelect?.(null);
           }}
         />
-        {selectedId ? (
+        {selectedId && (query.trim().length > 0 || selected) ? (
           <button
             type="button"
             className="btn btn-ghost btn-sm"

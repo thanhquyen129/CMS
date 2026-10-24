@@ -185,15 +185,16 @@ public sealed class RatingContextResolver
                 ? N(leg?.ServiceTypeCode) ?? N(shipment?.ServiceTypeCode)
                 : N(bill.ServiceTypeCode) ?? N(bill.BillType));
         var partyType = N(card?.PartyType) ?? N(input.PartyTypeCode);
-        var routeCode = N(input.RouteCode)
-            ?? (legContext ? N(leg?.RouteCode) ?? N(shipment?.RouteCode) : N(bill.RouteCode));
-        var transportMode = legContext
-            ? ShipmentModePolicy.LegRatingMode(leg?.TransportMode, shipment?.TransportMode, input.TransportMode)
-            : N(input.TransportMode) ?? N(bill.TransportMode);
         var originCode = N(input.OriginCode)
             ?? (legContext ? N(leg?.OriginCode) ?? N(shipment?.OriginCode) : N(bill.OriginCode));
         var destinationCode = N(input.DestinationCode)
             ?? (legContext ? N(leg?.DestinationCode) ?? N(shipment?.DestinationCode) : N(bill.DestinationCode));
+        var routeCode = N(input.RouteCode)
+            ?? (legContext ? N(leg?.RouteCode) ?? N(shipment?.RouteCode) : N(bill.RouteCode))
+            ?? (originCode != null && destinationCode != null ? $"{originCode}-{destinationCode}" : null);
+        var transportMode = legContext
+            ? ShipmentModePolicy.LegRatingMode(leg?.TransportMode, shipment?.TransportMode, input.TransportMode)
+            : N(input.TransportMode) ?? N(bill.TransportMode);
         var commodityCode = N(input.CommodityCode);
         var commodityId = legContext
             ? leg?.CommodityTypeId ?? shipment?.CommodityTypeId

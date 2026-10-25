@@ -161,7 +161,7 @@ jobs:
              # Proxy keeps stale upstream IPs unless recreated / Docker DNS re-resolve.
              "${COMPOSE[@]}" up -d --force-recreate --no-deps proxy'
 
-      - name: Health check (Priority 1: cms.lsslogistics.vn)
+      - name: "Health check (Priority 1: cms.lsslogistics.vn)"
         if: env.SKIP_DEPLOY != 'true'
         run: |
           for i in 1 2 3 4 5 6 7 8 9 10 11 12; do

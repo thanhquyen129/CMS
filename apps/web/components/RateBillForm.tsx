@@ -4,6 +4,7 @@ import type { FormEvent, MouseEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { RatingReadinessBox } from "@/components/RatingReadinessBox";
+import { DateInputVi } from "@/components/DateInputVi";
 import type { ApiError, RatingReadiness } from "@/lib/opref-edit";
 import { term, type TerminologyMap } from "@/lib/terminology";
 
@@ -206,6 +207,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
   const [vendorId, setVendorId] = useState("");
   const [vendorTouched, setVendorTouched] = useState(false);
   const [replaceExisting, setReplaceExisting] = useState(false);
+  const [overrideRateDate, setOverrideRateDate] = useState("");
 
   const expected = term(terms, "EXPECTED", "Dự kiến");
   const costLabel = term(terms, "COST", "Chi phí");
@@ -219,6 +221,9 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       if (legId) params.set("legId", legId);
       if (vendorId) params.set("vendorPartyId", vendorId);
       if (buyVersion) params.set("rateVersionId", buyVersion);
+    }
+    if (overrideRateDate) {
+      params.set("asOf", overrideRateDate);
     }
     const query = params.toString();
     (async () => {
@@ -277,6 +282,7 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
         quantity: q === null || Number.isNaN(q) ? null : q,
         weight: w === null || Number.isNaN(w) ? null : w,
         chargeableOverrideReason: reason.trim() || null,
+        rateDate: overrideRateDate || null,
         ...(side === "buy"
           ? buyContext === "leg"
             ? {
@@ -430,9 +436,23 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
           {success}
         </div>
       ) : null}
-      {suggestion.rateDateFormatted ? (
-        <div className="alert alert-info" role="status" style={{ marginBottom: "16px" }}>
-          <strong>Ngày áp dụng giá:</strong> {suggestion.rateDateFormatted} &nbsp;·&nbsp; <strong>Nguồn xác định:</strong> {suggestion.rateDateSourceLabel ?? "Theo Bill"}
+            {suggestion.rateDateFormatted ? (
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "16px", padding: "12px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "6px" }}>
+          <div>
+            <strong style={{ color: "#166534" }}>Ngày áp dụng giá:</strong> {suggestion.rateDateFormatted} &nbsp;·&nbsp; <strong style={{ color: "#166534" }}>Nguồn xác định:</strong> {suggestion.rateDateSourceLabel ?? "Theo Bill"}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <label htmlFor="rate-date-override-input" className="small" style={{ fontWeight: 600, color: "#374151" }}>Ghi đè ngày tính:</label>
+            <div style={{ width: "160px" }}>
+              <DateInputVi
+                id="rate-date-override-input"
+                name="overrideRateDate"
+                value={overrideRateDate}
+                onChange={(iso: string) => setOverrideRateDate(iso)}
+                placeholder="DD/MM/YYYY"
+              />
+            </div>
+          </div>
         </div>
       ) : null}
       <div className="layout-cols-2">

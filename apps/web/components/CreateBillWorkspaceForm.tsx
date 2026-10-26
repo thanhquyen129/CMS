@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { CreateCargoFields } from "@/components/CreateCargoFields";
 import { CreateSection, CreateWorkspace } from "@/components/CreateWorkspace";
 import { LocationField } from "@/components/LocationField";
+import { DateInputVi } from "@/components/DateInputVi";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { RefTagPicker, type RefHit } from "@/components/RefTagPicker";
 import {
@@ -367,15 +368,15 @@ export function CreateBillWorkspaceForm({
             </div>
             <div className="cw-field">
               <label htmlFor="etdAt">Ngày ETD</label>
-              <input id="etdAt" name="etdAt" type="date" disabled={submitting} />
+              <DateInputVi id="etdAt" name="etdAt" disabled={submitting} placeholder="DD/MM/YYYY" />
             </div>
             <div className="cw-field">
               <label htmlFor="etaAt">Ngày ETA</label>
-              <input id="etaAt" name="etaAt" type="date" disabled={submitting} />
+              <DateInputVi id="etaAt" name="etaAt" disabled={submitting} placeholder="DD/MM/YYYY" />
             </div>
             <div className="cw-field">
               <label>Ngày tạo Bill</label>
-              <input type="date" defaultValue={today} readOnly />
+              <DateInputVi defaultValue={today} disabled={true} placeholder="DD/MM/YYYY" />
             </div>
           </div>
         </CreateSection>

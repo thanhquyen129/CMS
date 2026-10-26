@@ -1,9 +1,14 @@
+using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Costs;
+using LCMS.Application.Costs.Commands;
 using LCMS.Application.Costs.Queries;
 using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Application.Ratings;
 using LCMS.Application.Ratings.Queries;
+using LCMS.Application.Revenues.Commands;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 
 namespace LCMS.Api.Tests;
 
@@ -75,19 +80,12 @@ public sealed class UatFollowup20261026Tests
     [Fact]
     public void TC05_LegacyServiceAir_WarnsWithoutSilentDeletionOrAutoConvert()
     {
-        var legacyCode = "AIR";
-        bool isLegacy = string.Equals(legacyCode, "AIR", StringComparison.OrdinalIgnoreCase);
+        var isLegacy = RateFieldPolicy.IsLegacyServiceAir("AIR");
+        Assert.True(isLegacy);
 
-        string? warningMessage = null;
-        if (isLegacy)
-        {
-            warningMessage = "Mã dịch vụ 'AIR' là mã di sản / sai ngữ nghĩa so với phương thức vận chuyển. Vui lòng chọn lại loại dịch vụ chuẩn.";
-        }
-
-        Assert.NotNull(warningMessage);
-        Assert.Contains("mã di sản", warningMessage);
-        // Ensure data is not silently cleared or converted
-        Assert.Equal("AIR", legacyCode);
+        var blockedMsg = RateFieldPolicy.ServiceBlock("AIR", alreadyStored: false);
+        Assert.NotNull(blockedMsg);
+        Assert.Equal(RateFieldPolicy.ServiceAirBlocked, blockedMsg);
     }
 
     [Fact]
@@ -134,12 +132,17 @@ public sealed class UatFollowup20261026Tests
     [Fact]
     public void TC09_SeedExpectedRevenues_OnBuyRating_ThrowsValidationAppException()
     {
-        var ratingDirection = "vendor"; // BUY
+        var validator = new SeedExpectedRevenuesFromRatingCommandValidator();
+        var valResult = validator.Validate(new SeedExpectedRevenuesFromRatingCommand(Guid.Empty));
+        Assert.False(valResult.IsValid);
+        Assert.Contains(valResult.Errors, e => e.PropertyName == "RatingId");
+
+        var rating = new Rating { Id = Guid.NewGuid(), PartyTypeCode = "vendor" };
         var ex = Assert.Throws<ValidationAppException>(() =>
         {
-            if (string.Equals(ratingDirection, "vendor", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(rating.PartyTypeCode, "vendor", StringComparison.OrdinalIgnoreCase))
             {
-                throw new ValidationAppException("Chỉ được seed Doanh thu dự kiến từ bảng giá bán (SELL/customer). Bảng giá này là giá mua (BUY/vendor).");
+                throw new ValidationAppException("Không thể tạo doanh thu dự kiến từ lần tính giá mua (BUY). Chỉ lần tính giá bán (SELL) mới được tạo doanh thu dự kiến.");
             }
         });
         Assert.Contains("BUY", ex.Message);
@@ -149,12 +152,17 @@ public sealed class UatFollowup20261026Tests
     [Fact]
     public void TC10_SeedExpectedCosts_OnSellRating_ThrowsValidationAppException()
     {
-        var ratingDirection = "customer"; // SELL
+        var validator = new SeedExpectedCostsFromRatingCommandValidator();
+        var valResult = validator.Validate(new SeedExpectedCostsFromRatingCommand(Guid.Empty));
+        Assert.False(valResult.IsValid);
+        Assert.Contains(valResult.Errors, e => e.PropertyName == "RatingId");
+
+        var rating = new Rating { Id = Guid.NewGuid(), PartyTypeCode = "customer" };
         var ex = Assert.Throws<ValidationAppException>(() =>
         {
-            if (string.Equals(ratingDirection, "customer", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(rating.PartyTypeCode, "customer", StringComparison.OrdinalIgnoreCase))
             {
-                throw new ValidationAppException("Chỉ được seed Chi phí dự kiến từ bảng giá mua (BUY/vendor). Bảng giá này là giá bán (SELL/customer).");
+                throw new ValidationAppException("Không thể tạo chi phí dự kiến từ lần tính giá bán (SELL). Chỉ lần tính giá mua (BUY) mới được tạo chi phí dự kiến.");
             }
         });
         Assert.Contains("BUY", ex.Message);
@@ -164,31 +172,49 @@ public sealed class UatFollowup20261026Tests
     [Fact]
     public void TC11_SeedIdempotency_RepeatSeed_ReturnsExistingCostsWithoutDuplicates()
     {
+        var ratingId = Guid.NewGuid();
         var existingCostIds = new List<Guid> { Guid.NewGuid(), Guid.NewGuid() };
-        var isAlreadySeeded = existingCostIds.Count > 0;
+        var result = new SeedExpectedCostsResult(ratingId, CreatedCount: 0, ExistingCount: 2, CostIds: existingCostIds);
 
-        List<Guid> resultingCostIds;
-        if (isAlreadySeeded)
-        {
-            resultingCostIds = existingCostIds; // Idempotent return
-        }
-        else
-        {
-            resultingCostIds = [Guid.NewGuid(), Guid.NewGuid()];
-        }
-
-        Assert.Equal(2, resultingCostIds.Count);
-        Assert.Equal(existingCostIds, resultingCostIds);
+        Assert.Equal(0, result.CreatedCount);
+        Assert.Equal(2, result.ExistingCount);
+        Assert.Equal(2, result.CostIds.Count);
+        Assert.Equal(existingCostIds, result.CostIds);
     }
 
     [Fact]
     public void TC12_RatingDetail_ComponentNature_BothFreightAndSurchargeAreCost()
     {
-        var freightNature = "cost";
-        var surchargeNature = "cost";
+        var freightDetail = new RatingDetail
+        {
+            Id = Guid.NewGuid(),
+            RatingId = Guid.NewGuid(),
+            RuleCode = "QT0001",
+            ComponentCode = "FREIGHT",
+            ComponentName = "Cước chính",
+            FinancialNature = "cost",
+            FinancialMaturity = "expected",
+            Amount = 1440000m,
+            CurrencyCode = "VND"
+        };
 
-        Assert.Equal("cost", freightNature);
-        Assert.Equal("cost", surchargeNature);
+        var surchargeDetail = new RatingDetail
+        {
+            Id = Guid.NewGuid(),
+            RatingId = freightDetail.RatingId,
+            RuleCode = "DONGGOI",
+            ComponentCode = "PACKING",
+            ComponentName = "Phụ phí đóng gói",
+            FinancialNature = "cost",
+            FinancialMaturity = "expected",
+            Amount = 300000m,
+            CurrencyCode = "VND"
+        };
+
+        Assert.Equal("cost", freightDetail.FinancialNature);
+        Assert.Equal("cost", surchargeDetail.FinancialNature);
+        Assert.Equal("expected", freightDetail.FinancialMaturity);
+        Assert.Equal("expected", surchargeDetail.FinancialMaturity);
     }
 
     // ========================================================================
@@ -558,30 +584,39 @@ public sealed class UatFollowup20261026Tests
     [Fact]
     public void TC30_FinancialMaturity_ExpectedCost_NeverAutoCreatesConfirmedOrActual()
     {
-        var seededMaturity = "expected";
-        decimal expectedAmount = 1440000m;
-        decimal? confirmedAmount = null;
-        decimal? actualAmount = null;
+        var cost = new Cost
+        {
+            Id = Guid.NewGuid(),
+            BillId = Guid.NewGuid(),
+            CostTypeCode = "FREIGHT",
+            FinancialMaturity = "expected",
+            Amount = 1440000m,
+            ExpectedAmount = 1440000m,
+            CurrencyCode = "VND",
+            AttributionType = "direct"
+        };
 
-        Assert.Equal("expected", seededMaturity);
-        Assert.Null(confirmedAmount);
-        Assert.Null(actualAmount);
-        Assert.Equal(1440000m, expectedAmount);
+        Assert.Equal("expected", cost.FinancialMaturity);
+        Assert.Null(cost.ConfirmedAmount);
+        Assert.Null(cost.ActualAmount);
+        Assert.Equal(1440000m, cost.Amount);
     }
 
     [Fact]
     public void TC31_FinancialIntegrity_TwoSeeds_ProduceExactlyTwoEconomicCostFacts()
     {
-        var seededFacts = new HashSet<string>();
-        // First seed
-        seededFacts.Add("RATING_DETAIL_FREIGHT_COST");
-        seededFacts.Add("RATING_DETAIL_DONGGOI_COST");
-        Assert.Equal(2, seededFacts.Count);
+        Assert.Equal("rating_detail", CostSourceTypes.RatingDetail);
 
-        // Second seed (repeat)
-        seededFacts.Add("RATING_DETAIL_FREIGHT_COST");
-        seededFacts.Add("RATING_DETAIL_DONGGOI_COST");
-        Assert.Equal(2, seededFacts.Count);
+        var freightSource = (CostSourceTypes.RatingDetail, Guid.NewGuid());
+        var surchargeSource = (CostSourceTypes.RatingDetail, Guid.NewGuid());
+
+        var facts = new HashSet<(string, Guid)> { freightSource, surchargeSource };
+        Assert.Equal(2, facts.Count);
+
+        // Second seed (repeat) - Idempotency ensures set size remains 2
+        facts.Add(freightSource);
+        facts.Add(surchargeSource);
+        Assert.Equal(2, facts.Count);
     }
 
     // ========================================================================

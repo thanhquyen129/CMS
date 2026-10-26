@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DateInputVi } from "@/components/DateInputVi";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { SPECIAL_FLAGS } from "@/lib/create-workspace";
@@ -597,7 +598,13 @@ function FieldInput({
     }
     case "datetime":
       control = (
-        <input id={id} type="datetime-local" value={value} disabled={locked} onChange={(ev) => onChange(ev.target.value)} />
+        <DateInputVi
+          id={id}
+          value={value ? value.slice(0, 10) : ""}
+          disabled={locked}
+          onChange={(iso: string) => onChange(iso)}
+          placeholder="DD/MM/YYYY"
+        />
       );
       break;
     default:

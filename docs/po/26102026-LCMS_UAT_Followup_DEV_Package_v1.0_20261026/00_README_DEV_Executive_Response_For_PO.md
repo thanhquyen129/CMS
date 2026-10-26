@@ -52,7 +52,7 @@ Toàn bộ **8 hạng mục điều chỉnh** (`01_Change_Register`) đã đư�
 
 - **Nhánh triển khai (`branch`)**: `main`
 - **Baseline Commit trước khi làm**: `172542cab7a8c720c74ff7a66a49111c356edc8b`
-- **Commit bàn giao nghiệm thu**: Commit SHA trên branch `main` chứa toàn bộ gói hoàn chỉnh `LCMS-UAT-FU-20261026-01` (`4dcc49bed26a69f81de2ddfe89230d24f3b04e89`)
+- **Commit bàn giao nghiệm thu**: Commit SHA trên branch `main` chứa toàn bộ gói hoàn chỉnh `LCMS-UAT-FU-20261026-01` (`8e81ae0b2055f76e62377ba4893e710e028185db`)
 - **Trạng thái Git**: Clean (`git status` 0 untracked core files, sạch sẽ).
 - **Trạng thái Database Migration**: **`0 schema migration`** (Hoàn toàn tương thích ngược với cấu trúc DB hiện tại; không yêu cầu migrate hay rollback database).
 - **Môi trường triển khai nghiệm thu**:

@@ -83,6 +83,8 @@ public sealed class ResolvedRatingContext
     public decimal? Quantity { get; init; }
     public string Basis { get; init; } = "missing";
     public string? QuantityRuleCode { get; init; }
+    public string RateDateSource { get; init; } = "policy_fallback";
+    public string RateDateSourceLabel { get; init; } = "";
     public bool RequiresOverride { get; init; }
     public IReadOnlyList<string> ExcludedLegacySurchargeCodes { get; init; } = [];
     public string ContextType { get; init; } = RatingContextTypes.Bill;
@@ -114,7 +116,29 @@ public sealed class RatingContextResolver
             throw new ConflictAppException("Chỉ được tính giá trên phiên bản bảng giá đã phát hành.");
         }
 
-        var rateDate = input.RateDate ?? DateTimeOffset.UtcNow;
+        DateTimeOffset rateDate;
+        string rateDateSource;
+        string rateDateSourceLabel;
+
+        if (input.RateDate is DateTimeOffset reqDate)
+        {
+            rateDate = reqDate;
+            rateDateSource = "manual_override";
+            rateDateSourceLabel = "Chỉ định thủ công: " + reqDate.ToString("dd/MM/yyyy");
+        }
+        else if (bill.EtdAt is DateTimeOffset etd)
+        {
+            rateDate = etd;
+            rateDateSource = "etd";
+            rateDateSourceLabel = "ETD của Bill: " + etd.ToString("dd/MM/yyyy");
+        }
+        else
+        {
+            rateDate = bill.CreatedAt;
+            rateDateSource = "policy_fallback";
+            rateDateSourceLabel = "Chính sách mặc định (Ngày tạo Bill: " + bill.CreatedAt.ToString("dd/MM/yyyy") + ")";
+        }
+
         if (version.EffectiveFrom is DateTimeOffset from && rateDate < from)
         {
             throw new ConflictAppException("Phiên bản bảng giá chưa đến ngày hiệu lực.");
@@ -475,6 +499,8 @@ public sealed class RatingContextResolver
             Version = version,
             Card = card,
             RateDate = rateDate,
+            RateDateSource = rateDateSource,
+            RateDateSourceLabel = rateDateSourceLabel,
             ServiceType = serviceType,
             PartyType = partyType,
             RouteCode = routeCode,

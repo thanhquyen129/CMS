@@ -213,6 +213,17 @@ public sealed class EditOperationalReferenceCommandHandler
             BindLocation(record, def.Code, bound.LocationId);
         }
 
+        if (def.Code == OperationalFieldCodes.ServiceTypeCode && !string.IsNullOrWhiteSpace(value))
+        {
+            var trimmedSvc = value.Trim();
+            var exists = await _db.MasterCatalogItems.AsNoTracking()
+                .AnyAsync(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive && m.Code.ToLower() == trimmedSvc.ToLower(), cancellationToken);
+            if (!exists)
+            {
+                throw new ValidationAppException($"Mã loại dịch vụ '{trimmedSvc}' không hợp lệ hoặc không tồn tại trong danh mục hoạt động.");
+            }
+        }
+
         if (string.Equals(old, value, StringComparison.Ordinal))
         {
             return null;

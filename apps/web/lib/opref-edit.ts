@@ -28,7 +28,8 @@ export type OprefFieldKind =
   | "datetime"
   | "transport_mode"
   | "commodity"
-  | "flags";
+  | "flags"
+  | "service_type";
 
 export type OprefFieldState = {
   code: string;
@@ -78,6 +79,7 @@ export type OprefEditView = {
   currentRatings: OprefRatingStatus[];
   linkedBillCount: number;
   commodities: OprefOption[];
+  services?: OprefOption[];
 };
 
 export type OprefEditResult = {

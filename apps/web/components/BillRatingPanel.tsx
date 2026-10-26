@@ -143,11 +143,12 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                       />
                     ) : (
                       <div className="row-actions">
-                        <SeedExpectedCostsButton terms={terms} ratingId={r.id} />
-                        <SeedExpectedRevenuesButton
-                          terms={terms}
-                          ratingId={r.id}
-                        />
+                        {(!r.partyTypeCode || r.partyTypeCode.toLowerCase() === "vendor" || r.partyTypeCode.toLowerCase() === "buy") ? (
+                          <SeedExpectedCostsButton terms={terms} ratingId={r.id} billId={billId} />
+                        ) : null}
+                        {(r.partyTypeCode?.toLowerCase() === "customer" || r.partyTypeCode?.toLowerCase() === "sell") ? (
+                          <SeedExpectedRevenuesButton terms={terms} ratingId={r.id} billId={billId} />
+                        ) : null}
                       </div>
                     )}
                   </td>

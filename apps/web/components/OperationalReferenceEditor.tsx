@@ -314,6 +314,12 @@ export function OperationalReferenceEditor({ objectType, objectId, ratingHref }:
         </div>
       ) : null}
 
+      {view.fields.some((f) => f.code === "service_type_code" && f.value?.toUpperCase() === "AIR") ? (
+        <div className="alert alert-warning" role="alert">
+          <strong>Cảnh báo danh mục:</strong> Mã dịch vụ “AIR” không chuẩn theo danh mục đã hiệu chỉnh / sai ngữ nghĩa so với phương thức vận chuyển, cần mapping có kiểm soát (chọn “FREIGHT” hoặc loại dịch vụ tương ứng). Dữ liệu cũ vẫn được bảo toàn.
+        </div>
+      ) : null}
+
       {staleRatings.length > 0 ? (
         <div className="alert alert-warning" role="status">
           <strong>Cần tính giá lại</strong> — {staleRatings.length} lần tính giá dùng dữ liệu đã thay đổi. Kết quả cũ
@@ -412,6 +418,7 @@ export function OperationalReferenceEditor({ objectType, objectId, ratingHref }:
                       field={f}
                       value={draft[f.code] ?? ""}
                       commodities={view.commodities}
+                      services={view.services ?? []}
                       disabled={busy}
                       allowMultimodal={objectType === "shipment"}
                       onChange={(v) => setDraft((d) => ({ ...d, [f.code]: v }))}
@@ -488,6 +495,7 @@ function FieldInput({
   field,
   value,
   commodities,
+  services,
   disabled,
   allowMultimodal,
   onChange,
@@ -496,6 +504,7 @@ function FieldInput({
   field: OprefFieldState;
   value: string;
   commodities: { value: string; label: string }[];
+  services?: { value: string; label: string }[];
   disabled: boolean;
   allowMultimodal?: boolean;
   onChange: (value: string) => void;
@@ -519,6 +528,34 @@ function FieldInput({
             </option>
           ))}
         </select>
+      );
+      break;
+    }
+    case "service_type": {
+      const catalog = services ?? [];
+      const hasOption = catalog.some((s) => s.value.toUpperCase() === value.toUpperCase());
+      const isLegacyAir = value.toUpperCase() === "AIR";
+      control = (
+        <div>
+          <select id={id} value={value} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
+            <option value="">Chưa chọn loại dịch vụ</option>
+            {value && !hasOption ? (
+              <option value={value}>
+                {value} — {isLegacyAir ? "Mã AIR di sản (cần chuyển sang FREIGHT)" : "Mã không chuẩn"}
+              </option>
+            ) : null}
+            {catalog.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          {isLegacyAir ? (
+            <p className="muted small" style={{ color: "#b45309", marginTop: "4px" }}>
+              Mã dịch vụ không chuẩn theo danh mục đã hiệu chỉnh / sai ngữ nghĩa so với phương thức vận chuyển, cần mapping có kiểm soát.
+            </p>
+          ) : null}
+        </div>
       );
       break;
     }

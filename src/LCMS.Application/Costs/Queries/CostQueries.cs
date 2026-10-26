@@ -45,6 +45,38 @@ public sealed record CostAllocationDto(
     IReadOnlyList<CostAllocationDetailDto> Details,
     byte[]? RowVersion = null);
 
+public sealed record CostRatingTraceDto(
+    Guid? RatingId,
+    Guid? RatingDetailId,
+    Guid? RateCardId,
+    string? RateCardCode,
+    string? RateCardName,
+    Guid? RateVersionId,
+    int? RateVersionNo,
+    Guid? PricingRuleId,
+    string? RuleCode,
+    string? ChargeCode,
+    decimal? ChargeableWeightKg,
+    decimal? UnitRate,
+    string? FormulaText,
+    DateTimeOffset? RateDate,
+    string? RateDateFormatted,
+    string? RateDateSourceLabel,
+    string CurrencyCode,
+    decimal? NetAmount,
+    decimal? VatRate,
+    decimal? VatAmount,
+    decimal? GrossAmount,
+    Guid? VendorPartyId,
+    string? VendorName,
+    bool IsSurcharge,
+    Guid? SurchargeId,
+    string? SurchargeCode,
+    string? SurchargeName,
+    Guid? SurchargeVersionId,
+    string SourceOrigin
+);
+
 public sealed record CostDto(
     Guid Id,
     Guid? BillId,
@@ -78,7 +110,12 @@ public sealed record CostDto(
     Guid? ShipmentId = null,
     Guid? RateCardId = null,
     Guid? RateVersionId = null,
-    Guid? PricingRuleId = null);
+    Guid? PricingRuleId = null,
+    decimal? NetAmount = null,
+    decimal? VatRate = null,
+    decimal? VatAmount = null,
+    decimal? GrossAmount = null,
+    CostRatingTraceDto? RatingTrace = null);
 
 public sealed record CostListItemDto(
     Guid Id,
@@ -222,6 +259,119 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                 a.RowVersion);
         }).ToList();
 
+        CostRatingTraceDto? trace = null;
+        if (string.Equals(cost.SourceType, CostSourceTypes.RatingDetail, StringComparison.OrdinalIgnoreCase) && cost.SourceId is Guid detailId)
+        {
+            var detail = await _db.RatingDetails.AsNoTracking().FirstOrDefaultAsync(d => d.Id == detailId, cancellationToken);
+            if (detail is not null)
+            {
+                var rating = await _db.Ratings.AsNoTracking().FirstOrDefaultAsync(r => r.Id == detail.RatingId, cancellationToken);
+                var cardId = cost.RateCardId ?? rating?.RateCardId;
+                var versionId = cost.RateVersionId ?? rating?.RateVersionId;
+                var ruleId = cost.PricingRuleId ?? detail.PricingRuleId;
+
+                var card = cardId is Guid cid ? await _db.RateCards.AsNoTracking().FirstOrDefaultAsync(c => c.Id == cid, cancellationToken) : null;
+                var version = versionId is Guid vid ? await _db.RateVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == vid, cancellationToken) : null;
+                var rule = ruleId is Guid rid ? await _db.PricingRules.AsNoTracking().FirstOrDefaultAsync(pr => pr.Id == rid, cancellationToken) : null;
+                var vendor = cost.VendorPartyId is Guid vpid ? await _db.BusinessParties.AsNoTracking().FirstOrDefaultAsync(p => p.Id == vpid, cancellationToken) : null;
+
+                bool isSurcharge = string.Equals(detail.SourceType, RatingSourceTypes.Surcharge, StringComparison.OrdinalIgnoreCase) || detail.SourceVersionId is not null;
+                LCMS.Domain.Entities.Surcharge? surcharge = null;
+                if (isSurcharge && detail.SourceId is Guid sId)
+                {
+                    surcharge = await _db.Surcharges.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sId, cancellationToken);
+                }
+
+                string? rateDateSourceLabel = null;
+                string? rateDateFormatted = rating?.RateDate?.ToString("dd/MM/yyyy");
+                if (rating?.ContextJson is not null)
+                {
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(rating.ContextJson);
+                        if (doc.RootElement.TryGetProperty("rateDateSourceLabel", out var slProp))
+                        {
+                            rateDateSourceLabel = slProp.GetString();
+                        }
+                    }
+                    catch { }
+                }
+                rateDateSourceLabel ??= rating?.RateDate != null ? "Ngày tính giá" : "Không xác định";
+
+                decimal? unitRate = null;
+                if (rating?.ChargeableWeightKg is decimal cw && cw > 0 && detail.Amount > 0)
+                {
+                    unitRate = decimal.Round(detail.Amount / cw, 2, MidpointRounding.AwayFromZero);
+                }
+
+                trace = new CostRatingTraceDto(
+                    RatingId: detail.RatingId,
+                    RatingDetailId: detail.Id,
+                    RateCardId: card?.Id ?? cardId,
+                    RateCardCode: card?.Code,
+                    RateCardName: card?.Name,
+                    RateVersionId: version?.Id ?? versionId,
+                    RateVersionNo: version?.VersionNo,
+                    PricingRuleId: rule?.Id ?? ruleId,
+                    RuleCode: !string.IsNullOrWhiteSpace(detail.RuleCode) ? detail.RuleCode : rule?.Code,
+                    ChargeCode: detail.ComponentCode,
+                    ChargeableWeightKg: rating?.ChargeableWeightKg,
+                    UnitRate: unitRate,
+                    FormulaText: detail.FormulaText,
+                    RateDate: rating?.RateDate,
+                    RateDateFormatted: rateDateFormatted,
+                    RateDateSourceLabel: rateDateSourceLabel,
+                    CurrencyCode: detail.CurrencyCode,
+                    NetAmount: detail.NetAmount ?? cost.NetAmount ?? cost.Amount,
+                    VatRate: detail.VatRate ?? cost.VatRate,
+                    VatAmount: detail.VatAmount ?? cost.VatAmount,
+                    GrossAmount: detail.GrossAmount ?? cost.GrossAmount ?? cost.Amount,
+                    VendorPartyId: vendor?.Id ?? cost.VendorPartyId,
+                    VendorName: vendor?.Name,
+                    IsSurcharge: isSurcharge,
+                    SurchargeId: surcharge?.Id ?? detail.SourceId,
+                    SurchargeCode: surcharge?.Code,
+                    SurchargeName: surcharge?.Name,
+                    SurchargeVersionId: detail.SourceVersionId,
+                    SourceOrigin: isSurcharge ? "surcharge" : "rating"
+                );
+            }
+        }
+        else
+        {
+            trace = new CostRatingTraceDto(
+                RatingId: null,
+                RatingDetailId: null,
+                RateCardId: null,
+                RateCardCode: null,
+                RateCardName: null,
+                RateVersionId: null,
+                RateVersionNo: null,
+                PricingRuleId: null,
+                RuleCode: null,
+                ChargeCode: cost.CostTypeCode,
+                ChargeableWeightKg: null,
+                UnitRate: null,
+                FormulaText: null,
+                RateDate: null,
+                RateDateFormatted: null,
+                RateDateSourceLabel: null,
+                CurrencyCode: cost.CurrencyCode,
+                NetAmount: cost.NetAmount ?? cost.Amount,
+                VatRate: cost.VatRate,
+                VatAmount: cost.VatAmount,
+                GrossAmount: cost.GrossAmount ?? cost.Amount,
+                VendorPartyId: cost.VendorPartyId,
+                VendorName: null,
+                IsSurcharge: false,
+                SurchargeId: null,
+                SurchargeCode: null,
+                SurchargeName: null,
+                SurchargeVersionId: null,
+                SourceOrigin: "manual"
+            );
+        }
+
         return new CostDto(
             cost.Id,
             cost.BillId,
@@ -255,7 +405,12 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             cost.ShipmentId,
             cost.RateCardId,
             cost.RateVersionId,
-            cost.PricingRuleId);
+            cost.PricingRuleId,
+            cost.NetAmount,
+            cost.VatRate,
+            cost.VatAmount,
+            cost.GrossAmount,
+            trace);
     }
 }
 

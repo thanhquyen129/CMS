@@ -65,6 +65,12 @@ public sealed class SeedExpectedRevenuesFromRatingCommandHandler
             .FirstOrDefaultAsync(r => r.Id == request.RatingId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy lần tính giá.");
 
+        // Guard BR-01, BR-02: SELL -> Revenue, BUY cannot seed Revenue
+        if (string.Equals(rating.PartyTypeCode, "vendor", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ValidationAppException("Không thể tạo doanh thu dự kiến từ lần tính giá mua (BUY). Chỉ lần tính giá bán (SELL) mới được tạo doanh thu dự kiến.");
+        }
+
         var details = await _db.RatingDetails.AsNoTracking()
             .Where(d => d.RatingId == rating.Id && d.FinancialNature == "revenue")
             .OrderBy(d => d.ComponentCode)

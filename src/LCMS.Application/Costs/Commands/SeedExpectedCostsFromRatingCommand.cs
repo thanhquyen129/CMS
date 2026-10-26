@@ -58,6 +58,12 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             .FirstOrDefaultAsync(r => r.Id == request.RatingId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy lần tính giá.");
 
+        // Guard BR-01, BR-02: BUY -> Cost, SELL cannot seed Cost
+        if (string.Equals(rating.PartyTypeCode, "customer", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ValidationAppException("Không thể tạo chi phí dự kiến từ lần tính giá bán (SELL). Chỉ lần tính giá mua (BUY) mới được tạo chi phí dự kiến.");
+        }
+
         var details = await _db.RatingDetails.AsNoTracking()
             .Where(d => d.RatingId == rating.Id
                         && d.FinancialNature == "cost")

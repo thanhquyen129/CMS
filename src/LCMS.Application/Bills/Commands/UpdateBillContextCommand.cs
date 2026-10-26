@@ -159,6 +159,17 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
             .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id)
             .ToListAsync(cancellationToken));
 
+        if (!string.IsNullOrWhiteSpace(request.Context?.ServiceType))
+        {
+            var trimmedSvc = request.Context.ServiceType.Trim();
+            var exists = await _db.MasterCatalogItems.AsNoTracking()
+                .AnyAsync(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive && m.Code.ToLower() == trimmedSvc.ToLower(), cancellationToken);
+            if (!exists)
+            {
+                throw new ValidationAppException($"Mã loại dịch vụ '{trimmedSvc}' không hợp lệ trong danh mục hoạt động.");
+            }
+        }
+
         if (request.CustomerPartyId is Guid partyId)
         {
             await _parties.EnsureUsableAsync(

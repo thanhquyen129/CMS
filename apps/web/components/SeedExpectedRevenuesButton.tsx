@@ -7,9 +7,10 @@ import { term, type TerminologyMap } from "@/lib/terminology";
 type Props = {
   terms: TerminologyMap;
   ratingId: string;
+  billId?: string;
 };
 
-export function SeedExpectedRevenuesButton({ terms, ratingId }: Props) {
+export function SeedExpectedRevenuesButton({ terms, ratingId, billId }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -75,8 +76,13 @@ export function SeedExpectedRevenuesButton({ terms, ratingId }: Props) {
         </div>
       ) : null}
       {info ? (
-        <div className="alert alert-info" role="status">
-          {info}
+        <div className="alert alert-info" role="status" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+          <span>{info}</span>
+          {billId ? (
+            <a className="btn btn-sm btn-ghost" href={`/bills/${billId}?tab=revenues`}>
+              Xem danh sách doanh thu
+            </a>
+          ) : null}
         </div>
       ) : null}
       <button

@@ -52,7 +52,8 @@ public sealed record OperationalReferenceEditDto(
     ChargeableWeightStateDto? Chargeable,
     IReadOnlyList<OperationalRatingStatusDto> CurrentRatings,
     int LinkedBillCount,
-    IReadOnlyList<OperationalOptionDto> Commodities);
+    IReadOnlyList<OperationalOptionDto> Commodities,
+    IReadOnlyList<OperationalOptionDto>? Services = null);
 
 public sealed record GetOperationalReferenceEditQuery(string ObjectType, Guid ObjectId) : IRequest<OperationalReferenceEditDto>;
 
@@ -136,6 +137,15 @@ public sealed class GetOperationalReferenceEditQueryHandler
                 .ToList()
             : [];
 
+        var services = (await _db.MasterCatalogItems.AsNoTracking()
+            .Where(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive)
+            .OrderBy(m => m.SortOrder)
+            .ThenBy(m => m.Code)
+            .Select(m => new { m.Code, m.Name })
+            .ToListAsync(cancellationToken))
+            .Select(m => new OperationalOptionDto(m.Code, $"{m.Code} — {m.Name}"))
+            .ToList();
+
         return new OperationalReferenceEditDto(
             type,
             record.Id,
@@ -152,7 +162,8 @@ public sealed class GetOperationalReferenceEditQueryHandler
             chargeable,
             ratings.OrderByDescending(r => r.RatedAt).ToList(),
             type == OperationalObjectTypes.Bill ? 0 : billIds.Count,
-            commodities);
+            commodities,
+            services);
     }
 }
 

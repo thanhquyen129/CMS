@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { formatDateOnlyVi } from "@/lib/money";
 
 type Props = {
   rateCardId: string;
@@ -13,6 +14,8 @@ export function CreateRateVersionForm({ rateCardId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [fromVal, setFromVal] = useState("");
+  const [toVal, setToVal] = useState("");
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,6 +65,8 @@ export function CreateRateVersionForm({ rateCardId }: Props) {
 
       startTransition(() => router.refresh());
       e.currentTarget.reset();
+      setFromVal("");
+      setToVal("");
     } catch {
       setError("Không kết nối được máy chủ. Thử lại sau.");
     } finally {
@@ -82,11 +87,35 @@ export function CreateRateVersionForm({ rateCardId }: Props) {
       <div className="form-grid">
         <div className="field">
           <label htmlFor="effectiveFrom">Hiệu lực từ (tuỳ chọn)</label>
-          <input id="effectiveFrom" name="effectiveFrom" type="date" />
+          <input
+            id="effectiveFrom"
+            name="effectiveFrom"
+            type="date"
+            lang="vi-VN"
+            value={fromVal}
+            onChange={(e) => setFromVal(e.target.value)}
+          />
+          {fromVal ? (
+            <span className="muted small" style={{ display: "block", marginTop: "4px" }}>
+              Định dạng Việt Nam: <strong>{formatDateOnlyVi(fromVal)}</strong> (ngày/tháng/năm)
+            </span>
+          ) : null}
         </div>
         <div className="field">
           <label htmlFor="effectiveTo">Hiệu lực đến (tuỳ chọn)</label>
-          <input id="effectiveTo" name="effectiveTo" type="date" />
+          <input
+            id="effectiveTo"
+            name="effectiveTo"
+            type="date"
+            lang="vi-VN"
+            value={toVal}
+            onChange={(e) => setToVal(e.target.value)}
+          />
+          {toVal ? (
+            <span className="muted small" style={{ display: "block", marginTop: "4px" }}>
+              Định dạng Việt Nam: <strong>{formatDateOnlyVi(toVal)}</strong> (ngày/tháng/năm)
+            </span>
+          ) : null}
         </div>
         <div className="field">
           <label htmlFor="vatRate">Thuế suất VAT (%)</label>

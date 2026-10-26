@@ -179,6 +179,147 @@ export default async function CostDetailPage({ params }: { params: Params }) {
           currencyCode={cost.currencyCode}
         />
 
+        <section className="panel" style={{ marginTop: "24px" }} aria-labelledby="cost-trace-heading">
+          <h2 id="cost-trace-heading" className="section-title">
+            Nguồn tính giá &amp; Truy vết (Rating Traceability)
+          </h2>
+          {cost.ratingTrace && cost.ratingTrace.sourceOrigin !== "manual" ? (
+            <div className="stack">
+              <dl className="kv-list">
+                <div>
+                  <dt>Nguồn phát sinh</dt>
+                  <dd>
+                    <span className="badge badge-success">
+                      {cost.ratingTrace.isSurcharge ? "Phụ phí từ Rating" : "Cước chính từ Rating"}
+                    </span>
+                  </dd>
+                </div>
+                {cost.ratingTrace.ratingId ? (
+                  <div>
+                    <dt>Lần tính giá (Rating)</dt>
+                    <dd>
+                      {cost.billId ? (
+                        <Link className="row-link" href={`/bills/${cost.billId}?tab=rating#bill-rating`}>
+                          Rating #{cost.ratingTrace.ratingId.slice(0, 8)}
+                        </Link>
+                      ) : (
+                        <span>#{cost.ratingTrace.ratingId.slice(0, 8)}</span>
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
+                {cost.ratingTrace.isSurcharge ? (
+                  <>
+                    <div>
+                      <dt>Biểu phụ phí (Surcharge)</dt>
+                      <dd>
+                        {cost.ratingTrace.surchargeId ? (
+                          <Link className="row-link" href={`/rate-cards/surcharges/${cost.ratingTrace.surchargeId}`}>
+                            {cost.ratingTrace.surchargeCode} — {cost.ratingTrace.surchargeName ?? "Phụ phí độc lập"}
+                          </Link>
+                        ) : (
+                          <span>{cost.ratingTrace.surchargeCode ?? "Phụ phí"}</span>
+                        )}
+                      </dd>
+                    </div>
+                    {cost.ratingTrace.surchargeVersionId ? (
+                      <div>
+                        <dt>Phiên bản phụ phí</dt>
+                        <dd><code>#{cost.ratingTrace.surchargeVersionId.slice(0, 8)}</code> (Snapshot độc lập)</dd>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <dt>Bảng giá &amp; Phiên bản</dt>
+                      <dd>
+                        {cost.ratingTrace.rateCardId ? (
+                          <Link className="row-link" href={`/rate-cards/${cost.ratingTrace.rateCardId}`}>
+                            {cost.ratingTrace.rateCardCode} — {cost.ratingTrace.rateCardName} (v{cost.ratingTrace.rateVersionNo ?? 1})
+                          </Link>
+                        ) : (
+                          <span>v{cost.ratingTrace.rateVersionNo}</span>
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Quy tắc tính giá</dt>
+                      <dd>
+                        <code>{cost.ratingTrace.ruleCode ?? "QT0001"}</code>
+                      </dd>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <dt>Khoản mục (Charge Code)</dt>
+                  <dd>
+                    <strong>{cost.ratingTrace.chargeCode ?? cost.costTypeCode}</strong>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Trọng lượng tính cước (CW)</dt>
+                  <dd>
+                    {cost.ratingTrace.chargeableWeightKg != null ? `${cost.ratingTrace.chargeableWeightKg} kg` : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Đơn giá / Nấc khớp</dt>
+                  <dd>
+                    {cost.ratingTrace.unitRate != null
+                      ? `${formatMoney(cost.ratingTrace.unitRate, cost.currencyCode)} / kg`
+                      : cost.ratingTrace.formulaText ?? "Theo bảng giá"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Công thức snapshot</dt>
+                  <dd>
+                    <code>{cost.ratingTrace.formulaText ?? "—"}</code>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Ngày áp dụng giá (Rate Date)</dt>
+                  <dd>
+                    {cost.ratingTrace.rateDateFormatted ?? "—"} ({cost.ratingTrace.rateDateSourceLabel ?? "Theo Bill"})
+                  </dd>
+                </div>
+                {cost.ratingTrace.vendorName ? (
+                  <div>
+                    <dt>Nhà cung cấp (Vendor)</dt>
+                    <dd>{cost.ratingTrace.vendorName}</dd>
+                  </div>
+                ) : null}
+              </dl>
+
+              <h3 className="section-title sm" style={{ marginTop: "16px" }}>Bóc tách Thuế &amp; Tiền (VAT Disclosure)</h3>
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Tiền trước thuế (Net / Pre-tax)</th>
+                      <th scope="col">Thuế suất VAT</th>
+                      <th scope="col" className="num">Tiền thuế VAT</th>
+                      <th scope="col" className="num">Tổng sau thuế (Gross)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>{formatMoney(cost.ratingTrace.netAmount ?? cost.expectedAmount, cost.currencyCode)}</strong></td>
+                      <td>{cost.ratingTrace.vatRate != null ? `${cost.ratingTrace.vatRate}%` : "Chưa khai báo"}</td>
+                      <td className="num">{formatMoney(cost.ratingTrace.vatAmount ?? 0, cost.currencyCode)}</td>
+                      <td className="num"><strong>{formatMoney(cost.ratingTrace.grossAmount ?? cost.expectedAmount, cost.currencyCode)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="alert alert-info" role="status">
+              <strong>Nguồn: Nhập thủ công</strong> — Khoản chi phí này được tạo thủ công hoặc chưa có snapshot liên kết từ Rating Engine.
+            </div>
+          )}
+        </section>
+
         <AuditTrailPanel
           terms={terms}
           objectType="cost"

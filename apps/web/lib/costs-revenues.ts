@@ -75,6 +75,38 @@ export type RevenueListItem = {
   rowVersion?: string | null;
 };
 
+export type CostRatingTrace = {
+  ratingId?: string | null;
+  ratingDetailId?: string | null;
+  rateCardId?: string | null;
+  rateCardCode?: string | null;
+  rateCardName?: string | null;
+  rateVersionId?: string | null;
+  rateVersionNo?: number | null;
+  pricingRuleId?: string | null;
+  ruleCode?: string | null;
+  chargeCode?: string | null;
+  chargeableWeightKg?: number | null;
+  unitRate?: number | null;
+  formulaText?: string | null;
+  rateDate?: string | null;
+  rateDateFormatted?: string | null;
+  rateDateSourceLabel?: string | null;
+  currencyCode: string;
+  netAmount?: number | null;
+  vatRate?: number | null;
+  vatAmount?: number | null;
+  grossAmount?: number | null;
+  vendorPartyId?: string | null;
+  vendorName?: string | null;
+  isSurcharge: boolean;
+  surchargeId?: string | null;
+  surchargeCode?: string | null;
+  surchargeName?: string | null;
+  surchargeVersionId?: string | null;
+  sourceOrigin: "rating" | "surcharge" | "manual";
+};
+
 export type CostDto = CostListItem & {
   expectedAmount: number;
   confirmedAmount: number | null;
@@ -89,6 +121,11 @@ export type CostDto = CostListItem & {
   actualizedAt: string | null;
   adjustments: CostAdjustmentItem[];
   allocations: CostAllocation[];
+  netAmount?: number | null;
+  vatRate?: number | null;
+  vatAmount?: number | null;
+  grossAmount?: number | null;
+  ratingTrace?: CostRatingTrace | null;
 };
 
 export type RevenueMappingSummary = {

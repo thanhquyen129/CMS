@@ -1,3 +1,7 @@
+## 2026-10-26 (LCMS-UAT-FU-20261026-01 Post-UAT Follow-up Package v1.0)
+- Changes: Binds ServiceTypeCode to active master catalog in Bill/Order/Shipment/Leg; direction guards for Seed Cost (BUY only) and Seed Revenue (SELL only); weight tier half-open matching & version precedence in BillRateSuggestion; Cost detail rating snapshot trace & itemized VAT disclosure; date format localization to DD/MM/YYYY.
+- Files: src/LCMS.Application/OperationalReferences/*, src/LCMS.Application/Ratings/*, src/LCMS.Application/Costs/*, src/LCMS.Application/Revenues/*, apps/web/components/*, apps/web/app/costs/[id]/page.tsx, tests/LCMS.Api.Tests/UatFollowup20261026Tests.cs.
+
 ## 2026-10-24 — Hoàn tất Live E2E Screenshots full-page, hiển thị tuyến SGN-HAN, RATE_CONFLICT banner và Rating CW=120kg (RATE-VERSION-UI-01 v1.1)
 - Sửa Route binding và Carrier policy: Khắc phục route SGN-HAN trên draft v2 không bị rơi về "Tất cả tuyến", chỉnh carrier_name nullable trên rules tránh chặn Bill rating, cập nhật RatePage listBills không kẹp phân trang 50 để DEMO-01-HUB hiển thị và chọn tính giá trực tiếp.
 - Chụp bộ ảnh Chrome CDP full-page thật 100%: 03, 04, 05, 06, 07a, 07b hiển thị đủ bảng quy tắc, banner xanh lưu nháp tại chỗ, banner đỏ RATE_CONFLICT, lịch sử v1/v2 bất biến, và kết quả tính giá 1.440.000 ₫.

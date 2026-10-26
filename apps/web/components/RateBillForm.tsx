@@ -17,6 +17,8 @@ type RateOption = {
   versionNo: number;
   selectable: boolean;
   reason: string | null;
+  reasonCategory?: string | null;
+  detailedReason?: string | null;
 };
 
 type RateSide = {
@@ -56,6 +58,9 @@ type Suggestion = {
   activeRatingId?: string | null;
   activeRatingQuantity?: number | null;
   activeRatingWeight?: number | null;
+  rateDateFormatted?: string | null;
+  rateDateSource?: string | null;
+  rateDateSourceLabel?: string | null;
 };
 
 type Props = {
@@ -127,24 +132,29 @@ function SideBlock({
       ) : null}
       {extra}
       <div className="field">
-        <label htmlFor={`version-${sideId}`}>Bảng giá / phiên bản đã phát hành</label>
+        <label htmlFor={`version-${sideId}`}>Bảng giá / phiên bản đủ điều kiện áp dụng</label>
         <select id={`version-${sideId}`} value={versionId} onChange={(ev) => onVersion(ev.target.value)}>
-          <option value="">{selectable.length === 0 ? "— Không chọn được —" : "Chọn bảng giá"}</option>
+          <option value="">{selectable.length === 0 ? "— Không có phiên bản đủ điều kiện —" : "Chọn bảng giá (Đủ điều kiện)"}</option>
           {selectable.map((o) => (
             <option key={o.versionId} value={o.versionId}>
-              {o.code} — {o.name} · v{o.versionNo} · {o.currencyCode}
+              {o.code} — {o.name} · v{o.versionNo} · {o.currencyCode} (Đủ điều kiện áp dụng)
             </option>
           ))}
         </select>
       </div>
       {blocked.length > 0 ? (
-        <ul className="readiness-list">
-          {blocked.map((o) => (
-            <li key={o.versionId}>
-              <code>{o.code}</code> v{o.versionNo}: {o.reason}
-            </li>
-          ))}
-        </ul>
+        <div style={{ marginTop: "8px", marginBottom: "12px" }}>
+          <p className="muted small" style={{ fontWeight: 600 }}>Phiên bản không đủ điều kiện / Chỉ tham khảo:</p>
+          <ul className="readiness-list">
+            {blocked.map((o) => (
+              <li key={o.versionId}>
+                <strong><code>{o.code}</code> v{o.versionNo}</strong>:{" "}
+                <span style={{ color: "#b45309" }}>{o.detailedReason || o.reason}</span>
+                <span className="badge badge-subtle" style={{ marginLeft: "8px" }}>Chỉ tham khảo</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
       <div className="form-grid">
         <div className="field">
@@ -418,6 +428,11 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       {success ? (
         <div className="alert alert-info" role="status">
           {success}
+        </div>
+      ) : null}
+      {suggestion.rateDateFormatted ? (
+        <div className="alert alert-info" role="status" style={{ marginBottom: "16px" }}>
+          <strong>Ngày áp dụng giá:</strong> {suggestion.rateDateFormatted} &nbsp;·&nbsp; <strong>Nguồn xác định:</strong> {suggestion.rateDateSourceLabel ?? "Theo Bill"}
         </div>
       ) : null}
       <div className="layout-cols-2">

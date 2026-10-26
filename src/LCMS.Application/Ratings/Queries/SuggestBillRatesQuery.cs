@@ -1,3 +1,4 @@
+using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Ratings;
 using LCMS.Application.Common.Exceptions;
@@ -36,7 +37,11 @@ public sealed record BillRateSuggestionDto(
     IReadOnlyList<VendorRateOptionDto>? Vendors = null,
     Guid? ActiveRatingId = null,
     decimal? ActiveRatingQuantity = null,
-    decimal? ActiveRatingWeight = null);
+    decimal? ActiveRatingWeight = null,
+    DateTimeOffset? RateDate = null,
+    string? RateDateFormatted = null,
+    string? RateDateSource = null,
+    string? RateDateSourceLabel = null);
 
 public sealed record SuggestBillRatesQuery(
     Guid BillId,
@@ -92,7 +97,8 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
         var rules = await _db.PricingRules.AsNoTracking()
             .Where(r => versionIds.Contains(r.RateVersionId) && r.IsActive)
             .Select(r => new RateSuggestionRule(
-                r.RateVersionId, r.Code, r.Name, r.ChargeCode, r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode, r.TransportMode, r.OriginCode, r.DestinationCode, r.CommodityCode, r.AppliesAnyRoute == true))
+                r.RateVersionId, r.Code, r.Name, r.ChargeCode, r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode, r.TransportMode, r.OriginCode, r.DestinationCode, r.CommodityCode, r.AppliesAnyRoute == true,
+                r.WeightMin, r.WeightMax, r.WeightBasis))
             .ToListAsync(cancellationToken);
         rules = rules.Where(r => explicitVersionIds.Contains(r.RateVersionId)
             || !LCMS.Application.Surcharges.LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode)).ToList();
@@ -107,14 +113,49 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
 
         var mapped = cards.Select(c => new RateSuggestionCard(
             c.Id, c.Code, c.Name, c.PartyType, c.IsActive, c.RouteCode, c.TransportMode, c.CurrencyCode, c.SupplierPartyId)).ToList();
-        var rateDate = request.RateDate ?? DateTimeOffset.UtcNow;
+
+        DateTimeOffset rateDate;
+        string rateDateSource;
+        string rateDateSourceLabel;
+
+        if (request.RateDate is DateTimeOffset reqDate)
+        {
+            rateDate = reqDate;
+            rateDateSource = "manual_override";
+            rateDateSourceLabel = "Chỉ định thủ công: " + reqDate.ToString("dd/MM/yyyy");
+        }
+        else if (bill.EtdAt is DateTimeOffset etd)
+        {
+            rateDate = etd;
+            rateDateSource = "etd";
+            rateDateSourceLabel = "ETD của Bill: " + etd.ToString("dd/MM/yyyy");
+        }
+        else
+        {
+            rateDate = bill.CreatedAt;
+            rateDateSource = "policy_fallback";
+            rateDateSourceLabel = "Chính sách mặc định (Ngày tạo Bill: " + bill.CreatedAt.ToString("dd/MM/yyyy") + ")";
+        }
+
+        var measures = await _db.OperationalMeasurements.AsNoTracking()
+            .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id)
+            .ToListAsync(cancellationToken);
+        var cwOverride = await _db.OperationalFieldOverrides.AsNoTracking()
+            .FirstOrDefaultAsync(
+                o => o.ObjectType == OperationalObjectTypes.Bill && o.ObjectId == bill.Id && o.FieldCode == OperationalFieldCodes.ChargeableWeightKg,
+                cancellationToken);
+        var billCw = LCMS.Application.OperationalReferences.Edit.ChargeableWeightPolicy.Resolve(measures, cwOverride, bill.TransportMode, bill.SourceSystem);
+        var gross = measures.FirstOrDefault(m => m.MeasureCode == MeasureCodes.GrossWeightKg)?.Quantity;
+
         var context = new BillRateMatchContext(
             bill.RouteCode,
             bill.TransportMode,
             string.IsNullOrWhiteSpace(bill.ServiceTypeCode) ? bill.BillType : bill.ServiceTypeCode,
             bill.OriginCode,
             bill.DestinationCode,
-            commodity);
+            commodity,
+            billCw.Value,
+            gross);
         var buyCards = mapped.Where(c => string.Equals(c.PartyType, "vendor", StringComparison.OrdinalIgnoreCase)).ToList();
         var sellCards = mapped.Where(c => string.Equals(c.PartyType, "customer", StringComparison.OrdinalIgnoreCase)).ToList();
         var legs = await LoadLegsAsync(bill.Id, cancellationToken);
@@ -140,7 +181,9 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
                     leg.ServiceTypeCode,
                     leg.OriginCode,
                     leg.DestinationCode,
-                    leg.CommodityCode);
+                    leg.CommodityCode,
+                    billCw.Value,
+                    gross);
                 var withVendor = buyCards.Where(c => c.SupplierPartyId is not null).ToList();
                 var preview = BillRateSuggestion.Classify(withVendor, versions, rules, legContext, rateDate);
                 var selectableCards = preview.Options.Where(o => o.Selectable).Select(o => o.RateCardId).ToHashSet();

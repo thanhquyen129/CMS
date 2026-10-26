@@ -35,6 +35,7 @@ public static class OperationalFieldKinds
     public const string TransportMode = "transport_mode";
     public const string Commodity = "commodity";
     public const string Flags = "flags";
+    public const string ServiceType = "service_type";
 }
 
 /// <summary>One editable operational field. <see cref="RatingRelevant"/> fields can make a rating stale.</summary>
@@ -58,7 +59,7 @@ public static class OperationalFieldCatalog
     private static readonly OperationalFieldDef Flags = new(OperationalFieldCodes.SpecialFlags, "Thuộc tính đặc biệt (DG / lạnh / quá khổ)", OperationalFieldKinds.Flags, "cargo", false);
     private static readonly OperationalFieldDef CargoDescription = new(OperationalFieldCodes.CargoDescription, "Mô tả hàng hóa", OperationalFieldKinds.Text, "cargo", false, 2000);
     private static readonly OperationalFieldDef Mode = new(OperationalFieldCodes.TransportMode, "Phương thức vận chuyển", OperationalFieldKinds.TransportMode, "service", true, 32);
-    private static readonly OperationalFieldDef Service = new(OperationalFieldCodes.ServiceTypeCode, "Loại dịch vụ", OperationalFieldKinds.Text, "service", true, 64);
+    private static readonly OperationalFieldDef Service = new(OperationalFieldCodes.ServiceTypeCode, "Loại dịch vụ", OperationalFieldKinds.ServiceType, "service", true, 64);
     private static readonly OperationalFieldDef Origin = new(OperationalFieldCodes.OriginCode, "Điểm đi", OperationalFieldKinds.Text, "route", true, 64, OwnershipKey: "origin_code");
     private static readonly OperationalFieldDef Destination = new(OperationalFieldCodes.DestinationCode, "Điểm đến", OperationalFieldKinds.Text, "route", true, 64, OwnershipKey: "origin_code");
     private static readonly OperationalFieldDef Route = new(OperationalFieldCodes.RouteCode, "Tuyến", OperationalFieldKinds.Text, "route", true, 128, OwnershipKey: "origin_code");

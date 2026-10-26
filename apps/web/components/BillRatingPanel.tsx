@@ -97,7 +97,10 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                 <th scope="col">Thời điểm</th>
                 <th scope="col">Chiều</th>
                 <th scope="col" className="num">
-                  Tổng
+                  Tổng Net (Trước thuế)
+                </th>
+                <th scope="col" className="num">
+                  Tổng Gross (Sau thuế)
                 </th>
                 <th scope="col" className="num">
                   TL tính cước
@@ -115,7 +118,11 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                   <td>{formatDateTimeVi(r.ratedAt)}</td>
                   <td>{r.partyTypeCode ? partyTypeLabel(r.partyTypeCode) : "—"}</td>
                   <td className="num">
-                    {formatMoney(r.totalAmount, r.currencyCode)}
+                    <strong>{formatMoney(r.totalAmount, r.currencyCode)}</strong>
+                  </td>
+                  <td className="num">
+                    <strong>{formatMoney(Math.round(r.totalAmount * 1.08), r.currencyCode)}</strong>
+                    <span className="muted small block">(VAT 8%)</span>
                   </td>
                   <td className="num">
                     {r.chargeableBasis === "not_required"
@@ -165,45 +172,70 @@ export async function BillRatingPanel({ terms, billId }: Props) {
 
 function RatingBreakdown({ rating }: { rating: Rating }) {
   const side = rating.partyTypeCode ? partyTypeLabel(rating.partyTypeCode) : "Kết quả";
+  const totalNet = rating.details.reduce((sum, d) => sum + (d.amount || 0), 0) || rating.totalAmount;
+  const totalVat = rating.details.reduce((sum, d) => {
+    const net = d.amount || 0;
+    return sum + (d.vatAmount != null ? d.vatAmount : (d.vatRate != null ? Math.round(net * (d.vatRate / 100) * 100) / 100 : 0));
+  }, 0);
+  const totalGross = totalNet + totalVat;
+
   return (
-    <div className="stack">
-      <h3 className="section-title sm">
-        {side} · v vừa tính · {formatMoney(rating.totalAmount, rating.currencyCode)}
-      </h3>
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nguồn</th>
-              <th>Công thức</th>
-              <th className="num">Thành tiền</th>
-              <th className="num">Nguyên tệ</th>
-              <th className="num">Tỷ giá</th>
-              <th className="num">VAT</th>
-              <th>Độ chín</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rating.details.map((d) => (
-              <tr key={d.id}>
-                <td>
-                  <code>{d.ruleCode}</code>
-                  {d.componentCode ? ` · ${d.componentCode}` : ""}
-                </td>
-                <td>{d.formulaText || d.componentName}</td>
-                <td className="num">{formatMoney(d.amount, d.currencyCode)}</td>
-                <td className="num">
-                  {d.amountOriginal != null && d.originalCurrency
-                    ? formatMoney(d.amountOriginal, d.originalCurrency)
-                    : "—"}
-                </td>
-                <td className="num">{d.lineFxRate ?? "—"}</td>
-                <td className="num">{d.vatRate == null ? "chưa khai báo" : `${d.vatRate}%`}</td>
-                <td>{d.financialMaturity === "expected" ? "Dự kiến" : d.financialMaturity}</td>
+    <div className="stack" style={{ marginTop: "1rem", marginBottom: "1.5rem" }}>
+      <div className="panel" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "16px" }}>
+        <h3 className="section-title sm" style={{ marginBottom: "8px" }}>
+          {side} · v vừa tính · {rating.serviceTypeCode ? `Dịch vụ: ${rating.serviceTypeCode} · ` : ""}Bóc tách Thuế &amp; Tiền (VAT Disclosure)
+        </h3>
+        <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", marginBottom: "16px", padding: "12px", background: "#ffffff", borderRadius: "6px", border: "1px solid #cbd5e1" }}>
+          <div>
+            <span className="muted small block" style={{ fontWeight: 600 }}>Tiền trước thuế (Net):</span>
+            <strong style={{ fontSize: "1.15rem", color: "#0f172a" }}>{formatMoney(totalNet, rating.currencyCode)}</strong>
+          </div>
+          <div>
+            <span className="muted small block" style={{ fontWeight: 600 }}>Tiền thuế VAT (8%):</span>
+            <strong style={{ fontSize: "1.15rem", color: "#b45309" }}>{formatMoney(totalVat, rating.currencyCode)}</strong>
+          </div>
+          <div>
+            <span className="muted small block" style={{ fontWeight: 600 }}>Tổng tiền sau thuế (Gross):</span>
+            <strong style={{ fontSize: "1.15rem", color: "#1d4e89" }}>{formatMoney(totalGross, rating.currencyCode)}</strong>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Nguồn / Mã quy tắc</th>
+                <th>Công thức tính</th>
+                <th className="num">Tiền trước thuế (Net)</th>
+                <th className="num">Thuế suất VAT</th>
+                <th className="num">Tiền thuế VAT</th>
+                <th className="num">Tổng sau thuế (Gross)</th>
+                <th>Độ chín</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rating.details.map((d) => {
+                const net = d.amount || 0;
+                const vatRate = d.vatRate;
+                const vatAmt = d.vatAmount != null ? d.vatAmount : (vatRate != null ? Math.round(net * (vatRate / 100) * 100) / 100 : 0);
+                const gross = net + vatAmt;
+                return (
+                  <tr key={d.id}>
+                    <td>
+                      <code>{d.ruleCode}</code>
+                      {d.componentCode ? ` · ${d.componentCode}` : ""}
+                    </td>
+                    <td>{d.formulaText || d.componentName}</td>
+                    <td className="num"><strong>{formatMoney(net, d.currencyCode)}</strong></td>
+                    <td className="num">{vatRate == null ? "Chưa khai báo" : `${vatRate}%`}</td>
+                    <td className="num">{formatMoney(vatAmt, d.currencyCode)}</td>
+                    <td className="num"><strong>{formatMoney(gross, d.currencyCode)}</strong></td>
+                    <td><span className="badge badge-subtle">{d.financialMaturity === "expected" ? "Dự kiến" : d.financialMaturity}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

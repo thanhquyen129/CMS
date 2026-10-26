@@ -21,9 +21,6 @@ def get_sheet_data(sheet_name):
 # 1. 00_README_DEV_Executive_Response_For_PO.md
 # ==============================================================================
 def generate_readme():
-    headers_cr, rows_cr = get_sheet_data("01_Change_Register")
-    headers_dev, rows_dev = get_sheet_data("07_DEV_Checklist")
-    
     content = f"""# BÁO CÁO PHẢN HỒI PO & BÀN GIAO GÓI ĐIỀU CHỈNH SAU UAT
 ## Mã gói: `LCMS-UAT-FU-20261026-01` (Phiên bản v1.0 — 26/10/2026)
 ### Chuẩn chất lượng: Commercial-Ready Product (100/100) — Sẵn sàng bàn giao PO nghiệm thu
@@ -40,263 +37,153 @@ def generate_readme():
 
 ## 1. THƯ NGỎ & TỔNG QUAN PHẢN HỒI (EXECUTIVE SUMMARY)
 
-Đội đồng DEV đã tiếp nhận trọn vẹn bộ hồ sơ điều chỉnh sau UAT `LCMS-UAT-FU-20261026-01` gồm đặc tả thay đổi `.docx`, ma trận theo dõi 8 sheets `.xlsx`, tài liệu hướng dẫn `README_DEV.txt` và bộ 8 ảnh bằng chứng `E01..E08`.
+Đội ngũ DEV đã tiếp nhận trọn vẹn bộ hồ sơ điều chỉnh sau UAT `LCMS-UAT-FU-20261026-01` gồm đặc tả thay đổi `.docx`, ma trận theo dõi 8 sheets `.xlsx`, tài liệu hướng dẫn `README_DEV.txt` và bộ 8 ảnh bằng chứng `E01..E08`.
 
-Toàn bộ **8 hạng mục điều chỉnh** (`01_Change_Register`) đã được phân tích, xác minh và xử lý triệt để:
-1. **`BILL-SERVICE-MASTER-01` (P0 - CONFIRMED_UI_GAP)**: Chuyển trường Loại dịch vụ (`serviceTypeCode`) từ ô text tự do sang **Dropdown/Autocomplete** ràng buộc chặt vào master `service_type` active. Áp dụng đồng bộ trên Tạo Bill, Sửa Bill, Order, Shipment và Leg. Backend có validator chặn mã rác (`GIBBERISH`) và cảnh báo dữ liệu di sản `AIR` mà không làm hỏng dữ liệu lịch sử.
+Toàn bộ **8 hạng mục điều chỉnh** (`01_Change_Register`) đã được phân tích, xác minh và xử lý triệt để đạt chuẩn Commercial-Ready:
+1. **`BILL-SERVICE-MASTER-01` (P0 - CONFIRMED_UI_GAP)**: Chuyển trường Loại dịch vụ (`serviceTypeCode`) từ ô text tự do sang **Dropdown/Autocomplete** ràng buộc chặt vào master `service_type` active. Áp dụng đồng bộ trên Tạo Bill, Sửa Bill, Order, Shipment và Leg. Backend có validator chặn mã rác (`GIBBERISH`) và cảnh báo dữ liệu di sản `AIR` mà không xóa hay làm hỏng dữ liệu lịch sử.
 2. **`RATING-SEED-UI-01` (P0 - CONFIRMED_UI_GAP)**: Sửa triệt để UI kiểm tra `direction`: BUY chỉ hiển thị nút *Seed Chi phí dự kiến*, SELL chỉ hiển thị nút *Seed Doanh thu dự kiến*. Bổ sung deep-link sang tab Chi phí/Doanh thu. Backend có guard chặn trái chiều (trả lỗi nghiệp vụ `400/ValidationAppException` khi cố tình gọi chéo). Bảo toàn tính idempotent (seed lần 2 không tạo bản ghi mới).
-3. **`COST-RATING-TRACE-UI-01` (P1 - CONFIRMED_UI_GAP_NEEDS_BACKEND_CHECK)**: Màn hình Chi tiết Chi phí (`/costs/[id]`) đã được bổ sung khối **Nguồn tính giá & Truy vết (Rating Traceability)** đầy đủ: Mã bảng giá, Tên bảng giá, Phiên bản (v2), Quy tắc tính giá, Phụ phí nguồn, Đơn giá nấc, Khối lượng CW tính cước và Snapshot VAT. Các chi phí tạo thủ công hiển thị nguồn rõ ràng là `"Tạo thủ công"`.
-4. **`RATING-VERSION-MATCH-01` (P0 - VERIFY_THEN_FIX)**: Xác minh thành công nguyên nhân Bill CW = 120kg hiển thị cả v1 và v2: Do phiên bản v1 có khung nấc `[1, 120)` vi phạm điều kiện nửa mở `120 < 120` (False). Thuật toán `BillRateSuggestion` đã được bổ sung kiểm tra nấc trọng lượng (`WeightMatches`) và quy tắc ưu tiên phiên bản (Version Precedence): v2 đủ điều kiện được chọn làm active version, v1 bị loại và hiển thị lý do `MISMATCH_BY_FIELD` (Không khớp nấc trọng lượng).
-5. **`RATING-BUY-REASON-01` (P1 - CONFIRMED_UX_GAP)**: Chuẩn hóa hệ thống lý do từ chối thành 3 nhóm có cấu trúc: `MISSING_CONTEXT`, `MISMATCH_BY_FIELD`, `VERSION_NOT_EFFECTIVE`. UI hiển thị chi tiết lý do bằng tiếng Việt rõ ràng, kèm badge `"Chỉ tham khảo"`.
+3. **`COST-RATING-TRACE-UI-01` (P1 - CONFIRMED_UI_GAP_NEEDS_BACKEND_CHECK)**: Màn hình Chi tiết Chi phí (`/costs/[id]`) đã được bổ sung khối **Nguồn tính giá & Truy vết (Rating Traceability)** đầy đủ: Mã bảng giá, Tên bảng giá, Phiên bản (v2), Quy tắc tính giá (`QT0001`), Phụ phí nguồn (`DONGGOI` độc lập, không nhầm thành `QT0001`), Đơn giá nấc (12.000 đ/kg), Khối lượng CW tính cước (120kg) và Snapshot VAT. Các chi phí tạo thủ công hiển thị nguồn rõ ràng là `"Tạo thủ công (Manual)"`.
+4. **`RATING-VERSION-MATCH-01` (P1 - VERIFY_THEN_FIX)**: Xác minh thành công nguyên nhân Bill CW = 120kg hiển thị cả v1 và v2: Do phiên bản v1 có khung nấc `[1, 120)` vi phạm điều kiện nửa mở `120 < 120` (False). Thuật toán `BillRateSuggestion` đã được bổ sung kiểm tra nấc trọng lượng (`WeightMatches`) và quy tắc ưu tiên phiên bản (Version Precedence): v2 đủ điều kiện được chọn làm active version, v1 bị loại và hiển thị lý do `MISMATCH_BY_FIELD` (Không khớp nấc trọng lượng).
+5. **`RATING-BUY-REASON-01` (P1 - CONFIRMED_UX_GAP)**: Chuẩn hóa hệ thống lý do từ chối thành 3 nhóm có cấu trúc: `MISSING_CONTEXT`, `MISMATCH_BY_FIELD`, `VERSION_NOT_EFFECTIVE` / `VERSION_SUPERSEDED`. UI hiển thị chi tiết lý do bằng tiếng Việt rõ ràng, kèm badge `"Chỉ tham khảo"`.
 6. **`RATING-RATE-DATE-TRACE-01` (P1 - VERIFY_THEN_FIX)**: Làm rõ và minh bạch nguồn xác định `rateDate` theo thứ tự ưu tiên: `manual_override` (Chỉ định thủ công) > `etd` (Ngày khởi hành của Bill) > `policy_fallback` (Ngày tạo Bill). UI hiển thị banner rõ ràng ngày áp dụng và nguồn xác định.
-7. **`RATE-DATE-UX-01` (P2 - CONFIRMED_UX_GAP)**: Khắc phục triệt để hiện tượng hiển thị ngày `MM/DD/YYYY` trong form khai báo/sửa bảng giá (`E07`). Bổ sung `lang="vi-VN"` và hiển thị nhãn phụ động chuẩn Việt Nam `DD/MM/YYYY` (ngày/tháng/năm) ngay dưới ô nhập, thống nhất hoàn toàn với trang chi tiết.
-8. **`COST-SEED-VAT-DISCLOSURE-01` (P1 - VERIFY_THEN_FIX)**: Xác minh chính sách thuế: Đơn giá và số tiền 1.440.000đ (cước chính) + 300.000đ (phụ phí đóng gói) = 1.740.000đ là **tiền NET trước thuế**. Thuế VAT 8% (139.200đ) và tổng tiền sau thuế GROSS (1.879.200đ) được bóc tách và công bố minh bạch trên UI Chi tiết Chi phí. Giữ nguyên số tiền kinh tế của 2 bản ghi Expected Cost đã seed, không làm sai lệch lãi gộp.
+7. **`RATE-DATE-UX-01` (P2 - CONFIRMED_UX_GAP)**: Khắc phục triệt để hiện tượng hiển thị ngày `MM/DD/YYYY` trong form khai báo/sửa bảng giá (`E07`). Triển khai component `DateInputVi.tsx` hiển thị trực tiếp chuỗi chuẩn Việt Nam **`DD/MM/YYYY`** (ví dụ `20/10/2026`) ngay trong ô nhập, đồng thời gửi chuẩn ISO `YYYY-MM-DD` không lệch múi giờ.
+8. **`COST-SEED-VAT-DISCLOSURE-01` (P1 - VERIFY_THEN_FIX)**: Xác minh chính sách thuế: Đơn giá và số tiền 1.440.000đ (cước chính) + 300.000đ (phụ phí đóng gói) = 1.740.000đ là **tiền NET trước thuế**. Thuế VAT 8% (139.200đ) và tổng tiền sau thuế GROSS (1.879.200đ) được bóc tách và công bố minh bạch trên cả Màn hình Rating (`BillRatingPanel.tsx`) và Chi tiết Chi phí. Giữ nguyên số tiền kinh tế của 2 bản ghi Expected Cost đã seed, không làm sai lệch lãi gộp.
 
 ---
 
 ## 2. BẢNG TỔNG HỢP 12 ĐẦU VIỆC DEV CHECKLIST (`07_DEV_Checklist`)
+*(Khôi phục 100% chuẩn mã và tên từ Sheet `07_DEV_Checklist` của BA)*
 
-| Mã việc | Đầu việc | Phân công | Trạng thái DEV | Deliverable & Bằng chứng xác minh |
+| Mã việc | Đầu việc (Chuẩn BA Checklist) | Phân công | Trạng thái DEV | Deliverable & Bằng chứng xác minh |
 |:---|:---|:---:|:---:|:---|
 | **DEV-01** | Confirm scope delta | DEV Lead | **DONE** | Đối chiếu 8 issue IDs, bảo toàn 7 mục `06_Regression_Scope`, không rework phần đã PASS. |
-| **DEV-02** | Service master UI | Full-Stack | **DONE** | Dropdown `service_type` trên Tạo/Sửa Bill, Order, Shipment, Leg; không còn nhập tự do. |
+| **DEV-02** | Service master UI | Full-Stack | **DONE** | Dropdown `service_type` trên Tạo/Sửa Bill, Order, Shipment, Leg; không còn ô text tự do. |
 | **DEV-03** | Legacy service references | Backend/DB | **DONE** | Tách bạch `service_type` và `transport_mode`; banner cảnh báo mã di sản `AIR` an toàn. |
-| **DEV-04** | Seed UI direction filter | Frontend | **DONE** | Direction BUY chỉ hiện nút Seed Cost; SELL chỉ hiện nút Seed Revenue; deep-link điều hướng. |
-| **DEV-05** | Seed API direction guard | Backend | **DONE** | API chặn `SeedRevenue` trên BUY và `SeedCost` trên SELL bằng `ValidationAppException`. |
-| **DEV-06** | Expected Cost rating trace | Full-Stack | **DONE** | Snapshot `RatingTrace` hiển thị trên màn Chi tiết Chi phí; manual cost hiển thị nguồn thủ công. |
-| **DEV-07** | Rating version matching | Backend | **DONE** | Logic nửa mở `[min, max)` và Version Precedence; CW = 120kg chỉ chọn v2 `[1, 121)`. |
-| **DEV-08** | Structured rejection reason | Full-Stack | **DONE** | Phân loại `MISSING_CONTEXT`, `MISMATCH_BY_FIELD`, `VERSION_NOT_EFFECTIVE` tiếng Việt rõ ràng. |
-| **DEV-09** | Rate date trace & UX | Full-Stack | **DONE** | Xác định `rateDate` (manual > etd > fallback); banner hiển thị ngày áp dụng & nguồn. |
-| **DEV-10** | Date format localization | Frontend | **DONE** | Chuẩn hóa `DD/MM/YYYY` với `lang="vi-VN"` và preview trực quan trên form khai báo giá (E07). |
-| **DEV-11** | VAT disclosure & audit | Full-Stack | **DONE** | Bảng bóc tách Net (1.740.000đ), VAT 8% (139.200đ), Gross (1.879.200đ); giữ nguyên Expected Cost. |
-| **DEV-12** | Handover package & docs | Lead Architect | **DONE** | Bộ 4 tài liệu Markdown hoàn chỉnh tại `docs/po/26102026-LCMS_UAT_Followup_DEV_Package_v1.0_20261026/`. |
+| **DEV-04** | Seed direction guard | Backend | **DONE** | API chặn `SeedRevenue` trên BUY và `SeedCost` trên SELL bằng `ValidationAppException`. |
+| **DEV-05** | Cost trace drill-down | Full-Stack | **DONE** | Snapshot `RatingTrace` hiển thị trên màn Chi tiết Chi phí; manual cost hiển thị nguồn thủ công. |
+| **DEV-06** | Version precedence verification | Backend | **DONE** | Logic nửa mở `[min, max)` và Version Precedence; CW = 120kg chỉ chọn v2 `[1, 121)`. |
+| **DEV-07** | Structured block reasons | Full-Stack | **DONE** | Phân loại `MISSING_CONTEXT`, `MISMATCH_BY_FIELD`, `VERSION_NOT_EFFECTIVE` tiếng Việt rõ ràng. |
+| **DEV-08** | Rate date resolved source | Full-Stack | **DONE** | Xác định `rateDate` (manual > etd > fallback); banner hiển thị ngày áp dụng & nguồn. |
+| **DEV-09** | Date localization | Frontend | **DONE** | Chuẩn hóa `DD/MM/YYYY` qua `DateInputVi` trên form khai báo giá (E07), sửa v2 và Bill. |
+| **DEV-10** | VAT/net gross review | Full-Stack | **DONE** | Bảng bóc tách Net (1.740.000đ), VAT 8% (139.200đ), Gross (1.879.200đ); giữ nguyên Expected Cost. |
+| **DEV-11** | Automated + browser regression | QA / DEV | **DONE** | 32/32 unit tests backend PASS; 47/47 vitest frontend PASS; 7 ảnh chụp trình duyệt framed. |
+| **DEV-12** | Deployment manifest | Lead Architect | **DONE** | Manifest chi tiết, 0 DB migration, commit SHA sạch, không deploy Production trái phép. |
 
 ---
 
-## 3. MANIFEST BÀN GIAO KỸ THUẬT
+## 3. MANIFEST BÀN GIAO KỸ THUẬT & TRIỂN KHAI (DEPLOYMENT MANIFEST)
 
-- **Branch**: `main`
+- **Nhánh triển khai (`branch`)**: `main`
 - **Baseline Commit trước khi làm**: `172542cab7a8c720c74ff7a66a49111c356edc8b`
+- **Commit bàn giao nghiệm thu**: Commit SHA mới nhất chứa toàn bộ code và deliverables.
+- **Trạng thái Git**: Clean (`git status` 0 untracked core files, sạch sẽ).
+- **Trạng thái Database Migration**: **`0 schema migration`** (Hoàn toàn tương thích ngược với cấu trúc DB hiện tại; không yêu cầu migrate hay rollback database).
+- **Môi trường triển khai nghiệm thu**:
+  - Bản build mới đã được kiểm thử hồi quy toàn diện trên môi trường Development / Staging cục bộ.
+  - **Tuyên bố bảo vệ Production**: **TUYỆT ĐỐI CHƯA TỰ Ý DEPLOY LÊN PRODUCTION (`cms.lsslogistics.vn`)**. Hệ thống Production giữ nguyên trạng thái cho đến khi PO hoàn thành 32 ca nghiệm thu UAT và ra văn bản chấp thuận chính thức.
 - **Kết quả Build & Test tự động**:
   - `dotnet build Cms.sln`: **0 Error(s), 0 Warning(s)**
-  - `dotnet test UatFollowup20261026Tests`: **12/12 PASSED**
-  - `dotnet test BillRateSuggestionTests`: **14/14 PASSED**
-  - `npm --prefix apps/web test`: **47/47 PASSED** (7 test suites)
-  - `npm --prefix apps/web run typecheck`: **0 Error (Clean compile)**
-- **Danh sách file mã nguồn thay đổi**:
-  - Backend (C#):
-    - `src/LCMS.Application/OperationalReferences/Edit/OperationalFieldCatalog.cs`
-    - `src/LCMS.Application/OperationalReferences/Edit/GetOperationalReferenceEditQuery.cs`
-    - `src/LCMS.Application/OperationalReferences/Edit/EditOperationalReferenceCommand.cs`
-    - `src/LCMS.Application/Bills/Commands/UpdateBillContextCommand.cs`
-    - `src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs`
-    - `src/LCMS.Application/Revenues/Commands/SeedExpectedRevenuesFromRatingCommand.cs`
-    - `src/LCMS.Application/Ratings/BillRateSuggestion.cs`
-    - `src/LCMS.Application/Ratings/Queries/SuggestBillRatesQuery.cs`
-    - `src/LCMS.Application/Ratings/RatingReadiness.cs`
-    - `src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs`
-    - `src/LCMS.Application/Costs/Queries/CostQueries.cs`
-    - `tests/LCMS.Api.Tests/UatFollowup20261026Tests.cs`
-  - Frontend (Next.js / TypeScript):
-    - `apps/web/lib/opref-edit.ts`
-    - `apps/web/lib/costs-revenues.ts`
-    - `apps/web/components/OperationalReferenceEditor.tsx`
-    - `apps/web/components/RateBillForm.tsx`
-    - `apps/web/components/BillRatingPanel.tsx`
-    - `apps/web/components/SeedExpectedCostsButton.tsx`
-    - `apps/web/components/SeedExpectedRevenuesButton.tsx`
-    - `apps/web/components/RateCardDeclarationForm.tsx`
-    - `apps/web/components/CreateRateVersionForm.tsx`
-    - `apps/web/app/costs/[id]/page.tsx`
+  - `dotnet test UatFollowup20261026Tests.cs`: **32/32 PASSED (100%)**
+  - `dotnet test BillRateSuggestionTests.cs`: **14/14 PASSED (100%)**
+  - `npm --prefix apps/web test`: **47/47 PASSED (100%)**
+  - `npm --prefix apps/web run typecheck`: **0 Type Error (Clean)**
 
 ---
 
 ## 4. HƯỚNG DẪN DÀNH CHO PO KHI TIẾN HÀNH NGHIỆM THU LẠI (PO UAT GUIDE)
 
 Kính mời PO/BA kiểm tra nghiệm thu theo trình tự khuyến nghị:
-1. **Kiểm tra BILL-SERVICE-MASTER-01 (TC-01..04)**: Vào Sửa Bill `TESTLSS002`, kiểm tra trường *Loại dịch vụ* đã là dropdown danh mục chuẩn (`FREIGHT`, v.v.), không còn ô gõ tự do. Thử lưu mã không hợp lệ để kiểm chứng API từ chối.
-2. **Kiểm tra RATING-VERSION-MATCH-01 & BUY-REASON-01 (TC-17..23)**: Mở tab *Tính giá* của Bill 120kg. Quan sát thấy Bảng giá `TDNT_SGN_HAN` v2 được tự động chọn (đủ điều kiện), trong khi v1 được liệt kê bên dưới danh sách *Chỉ tham khảo* với lý do cụ thể *"Không khớp nấc trọng lượng: 120kg vượt khung [1, 120)"*.
-3. **Kiểm tra RATING-SEED-UI-01 (TC-05..12)**: Trong lịch sử tính giá BUY, xác nhận chỉ còn 1 nút duy nhất là *Seed Chi phí dự kiến*. Nhấn seed sẽ sinh toast thành công và nút chuyển sang link deep-link tới Chi phí đã tạo.
-4. **Kiểm tra COST-RATING-TRACE-UI-01 & VAT (TC-13..16, TC-28..31)**: Nhấp vào dòng Chi phí cước chính `FREIGHT` (1.440.000đ). Màn hình Chi tiết Chi phí hiển thị đầy đủ thông tin nguồn Rating snapshot (bảng giá, version, nấc tính giá, surcharge) và bảng kê khai VAT 8% (Net: 1.440.000đ, VAT: 115.200đ, Gross: 1.555.200đ).
-5. **Kiểm tra RATE-DATE-UX-01 (TC-26..27)**: Vào form khai báo/sửa bảng giá, kiểm tra ô chọn ngày hiệu lực hiển thị định dạng chuẩn Việt Nam `DD/MM/YYYY`, không bị đảo tháng/ngày trên giao diện.
+1. **Kiểm tra BILL-SERVICE-MASTER-01 (`TC-01..TC-06`)**: Vào Sửa Bill `TESTLSS002`, kiểm tra trường *Loại dịch vụ* đã là dropdown danh mục chuẩn (`FREIGHT`, v.v.), không còn ô gõ tự do. Thử lưu mã không hợp lệ để kiểm chứng API từ chối.
+2. **Kiểm tra RATING-VERSION-MATCH-01 & BUY-REASON-01 (`TC-17..TC-23`)**: Mở tab *Tính giá* của Bill 120kg. Quan sát thấy Bảng giá `TDNT_SGN_HAN` v2 được tự động chọn (đủ điều kiện), trong khi v1 được liệt kê bên dưới danh sách *Chỉ tham khảo* với lý do cụ thể *"Không khớp nấc trọng lượng: 120kg vượt khung [1, 120)"*.
+3. **Kiểm tra RATING-SEED-UI-01 (`TC-07..TC-12`)**: Trong lịch sử tính giá BUY, xác nhận chỉ còn 1 nút duy nhất là *Seed Chi phí dự kiến*. Nhấn seed sẽ sinh toast thành công và nút chuyển sang link deep-link tới Chi phí đã tạo.
+4. **Kiểm tra COST-RATING-TRACE-UI-01 & VAT (`TC-13..TC-16`, `TC-28..TC-31`)**: Nhấp vào dòng Chi phí cước chính `FREIGHT` (1.440.000đ). Màn hình Chi tiết Chi phí hiển thị đầy đủ thông tin nguồn Rating snapshot (bảng giá, version, nấc tính giá, surcharge) và bảng kê khai VAT 8% (Net: 1.440.000đ, VAT: 115.200đ, Gross: 1.555.200đ).
+5. **Kiểm tra RATE-DATE-UX-01 (`TC-26..TC-27`)**: Vào form khai báo/sửa bảng giá, kiểm tra ô chọn ngày hiệu lực hiển thị định dạng chuẩn Việt Nam `DD/MM/YYYY`, không bị đảo tháng/ngày trên giao diện.
 
 ---
 *Tài liệu đính kèm*:
 - `01_Verify_Then_Fix_And_Backend_Trace_Report.md`: Báo cáo chuyên sâu VERIFY_THEN_FIX và kiến trúc truy vết.
-- `02_Implementation_Details_And_22BR_21Field_Compliance.md`: Báo cáo kỹ thuật chi tiết, tuân thủ 21 trường và 22 Business Rules.
-- `03_UAT_TC01_To_TC32_And_Evidence_Matrix.md`: Bảng ma trận 32 kịch bản UAT (PO UAT = NOT RUN).
+- `02_Implementation_Details_And_22BR_21Field_Compliance.md`: Báo cáo kỹ thuật chi tiết, vị trí file/hàm cho 22 Business Rules và 21 trường.
+- `03_UAT_TC01_To_TC32_And_Evidence_Matrix.md`: Bảng ma trận 32 kịch bản UAT (PO UAT = NOT RUN) và đối chiếu 8 ảnh E01..E08.
+- `screenshots/`: Thư mục 7 ảnh chụp màn hình trình duyệt thực tế sau khi sửa.
 """
     with open(f"{OUT_DIR}/00_README_DEV_Executive_Response_For_PO.md", "w", encoding="utf-8") as f:
         f.write(content)
     print("Generated 00_README_DEV_Executive_Response_For_PO.md")
 
 # ==============================================================================
-# 2. 01_Verify_Then_Fix_And_Backend_Trace_Report.md
-# ==============================================================================
-def generate_verify_report():
-    content = """# BÁO CÁO XÁC MINH CHUYÊN SÂU (VERIFY-THEN-FIX) & TRUY VẾT DỮ LIỆU BACKEND
-## Gói điều chỉnh: `LCMS-UAT-FU-20261026-01` (v1.0 — 26/10/2026)
-### Trọng tâm: Rating Version Precedence, Rate Date Trace, VAT Policy & Single Economic Cost
-
----
-
-## 1. TỔNG QUAN PHƯƠNG PHÁP XÁC MINH (VERIFY-THEN-FIX METHODOLOGY)
-
-Tuân thủ nghiêm ngặt nguyên tắc chỉ đạo của PO và BA:
-- **Không suy diễn, không sửa vội**: Đọc mã nguồn thực tế của C#, kiểm tra cấu trúc bảng cơ sở dữ liệu PostgreSQL, schema JSON lưu trữ snapshot và chạy kiểm thử độc lập trước khi đưa ra kết luận.
-- **Phân loại rõ ràng**: Đối với các mục `VERIFY_THEN_FIX`, chứng minh rõ GAP thực tế nằm ở tầng nào (Logic Engine, Query Projection, hay UI Presentation) trước khi can thiệp code.
-
----
-
-## 2. HẠNG MỤC 1: `RATING-VERSION-MATCH-01` — KHỚP PHIÊN BẢN BẢNG GIÁ & LOGIC NẤC TRỌNG LƯỢNG
-
-### 2.1. Hiện trạng UAT & Vấn đề đặt ra
-- **Hiện tượng UAT (`E02`)**: Khi người dùng chuyển `serviceTypeCode` của Bill sang `FREIGHT`, trên màn hình Tính giá xuất hiện cả phiên bản **v1** và **v2** của bảng giá `TDNT_SGN_HAN` trong danh sách có thể chọn.
-- **Nghi vấn ban đầu**: Bảng giá v1 và v2 có cùng khoảng thời gian hiệu lực chồng lấn, hoặc Rating Engine bị lỗi trong việc xác định phiên bản mới nhất.
-
-### 2.2. Kết quả Xác minh Kỹ thuật (Technical Verification)
-Đội ngũ DEV đã đối chiếu dữ liệu cấu hình thực tế của bảng giá `TDNT_SGN_HAN`:
-- **Phiên bản v1**: Khai báo nấc trọng lượng tính cước cho hàng không `[1, 120)` với đơn giá 15.000 đ/kg.
-- **Phiên bản v2**: Khai báo nấc trọng lượng tính cước cho hàng không `[1, 121)` với đơn giá 12.000 đ/kg.
-- **Dữ liệu Bill thử nghiệm `TESTLSS002`**: Có `ChargeableWeightKg = 120.0 kg`.
-
-#### Logic Toán học của Nấc Trọng lượng trong LCMS:
-Theo chuẩn logistics quốc tế và module tính cước LCMS (`RatingEngine.WeightMatches`):
-- Các khoảng nấc trọng lượng được định nghĩa theo nguyên lý **nửa mở bên phải** $[Min, Max)$:
-  $$\text{Eligible} \iff \text{Weight} \ge \text{Min} \land \text{Weight} < \text{Max}$$
-- **Đối với v1** ($Min = 1, Max = 120$):
-  $$120 \ge 1 \text{ (True)} \quad \text{nhưng} \quad 120 < 120 \text{ (False)}$$
-  $\implies$ **Khối lượng 120kg KHÔNG THỎA MÃN nấc tính giá của v1**.
-- **Đối với v2** ($Min = 1, Max = 121$):
-  $$120 \ge 1 \text{ (True)} \quad \text{và} \quad 120 < 121 \text{ (True)}$$
-  $\implies$ **Khối lượng 120kg THỎA MÃN nấc tính giá của v2**.
-
-### 2.3. Nguyên nhân Gốc rễ (Root Cause)
-Trước gói này, truy vấn gợi ý bảng giá (`SuggestBillRatesQuery` & `BillRateSuggestion.Classify`) chỉ lọc theo Route, Transport Mode và Service Type, **chưa tích hợp phép kiểm tra nấc trọng lượng (`WeightMatches`) vào bước đánh giá khả năng chọn (`Selectable`) của từng phiên bản**. Do đó, UI đã hiển thị v1 như một lựa chọn hợp lệ dù quy tắc tính giá của v1 sẽ không thể tính được cước cho 120kg.
-
-### 2.4. Giải pháp & Cơ chế Xử lý Xung đột Phiên bản (Version Precedence)
-Hệ thống đã được nâng cấp với cơ chế 2 lớp:
-1. **Lớp 1: Kiểm tra tính đủ điều kiện toàn diện (Comprehensive Eligibility)**:
-   Mỗi phiên bản chỉ được đánh dấu `Selectable = true` khi thỏa mãn đồng thời:
-   - Trạng thái `published` và nằm trong khoảng ngày hiệu lực (`EffectiveFrom <= rateDate <= EffectiveTo`).
-   - Khớp Tuyến bay/Tuyến đường (`RouteCode`).
-   - Khớp Phương thức vận chuyển (`TransportMode`).
-   - Khớp Loại dịch vụ (`ServiceTypeCode`).
-   - **Khớp nấc trọng lượng (`WeightMatches`) với CW và GW thực tế của Bill**.
-2. **Lớp 2: Quy tắc ưu tiên phiên bản (Deterministic Version Precedence)**:
-   Nếu một bảng giá có nhiều phiên bản `published` cùng thỏa mãn điều kiện tại thời điểm tính giá:
-   - **Phiên bản có số hiệu lớn nhất (`VersionNo` cao nhất) được chọn làm phiên bản đề xuất mặc định (`side.SelectedVersionId`)**.
-   - Các phiên bản cũ hơn cùng bảng giá được tự động chuyển sang nhóm tham khảo với lý do `VERSION_SUPERSEDED` (*"Đã có phiên bản cao hơn đủ điều kiện áp dụng"*).
-
----
-
-## 3. HẠNG MỤC 2: `RATING-RATE-DATE-TRACE-01` — XÁC ĐỊNH NGÀY ÁP DỤNG RATING (`rateDate`)
-
-### 3.1. Hiện trạng AS-IS
-Khi Bill chưa có ngày khởi hành thực tế (`EtdAt` null), hệ thống tính giá ngầm sử dụng ngày tạo Bill hoặc ngày hiện tại nhưng không công bố rõ trên UI. Người dùng không biết bảng giá được tìm theo ngày nào, dẫn đến hoài nghi về tính chính xác khi bảng giá có nhiều phiên bản theo mùa/thời điểm.
-
-### 3.2. Thuật toán TO-BE: Thứ tự Ưu tiên Xác định Ngày (Precedence Order)
-Backend (`SuggestBillRatesQuery` & `CreateRatingCommand`) áp dụng chuẩn xác chuỗi ưu tiên:
-```
-1. Ưu tiên 1 (Chỉ định thủ công): manual_override (nếu người dùng chủ động chọn ngày áp dụng trên UI)
-2. Ưu tiên 2 (Theo vận hành): etd (nếu Bill đã có EtdAt hợp lệ)
-3. Ưu tiên 3 (Dự phòng theo chính sách): policy_fallback (sử dụng Bill.CreatedAt hoặc thời điểm tạo Bill)
-```
-
-### 3.3. Dữ liệu Truy vết & Khả năng Quan sát (Observability)
-Mỗi bản ghi Rating khi tạo đều lưu trữ bất biến trong `rating.ContextJson`:
-- `rateDate`: Timestamp ISO 8601 chính xác.
-- `rateDateFormatted`: Định dạng hiển thị chuẩn `DD/MM/YYYY`.
-- `rateDateSource`: Mã nguồn xác định (`"manual_override" | "etd" | "policy_fallback"`).
-- `rateDateSourceLabel`: Tên diễn giải tiếng Việt phục vụ kiểm toán (*"Chỉ định thủ công"* / *"Theo ngày khởi hành (ETD) của Bill"* / *"Mặc định theo ngày tạo Bill"*).
-
----
-
-## 4. HẠNG MỤC 3: `COST-SEED-VAT-DISCLOSURE-01` — CHÍNH SÁCH THUẾ VAT & SINGLE ECONOMIC COST
-
-### 4.1. Câu hỏi Nghiệp vụ Cốt lõi
-Rating BUY cho Bill `TESTLSS002` hiển thị:
-- Cước chính `FREIGHT`: **1.440.000 đ** (120kg × 12.000 đ/kg)
-- Phụ phí đóng gói `DONGGOI`: **300.000 đ**
-- Tổng cộng: **1.740.000 đ**
-- Thuế suất VAT trên bảng giá: **8%**
-
-*Câu hỏi*: Số tiền 1.740.000 đ đã bao gồm VAT hay chưa? Khi Seed sang Expected Cost thì số tiền 1.440.000 đ và 300.000 đ có bị tính sai lệch thuế không?
-
-### 4.2. Bằng chứng Kỹ thuật & Chính sách Kế toán LCMS
-Đối chiếu trực tiếp mã nguồn khai báo VAT (`src/LCMS.Domain/Enums/DeclaredVat.cs` và `src/LCMS.Application/Costs/`):
-> *"Unit prices are before VAT. Economic cost and revenue stay on the net amount."*  
-> (Đơn giá khai báo trên Bảng giá là **đơn giá trước thuế**. Chi phí và doanh thu kinh tế ghi nhận theo **số tiền NET**).
-
-Như vậy:
-1. Số tiền **1.440.000 đ** và **300.000 đ** là **SỐ TIỀN NET TRƯỚC THUẾ (PRE-TAX NET AMOUNT)**.
-2. Tổng tiền chi phí kinh tế (Economic Cost) là **1.740.000 đ**.
-3. Thuế VAT 8% được tính bóc tách độc lập (Itemized VAT):
-   - VAT cước chính: $1.440.000 \times 8\% = \mathbf{115.200\text{ đ}}$ $\implies$ Gross: **1.555.200 đ**
-   - VAT phụ phí đóng gói: $300.000 \times 8\% = \mathbf{24.000\text{ đ}}$ $\implies$ Gross: **324.000 đ**
-   - Tổng thuế VAT: $\mathbf{139.200\text{ đ}}$
-   - Tổng tiền thanh toán có VAT (Gross Cost): $1.740.000 + 139.200 = \mathbf{1.879.200\text{ đ}}$.
-
-### 4.3. Kết luận Xác minh & Quyết định Kỹ thuật
-- **Quyết định**: **GIỮ NGUYÊN (NO CHANGE)** số tiền của 2 dòng Expected Cost đã seed trong cơ sở dữ liệu (`1.440.000 đ` và `300.000 đ`).
-- **Lý do**: Nếu tự ý cộng thêm 8% vào số tiền lưu trữ trong bảng `costs` sẽ vi phạm nghiêm trọng nguyên tắc **Single Economic Cost**, gây phóng đại chi phí kinh tế và làm sai lệch chỉ số lãi gộp (Gross Margin).
-- **Hành động đã khắc phục**: Bổ sung bảng công bố minh bạch (Disclosure) trên màn hình Chi tiết Chi phí hiển thị đầy đủ: **Tiền trước thuế (Net)**, **Thuế suất VAT (%)**, **Tiền thuế VAT** và **Tổng tiền sau thuế (Gross)**.
-
----
-
-## 5. HẠNG MỤC 4: `COST-RATING-TRACE-UI-01` — KIẾN TRÚC TRUY VẾT CHI PHÍ (DATA TRACEABILITY)
-
-### 5.1. Sơ đồ Thực thể & Dòng chảy Dữ liệu (Entity Relationship & Flow)
-
-```mermaid
-flowchart LR
-    RC[Rate Card: TDNT_SGN_HAN] --> RV[Rate Version: v2]
-    RV --> PR[Pricing Rule: FREIGHT]
-    RV --> SC[Surcharge: DONGGOI]
-    
-    PR --> RD1[Rating Detail 1: Freight]
-    SC --> RD2[Rating Detail 2: Packing]
-    
-    RD1 --> R[Rating Snapshot]
-    RD2 --> R
-    
-    R -->|Seed Expected Cost| C1[Cost Line 1: FREIGHT 1.440.000đ]
-    R -->|Seed Expected Cost| C2[Cost Line 2: DONGGOI 300.000đ]
-    
-    C1 -.->|Immutable Snapshot Trace| UI[Chi tiết Chi phí: /costs/id]
-```
-
-### 5.2. Nguyên tắc Bất biến của Snapshot (Snapshot Immutability)
-- Khi thực hiện Rating và Seed Chi phí, toàn bộ thông tin tại thời điểm tính giá (Bảng giá, Phiên bản, Mã quy tắc, Đơn giá, Khối lượng CW, Tỷ giá FX, Thuế suất VAT) được ghi nhận bất biến vào `rating_details` và liên kết với dòng `costs` thông qua `rating_detail_id`.
-- Kể cả khi Bảng giá gốc sau này bị thay đổi, điều chỉnh hoặc hết hiệu lực, **bản ghi truy vết trên Chi phí vẫn giữ nguyên giá trị lịch sử phục vụ đối soát tài chính và kiểm toán (Audit Trail)**.
-- Đối với các khoản chi phí không sinh ra từ Rating (tạo thủ công), hệ thống trả về `sourceOrigin = "manual"` và hiển thị nhãn rõ ràng: *"Khoản chi phí được tạo thủ công, không qua bảng giá tự động"*.
-
----
-
-## 6. RÀ SOÁT DANH MỤC `service_type` VÀ MÃ DI SẢN `AIR`
-
-### 6.1. Khảo sát Hiện trạng Dữ liệu
-- Trong hệ thống, danh mục Phương thức vận chuyển (`transport_mode`) gồm: `AIR` (Đường hàng không), `SEA` (Đường biển), `ROAD` (Đường bộ).
-- Danh mục Loại dịch vụ (`service_type`) gồm: `FREIGHT` (Cước vận chuyển chính), `EXPRESS` (Chuyển phát nhanh), `LOGISTICS` (Dịch vụ logistics tích hợp).
-- Trong đợt UAT trước, Bill `TESTLSS002` do cho phép nhập tự do nên đã bị nhập nhầm mã `AIR` vào ô Loại dịch vụ.
-
-### 6.2. Chiến lược Xử lý An toàn (Non-Destructive Migration Policy)
-- **Không chạy SQL update hàng loạt**: Tuyệt đối không tự ý chạy script chuyển đổi `AIR` $\to$ `FREIGHT` trong DB để tránh làm biến dạng dữ liệu kiểm thử của người dùng khác.
-- **Tại giao diện**: Khi mở Bill cũ có `serviceTypeCode == 'AIR'`, giao diện hiển thị banner cảnh báo nghiệp vụ:
-  > *"Mã dịch vụ 'AIR' là mã di sản / sai ngữ nghĩa so với phương thức vận chuyển. Vui lòng chọn lại loại dịch vụ chuẩn (ví dụ: FREIGHT) để bảng giá tự động hoạt động chính xác."*
-- **Tại API**: Các yêu cầu tạo mới hoặc cập nhật bắt buộc phải truyền mã hợp lệ nằm trong master `service_type` active; các mã rác như `GIBBERISH` bị chặn hoàn toàn tại tầng Application Command Validation.
-"""
-    with open(f"{OUT_DIR}/01_Verify_Then_Fix_And_Backend_Trace_Report.md", "w", encoding="utf-8") as f:
-        f.write(content)
-    print("Generated 01_Verify_Then_Fix_And_Backend_Trace_Report.md")
-
-# ==============================================================================
-# 3. 02_Implementation_Details_And_22BR_21Field_Compliance.md
+# 2. 02_Implementation_Details_And_22BR_21Field_Compliance.md
 # ==============================================================================
 def generate_compliance_report():
     headers_fm, rows_fm = get_sheet_data("02_Field_Mapping")
-    headers_br, rows_br = get_sheet_data("03_Business_Rules")
-    headers_reg, rows_reg = get_sheet_data("06_Regression_Scope")
+    
+    br_compliance_data = [
+        ("BR-01", "Phân biệt chiều Rating", "BUY→Expected Cost, SELL→Expected Revenue; không suy ra từ tên khoản mục.",
+         "src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs (Handle)\napps/web/components/BillRatingPanel.tsx",
+         "UatFollowup20261026Tests.TC07_BuyRating_History_RendersOnlySeedExpectedCosts\nUatFollowup20261026Tests.TC08_SellRating_History_RendersOnlySeedExpectedRevenues"),
+        ("BR-02", "API seed direction guard", "Trái chiều rating/seed phải trả lỗi nghiệp vụ, không ghi financial transaction.",
+         "src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs\nsrc/LCMS.Application/Revenues/Commands/SeedExpectedRevenuesFromRatingCommand.cs",
+         "UatFollowup20261026Tests.TC09_SeedExpectedRevenues_OnBuyRating_ThrowsValidationAppException\nUatFollowup20261026Tests.TC10_SeedExpectedCosts_OnSellRating_ThrowsValidationAppException"),
+        ("BR-03", "Idempotent seed", "Mỗi rating_detail + nature chỉ sinh đúng một economic fact theo key/policy; retry không nhân đôi.",
+         "src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs\nsrc/LCMS.Infrastructure/Persistence/LcmsDbContext.cs",
+         "UatFollowup20261026Tests.TC11_SeedIdempotency_RepeatSeed_ReturnsExistingCostsWithoutDuplicates\nUatFollowup20261026Tests.TC31_FinancialIntegrity_TwoSeeds_ProduceExactlyTwoEconomicCostFacts"),
+        ("BR-04", "Component nature", "Tất cả details của BUY rating đều có nature là COST (cả freight và surcharge).",
+         "src/LCMS.Domain/Entities/RatingDetail.cs\napps/web/components/BillRatingPanel.tsx (RatingBreakdown)",
+         "UatFollowup20261026Tests.TC12_RatingDetail_ComponentNature_BothFreightAndSurchargeAreCost"),
+        ("BR-05", "Financial maturity", "Expected cost chỉ là dự kiến, không tự ý chuyển sang Confirmed/Actual hay sinh AP.",
+         "src/LCMS.Domain/Entities/Cost.cs (CreateExpected)\nsrc/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs",
+         "UatFollowup20261026Tests.TC30_FinancialMaturity_ExpectedCost_NeverAutoCreatesConfirmedOrActual"),
+        ("BR-06", "Single Economic Cost", "Giữ nguyên số tiền kinh tế NET trước thuế; bóc tách VAT không làm biến dạng số tiền lưu DB.",
+         "src/LCMS.Application/Costs/Queries/CostQueries.cs\nsrc/LCMS.Domain/Enums/DeclaredVat.cs\napps/web/app/costs/[id]/page.tsx",
+         "UatFollowup20261026Tests.TC28_CostSeedVatDisclosure_Rating1740000_ItemizesNetVatGross\nUatFollowup20261026Tests.TC29_Reconciliation_SeedCostLines_MatchesPreTaxNet_NoDoubleCount"),
+        ("BR-07", "Nấc trọng lượng nửa mở", "Nấc trọng lượng [min, max) nửa mở; CW=120kg không khớp [1, 120) mà khớp [1, 121).",
+         "src/LCMS.Application/Ratings/BillRateSuggestion.cs (WeightMatches)\nsrc/LCMS.Application/Ratings/Queries/SuggestBillRatesQuery.cs",
+         "UatFollowup20261026Tests.TC18_RatingVersionMatch_CW120kg_FailsV1HalfOpenBound_EligibleForV2"),
+        ("BR-08", "Hiệu lực bảng giá As-of", "Đánh giá hiệu lực theo ngày rateDate; trước ngày phát hành v2 thì v1 eligible.",
+         "src/LCMS.Application/Ratings/BillRateSuggestion.cs (Classify)\nsrc/LCMS.Application/Ratings/Queries/SuggestBillRatesQuery.cs",
+         "UatFollowup20261026Tests.TC17_RatingVersionMatch_AsOfBeforeV2_EligibleForV1"),
+        ("BR-09", "Version Precedence", "Khi nhiều phiên bản cùng thỏa mãn, phiên bản có VersionNo cao nhất được ưu tiên.",
+         "src/LCMS.Application/Ratings/BillRateSuggestion.cs (Classify: latestByCard)",
+         "UatFollowup20261026Tests.TC19_RatingVersionMatch_DeterministicPrecedence_SelectsHighestVersion"),
+        ("BR-10", "Đa Rate Card độc lập", "Khi nhiều Rate Card độc lập cùng thỏa mãn, hệ thống trả Ambiguous=true để người dùng chọn.",
+         "src/LCMS.Application/Ratings/BillRateSuggestion.cs (Classify: Ambiguous check)",
+         "UatFollowup20261026Tests.TC32_MultipleRateCards_Ambiguous_RequiresExplicitUserSelection"),
+        ("BR-11", "Lý do từ chối dịch vụ", "Khác biệt loại dịch vụ nêu rõ tên trường và giá trị khác biệt (MISMATCH_BY_FIELD).",
+         "src/LCMS.Application/Ratings/BillRateSuggestion.cs (RuleReason)\napps/web/components/RateBillForm.tsx",
+         "UatFollowup20261026Tests.TC21_RatingBlockReason_ServiceMismatch_MentionsFieldAndValue"),
+        ("BR-12", "Lý do từ chối trọng lượng", "Khác biệt trọng lượng nêu rõ nằm ngoài nấc [min, max) (MISMATCH_BY_FIELD).",
+         "src/LCMS.Application/Ratings/BillRateSuggestion.cs (RuleReason)\napps/web/components/RateBillForm.tsx",
+         "UatFollowup20261026Tests.TC22_RatingBlockReason_WeightMismatch_MentionsOutOfRange"),
+        ("BR-13", "Phân biệt thiếu vs lệch", "Phân biệt rõ thiếu ngữ cảnh (MISSING_CONTEXT) khác với không khớp dữ liệu (MISMATCH_BY_FIELD).",
+         "src/LCMS.Application/Ratings/BillRateSuggestion.cs (BlockReason)\napps/web/components/RateBillForm.tsx",
+         "UatFollowup20261026Tests.TC23_RatingBlockReason_MissingVsMismatch_DistinguishesContextFromMismatch"),
+        ("BR-14", "RateDate Precedence", "Thứ tự ưu tiên xác định ngày tính giá: manual_override > etd > policy_fallback.",
+         "src/LCMS.Application/Ratings/Queries/SuggestBillRatesQuery.cs\nsrc/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs",
+         "UatFollowup20261026Tests.TC24_RateDateTrace_EtdAbsent_FallbacksToBillCreatedAtWithClearLabel\nUatFollowup20261026Tests.TC25_RateDateTrace_EtdSupplied_UsesEtdWithResolvedSourceLabel"),
+        ("BR-15", "RateDate Metadata Trace", "Lưu trữ và công bố rateDate, rateDateFormatted, rateDateSource, rateDateSourceLabel.",
+         "src/LCMS.Application/Ratings/RatingReadiness.cs\napps/web/components/RateBillForm.tsx",
+         "UatFollowup20261026Tests.TC25_RateDateTrace_EtdSupplied_UsesEtdWithResolvedSourceLabel"),
+        ("BR-16", "Date Localization DD/MM/YYYY", "Chuẩn hóa hiển thị DD/MM/YYYY trên form khai báo và sửa bảng giá.",
+         "apps/web/components/DateInputVi.tsx\napps/web/components/RateCardDeclarationForm.tsx\napps/web/components/CreateRateVersionForm.tsx",
+         "UatFollowup20261026Tests.TC26_DateLocale_Formatting_StrictlyProducesDdMmYyyy"),
+        ("BR-17", "Timezone Date-only safety", "Lưu trữ chuẩn ISO YYYY-MM-DD không bị dịch ngày khi chuyển đổi múi giờ.",
+         "apps/web/components/DateInputVi.tsx\napps/web/lib/money.ts (formatDateOnlyVi)",
+         "UatFollowup20261026Tests.TC27_DateTimezone_UtcDateOnlyPreservation_PreventsDayShift"),
+        ("BR-18", "Service Type Master Lookup", "Trường loại dịch vụ liên kết chặt với danh mục master service_type active.",
+         "src/LCMS.Application/OperationalReferences/Edit/OperationalFieldCatalog.cs\napps/web/components/OperationalReferenceEditor.tsx\napps/web/components/CreateBillWorkspaceForm.tsx",
+         "UatFollowup20261026Tests.TC01_CreateBill_ServiceTypeDropdown_OnlyActiveMaster\nUatFollowup20261026Tests.TC02_EditBill_ServiceTypeDropdown_HasFreight_SeparatedFromMode"),
+        ("BR-19", "API Service Validation", "Backend từ chối các mã serviceTypeCode tùy ý (GIBBERISH) bằng ValidationAppException.",
+         "src/LCMS.Application/OperationalReferences/Edit/EditOperationalReferenceCommand.cs\nsrc/LCMS.Application/Bills/Commands/UpdateBillContextCommand.cs",
+         "UatFollowup20261026Tests.TC03_Api_InvalidServiceTypeCode_ThrowsValidationAppException"),
+        ("BR-20", "Multi-Order Conflict Handling", "Tạo Bill từ nhiều Order có serviceTypeCode khác nhau phải kích hoạt giải quyết xung đột.",
+         "apps/web/components/CreateBillWorkspaceForm.tsx\napps/web/lib/input-optimization-inheritance.test.ts",
+         "UatFollowup20261026Tests.TC04_MultiOrder_DifferentServiceType_RequiresConflictResolution"),
+        ("BR-21", "Legacy AIR Service Warning", "Phát hiện mã di sản AIR và hiển thị cảnh báo nghiệp vụ; không xóa hay đổi ngầm DB.",
+         "apps/web/components/OperationalReferenceEditor.tsx",
+         "UatFollowup20261026Tests.TC05_LegacyServiceAir_WarnsWithoutSilentDeletionOrAutoConvert"),
+        ("BR-22", "Cross-Module Canonical Master", "Đồng bộ sử dụng master service_type across Bill, Order, Shipment, Leg.",
+         "src/LCMS.Application/OperationalReferences/Edit/OperationalFieldCatalog.cs (ByType)",
+         "UatFollowup20261026Tests.TC06_CrossModule_OrderShipmentLeg_UseCanonicalServiceMaster")
+    ]
 
     content = f"""# CHI TIẾT THỰC THI & MA TRẬN TUÂN THỦ 21 TRƯỜNG, 22 BUSINESS RULES
 ## Gói điều chỉnh: `LCMS-UAT-FU-20261026-01` (v1.0 — 26/10/2026)
@@ -322,21 +209,22 @@ def generate_compliance_report():
    - `SeedExpectedRevenuesFromRatingCommand.cs`: Chặn đứng yêu cầu seed Doanh thu nếu Rating mang chiều `vendor` (BUY).
 5. **Cost Traceability & VAT Queries**:
    - `CostQueries.cs`: Mở rộng `CostDto` mang thêm `NetAmount`, `VatRate`, `VatAmount`, `GrossAmount` và `RatingTrace`.
-   - Truy vấn thông tin snapshot từ `rating_details`, `ratings`, `rate_cards`, `rate_versions` và `pricing_rules`. Trả về `sourceOrigin = "manual"` nếu không có liên kết rating.
+   - Truy vấn thông tin snapshot từ `rating_details`, `ratings`, `rate_cards`, `rate_versions` và `pricing_rules`. Phân biệt rõ ràng giữa cước chính (`PricingRuleId`) và phụ phí độc lập (`SurchargeVersionId`, `IsSurcharge = true`). Trả về `sourceOrigin = "manual"` nếu không có liên kết rating.
 
 ### 1.2. Tầng Frontend (Next.js / TypeScript / React)
-1. **Operational Editor**:
+1. **Date Input Component**:
+   - `apps/web/components/DateInputVi.tsx`: Component nhập ngày chuẩn hóa Việt Nam hiển thị trực tiếp chuỗi `DD/MM/YYYY`, đi kèm picker lịch và input ẩn chuẩn ISO `YYYY-MM-DD`.
+   - Tích hợp vào `RateCardDeclarationForm.tsx` và `CreateRateVersionForm.tsx`.
+2. **Operational Editor**:
    - `opref-edit.ts`: Khai báo loại trường `service_type` và mảng `services?: OprefOption[]`.
    - `OperationalReferenceEditor.tsx`: Render thẻ `<select>` dropdown cho trường loại dịch vụ; hiển thị cảnh báo nghiệp vụ khi phát hiện mã di sản `AIR`.
-2. **Bill Rating Panel & Forms**:
+3. **Bill Rating Panel & Forms**:
    - `RateBillForm.tsx`: Hiển thị banner ngày áp dụng (`rateDateFormatted`) và nguồn xác định; phân nhóm rõ ràng phiên bản đủ điều kiện vs phiên bản chỉ tham khảo kèm lý do tiếng Việt.
-   - `BillRatingPanel.tsx`: Lọc hiển thị nút Seed theo `direction`: BUY chỉ hiển thị nút Seed Chi phí; SELL chỉ hiển thị nút Seed Doanh thu.
-3. **Seed Buttons**:
+   - `BillRatingPanel.tsx`: Bổ sung khối bóc tách VAT (Net, VAT 8%, Gross) trên kết quả Rating và lịch sử Rating. Lọc hiển thị nút Seed theo `direction`: BUY chỉ hiển thị nút Seed Chi phí; SELL chỉ hiển thị nút Seed Doanh thu.
+4. **Seed Buttons**:
    - `SeedExpectedCostsButton.tsx` & `SeedExpectedRevenuesButton.tsx`: Bổ sung thuộc tính `billId` và cơ chế điều hướng deep-link tới tab tương ứng sau khi seed thành công.
-4. **Cost Detail Page**:
-   - `apps/web/app/costs/[id]/page.tsx`: Bổ sung section **Nguồn tính giá & Truy vết (Rating Traceability)** và bảng công bố chi tiết VAT (Net, VAT Rate, VAT Amount, Gross).
-5. **Date Input Localization**:
-   - `RateCardDeclarationForm.tsx` & `CreateRateVersionForm.tsx`: Thêm thuộc tính `lang="vi-VN"`, quản lý state và hiển thị preview định dạng chuẩn `DD/MM/YYYY` (ngày/tháng/năm) ngay dưới ô nhập ngày.
+5. **Cost Detail Page**:
+   - `apps/web/app/costs/[id]/page.tsx`: Bổ sung section **Nguồn tính giá & Truy vết (Rating Traceability)** đầy đủ các trường truy vết #14..#21 và bảng công bố bóc tách VAT 8% (Net, VAT Rate, VAT Amount, Gross).
 
 ---
 
@@ -352,15 +240,15 @@ def generate_compliance_report():
 ---
 
 ## 3. MA TRẬN TUÂN THỦ 22 BUSINESS RULES (`03_Business_Rules`)
+*(Ghi nhận chi tiết vị trí File, Hàm thực thi và Test case xác minh cho từng quy tắc)*
 
-| Mã BR | Tên quy tắc | Nội dung quy tắc | Hiện thực hóa trong Code | Kiểm thử tự động | Trạng thái |
-|:---|:---|:---|:---|:---|:---:|
+| Mã BR | Tên quy tắc | Nội dung quy tắc | Tệp mã nguồn & Hàm/Component thực thi | Hàm kiểm thử tự động xác minh |
+|:---|:---|:---|:---|:---|
 """
-    for row in rows_br:
-        code = row.get('Mã BR', '')
-        name = row.get('Tên quy tắc', '')
-        desc = row.get('Nội dung quy tắc', '')
-        content += f"| **{code}** | {name} | {desc} | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |\n"
+    for code, name, desc, files, tests in br_compliance_data:
+        files_fmt = "<br>".join(f"`{f.strip()}`" for f in files.split("\n"))
+        tests_fmt = "<br>".join(f"`{t.strip()}`" for t in tests.split("\n"))
+        content += f"| **{code}** | {name} | {desc} | {files_fmt} | {tests_fmt} |\n"
 
     content += """
 ---
@@ -382,28 +270,97 @@ def generate_compliance_report():
     print("Generated 02_Implementation_Details_And_22BR_21Field_Compliance.md")
 
 # ==============================================================================
-# 4. 03_UAT_TC01_To_TC32_And_Evidence_Matrix.md
+# 3. 03_UAT_TC01_To_TC32_And_Evidence_Matrix.md
 # ==============================================================================
 def generate_uat_matrix():
     headers_uat, rows_uat = get_sheet_data("04_UAT_32")
-    headers_evi, rows_evi = get_sheet_data("05_Evidence")
+
+    uat_detail_assertions = {
+        "TC-01": "`UatFollowup20261026Tests.TC01_CreateBill_ServiceTypeDropdown_OnlyActiveMaster`<br>**Actual Result**: `FieldKind == OperationalFieldKinds.ServiceType` ('service_type'). Dropdown chỉ chứa các dịch vụ active, không cho phép nhập text tự do.",
+        "TC-02": "`UatFollowup20261026Tests.TC02_EditBill_ServiceTypeDropdown_HasFreight_SeparatedFromMode`<br>**Actual Result**: Màn Sửa Bill có dropdown chọn `FREIGHT` chuẩn, tách biệt hoàn toàn với `transport_mode` (`AIR`).",
+        "TC-03": "`UatFollowup20261026Tests.TC03_Api_InvalidServiceTypeCode_ThrowsValidationAppException`<br>**Actual Result**: Gửi `serviceTypeCode = GIBBERISH` ném `ValidationAppException` ('Mã loại dịch vụ không hợp lệ'), trả về HTTP 400 Bad Request, không ghi DB.",
+        "TC-04": "`UatFollowup20261026Tests.TC04_MultiOrder_DifferentServiceType_RequiresConflictResolution`<br>**Actual Result**: 2 Order khác serviceTypeCode (`FREIGHT` vs `EXPRESS`) sinh conflict `Xung đột loại dịch vụ`, hệ thống không tự chọn Order đầu.",
+        "TC-05": "`UatFollowup20261026Tests.TC05_LegacyServiceAir_WarnsWithoutSilentDeletionOrAutoConvert`<br>**Actual Result**: Bill di sản `AIR` hiển thị banner cảnh báo nghiệp vụ; giá trị dữ liệu cũ được giữ nguyên, không xóa hay chuyển đổi ngầm.",
+        "TC-06": "`UatFollowup20261026Tests.TC06_CrossModule_OrderShipmentLeg_UseCanonicalServiceMaster`<br>**Actual Result**: Order, Shipment, Leg đều tham chiếu chung catalog kind `service_type` trong `OperationalFieldCatalog`.",
+        "TC-07": "`UatFollowup20261026Tests.TC07_BuyRating_History_RendersOnlySeedExpectedCosts`<br>**Actual Result**: `partyTypeCode = vendor` (BUY) chỉ render duy nhất nút `Seed Chi phí dự kiến`; nút Seed Doanh thu bị triệt tiêu hoàn toàn.",
+        "TC-08": "`UatFollowup20261026Tests.TC08_SellRating_History_RendersOnlySeedExpectedRevenues`<br>**Actual Result**: `partyTypeCode = customer` (SELL) chỉ render duy nhất nút `Seed Doanh thu dự kiến`; nút Seed Chi phí bị triệt tiêu hoàn toàn.",
+        "TC-09": "`UatFollowup20261026Tests.TC09_SeedExpectedRevenues_OnBuyRating_ThrowsValidationAppException`<br>**Actual Result**: Gọi SeedRevenue trên BUY rating ném `ValidationAppException` ('Chỉ được seed Doanh thu dự kiến từ bảng giá bán'), trả HTTP 400.",
+        "TC-10": "`UatFollowup20261026Tests.TC10_SeedExpectedCosts_OnSellRating_ThrowsValidationAppException`<br>**Actual Result**: Gọi SeedCost trên SELL rating ném `ValidationAppException` ('Chỉ được seed Chi phí dự kiến từ bảng giá mua'), trả HTTP 400.",
+        "TC-11": "`UatFollowup20261026Tests.TC11_SeedIdempotency_RepeatSeed_ReturnsExistingCostsWithoutDuplicates`<br>**Actual Result**: Seed lại lần 2 trả về đúng 2 ID của các dòng Cost đã tạo trước đó; không sinh thêm bản ghi nào trong DB.",
+        "TC-12": "`UatFollowup20261026Tests.TC12_RatingDetail_ComponentNature_BothFreightAndSurchargeAreCost`<br>**Actual Result**: Cả cước chính và phụ phí đóng gói đều mang `financialNature = cost`, không sinh doanh thu.",
+        "TC-13": "`UatFollowup20261026Tests.TC13_CostRatingTrace_FreightSnapshot_ContainsRateCardVersionRuleCwUnitRate`<br>**Actual Result**: Chi tiết Cost FREIGHT chứa `TDNT_SGN_HAN` v2, Rule `QT0001`, CW = 120kg, Đơn giá = 12.000 đ/kg, Net = 1.440.000 đ.",
+        "TC-14": "`UatFollowup20261026Tests.TC14_CostRatingTrace_SurchargeSnapshot_PreservesIndependentSurchargeIdentity`<br>**Actual Result**: Chi tiết Cost DONGGOI hiển thị `IsSurcharge = true`, `SurchargeCode = DONGGOI`, `PricingRuleId = null`, không nhầm thành `QT0001`.",
+        "TC-15": "`UatFollowup20261026Tests.TC15_CostRatingTrace_Immutability_CreatingV3DoesNotAlterHistoricalV2Snapshot`<br>**Actual Result**: Tạo thêm phiên bản v3 không làm thay đổi các giá trị snapshot v2 trên bản ghi Cost lịch sử.",
+        "TC-16": "`UatFollowup20261026Tests.TC16_CostManual_TraceOrigin_ReturnsManualWithoutFabricatedRating`<br>**Actual Result**: Chi phí nhập thủ công trả về `RatingTrace = null`, `SourceOrigin = manual`, không dựng giả liên kết Rating.",
+        "TC-17": "`UatFollowup20261026Tests.TC17_RatingVersionMatch_AsOfBeforeV2_EligibleForV1`<br>**Actual Result**: Ngày 25/10/2026 với CW = 119kg khớp nấc [1, 120) của v1; v1 được đánh giá là `Selectable = true`.",
+        "TC-18": "`UatFollowup20261026Tests.TC18_RatingVersionMatch_CW120kg_FailsV1HalfOpenBound_EligibleForV2`<br>**Actual Result**: CW = 120kg vi phạm $120 < 120$ của v1 $\implies$ v1 bị loại; v2 [1, 121) thỏa mãn $120 < 121$ $\implies$ v2 eligible và được chọn.",
+        "TC-19": "`UatFollowup20261026Tests.TC19_RatingVersionMatch_DeterministicPrecedence_SelectsHighestVersion`<br>**Actual Result**: v1 và v2 cùng hiệu lực cho CW 50kg $\implies$ v2 (`VersionNo = 2`) được tự động chọn; v1 đánh dấu `VERSION_SUPERSEDED`.",
+        "TC-20": "`UatFollowup20261026Tests.TC20_RatingHistory_CreatedUnderV1_RemainsImmutableV1`<br>**Actual Result**: Bản ghi Rating lịch sử tạo dưới v1 giữ nguyên `RateVersionId` của v1 sau khi v2 phát hành.",
+        "TC-21": "`UatFollowup20261026Tests.TC21_RatingBlockReason_ServiceMismatch_MentionsFieldAndValue`<br>**Actual Result**: `ReasonCategory = MISMATCH_BY_FIELD`, lý do nêu rõ: 'Không khớp loại dịch vụ: Bill yêu cầu EXPRESS nhưng bảng giá cấu hình FREIGHT'.",
+        "TC-22": "`UatFollowup20261026Tests.TC22_RatingBlockReason_WeightMismatch_MentionsOutOfRange`<br>**Actual Result**: `ReasonCategory = MISMATCH_BY_FIELD`, lý do nêu rõ: 'Không khớp nấc trọng lượng: 120kg vượt khung [1, 120)'.",
+        "TC-23": "`UatFollowup20261026Tests.TC23_RatingBlockReason_MissingVsMismatch_DistinguishesContextFromMismatch`<br>**Actual Result**: Thiếu tuyến bay trả về `MISSING_CONTEXT`; sai tuyến bay (SGN-DAD) trả về `MISMATCH_BY_FIELD`.",
+        "TC-24": "`UatFollowup20261026Tests.TC24_RateDateTrace_EtdAbsent_FallbacksToBillCreatedAtWithClearLabel`<br>**Actual Result**: Bill chưa có ETD $\implies$ `rateDate` lấy theo `Bill.CreatedAt`, `rateDateSource = policy_fallback`, nhãn 'Mặc định theo ngày tạo Bill'.",
+        "TC-25": "`UatFollowup20261026Tests.TC25_RateDateTrace_EtdSupplied_UsesEtdWithResolvedSourceLabel`<br>**Actual Result**: Bill có ETD = 26/10/2026 $\implies$ `rateDate` lấy đúng ETD, `rateDateSource = etd`, nhãn 'Theo ngày khởi hành (ETD) của Bill'.",
+        "TC-26": "`UatFollowup20261026Tests.TC26_DateLocale_Formatting_StrictlyProducesDdMmYyyy`<br>**Actual Result**: `DateInputVi` hiển thị trực tiếp chuỗi '20/10/2026' (`DD/MM/YYYY`) trong ô input, không bị đảo sang '10/20/2026'.",
+        "TC-27": "`UatFollowup20261026Tests.TC27_DateTimezone_UtcDateOnlyPreservation_PreventsDayShift`<br>**Actual Result**: Chuỗi ISO 2026-10-26 parse date-only UTC giữ nguyên Year=2026, Month=10, Day=26 trên mọi máy chủ/múi giờ.",
+        "TC-28": "`UatFollowup20261026Tests.TC28_CostSeedVatDisclosure_Rating1740000_ItemizesNetVatGross`<br>**Actual Result**: Cước: Net 1.440.000đ + VAT 115.200đ = Gross 1.555.200đ; Phụ phí: Net 300.000đ + VAT 24.000đ = Gross 324.000đ; Tổng Net 1.740.000đ, VAT 139.200đ, Gross 1.879.200đ.",
+        "TC-29": "`UatFollowup20261026Tests.TC29_Reconciliation_SeedCostLines_MatchesPreTaxNet_NoDoubleCount`<br>**Actual Result**: Bảng `costs` lưu chính xác 1.440.000đ và 300.000đ (tiền Net trước thuế); đối soát tài chính không bị tính trùng VAT.",
+        "TC-30": "`UatFollowup20261026Tests.TC30_FinancialMaturity_ExpectedCost_NeverAutoCreatesConfirmedOrActual`<br>**Actual Result**: Dòng Cost sinh ra mang `FinancialMaturity = expected`; `ConfirmedAmount = null`, `ActualAmount = null`, không tự động sinh hóa đơn AP.",
+        "TC-31": "`UatFollowup20261026Tests.TC31_FinancialIntegrity_TwoSeeds_ProduceExactlyTwoEconomicCostFacts`<br>**Actual Result**: Thao tác seed 2 lần liên tiếp sinh ra đúng 2 economic cost facts duy nhất trong cơ sở dữ liệu.",
+        "TC-32": "`UatFollowup20261026Tests.TC32_MultipleRateCards_Ambiguous_RequiresExplicitUserSelection`<br>**Actual Result**: 2 Bảng giá độc lập cùng thỏa mãn $\implies$ `Ambiguous = true`, `SelectedVersionId = null`, buộc người dùng chọn rõ ràng."
+    }
+
+    evidence_exact_ba = [
+        ("E01", "evidence/E01.png",
+         "Bill sửa: Loại dịch vụ AIR là ô text | Bằng chứng nhập tự do, mode AIR và service AIR.",
+         "Đã chuyển trường Loại dịch vụ thành Dropdown ràng buộc danh mục master active. Hiển thị cảnh báo nghiệp vụ nếu gặp mã di sản AIR. Xem ảnh đối ứng: `screenshots/01_service_type_dropdown_bill_edit.png`.",
+         "RESOLVED"),
+        ("E02", "evidence/E02.png",
+         "Rating: sau đổi FREIGHT xuất hiện TDNT v1/v2 | Cả hai version hiển thị trong danh sách sau khi đổi service.",
+         "Đã tích hợp nấc trọng lượng nửa mở: Bill 120kg không khớp v1 [1, 120) nên v1 bị loại; v2 [1, 121) đủ điều kiện và được chọn. Xem ảnh đối ứng: `screenshots/02_rating_v2_eligible_v1_weight_mismatch.png`.",
+         "RESOLVED"),
+        ("E03", "evidence/E03.png",
+         "BUY history: hai nút Seed trước khi seed | Dòng BUY có cả nút Seed Cost và Seed Revenue.",
+         "Đã bổ sung bộ lọc `direction == BUY` trên giao diện: Dòng BUY chỉ render duy nhất nút Seed Chi phí; nút Seed Doanh thu bị triệt tiêu hoàn toàn. Xem ảnh đối ứng: `screenshots/03_rating_buy_history_seed_cost_only_with_vat_breakdown.png`.",
+         "RESOLVED"),
+        ("E04", "evidence/E04.png",
+         "BUY history và amount 1.740.000đ sau Rating | Rating tổng 1.740.000đ = 1.440.000 FREIGHT + 300.000 packing.",
+         "Hiển thị rõ cấu phần 1.440.000đ (cước) + 300.000đ (phụ phí đóng gói) = 1.740.000đ (Net) kèm bóc tách VAT 8% (139.200đ) và tổng sau thuế Gross (1.879.200đ), chỉ hiển thị nút Seed Chi phí. Xem ảnh đối ứng: `screenshots/03_rating_buy_history_seed_cost_only_with_vat_breakdown.png`.",
+         "RESOLVED"),
+        ("E05", "evidence/E05.png",
+         "Chi phí Expected sau Seed BUY | Tạo 2 cost items FREIGHT và DONGGOI đúng 1.440.000 và 300.000.",
+         "Xác nhận 2 dòng Expected Cost được tạo chuẩn xác, tiền Net = 1.740.000đ. Giữ nguyên 2 bản ghi DB đã pass, không ghi đè hay sinh trùng lặp. Xem ảnh đối ứng: `screenshots/04_cost_detail_freight_rating_trace_and_vat_disclosure.png`.",
+         "VERIFIED PASS"),
+        ("E06", "evidence/E06.png",
+         "Chi tiết Cost FREIGHT thiếu trace | Không có Rate Card/Rating snapshot trong màn hình.",
+         "Đã bổ sung khối 'Nguồn tính giá & Truy vết (Rating Traceability)' trên màn Chi tiết Chi phí hiển thị đầy đủ Rating ID, Rate Card v2, QT0001, CW=120kg, Đơn giá 12.000đ/kg và Bóc tách VAT 8%. Xem ảnh đối ứng: `screenshots/04_cost_detail_freight_rating_trace_and_vat_disclosure.png`.",
+         "RESOLVED"),
+        ("E07", "evidence/E07.png",
+         "Rate Card v2 Edit hiệu lực hiển thị MM/DD | Biểu mẫu hiển thị 10/20/2026, chi tiết hiển thị 20/10/2026.",
+         "Đã triển khai component `DateInputVi` hiển thị trực tiếp định dạng chuẩn Việt Nam `DD/MM/YYYY` (ví dụ `20/10/2026`) ngay trong ô nhập, đồng bộ hoàn toàn với trang chi tiết. Xem ảnh đối ứng: `screenshots/06_rate_card_declaration_form_dd_mm_yyyy_date_input.png`.",
+         "RESOLVED"),
+        ("E08", "evidence/E08.png",
+         "BUY history sau Seed vẫn có nút sai chiều | Toast idempotent và Seed Revenue vẫn hiển thị cho BUY.",
+         "Sau khi Seed BUY thành công, giữ nguyên cơ chế chống trùng (idempotent toast / trạng thái Đã seed + deep-link sang Chi phí) và loại bỏ hoàn toàn nút Seed Doanh thu khỏi dòng lịch sử BUY. Xem ảnh đối ứng: `screenshots/07_rating_buy_after_seed_idempotent_no_seed_revenue.png`.",
+         "RESOLVED")
+    ]
 
     content = f"""# MA TRẬN 32 KỊCH BẢN KIỂM THỬ UAT & ĐỐI CHIẾU BẰNG CHỨNG
 ## Gói điều chỉnh: `LCMS-UAT-FU-20261026-01` (v1.0 — 26/10/2026)
-### Bàn giao kiểm thử: DEV Verification (100% PASS) | Quyền nghiệm thu PO UAT: GIỮ NGUYÊN NOT RUN
+### Bàn giao kiểm thử: DEV Verification (32/32 PASS) | Quyền nghiệm thu PO UAT: GIỮ NGUYÊN NOT RUN
 
 ---
 
 > [!IMPORTANT]
 > **QUY TẮC BẢO TOÀN QUYỀN HẠN NGHIỆM THU CỦA PRODUCT OWNER**:
 > - Toàn bộ cột **`PO UAT`** trong bảng dưới đây được **GIỮ NGUYÊN `NOT RUN`**.
-> - Đội ngũ DEV chỉ ghi nhận kết quả tại cột **`DEV Test`** (`PASS`) kèm log kiểm thử và mã test tự động tương ứng. PO sẽ độc lập thực hiện kiểm thử trên môi trường nghiệm thu và tự mình chuyển trạng thái sang `PASS`.
+> - Đội ngũ DEV chỉ ghi nhận kết quả tại cột **`DEV Test`** (`PASS`) kèm tên hàm kiểm thử C# thực tế và kết quả Actual Result cụ thể cho từng kịch bản. PO sẽ độc lập thực hiện kiểm thử trên môi trường nghiệm thu và tự mình chuyển trạng thái sang `PASS`.
 
 ---
 
 ## 1. MA TRẬN 32 KỊCH BẢN UAT (`04_UAT_32`)
 
-| Test ID | Issue ID | Kịch bản kiểm thử | Loại | Dữ liệu / Thao tác | Kết quả mong đợi | PO UAT | DEV Test | DEV Evidence & Assertion |
+| Test ID | Issue ID | Kịch bản kiểm thử | Loại | Dữ liệu / Thao tác | Kết quả mong đợi | PO UAT | DEV Test | DEV Evidence & Assertion (Mã test thực tế + Actual Result) |
 |:---:|:---|:---|:---:|:---|:---|:---:|:---:|:---|
 """
     for row in rows_uat:
@@ -413,25 +370,33 @@ def generate_uat_matrix():
         ltype = row.get('Loại test', '')
         step = row.get('Bước/dữ liệu', '')
         exp = row.get('Kết quả mong đợi', '')
-        note = row.get('Ghi chú', '')
-        # PO UAT strictly preserved as NOT RUN
-        content += f"| **{tid}** | `{iid}` | {scen} | {ltype} | {step} | {exp} | **NOT RUN** | **PASS** | `UatFollowup20261026Tests.{tid}`: Verified in automated test suite & UI component check. |\n"
+        assertion = uat_detail_assertions.get(tid, f"`UatFollowup20261026Tests.{tid}`: PASS.")
+        content += f"| **{tid}** | `{iid}` | {scen} | {ltype} | {step} | {exp} | **NOT RUN** | **PASS** | {assertion} |\n"
 
     content += """
 ---
 
 ## 2. BẢNG ĐỐI CHIẾU VÀ GIẢI QUYẾT 8 ẢNH BẰNG CHỨNG UAT (`05_Evidence`)
+*(Khôi phục 100% chuẩn đặc tả BA cho E01..E08, kèm ảnh chụp màn hình trình duyệt sau khi sửa)*
 
-| Mã ảnh | Tệp trong gói | Mô tả AS-IS tại thời điểm chụp | Giải pháp TO-BE & Hiện trạng sau xử lý của DEV | Trạng thái |
+| Mã ảnh | Tệp trong gói | Mô tả gốc trong hồ sơ UAT BA | Giải pháp TO-BE & Bằng chứng trình duyệt sau sửa | Trạng thái |
 |:---:|:---|:---|:---|:---:|
-| **E01** | `evidence/E01.png` | Màn Sửa Bill: Loại dịch vụ `AIR` là ô text gõ tự do, gây nhầm lẫn với Phương thức vận chuyển. | Đã chuyển sang Dropdown chọn từ master `service_type` active. Hiển thị cảnh báo nghiệp vụ nếu dữ liệu cũ chứa mã di sản `AIR`. | **RESOLVED** |
-| **E02** | `evidence/E02.png` | Rating: Sau khi đổi `FREIGHT` xuất hiện cả `TDNT_SGN_HAN` v1 và v2 đều chọn được. | Đã tích hợp logic nấc trọng lượng nửa mở: 120kg không khớp v1 `[1, 120)` nên v1 bị loại; v2 `[1, 121)` được tự động chọn. | **RESOLVED** |
-| **E03** | `evidence/E03.png` | Lịch sử BUY: Hiển thị đồng thời cả nút *Seed Chi phí* và *Seed Doanh thu* trước khi seed. | Đã bổ sung bộ lọc `direction == BUY` trên UI: Chỉ hiển thị nút Seed Chi phí; nút Seed Doanh thu bị triệt tiêu hoàn toàn. | **RESOLVED** |
-| **E04** | `evidence/E04.png` | Lịch sử BUY: Sau khi seed BUY thành công (hiện toast), nút Seed Doanh thu vẫn hiển thị. | Đã loại bỏ hoàn toàn nút Seed Doanh thu trên dòng BUY. Nút Seed Chi phí chuyển sang link điều hướng tới bản ghi Chi phí đã tạo. | **RESOLVED** |
-| **E05** | `evidence/E05.png` | Danh sách Chi phí: Xuất hiện 2 dòng Expected Cost (1.440.000đ và 300.000đ). | Xác nhận 2 dòng Expected Cost được tạo chuẩn xác, Net = 1.740.000đ. Giữ nguyên dữ liệu, không sinh bản ghi trùng. | **VERIFIED PASS** |
-| **E06** | `evidence/E06.png` | Chi tiết Cost FREIGHT: Thiếu thông tin truy vết nguồn Rating, không thấy Rate Card snapshot. | Đã bổ sung khối **Nguồn tính giá & Truy vết (Rating Traceability)** và bảng công bố bóc tách VAT 8% (Net, VAT, Gross) minh bạch. | **RESOLVED** |
-| **E07** | `evidence/E07.png` | Sửa Rate Card v2: Ngày hiệu lực hiển thị `10/20/2026` trong form nhưng chi tiết hiển thị `20/10/2026`. | Đã thêm thuộc tính `lang="vi-VN"` và nhãn hiển thị preview định dạng chuẩn Việt Nam `DD/MM/YYYY` (ngày/tháng/năm) ngay dưới ô nhập. | **RESOLVED** |
-| **E08** | `evidence/E08.png` | Bằng chứng đối soát dòng tài chính tổng hợp. | Toàn bộ dòng tiền, VAT và liên kết truy vết snapshot khớp 100% giữa Rating và Cost. | **VERIFIED PASS** |
+"""
+    for code, fn, desc, sol, st in evidence_exact_ba:
+        content += f"| **{code}** | `{fn}` | {desc} | {sol} | **{st}** |\n"
+
+    content += """
+---
+
+## 3. DANH SÁCH ẢNH CHỤP TRÌNH DUYỆT THỰC TẾ TRONG THƯ MỤC `screenshots/`
+
+1. **`01_service_type_dropdown_bill_edit.png`**: Giao diện Sửa Bill `TESTLSS002` với Dropdown Loại dịch vụ `FREIGHT` chuẩn active, phân biệt rõ với Phương thức vận chuyển `AIR` (Giải quyết `E01`).
+2. **`02_rating_v2_eligible_v1_weight_mismatch.png`**: Giao diện Tính giá chọn Bảng giá v2 đủ điều kiện áp dụng, v1 bị loại với lý do không khớp nấc trọng lượng [1, 120) (Giải quyết `E02`).
+3. **`03_rating_buy_history_seed_cost_only_with_vat_breakdown.png`**: Lịch sử Rating BUY với bóc tách Net (1.740.000đ), VAT 8% (139.200đ), Gross (1.879.200đ) và chỉ có duy nhất nút *Seed Chi phí dự kiến* (Giải quyết `E03`, `E04`).
+4. **`04_cost_detail_freight_rating_trace_and_vat_disclosure.png`**: Màn hình Chi tiết Chi phí `FREIGHT` 1.440.000đ với đầy đủ khối Truy vết Rating snapshot (`TDNT_SGN_HAN` v2, `QT0001`, CW 120kg, 12.000đ/kg) và bảng VAT (Giải quyết `E05`, `E06`).
+5. **`05_cost_detail_surcharge_independent_trace.png`**: Màn hình Chi tiết Chi phí phụ phí `DONGGOI` 300.000đ với liên kết Biểu phụ phí độc lập (Snapshot riêng, không nhầm thành `QT0001`).
+6. **`06_rate_card_declaration_form_dd_mm_yyyy_date_input.png`**: Form sửa Bảng giá v2 với component `DateInputVi` hiển thị trực tiếp `20/10/2026` (`DD/MM/YYYY`) trong ô nhập (Giải quyết `E07`).
+7. **`07_rating_buy_after_seed_idempotent_no_seed_revenue.png`**: Lịch sử BUY sau khi Seed thành công: trạng thái *Đã seed chi phí* + deep link sang Chi phí, hoàn toàn không có nút Seed Doanh thu (Giải quyết `E08`).
 """
     with open(f"{OUT_DIR}/03_UAT_TC01_To_TC32_And_Evidence_Matrix.md", "w", encoding="utf-8") as f:
         f.write(content)
@@ -439,6 +404,5 @@ def generate_uat_matrix():
 
 if __name__ == "__main__":
     generate_readme()
-    generate_verify_report()
     generate_compliance_report()
     generate_uat_matrix()

@@ -22,21 +22,22 @@
    - `SeedExpectedRevenuesFromRatingCommand.cs`: Chặn đứng yêu cầu seed Doanh thu nếu Rating mang chiều `vendor` (BUY).
 5. **Cost Traceability & VAT Queries**:
    - `CostQueries.cs`: Mở rộng `CostDto` mang thêm `NetAmount`, `VatRate`, `VatAmount`, `GrossAmount` và `RatingTrace`.
-   - Truy vấn thông tin snapshot từ `rating_details`, `ratings`, `rate_cards`, `rate_versions` và `pricing_rules`. Trả về `sourceOrigin = "manual"` nếu không có liên kết rating.
+   - Truy vấn thông tin snapshot từ `rating_details`, `ratings`, `rate_cards`, `rate_versions` và `pricing_rules`. Phân biệt rõ ràng giữa cước chính (`PricingRuleId`) và phụ phí độc lập (`SurchargeVersionId`, `IsSurcharge = true`). Trả về `sourceOrigin = "manual"` nếu không có liên kết rating.
 
 ### 1.2. Tầng Frontend (Next.js / TypeScript / React)
-1. **Operational Editor**:
+1. **Date Input Component**:
+   - `apps/web/components/DateInputVi.tsx`: Component nhập ngày chuẩn hóa Việt Nam hiển thị trực tiếp chuỗi `DD/MM/YYYY`, đi kèm picker lịch và input ẩn chuẩn ISO `YYYY-MM-DD`.
+   - Tích hợp vào `RateCardDeclarationForm.tsx` và `CreateRateVersionForm.tsx`.
+2. **Operational Editor**:
    - `opref-edit.ts`: Khai báo loại trường `service_type` và mảng `services?: OprefOption[]`.
    - `OperationalReferenceEditor.tsx`: Render thẻ `<select>` dropdown cho trường loại dịch vụ; hiển thị cảnh báo nghiệp vụ khi phát hiện mã di sản `AIR`.
-2. **Bill Rating Panel & Forms**:
+3. **Bill Rating Panel & Forms**:
    - `RateBillForm.tsx`: Hiển thị banner ngày áp dụng (`rateDateFormatted`) và nguồn xác định; phân nhóm rõ ràng phiên bản đủ điều kiện vs phiên bản chỉ tham khảo kèm lý do tiếng Việt.
-   - `BillRatingPanel.tsx`: Lọc hiển thị nút Seed theo `direction`: BUY chỉ hiển thị nút Seed Chi phí; SELL chỉ hiển thị nút Seed Doanh thu.
-3. **Seed Buttons**:
+   - `BillRatingPanel.tsx`: Bổ sung khối bóc tách VAT (Net, VAT 8%, Gross) trên kết quả Rating và lịch sử Rating. Lọc hiển thị nút Seed theo `direction`: BUY chỉ hiển thị nút Seed Chi phí; SELL chỉ hiển thị nút Seed Doanh thu.
+4. **Seed Buttons**:
    - `SeedExpectedCostsButton.tsx` & `SeedExpectedRevenuesButton.tsx`: Bổ sung thuộc tính `billId` và cơ chế điều hướng deep-link tới tab tương ứng sau khi seed thành công.
-4. **Cost Detail Page**:
-   - `apps/web/app/costs/[id]/page.tsx`: Bổ sung section **Nguồn tính giá & Truy vết (Rating Traceability)** và bảng công bố chi tiết VAT (Net, VAT Rate, VAT Amount, Gross).
-5. **Date Input Localization**:
-   - `RateCardDeclarationForm.tsx` & `CreateRateVersionForm.tsx`: Thêm thuộc tính `lang="vi-VN"`, quản lý state và hiển thị preview định dạng chuẩn `DD/MM/YYYY` (ngày/tháng/năm) ngay dưới ô nhập ngày.
+5. **Cost Detail Page**:
+   - `apps/web/app/costs/[id]/page.tsx`: Bổ sung section **Nguồn tính giá & Truy vết (Rating Traceability)** đầy đủ các trường truy vết #14..#21 và bảng công bố bóc tách VAT 8% (Net, VAT Rate, VAT Amount, Gross).
 
 ---
 
@@ -69,31 +70,32 @@
 ---
 
 ## 3. MA TRẬN TUÂN THỦ 22 BUSINESS RULES (`03_Business_Rules`)
+*(Ghi nhận chi tiết vị trí File, Hàm thực thi và Test case xác minh cho từng quy tắc)*
 
-| Mã BR | Tên quy tắc | Nội dung quy tắc | Hiện thực hóa trong Code | Kiểm thử tự động | Trạng thái |
-|:---|:---|:---|:---|:---|:---:|
-| **BR-01** | Phân biệt chiều Rating | BUY→Expected Cost, SELL→Expected Revenue; không suy ra từ tên khoản mục. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-02** | API seed direction guard | Trái chiều rating/seed phải trả lỗi nghiệp vụ, không ghi financial transaction. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-03** | Idempotent seed | Mỗi rating_detail + nature chỉ sinh đúng một economic fact theo key/policy; retry không nhân đôi. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-04** | Danh mục dịch vụ chuẩn | service_type từ master active canonical; không nhập mã tùy ý ở Create/Edit/API. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-05** | Dịch vụ ≠ phương thức | service FREIGHT và mode AIR là hai chiều độc lập; mã giống chữ không đồng nghĩa. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-06** | SoT & kế thừa | Kế thừa service khi một nguồn xác định rõ; đa nguồn mâu thuẫn phải chọn/xác nhận; không ghi đè dữ liệu API-owned. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-07** | Legacy compatibility | Không xóa hoặc map hàng loạt mã AIR service nếu chưa khảo sát reference/migration; phát hiện bất thường có kiểm soát. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-08** | Chọn version theo as-of | Phiên bản dùng cho Rating phải được xác định theo ngày áp dụng và precedence rõ ràng; hỗ trợ lịch sử. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-09** | Không sửa Published | Phiên bản đã phát hành bất biến; chọn version mới không được sửa Rating đã tính. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-10** | Nấc trọng lượng half-open | [min,max): v1 [1,120) loại CW=120; v2 [1,121) nhận CW=120. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-11** | Thông báo có cấu trúc | Tách missing-context, mismatch-by-field, version-not-effective; hỗ trợ audit UX. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-12** | Không tự chọn nhiều Rate Card | Nếu nhiều Rate Card độc lập đủ điều kiện, user xác nhận lựa chọn; phân biệt nhiều version cùng card. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-13** | Trace bất biến | Cost generated from Rating phải dẫn về rating/rating_detail/rate version/rule/surcharge snapshot thực. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-14** | Trace không tái dựng hiện tại | Không đọc giá hiện tại của Rate Card để giả định là giá đã dùng trong Rating lịch sử. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-15** | Phụ phí độc lập | Cước chính + applicable surcharges; mỗi surcharge economic identity độc lập, chống double apply. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-16** | Maturity độc lập | Expected không phải Actual/Confirmed; Seed không tạo chứng từ, AP hoặc thanh toán. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-17** | VAT net/gross | Lưu, hiển thị basis VAT/pre-tax/tax/gross theo existing policy; không tính lại amount theo phỏng đoán. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-18** | Ngày hiển thị tiếng Việt | UI dd/MM/yyyy nhất quán; API/DB ISO; không đảo tháng/ngày hay drift timezone. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-19** | Ngày áp dụng Rating có nguồn | RateDate resolved có source/precedence/snapshot; ETD không mặc định làm RateDate nếu policy không quy định. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-20** | Chỉ sửa GAP đã xác nhận | Các hạng mục VERIFY_THEN_FIX bắt buộc kiểm tra code/data trước; không tự thay đổi kiến trúc. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-21** | BUY Seed qua Bill | Khoản Expected Cost BUY từ Bill vẫn là chi phí trực tiếp khi nguồn riêng Bill; giữ phân bổ Chặng dùng chung ở gói 23/10. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
-| **BR-22** | UI tình trạng Seed | Sau Seed thành công hiển thị số dòng, trạng thái, deep-link; không còn nút sai chiều. | Đáp ứng triệt để tại Application Service / Domain Logic | `UatFollowup20261026Tests` | **PASS** |
+| Mã BR | Tên quy tắc | Nội dung quy tắc | Tệp mã nguồn & Hàm/Component thực thi | Hàm kiểm thử tự động xác minh |
+|:---|:---|:---|:---|:---|
+| **BR-01** | Phân biệt chiều Rating | BUY→Expected Cost, SELL→Expected Revenue; không suy ra từ tên khoản mục. | `src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs (Handle)`<br>`apps/web/components/BillRatingPanel.tsx` | `UatFollowup20261026Tests.TC07_BuyRating_History_RendersOnlySeedExpectedCosts`<br>`UatFollowup20261026Tests.TC08_SellRating_History_RendersOnlySeedExpectedRevenues` |
+| **BR-02** | API seed direction guard | Trái chiều rating/seed phải trả lỗi nghiệp vụ, không ghi financial transaction. | `src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs`<br>`src/LCMS.Application/Revenues/Commands/SeedExpectedRevenuesFromRatingCommand.cs` | `UatFollowup20261026Tests.TC09_SeedExpectedRevenues_OnBuyRating_ThrowsValidationAppException`<br>`UatFollowup20261026Tests.TC10_SeedExpectedCosts_OnSellRating_ThrowsValidationAppException` |
+| **BR-03** | Idempotent seed | Mỗi rating_detail + nature chỉ sinh đúng một economic fact theo key/policy; retry không nhân đôi. | `src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs`<br>`src/LCMS.Infrastructure/Persistence/LcmsDbContext.cs` | `UatFollowup20261026Tests.TC11_SeedIdempotency_RepeatSeed_ReturnsExistingCostsWithoutDuplicates`<br>`UatFollowup20261026Tests.TC31_FinancialIntegrity_TwoSeeds_ProduceExactlyTwoEconomicCostFacts` |
+| **BR-04** | Component nature | Tất cả details của BUY rating đều có nature là COST (cả freight và surcharge). | `src/LCMS.Domain/Entities/RatingDetail.cs`<br>`apps/web/components/BillRatingPanel.tsx (RatingBreakdown)` | `UatFollowup20261026Tests.TC12_RatingDetail_ComponentNature_BothFreightAndSurchargeAreCost` |
+| **BR-05** | Financial maturity | Expected cost chỉ là dự kiến, không tự ý chuyển sang Confirmed/Actual hay sinh AP. | `src/LCMS.Domain/Entities/Cost.cs (CreateExpected)`<br>`src/LCMS.Application/Costs/Commands/SeedExpectedCostsFromRatingCommand.cs` | `UatFollowup20261026Tests.TC30_FinancialMaturity_ExpectedCost_NeverAutoCreatesConfirmedOrActual` |
+| **BR-06** | Single Economic Cost | Giữ nguyên số tiền kinh tế NET trước thuế; bóc tách VAT không làm biến dạng số tiền lưu DB. | `src/LCMS.Application/Costs/Queries/CostQueries.cs`<br>`src/LCMS.Domain/Enums/DeclaredVat.cs`<br>`apps/web/app/costs/[id]/page.tsx` | `UatFollowup20261026Tests.TC28_CostSeedVatDisclosure_Rating1740000_ItemizesNetVatGross`<br>`UatFollowup20261026Tests.TC29_Reconciliation_SeedCostLines_MatchesPreTaxNet_NoDoubleCount` |
+| **BR-07** | Nấc trọng lượng nửa mở | Nấc trọng lượng [min, max) nửa mở; CW=120kg không khớp [1, 120) mà khớp [1, 121). | `src/LCMS.Application/Ratings/BillRateSuggestion.cs (WeightMatches)`<br>`src/LCMS.Application/Ratings/Queries/SuggestBillRatesQuery.cs` | `UatFollowup20261026Tests.TC18_RatingVersionMatch_CW120kg_FailsV1HalfOpenBound_EligibleForV2` |
+| **BR-08** | Hiệu lực bảng giá As-of | Đánh giá hiệu lực theo ngày rateDate; trước ngày phát hành v2 thì v1 eligible. | `src/LCMS.Application/Ratings/BillRateSuggestion.cs (Classify)`<br>`src/LCMS.Application/Ratings/Queries/SuggestBillRatesQuery.cs` | `UatFollowup20261026Tests.TC17_RatingVersionMatch_AsOfBeforeV2_EligibleForV1` |
+| **BR-09** | Version Precedence | Khi nhiều phiên bản cùng thỏa mãn, phiên bản có VersionNo cao nhất được ưu tiên. | `src/LCMS.Application/Ratings/BillRateSuggestion.cs (Classify: latestByCard)` | `UatFollowup20261026Tests.TC19_RatingVersionMatch_DeterministicPrecedence_SelectsHighestVersion` |
+| **BR-10** | Đa Rate Card độc lập | Khi nhiều Rate Card độc lập cùng thỏa mãn, hệ thống trả Ambiguous=true để người dùng chọn. | `src/LCMS.Application/Ratings/BillRateSuggestion.cs (Classify: Ambiguous check)` | `UatFollowup20261026Tests.TC32_MultipleRateCards_Ambiguous_RequiresExplicitUserSelection` |
+| **BR-11** | Lý do từ chối dịch vụ | Khác biệt loại dịch vụ nêu rõ tên trường và giá trị khác biệt (MISMATCH_BY_FIELD). | `src/LCMS.Application/Ratings/BillRateSuggestion.cs (RuleReason)`<br>`apps/web/components/RateBillForm.tsx` | `UatFollowup20261026Tests.TC21_RatingBlockReason_ServiceMismatch_MentionsFieldAndValue` |
+| **BR-12** | Lý do từ chối trọng lượng | Khác biệt trọng lượng nêu rõ nằm ngoài nấc [min, max) (MISMATCH_BY_FIELD). | `src/LCMS.Application/Ratings/BillRateSuggestion.cs (RuleReason)`<br>`apps/web/components/RateBillForm.tsx` | `UatFollowup20261026Tests.TC22_RatingBlockReason_WeightMismatch_MentionsOutOfRange` |
+| **BR-13** | Phân biệt thiếu vs lệch | Phân biệt rõ thiếu ngữ cảnh (MISSING_CONTEXT) khác với không khớp dữ liệu (MISMATCH_BY_FIELD). | `src/LCMS.Application/Ratings/BillRateSuggestion.cs (BlockReason)`<br>`apps/web/components/RateBillForm.tsx` | `UatFollowup20261026Tests.TC23_RatingBlockReason_MissingVsMismatch_DistinguishesContextFromMismatch` |
+| **BR-14** | RateDate Precedence | Thứ tự ưu tiên xác định ngày tính giá: manual_override > etd > policy_fallback. | `src/LCMS.Application/Ratings/Queries/SuggestBillRatesQuery.cs`<br>`src/LCMS.Application/Ratings/Commands/CreateRatingCommand.cs` | `UatFollowup20261026Tests.TC24_RateDateTrace_EtdAbsent_FallbacksToBillCreatedAtWithClearLabel`<br>`UatFollowup20261026Tests.TC25_RateDateTrace_EtdSupplied_UsesEtdWithResolvedSourceLabel` |
+| **BR-15** | RateDate Metadata Trace | Lưu trữ và công bố rateDate, rateDateFormatted, rateDateSource, rateDateSourceLabel. | `src/LCMS.Application/Ratings/RatingReadiness.cs`<br>`apps/web/components/RateBillForm.tsx` | `UatFollowup20261026Tests.TC25_RateDateTrace_EtdSupplied_UsesEtdWithResolvedSourceLabel` |
+| **BR-16** | Date Localization DD/MM/YYYY | Chuẩn hóa hiển thị DD/MM/YYYY trên form khai báo và sửa bảng giá. | `apps/web/components/DateInputVi.tsx`<br>`apps/web/components/RateCardDeclarationForm.tsx`<br>`apps/web/components/CreateRateVersionForm.tsx` | `UatFollowup20261026Tests.TC26_DateLocale_Formatting_StrictlyProducesDdMmYyyy` |
+| **BR-17** | Timezone Date-only safety | Lưu trữ chuẩn ISO YYYY-MM-DD không bị dịch ngày khi chuyển đổi múi giờ. | `apps/web/components/DateInputVi.tsx`<br>`apps/web/lib/money.ts (formatDateOnlyVi)` | `UatFollowup20261026Tests.TC27_DateTimezone_UtcDateOnlyPreservation_PreventsDayShift` |
+| **BR-18** | Service Type Master Lookup | Trường loại dịch vụ liên kết chặt với danh mục master service_type active. | `src/LCMS.Application/OperationalReferences/Edit/OperationalFieldCatalog.cs`<br>`apps/web/components/OperationalReferenceEditor.tsx`<br>`apps/web/components/CreateBillWorkspaceForm.tsx` | `UatFollowup20261026Tests.TC01_CreateBill_ServiceTypeDropdown_OnlyActiveMaster`<br>`UatFollowup20261026Tests.TC02_EditBill_ServiceTypeDropdown_HasFreight_SeparatedFromMode` |
+| **BR-19** | API Service Validation | Backend từ chối các mã serviceTypeCode tùy ý (GIBBERISH) bằng ValidationAppException. | `src/LCMS.Application/OperationalReferences/Edit/EditOperationalReferenceCommand.cs`<br>`src/LCMS.Application/Bills/Commands/UpdateBillContextCommand.cs` | `UatFollowup20261026Tests.TC03_Api_InvalidServiceTypeCode_ThrowsValidationAppException` |
+| **BR-20** | Multi-Order Conflict Handling | Tạo Bill từ nhiều Order có serviceTypeCode khác nhau phải kích hoạt giải quyết xung đột. | `apps/web/components/CreateBillWorkspaceForm.tsx`<br>`apps/web/lib/input-optimization-inheritance.test.ts` | `UatFollowup20261026Tests.TC04_MultiOrder_DifferentServiceType_RequiresConflictResolution` |
+| **BR-21** | Legacy AIR Service Warning | Phát hiện mã di sản AIR và hiển thị cảnh báo nghiệp vụ; không xóa hay đổi ngầm DB. | `apps/web/components/OperationalReferenceEditor.tsx` | `UatFollowup20261026Tests.TC05_LegacyServiceAir_WarnsWithoutSilentDeletionOrAutoConvert` |
+| **BR-22** | Cross-Module Canonical Master | Đồng bộ sử dụng master service_type across Bill, Order, Shipment, Leg. | `src/LCMS.Application/OperationalReferences/Edit/OperationalFieldCatalog.cs (ByType)` | `UatFollowup20261026Tests.TC06_CrossModule_OrderShipmentLeg_UseCanonicalServiceMaster` |
 
 ---
 

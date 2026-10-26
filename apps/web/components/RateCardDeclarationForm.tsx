@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { PublishRateVersionButton } from "@/components/PublishRateVersionButton";
 import { formatDateOnlyVi } from "@/lib/money";
+import { DateInputVi } from "@/components/DateInputVi";
 import type { RouteItem } from "@/lib/reference-masters-shared";
 import {
   amountFieldLabel,
@@ -794,18 +795,12 @@ export function RateCardDeclarationForm(props: Props) {
           <input id="vatRate" name="vatRate" inputMode="decimal" defaultValue={props.vatRate ?? ""} placeholder="Để trống nếu chưa khai báo" />
         </div>
         <div className="field">
-          <label htmlFor="effectiveFrom">Hiệu lực từ</label>
-          <input
+          <label htmlFor="effectiveFrom">Hiệu lực từ (DD/MM/YYYY)</label>
+          <DateInputVi
             id="effectiveFrom"
             name="effectiveFrom"
-            type="date"
-            lang="vi-VN"
-            value={effectiveDateVal}
-            onChange={(e) => setEffectiveDateVal(e.target.value)}
+            defaultValue={dateInput(props.effectiveFrom)}
           />
-          <span className="muted small" style={{ display: "block", marginTop: "4px" }}>
-            Định dạng Việt Nam: <strong>{formatDateOnlyVi(effectiveDateVal)}</strong> (ngày/tháng/năm)
-          </span>
         </div>
         <div className="field field-span">
           <label htmlFor="description">Mô tả</label>

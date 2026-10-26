@@ -247,6 +247,11 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                       <dt>Quy tắc tính giá</dt>
                       <dd>
                         <code>{cost.ratingTrace.ruleCode ?? "QT0001"}</code>
+                        {cost.ratingTrace.pricingRuleId ? (
+                          <span className="muted small" style={{ marginLeft: "8px" }}>
+                            (ID: #{cost.ratingTrace.pricingRuleId.slice(0, 8)})
+                          </span>
+                        ) : null}
                       </dd>
                     </div>
                   </>
@@ -283,10 +288,14 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                     {cost.ratingTrace.rateDateFormatted ?? "—"} ({cost.ratingTrace.rateDateSourceLabel ?? "Theo Bill"})
                   </dd>
                 </div>
-                {cost.ratingTrace.vendorName ? (
+                {cost.ratingTrace.vendorPartyId ? (
                   <div>
                     <dt>Nhà cung cấp (Vendor)</dt>
-                    <dd>{cost.ratingTrace.vendorName}</dd>
+                    <dd>
+                      <Link className="row-link" href="/admin/parties">
+                        {cost.ratingTrace.vendorName || `#${cost.ratingTrace.vendorPartyId.slice(0, 8)}`}
+                      </Link>
+                    </dd>
                   </div>
                 ) : null}
               </dl>

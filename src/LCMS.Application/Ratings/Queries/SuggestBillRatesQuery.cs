@@ -274,7 +274,11 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
             vendors,
             activeRatingId,
             activeQuantity,
-            activeWeight);
+            activeWeight,
+            rateDate,
+            rateDate.ToString("dd/MM/yyyy"),
+            rateDateSource,
+            rateDateSourceLabel);
     }
 
     private async Task<IReadOnlyList<LegRateOptionDto>> LoadLegsAsync(Guid billId, CancellationToken cancellationToken)

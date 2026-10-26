@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatDateOnlyVi } from "@/lib/money";
+import { DateInputVi } from "@/components/DateInputVi";
 
 type Props = {
   rateCardId: string;
@@ -86,36 +87,12 @@ export function CreateRateVersionForm({ rateCardId }: Props) {
       ) : null}
       <div className="form-grid">
         <div className="field">
-          <label htmlFor="effectiveFrom">Hiệu lực từ (tuỳ chọn)</label>
-          <input
-            id="effectiveFrom"
-            name="effectiveFrom"
-            type="date"
-            lang="vi-VN"
-            value={fromVal}
-            onChange={(e) => setFromVal(e.target.value)}
-          />
-          {fromVal ? (
-            <span className="muted small" style={{ display: "block", marginTop: "4px" }}>
-              Định dạng Việt Nam: <strong>{formatDateOnlyVi(fromVal)}</strong> (ngày/tháng/năm)
-            </span>
-          ) : null}
+          <label htmlFor="effectiveFrom">Hiệu lực từ (DD/MM/YYYY)</label>
+          <DateInputVi id="effectiveFrom" name="effectiveFrom" />
         </div>
         <div className="field">
-          <label htmlFor="effectiveTo">Hiệu lực đến (tuỳ chọn)</label>
-          <input
-            id="effectiveTo"
-            name="effectiveTo"
-            type="date"
-            lang="vi-VN"
-            value={toVal}
-            onChange={(e) => setToVal(e.target.value)}
-          />
-          {toVal ? (
-            <span className="muted small" style={{ display: "block", marginTop: "4px" }}>
-              Định dạng Việt Nam: <strong>{formatDateOnlyVi(toVal)}</strong> (ngày/tháng/năm)
-            </span>
-          ) : null}
+          <label htmlFor="effectiveTo">Hiệu lực đến (DD/MM/YYYY)</label>
+          <DateInputVi id="effectiveTo" name="effectiveTo" />
         </div>
         <div className="field">
           <label htmlFor="vatRate">Thuế suất VAT (%)</label>

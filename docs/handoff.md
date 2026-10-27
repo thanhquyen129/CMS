@@ -1,3 +1,7 @@
+## 2026-10-27 (LCMS-UAT-FU-20261026-01 Live Screenshots & Route Fix)
+- Changes: Added `/rate-cards/declare` re-export to `/rate-cards/new` and captured real Next.js browser screenshots for all 7 UAT scenarios without dev overlay badges or runtime errors.
+- Files: apps/web/app/rate-cards/declare/page.tsx, docs/po/26102026-LCMS_UAT_Followup_DEV_Package_v1.0_20261026/screenshots/*.
+
 ## 2026-10-26 (LCMS-UAT-FU-20261026-01 Post-UAT Follow-up Package v1.0)
 - Changes: Binds ServiceTypeCode to active master catalog in Bill/Order/Shipment/Leg; direction guards for Seed Cost (BUY only) and Seed Revenue (SELL only); weight tier half-open matching & version precedence in BillRateSuggestion; Cost detail rating snapshot trace & itemized VAT disclosure; date format localization to DD/MM/YYYY.
 - Files: src/LCMS.Application/OperationalReferences/*, src/LCMS.Application/Ratings/*, src/LCMS.Application/Costs/*, src/LCMS.Application/Revenues/*, apps/web/components/*, apps/web/app/costs/[id]/page.tsx, tests/LCMS.Api.Tests/UatFollowup20261026Tests.cs.

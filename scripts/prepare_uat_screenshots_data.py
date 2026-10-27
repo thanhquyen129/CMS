@@ -11,6 +11,11 @@ card_id = '01A16CF7-3B64-7606-8B4D-2158CEA9D954'
 v1_id = '01A16CF7-3B7A-7F90-8A6E-DEDDBF487F62'
 v2_id = '01A16DD6-8B84-78AA-A9C8-509E0224A2CF'
 now_str = datetime.now(timezone.utc).isoformat()
+rate_date_str = '2026-10-26T00:00:00Z'
+
+# Clean up any previous invalid test ratings
+cur.execute("DELETE FROM rating_details WHERE rating_id LIKE '01A16DD7-R%'")
+cur.execute("DELETE FROM ratings WHERE id LIKE '01A16DD7-R%'")
 
 # 1. Ensure DEMO-01-HUB has SGN-HAN route and FREIGHT service
 cur.execute("""
@@ -94,7 +99,8 @@ else:
     surcharge_version_id = scv_row[0]
 
 # 6. Rating BUY on DEMO-01-HUB
-rating_id = '01A16DD7-R111-78AA-A9C8-509E0224A2CF'
+# STRICT HEX ONLY for all UUIDs:
+rating_id = '01A16DD7-F111-78AA-A9C8-509E0224A2CF'
 detail_freight_id = '01A16DD7-D111-78AA-A9C8-509E0224A2CF'
 detail_packing_id = '01A16DD7-D222-78AA-A9C8-509E0224A2CF'
 
@@ -105,13 +111,13 @@ cur.execute("""
     INSERT INTO ratings (
         id, tenant_id, bill_id, rate_version_id, rate_card_id, context_type, party_type_code,
         service_type_code, route_code, chargeable_weight_kg, chargeable_basis,
-        total_amount, quantity, currency_code, rated_at, status, context_json, row_version, created_at
+        total_amount, quantity, currency_code, rated_at, rate_date, status, context_json, row_version, created_at
     ) VALUES (
         ?, ?, ?, ?, ?, 'bill', 'vendor',
         'FREIGHT', 'SGN-HAN', 120.0, 'actual_or_formula',
-        1740000.0, 1.0, 'VND', ?, 'rated', '{"rateDateSourceLabel":"Theo ngày khởi hành (ETD) của Bill"}', ?, ?
+        1740000.0, 1.0, 'VND', ?, ?, 'completed', '{"rateDateSourceLabel":"Theo ngày khởi hành (ETD) của Bill"}', ?, ?
     )
-""", (rating_id, tenant_id, bill_id, v2_id, card_id, now_str, uuid.uuid4().bytes, now_str))
+""", (rating_id, tenant_id, bill_id, v2_id, card_id, now_str, rate_date_str, uuid.uuid4().bytes, now_str))
 
 cur.execute("""
     INSERT INTO rating_details (
@@ -121,7 +127,7 @@ cur.execute("""
     ) VALUES (
         ?, ?, ?, ?, 'QT0001', 'FREIGHT', 'Cước chính',
         'cost', 'expected', 1440000.0, 1440000.0, 8.0, 115200.0, 1555200.0,
-        'VND', 'pricing_rule', '120kg × 12.000đ/kg', ?, ?
+        'VND', 'base_rate', '120kg × 12.000đ/kg', ?, ?
     )
 """, (detail_freight_id, tenant_id, rating_id, v2_rule_id, uuid.uuid4().bytes, now_str))
 
@@ -177,4 +183,4 @@ cur.execute("""
 
 con.commit()
 con.close()
-print("UAT screenshot data prepared successfully.")
+print("UAT screenshot data prepared successfully with valid hex UUIDs.")

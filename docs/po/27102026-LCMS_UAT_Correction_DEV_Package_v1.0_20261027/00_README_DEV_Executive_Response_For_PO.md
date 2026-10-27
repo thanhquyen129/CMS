@@ -31,7 +31,7 @@
 | `MASTER-SERVICE-01` | P1 | Mã dịch vụ di sản `AIR` vẫn chọn được trên Bill mới (`E03`, `E04`) | Dropdown chưa lọc mã legacy; Backend chưa validate chặn `AIR` làm `service_type` cho giao dịch mới. | Khóa/ẩn `AIR` khỏi danh sách chọn Bill mới; API từ chối nếu request gửi service = `AIR`; Bill cũ hiển thị cảnh báo di sản an toàn. | **DEV PASS** |
 | `BILL-SERVICE-DISPLAY-01` | P0 | Loại dịch vụ lệch giữa Sửa Bill và Tổng quan (`E03`, `E05`) | `BillDto` thiếu trường `ServiceTypeCode`; UI Tổng quan fallback đọc `ctx?.serviceType` từ JSON thay vì DB column. | Bổ sung `ServiceTypeCode` vào `BillDto` và Mapper; `OperationalContextGrid` ưu tiên đọc `serviceTypeCode` đã lưu. | **DEV PASS** |
 | `RATING-STALE-NORMALIZE-01` | P0 | Cảnh báo stale giả do phương thức `AIR` → `air` (`E05`, `E06`) | So sánh chuỗi phương thức phân biệt hoa thường (`StringComparison.Ordinal`), kích hoạt cờ stale sai. | Chuẩn hóa so sánh case-insensitive (`OrdinalIgnoreCase`); bảo toàn cảnh báo stale cho các thay đổi nghiệp vụ thật. | **DEV PASS** |
-| `COST-RATING-SOURCE-01` | P0 | Cost `FREIGHT` truy vết sai thành "Phụ phí từ Rating" (`E07`) | `CostQueries.cs` kiểm tra `detail.SourceVersionId is not null` làm điều kiện phụ phí, biến mọi Base Rate thành Phụ phí. | Loại bỏ điều kiện sai; truy vết chính xác Base Rate `TDNT_SGN_HAN` v2 / `QT0001` cho khoản cước `1.440.000 ₫`. | **DEV PASS** |
+| `COST-RATING-SOURCE-01` | P0 | Cost `FREIGHT` truy vết sai thành "Phụ phí từ Rating" (`E07`) | `CostQueries.cs` kiểm tra `detail.SourceVersionId is not null` làm điều kiện phụ phí, biến mọi Base Rate thành Phụ phí. | Chuẩn hóa quan hệ định danh 1-1 trực tiếp (`cost.source_type == 'rating_detail'` & `cost.source_id == rating_detail.id`) theo `BR27-13`; loại bỏ điều kiện sai; truy vết chính xác Base Rate `TDNT_SGN_HAN` v2 / `QT0001` cho khoản cước `1.440.000 ₫`. | **DEV PASS** |
 | `SURCHARGE-FORMULA-TRACE-01` | P1 | Phụ phí `DONGGOI` hiển thị đơn giá `2.500 đ/kg` như đơn giá gốc (`E08`) | UI tự chia `300.000 / 120 = 2.500` và hiển thị dưới nhãn "Đơn giá/Nấc khớp" mà không xét `calculation_mode == fixed`. | Hiển thị rõ `Cố định (FIXED) — 300.000 ₫ / khoản`; gán nhãn đơn giá 2.500 ₫/kg là "Đơn giá quy đổi tham khảo". | **DEV PASS** |
 
 ---
@@ -55,7 +55,8 @@
    - `06_HoiQuy`: 10/10 regression guards đạt `PASS`.
    - `08_BanGiao`: 10/10 đầu việc hoàn tất `DONE`.
 4. **Bộ ảnh đối chiếu thực tế (`screenshots/`)**:
-   - 08 ảnh chụp độ phân giải cao đối chiếu chuẩn mực với 08 ảnh bằng chứng gốc `E01` → `E08`.
+   - 08 ảnh chụp giao diện Next.js thật từ ứng dụng LCMS đang chạy thực tế (Next.js AppShell với đầy đủ Sidebar, Topbar, .NET Backend và CSDL thực `lcms_dev.db`), đối chiếu chuẩn mực với 08 ảnh bằng chứng gốc `E01` → `E08`, loại bỏ hoàn toàn các trang HTML mockup/card tĩnh trước đây.
+   - Thể hiện chuẩn xác từng con số tài chính của Bill `TESTLSS002` (Net `1.740.000 ₫`, Gross `1.879.200 ₫`, CW `120 kg`, cước chính `1.440.000 ₫` tại `12.000 ₫/kg`, phụ phí đóng gói `300.000 ₫`).
 
 ---
 
@@ -70,3 +71,4 @@ Toàn bộ kết quả được lưu trữ đồng nhất tại:
 - `03_UAT_37_TestCases_FU27_And_Visual_Evidence.md`: Báo cáo kết quả 37 kịch bản UAT và đối chiếu ảnh chứng minh.
 - `LCMS_DEV_UAT_Correction_Matrix_v1.0_20261027.xlsx`: Ma trận kiểm soát 9 sheets đã cập nhật dữ liệu nghiệm thu.
 - `screenshots/`: Thư mục chứa 08 ảnh chụp màn hình chứng minh nghiệm thu thực tế.
+

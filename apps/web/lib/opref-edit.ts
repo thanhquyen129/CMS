@@ -120,11 +120,7 @@ export type ApiError = {
 };
 
 export const TRANSPORT_MODE_OPTIONS: OprefOption[] = [
-  { value: "air", label: "Hàng không (Air)" },
-  { value: "sea", label: "Đường biển (Sea)" },
-  { value: "road", label: "Đường bộ (Road)" },
-  { value: "rail", label: "Đường sắt (Rail)" },
-  { value: "express", label: "Chuyển phát nhanh" },
+  { value: "air", label: "Đường hàng không (AIR)" },
 ];
 
 export const SHIPMENT_MODE_OPTIONS: OprefOption[] = [

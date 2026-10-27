@@ -14,20 +14,13 @@ Tuân thủ nguyên tắc số 4 của Chỉ thị Kỹ thuật, mọi lỗi kh�
 ### 1. Hạng mục `TV-01`: Xác minh API/Dữ liệu Master Mode hiện Active
 * **Vấn đề đối chiếu**: `MASTER-MODE-01` (Ảnh `E01`, `E02`).
 * **Hiện trạng điều tra**:
-  - Truy vấn bảng cơ sở dữ liệu `transport_modes` và truy vấn API `GetOperationalReferenceEditQuery`: Tenant chỉ kích hoạt duy nhất phương thức `AIR` (`Hàng không`).
-  - Kiểm tra giao diện quản trị Danh mục Phương thức vận chuyển: Chỉ hiển thị 01 bản ghi `AIR` đang hoạt động (Hoàn toàn đúng theo thiết kế quản trị).
-  - Kiểm tra mã nguồn Frontend `apps/web/lib/opref-edit.ts`: Phát hiện mảng khai báo tĩnh:
-    ```typescript
-    export const TRANSPORT_MODE_OPTIONS = [
-      { value: "air", label: "Hàng không" },
-      { value: "sea", label: "Đường biển" },
-      { value: "road", label: "Đường bộ" },
-      { value: "rail", label: "Đường sắt" },
-      { value: "express", label: "Chuyển phát nhanh" },
-    ];
-    ```
-* **Kết luận căn nguyên**: Lỗi hoàn toàn nằm ở **tầng Frontend/BFF**. Trang Sửa Bill không gọi API danh mục mà đọc mảng tĩnh hardcode có chứa cả giá trị chưa quản trị (`express`).
-* **Hành động điều chỉnh**: Loại bỏ việc phụ thuộc vào mảng hardcode tĩnh; bổ sung trường `TransportModes` vào response của `GetOperationalReferenceEditQuery` và truyền trực tiếp vào component dropdown.
+  - Truy vấn bảng cơ sở dữ liệu `master_catalog_items` (`kind = 'transport_mode'`) và truy vấn API `GetOperationalReferenceEditQuery`: Tenant hiện chỉ kích hoạt duy nhất 01 phương thức `air` (`Đường hàng không`, `is_active = 1`).
+  - Kiểm tra giao diện quản trị Danh mục Phương thức vận chuyển (`/admin/catalog?kind=transport_mode`): Chỉ hiển thị đúng 01 bản ghi `air | Đường hàng không | — | Đang dùng`. Tuân thủ nghiêm ngặt Red Line #3: không tự ý silent-seed các mode `sea`, `road`, `rail` ngoài quy trình quản trị.
+  - Kiểm tra mã nguồn Frontend `apps/web/lib/opref-edit.ts`: Trước đây có mảng fallback tĩnh chứa các mode chưa quản trị (`sea`, `road`, `rail`, `express`).
+* **Kết luận căn nguyên**: Form Sửa Bill trước đây chưa ưu tiên lấy trực tiếp danh mục từ backend mà fallback về mảng tĩnh có chứa cả các option ngoài danh mục quản trị.
+* **Hành động điều chỉnh**:
+  - Đồng bộ danh mục active từ `GetOperationalReferenceEditQuery`: component `OperationalReferenceEditor.tsx` render dropdown lấy đúng danh sách mode active từ backend.
+  - Loại bỏ các option hardcode tĩnh (`sea`, `road`, `rail`, `express`) trong fallback `TRANSPORT_MODE_OPTIONS`, chỉ giữ duy nhất `air`. Dropdown trên form Sửa Bill đồng bộ 100% với danh mục quản trị tại `E01`.
 
 ---
 
@@ -35,10 +28,10 @@ Tuân thủ nguyên tắc số 4 của Chỉ thị Kỹ thuật, mọi lỗi kh�
 * **Vấn đề đối chiếu**: `MASTER-MODE-01` (Ảnh `E02`).
 * **Hiện trạng điều tra**:
   - Rà soát các component: `OperationalReferenceEditor.tsx`, `CreateOrderModal`, `RateCardDeclarationForm.tsx`.
-  - Trên `RateCardDeclarationForm.tsx`, phương thức vận chuyển đã được lấy động hoặc chuẩn hóa `air`, `sea`, `road`, `rail`.
-  - Trên `OperationalReferenceEditor.tsx`, dropdown sử dụng `TRANSPORT_MODE_OPTIONS` cố định thay vì danh mục tenant.
-* **Kết luận căn nguyên**: Thiếu sự đồng bộ lookup canonical giữa các form nhập liệu nghiệp vụ vận hành và danh mục quản trị.
-* **Hành động điều chỉnh**: Thống nhất cơ chế truyền danh mục canonical modes từ `GetOperationalReferenceEditQuery` sang `OperationalReferenceEditor`, loại bỏ triệt để option `express` chưa quản trị.
+  - Trên form Sửa Bill (`OperationalReferenceEditor.tsx`), dropdown đã được cấu hình đọc danh sách `transportModes` trả về từ API backend.
+  - Khi danh mục quản trị chỉ có `air`, dropdown chỉ hiển thị đúng 01 lựa chọn `Đường hàng không (air)`.
+* **Kết luận căn nguyên**: Cần đảm bảo tính nhất quán tuyệt đối giữa Master Catalog và các dropdown nhập liệu; không tự động thêm các mode giả lập.
+* **Hành động điều chỉnh**: Thống nhất cơ chế canonical lookup qua `GetOperationalReferenceEditQuery`. Đảm bảo tính nhất quán giữa danh mục quản trị (`E01`) và dropdown form (`E02`).
 
 ---
 
@@ -98,21 +91,26 @@ Tuân thủ nguyên tắc số 4 của Chỉ thị Kỹ thuật, mọi lỗi kh�
 ### 6. Hạng mục `TV-06`: Truy vết Dòng Nguồn Rating Detail cho Cost `FREIGHT` và `DONGGOI`
 * **Vấn đề đối chiếu**: `COST-RATING-SOURCE-01` (Ảnh `E07`, `E08`).
 * **Hiện trạng điều tra**:
-  - Bảng cơ sở dữ liệu `rating_details` lưu trữ 2 dòng:
-    1. Dòng cước chính: `source_type = 'base_rate'`, `source_version_id` trỏ tới Version của Bảng giá `TDNT_SGN_HAN` v2, `pricing_rule_id = 'QT0001'`, số tiền `1.440.000 ₫`.
-    2. Dòng phụ phí: `source_type = 'surcharge'`, `source_version_id` trỏ tới Version của Biểu phụ phí `DONGGOI_SGN_HAN_MUA` v2, số tiền `300.000 ₫`.
+  - Tuân thủ nguyên tắc `BR27-13` và kịch bản `FU27-TC-023`: Khoản mục chi phí (Cost) liên kết trực tiếp với chi tiết tính giá (Rating Detail) thông qua quan hệ định danh (`cost.source_type == 'rating_detail'` và `cost.source_id == rating_detail.id`). **Tuyệt đối KHÔNG suy diễn qua mã phí `charge_code` hay `RatingId` chung chung**.
+  - Bảng cơ sở dữ liệu `rating_details` lưu trữ 2 dòng độc lập:
+    1. Dòng cước chính (`id = 01A16DD7-D111-78AA-A9C8-509E0224A2CF`): `source_type = 'base_rate'`, `source_version_id` trỏ tới Version của Bảng giá `TDNT_SGN_HAN` v2, `pricing_rule_id = 'QT0001'`, số tiền Net `1.440.000 ₫`, VAT 8% `115.200 ₫`, Gross `1.555.200 ₫`.
+    2. Dòng phụ phí (`id = 01A16DD7-D222-78AA-A9C8-509E0224A2CF`): `source_type = 'surcharge'`, `source_version_id` trỏ tới Version của Biểu phụ phí `DONGGOI_SGN_HAN_MUA` v2, số tiền Net `300.000 ₫`, VAT 8% `24.000 ₫`, Gross `324.000 ₫`.
+  - Bảng `costs` lưu 2 dòng Expected Cost trỏ định danh chính xác:
+    - Cost `FREIGHT` (`id = 01A16DD7-C111-78AA-A9C8-509E0224A2CF`): `source_type = 'rating_detail'`, `source_id = '01A16DD7-D111-78AA-A9C8-509E0224A2CF'`.
+    - Cost `DONGGOI` (`id = 01A16DD7-C222-78AA-A9C8-509E0224A2CF`): `source_type = 'rating_detail'`, `source_id = '01A16DD7-D222-78AA-A9C8-509E0224A2CF'`.
   - Kiểm tra mã nguồn Backend `LCMS.Application/Costs/Queries/CostQueries.cs`:
     ```csharp
     // Code AS-IS:
     var isSurcharge = string.Equals(detail.SourceType, "surcharge", StringComparison.OrdinalIgnoreCase)
         || detail.SourceVersionId is not null; // BUG NGHIÊM TRỌNG!
     ```
-    Do dòng Base Rate cũng có `SourceVersionId` (trỏ đến Rate Version của Bảng giá), điều kiện `|| detail.SourceVersionId is not null` đã biến **mọi dòng cước chính Base Rate thành Phụ phí (Surcharge)**!
-* **Kết luận căn nguyên**: **Lỗi logic biểu thức điều kiện trong `CostQueries.cs`**. Cơ sở dữ liệu và Rating Snapshot hoàn toàn lưu trữ đúng `source_type = 'base_rate'`.
+    Dù lineage định danh `cost.source_id -> rating_detail.id` hoàn toàn chính xác 1-1, nhưng do dòng Base Rate cũng có `SourceVersionId` (trỏ đến Rate Version của Bảng giá), điều kiện sai `|| detail.SourceVersionId is not null` đã biến **mọi dòng cước chính Base Rate thành Phụ phí (Surcharge)**!
+* **Kết luận căn nguyên**: **Lỗi logic biểu thức điều kiện trong `CostQueries.cs`**. Cơ sở dữ liệu, quan hệ khóa ngoại và Rating Snapshot hoàn toàn lưu trữ đúng `source_type = 'base_rate'` và `source_type = 'surcharge'`.
 * **Hành động điều chỉnh**:
   - Xóa bỏ hoàn toàn vế `|| detail.SourceVersionId is not null`.
-  - Phân định rõ ràng: `isSurcharge = string.Equals(detail.SourceType, "surcharge", StringComparison.OrdinalIgnoreCase)`.
-  - Nếu `detail.SourceType == "base_rate"`: Map sang `RateCardId`, `RateVersionId`, `PricingRuleId`, hiển thị nhãn "Bảng giá cước chính".
+  - Phân định chuẩn mực theo đúng `source_type` của `rating_detail`: `isSurcharge = string.Equals(detail.SourceType, "surcharge", StringComparison.OrdinalIgnoreCase)`.
+  - Nếu `detail.SourceType == "base_rate"`: Map sang `RateCardId`, `RateVersionId`, `PricingRuleId`, hiển thị nhãn "Cước chính từ Rating (Base Rate)".
+  - Nếu `detail.SourceType == "surcharge"`: Map sang `SurchargeId`, `SurchargeVersionId`, `CalculationMode`, hiển thị nhãn "Phụ phí từ Rating".
 
 ---
 
@@ -164,3 +162,4 @@ Tuân thủ nguyên tắc số 4 của Chỉ thị Kỹ thuật, mọi lỗi kh�
 * **Hành động điều chỉnh**:
   - Xây dựng `UatCorrection20261027Tests.cs` gồm 41 test cases (37 UAT + 10 Regression guards).
   - Thực thi kiểm thử: 41/41 C# tests PASS, 47/47 vitest PASS, TypeScript 0 lỗi, .NET build 0 lỗi.
+

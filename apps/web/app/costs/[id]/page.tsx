@@ -194,7 +194,7 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                   <dt>Nguồn phát sinh</dt>
                   <dd>
                     <span className="badge badge-success">
-                      {cost.ratingTrace.isSurcharge ? "Phụ phí từ Rating" : "Bảng giá cước chính (Từ Rating)"}
+                      {cost.ratingTrace.isSurcharge ? "Phụ phí từ Rating" : "Cước chính từ Rating (Base Rate)"}
                     </span>
                   </dd>
                 </div>
@@ -235,10 +235,7 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                     <div>
                       <dt>Cách tính</dt>
                       <dd>
-                        <strong>{cost.ratingTrace.calculationModeLabel ?? "Cố định (FIXED)"}</strong>
-                        {cost.ratingTrace.calculationMode === "fixed" ? (
-                          <span> — {formatMoney(cost.ratingTrace.netAmount ?? cost.expectedAmount, cost.currencyCode)} / khoản</span>
-                        ) : null}
+                        <strong>{cost.ratingTrace.calculationMode === "fixed" ? `Phí cố định (FIXED): ${formatMoney(cost.ratingTrace.netAmount ?? cost.expectedAmount, cost.currencyCode)} / khoản` : (cost.ratingTrace.calculationModeLabel ?? "Theo đơn giá (UNIT_RATE)")}</strong>
                       </dd>
                     </div>
                     {cost.ratingTrace.calculationMode === "fixed" && cost.ratingTrace.referenceUnitRate != null ? (

@@ -19,7 +19,7 @@
 | **BR27-10** | `RATING-STALE-NORMALIZE-01` | Staleness so sánh theo canonical business value; không so sánh trực tiếp hoa/thường nếu mã tương đương. | Áp dụng `StringComparison.OrdinalIgnoreCase` khi so sánh `AIR` vs `air`; loại bỏ stale giả. | **COMPLIANT** |
 | **BR27-11** | `RATING-STALE-NORMALIZE-01` | Thay đổi nghiệp vụ thực sự (service, mode, route, CW, date) phải kích hoạt stale với lý do cụ thể. | Đổi mode sang `SEA` hoặc đổi CW sinh đúng lý do stale tương ứng; không bỏ sót. | **COMPLIANT** |
 | **BR27-12** | `RATING-STALE-NORMALIZE-01` | Không tự rerate, sửa Rating/Cost đã seed hoặc bỏ qua lý do stale khác khi sửa stale `AIR`→`air`. | Bảo toàn snapshot tính giá gốc; không tự ý chạy lại rating ngoài ý muốn người dùng. | **COMPLIANT** |
-| **BR27-13** | `COST-RATING-SOURCE-01` | Nguồn của Cost được truy vết từ đúng `rating_detail` có định danh và snapshot bất biến. | Khắc phục liên kết 1-1 giữa chi phí và dòng chi tiết tính giá trong `CostQueries.cs`. | **COMPLIANT** |
+| **BR27-13** | `COST-RATING-SOURCE-01` | Nguồn của Cost được truy vết từ đúng `rating_detail` có định danh và snapshot bất biến. | Liên kết định danh 1-1 trực tiếp: `cost.source_type == 'rating_detail'` và `cost.source_id == rating_detail.id`; tuyệt đối không suy diễn qua `charge_code` hay `RatingId` chung. | **COMPLIANT** |
 | **BR27-14** | `COST-RATING-SOURCE-01` | Detail loại `base_rate` hiển thị Rate Card ID/code, Version, Pricing Rule, thông số tính giá và Vendor. | Trả về `TDNT_SGN_HAN` v2 / `QT0001`, CW `120 kg` × `12.000 ₫/kg`, gắn nhãn "Bảng giá cước chính". | **COMPLIANT** |
 | **BR27-15** | `COST-RATING-SOURCE-01` | Detail loại `surcharge` hiển thị Surcharge ID/code, Version, Rule/mode, bối cảnh áp dụng. | Trả về `DONGGOI_SGN_HAN_MUA` v2, cách tính `fixed`, gắn nhãn "Phụ phí độc lập". | **COMPLIANT** |
 | **BR27-16** | `COST-RATING-SOURCE-01` | Nếu lineage không đủ, hiển thị trạng thái thiếu nguồn và báo GAP; không bịa đặt thông tin nguồn. | Gắn cờ `missing_link` và hiển thị thông báo thiếu liên kết nếu không tìm thấy snapshot. | **COMPLIANT** |
@@ -38,12 +38,12 @@
 
 | Field Logic (từ Excel) | Tên thực tế trong DB / DTO | Nguồn chuẩn (Source of Truth) | Màn hình sử dụng | Hành vi TO-BE sau điều chỉnh |
 | :--- | :--- | :--- | :--- | :--- |
-| `transport_mode` | Cột `bills.transport_mode` | Master Catalog (`transport_modes`) | Order, Bill, Shipment, Leg, Rating | Dropdown lấy từ API `GetOperationalReferenceEditQuery`. |
+| `transport_mode` | Cột `bills.transport_mode` | Master Catalog (`transport_modes` active: duy nhất `air`) | Order, Bill, Shipment, Leg, Rating | Dropdown lấy từ API `GetOperationalReferenceEditQuery` đồng bộ 100% danh mục active; không còn option hardcode hay silent seed. |
 | `service_type_code` | Cột `bills.service_type_code` | Master Catalog (`service_types`) | Order, Bill, Shipment, Leg, Rating | Phân định độc lập với mode; chặn `AIR` trên giao dịch mới. |
 | `bill.serviceTypeCode` | `BillDto.ServiceTypeCode` | Bảng `bills` (Persisted column) | Bill Sửa, Bill Tổng quan, Rating | Thêm trường vào `BillDto`; hiển thị đồng bộ `FREIGHT`. |
 | `bill.transportMode` | `BillDto.TransportMode` | Bảng `bills` (Canonicalized) | Bill Sửa, Bill Tổng quan, Rating | So sánh không phân biệt hoa thường (`OrdinalIgnoreCase`). |
 | `rating.ContextJson` | `rating_snapshots.context_json` | Rating Immutable Snapshot | Rating Read / Stale check | So sánh bối cảnh chuẩn hóa; loại trừ stale giả `AIR` vs `air`. |
-| `cost → rating_detail FK` | `costs.source_rating_id` / `charge_code` | Bảng `costs` & `rating_details` | Chi tiết Cost / API | Liên kết 1-1 giữa chi phí và dòng chi tiết tính giá nguồn. |
+| `cost → rating_detail FK` | `costs.source_type` & `costs.source_id` trỏ trực tiếp `rating_details.id` | Bảng `costs` & `rating_details` | Chi tiết Cost / API | Liên kết định danh 1-1 trực tiếp qua `rating_detail.id` theo `BR27-13` và `FU27-TC-023`; không suy diễn qua `charge_code` hay `RatingId` chung. |
 | `rating_detail.source_type` | `rating_details.source_type` | `rating_details` (`base_rate` / `surcharge`) | Rating Detail, Cost Trace | Đã xóa điều kiện `detail.SourceVersionId is not null` gây lỗi. |
 | `rate_card / version / rule IDs` | `source_version_id`, `pricing_rule_id` | Snapshot base rate bất biến | Cost `FREIGHT` | Trả về `TDNT_SGN_HAN` v2 / `QT0001` (Cước chính 1.440.000 ₫). |
 | `surcharge / version IDs` | `source_version_id` | Snapshot surcharge bất biến | Cost `DONGGOI` | Trả về `DONGGOI_SGN_HAN_MUA` v2 (Phụ phí 300.000 ₫). |
@@ -67,3 +67,4 @@
 | **REG-08** | Quan hệ N:N / Shared Cost | Phân bổ không làm thay đổi Single Economic Cost. | `UatCorrection20261027Tests.Regression_REG08_SharedCostAllocationSingleEconomicCost` | **PASS** |
 | **REG-09** | Vòng đời Rate Card | Không mở lại phạm vi `RATE-UI-05..07` đã hoàn thành. | `UatCorrection20261027Tests.Regression_REG09_RateCardLifecyclePreserved` | **PASS** |
 | **REG-10** | Quản trị Master Data | Không hardcode option rác; tôn trọng dữ liệu master. | `UatCorrection20261027Tests.Regression_REG10_CommodityDeletionIntegrity` | **PASS** |
+

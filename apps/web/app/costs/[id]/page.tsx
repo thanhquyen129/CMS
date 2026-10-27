@@ -183,14 +183,18 @@ export default async function CostDetailPage({ params }: { params: Params }) {
           <h2 id="cost-trace-heading" className="section-title">
             Nguồn tính giá &amp; Truy vết (Rating Traceability)
           </h2>
-          {cost.ratingTrace && cost.ratingTrace.sourceOrigin !== "manual" ? (
+          {cost.ratingTrace && cost.ratingTrace.sourceOrigin === "missing_link" ? (
+            <div className="alert alert-warning" role="alert">
+              <strong>Thiếu dữ liệu liên kết nguồn chi tiết</strong> — Bản ghi chi phí có tham chiếu Rating nhưng không tìm thấy dòng chi tiết RatingDetail nguồn tương ứng. Vui lòng kiểm tra nhật ký kiểm toán.
+            </div>
+          ) : cost.ratingTrace && cost.ratingTrace.sourceOrigin !== "manual" ? (
             <div className="stack">
               <dl className="kv-list">
                 <div>
                   <dt>Nguồn phát sinh</dt>
                   <dd>
                     <span className="badge badge-success">
-                      {cost.ratingTrace.isSurcharge ? "Phụ phí từ Rating" : "Cước chính từ Rating"}
+                      {cost.ratingTrace.isSurcharge ? "Phụ phí từ Rating" : "Bảng giá cước chính (Từ Rating)"}
                     </span>
                   </dd>
                 </div>
@@ -228,6 +232,36 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                         <dd><code>#{cost.ratingTrace.surchargeVersionId.slice(0, 8)}</code> (Snapshot độc lập)</dd>
                       </div>
                     ) : null}
+                    <div>
+                      <dt>Cách tính</dt>
+                      <dd>
+                        <strong>{cost.ratingTrace.calculationModeLabel ?? "Cố định (FIXED)"}</strong>
+                        {cost.ratingTrace.calculationMode === "fixed" ? (
+                          <span> — {formatMoney(cost.ratingTrace.netAmount ?? cost.expectedAmount, cost.currencyCode)} / khoản</span>
+                        ) : null}
+                      </dd>
+                    </div>
+                    {cost.ratingTrace.calculationMode === "fixed" && cost.ratingTrace.referenceUnitRate != null ? (
+                      <div>
+                        <dt>Đơn giá quy đổi tham khảo</dt>
+                        <dd>
+                          {formatMoney(cost.ratingTrace.referenceUnitRate, cost.currencyCode)} / kg
+                          <span className="muted small" style={{ marginLeft: "8px" }}>
+                            ({formatMoney(cost.ratingTrace.netAmount ?? cost.expectedAmount, cost.currencyCode)} ÷ {cost.ratingTrace.chargeableWeightKg ?? "—"} kg)
+                          </span>
+                        </dd>
+                      </div>
+                    ) : null}
+                    {cost.ratingTrace.calculationMode === "unit_rate" ? (
+                      <div>
+                        <dt>Đơn giá khai báo</dt>
+                        <dd>
+                          {cost.ratingTrace.declaredUnitRate != null
+                            ? `${formatMoney(cost.ratingTrace.declaredUnitRate, cost.currencyCode)} / kg`
+                            : "Theo biểu phí"}
+                        </dd>
+                      </div>
+                    ) : null}
                   </>
                 ) : (
                   <>
@@ -236,10 +270,10 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                       <dd>
                         {cost.ratingTrace.rateCardId ? (
                           <Link className="row-link" href={`/rate-cards/${cost.ratingTrace.rateCardId}`}>
-                            {cost.ratingTrace.rateCardCode} — {cost.ratingTrace.rateCardName} (v{cost.ratingTrace.rateVersionNo ?? 1})
+                            {cost.ratingTrace.rateCardCode} — {cost.ratingTrace.rateCardName} (v{cost.ratingTrace.rateVersionNo ?? 2})
                           </Link>
                         ) : (
-                          <span>v{cost.ratingTrace.rateVersionNo}</span>
+                          <span>{cost.ratingTrace.rateCardCode ?? "Bảng giá"} (v{cost.ratingTrace.rateVersionNo ?? 2})</span>
                         )}
                       </dd>
                     </div>
@@ -254,26 +288,28 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                         ) : null}
                       </dd>
                     </div>
+                    <div>
+                      <dt>Trọng lượng tính cước (CW)</dt>
+                      <dd>
+                        {cost.ratingTrace.chargeableWeightKg != null ? `${cost.ratingTrace.chargeableWeightKg} kg` : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Đơn giá / Nấc khớp</dt>
+                      <dd>
+                        {cost.ratingTrace.declaredUnitRate != null
+                          ? `${formatMoney(cost.ratingTrace.declaredUnitRate, cost.currencyCode)} / kg`
+                          : cost.ratingTrace.unitRate != null
+                            ? `${formatMoney(cost.ratingTrace.unitRate, cost.currencyCode)} / kg`
+                            : cost.ratingTrace.formulaText ?? "Theo bảng giá"}
+                      </dd>
+                    </div>
                   </>
                 )}
                 <div>
                   <dt>Khoản mục (Charge Code)</dt>
                   <dd>
                     <strong>{cost.ratingTrace.chargeCode ?? cost.costTypeCode}</strong>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Trọng lượng tính cước (CW)</dt>
-                  <dd>
-                    {cost.ratingTrace.chargeableWeightKg != null ? `${cost.ratingTrace.chargeableWeightKg} kg` : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Đơn giá / Nấc khớp</dt>
-                  <dd>
-                    {cost.ratingTrace.unitRate != null
-                      ? `${formatMoney(cost.ratingTrace.unitRate, cost.currencyCode)} / kg`
-                      : cost.ratingTrace.formulaText ?? "Theo bảng giá"}
                   </dd>
                 </div>
                 <div>

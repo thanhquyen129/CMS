@@ -42,7 +42,8 @@ public sealed record BillDto(
     Guid? BillToPartyId = null,
     Guid? OriginLocationId = null,
     Guid? DestinationLocationId = null,
-    Guid? RouteId = null);
+    Guid? RouteId = null,
+    string? ServiceTypeCode = null);
 
 public sealed record BillListItemDto(
     Guid Id,
@@ -198,7 +199,8 @@ public sealed class GetBillByIdQueryHandler : IRequestHandler<GetBillByIdQuery, 
         bill.BillToPartyId,
         bill.OriginLocationId,
         bill.DestinationLocationId,
-        bill.RouteId);
+        bill.RouteId,
+        bill.ServiceTypeCode);
 }
 
 public sealed record ListBillsQuery(

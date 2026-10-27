@@ -53,7 +53,8 @@ public sealed record OperationalReferenceEditDto(
     IReadOnlyList<OperationalRatingStatusDto> CurrentRatings,
     int LinkedBillCount,
     IReadOnlyList<OperationalOptionDto> Commodities,
-    IReadOnlyList<OperationalOptionDto>? Services = null);
+    IReadOnlyList<OperationalOptionDto>? Services = null,
+    IReadOnlyList<OperationalOptionDto>? TransportModes = null);
 
 public sealed record GetOperationalReferenceEditQuery(string ObjectType, Guid ObjectId) : IRequest<OperationalReferenceEditDto>;
 
@@ -143,7 +144,17 @@ public sealed class GetOperationalReferenceEditQueryHandler
             .ThenBy(m => m.Code)
             .Select(m => new { m.Code, m.Name })
             .ToListAsync(cancellationToken))
+            .Where(m => !string.Equals(m.Code, "AIR", StringComparison.OrdinalIgnoreCase))
             .Select(m => new OperationalOptionDto(m.Code, $"{m.Code} — {m.Name}"))
+            .ToList();
+
+        var transportModes = (await _db.MasterCatalogItems.AsNoTracking()
+            .Where(m => m.Kind == MasterCatalogKinds.TransportMode && m.IsActive)
+            .OrderBy(m => m.SortOrder)
+            .ThenBy(m => m.Code)
+            .Select(m => new { m.Code, m.Name })
+            .ToListAsync(cancellationToken))
+            .Select(m => new OperationalOptionDto(m.Code.ToLowerInvariant(), $"{m.Name} ({m.Code.ToUpperInvariant()})"))
             .ToList();
 
         return new OperationalReferenceEditDto(
@@ -163,7 +174,8 @@ public sealed class GetOperationalReferenceEditQueryHandler
             ratings.OrderByDescending(r => r.RatedAt).ToList(),
             type == OperationalObjectTypes.Bill ? 0 : billIds.Count,
             commodities,
-            services);
+            services,
+            transportModes);
     }
 }
 

@@ -162,12 +162,22 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         if (!string.IsNullOrWhiteSpace(request.Context?.ServiceType))
         {
             var trimmedSvc = request.Context.ServiceType.Trim();
+            if (string.Equals(trimmedSvc, "AIR", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(bill.ServiceTypeCode, "AIR", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ValidationAppException("Mã loại dịch vụ 'AIR' là mã di sản không hợp lệ cho giao dịch mới.");
+                }
+            }
+
             var exists = await _db.MasterCatalogItems.AsNoTracking()
                 .AnyAsync(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive && m.Code.ToLower() == trimmedSvc.ToLower(), cancellationToken);
             if (!exists)
             {
                 throw new ValidationAppException($"Mã loại dịch vụ '{trimmedSvc}' không hợp lệ trong danh mục hoạt động.");
             }
+
+            bill.ServiceTypeCode = trimmedSvc;
         }
 
         if (request.CustomerPartyId is Guid partyId)

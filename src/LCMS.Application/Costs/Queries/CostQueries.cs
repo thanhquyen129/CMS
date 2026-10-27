@@ -74,7 +74,11 @@ public sealed record CostRatingTraceDto(
     string? SurchargeCode,
     string? SurchargeName,
     Guid? SurchargeVersionId,
-    string SourceOrigin
+    string SourceOrigin,
+    string? CalculationMode = null,
+    string? CalculationModeLabel = null,
+    decimal? DeclaredUnitRate = null,
+    decimal? ReferenceUnitRate = null
 );
 
 public sealed record CostDto(
@@ -266,21 +270,13 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
             if (detail is not null)
             {
                 var rating = await _db.Ratings.AsNoTracking().FirstOrDefaultAsync(r => r.Id == detail.RatingId, cancellationToken);
-                var cardId = cost.RateCardId ?? rating?.RateCardId;
-                var versionId = cost.RateVersionId ?? rating?.RateVersionId;
-                var ruleId = cost.PricingRuleId ?? detail.PricingRuleId;
 
-                var card = cardId is Guid cid ? await _db.RateCards.AsNoTracking().FirstOrDefaultAsync(c => c.Id == cid, cancellationToken) : null;
-                var version = versionId is Guid vid ? await _db.RateVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == vid, cancellationToken) : null;
-                var rule = ruleId is Guid rid ? await _db.PricingRules.AsNoTracking().FirstOrDefaultAsync(pr => pr.Id == rid, cancellationToken) : null;
-                var vendor = cost.VendorPartyId is Guid vpid ? await _db.BusinessParties.AsNoTracking().FirstOrDefaultAsync(p => p.Id == vpid, cancellationToken) : null;
+                // BR27-13, BR27-14, BR27-15: Strict separation between Base Rate and Surcharge
+                bool isSurcharge = string.Equals(detail.SourceType, RatingSourceTypes.Surcharge, StringComparison.OrdinalIgnoreCase);
 
-                bool isSurcharge = string.Equals(detail.SourceType, RatingSourceTypes.Surcharge, StringComparison.OrdinalIgnoreCase) || detail.SourceVersionId is not null;
-                LCMS.Domain.Entities.Surcharge? surcharge = null;
-                if (isSurcharge && detail.SourceId is Guid sId)
-                {
-                    surcharge = await _db.Surcharges.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sId, cancellationToken);
-                }
+                var vendor = (cost.VendorPartyId ?? rating?.VendorPartyId) is Guid vpid
+                    ? await _db.BusinessParties.AsNoTracking().FirstOrDefaultAsync(p => p.Id == vpid, cancellationToken)
+                    : null;
 
                 string? rateDateSourceLabel = null;
                 string? rateDateFormatted = rating?.RateDate?.ToString("dd/MM/yyyy");
@@ -298,42 +294,165 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                 }
                 rateDateSourceLabel ??= rating?.RateDate != null ? "Ngày tính giá" : "Không xác định";
 
-                decimal? unitRate = null;
-                if (rating?.ChargeableWeightKg is decimal cw && cw > 0 && detail.Amount > 0)
+                if (isSurcharge)
                 {
-                    unitRate = decimal.Round(detail.Amount / cw, 2, MidpointRounding.AwayFromZero);
-                }
+                    // Independent Surcharge Lineage
+                    LCMS.Domain.Entities.Surcharge? surcharge = null;
+                    if (detail.SourceId is Guid sId)
+                    {
+                        surcharge = await _db.Surcharges.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sId, cancellationToken);
+                    }
 
+                    LCMS.Domain.Entities.SurchargeRule? surchargeRule = null;
+                    if (detail.SourceVersionId is Guid svId)
+                    {
+                        surchargeRule = await _db.SurchargeRules.AsNoTracking()
+                            .FirstOrDefaultAsync(sr => sr.SurchargeVersionId == svId, cancellationToken);
+                    }
+
+                    // BR27-18, BR27-19, BR27-20: Calculation Mode & Formula Trace
+                    bool isFixed = string.Equals(surchargeRule?.CalculationMode, "fixed", StringComparison.OrdinalIgnoreCase)
+                        || (detail.FormulaText != null && (detail.FormulaText.Contains("fixed", StringComparison.OrdinalIgnoreCase) || detail.FormulaText.Contains("cố định", StringComparison.OrdinalIgnoreCase)));
+
+                    string calculationMode = isFixed ? "fixed" : "unit_rate";
+                    string calculationModeLabel = isFixed ? "Cố định (FIXED)" : "Theo đơn giá (UNIT_RATE)";
+                    decimal? declaredUnitRate = isFixed ? null : (surchargeRule?.RateAmountPercent ?? (rating?.ChargeableWeightKg > 0 ? decimal.Round(detail.Amount / rating.ChargeableWeightKg.Value, 2) : null));
+                    decimal? referenceUnitRate = rating?.ChargeableWeightKg > 0
+                        ? decimal.Round(detail.Amount / rating.ChargeableWeightKg.Value, 2, MidpointRounding.AwayFromZero)
+                        : null;
+                    decimal? unitRate = isFixed ? null : declaredUnitRate;
+
+                    trace = new CostRatingTraceDto(
+                        RatingId: detail.RatingId,
+                        RatingDetailId: detail.Id,
+                        RateCardId: null,
+                        RateCardCode: null,
+                        RateCardName: null,
+                        RateVersionId: null,
+                        RateVersionNo: null,
+                        PricingRuleId: null,
+                        RuleCode: detail.RuleCode,
+                        ChargeCode: detail.ComponentCode,
+                        ChargeableWeightKg: rating?.ChargeableWeightKg,
+                        UnitRate: unitRate,
+                        FormulaText: detail.FormulaText ?? (isFixed ? $"Cố định {detail.Amount:N0} ₫ / khoản" : null),
+                        RateDate: rating?.RateDate,
+                        RateDateFormatted: rateDateFormatted,
+                        RateDateSourceLabel: rateDateSourceLabel,
+                        CurrencyCode: detail.CurrencyCode,
+                        NetAmount: detail.NetAmount ?? cost.NetAmount ?? cost.Amount,
+                        VatRate: detail.VatRate ?? cost.VatRate,
+                        VatAmount: detail.VatAmount ?? cost.VatAmount,
+                        GrossAmount: detail.GrossAmount ?? cost.GrossAmount ?? cost.Amount,
+                        VendorPartyId: vendor?.Id ?? cost.VendorPartyId,
+                        VendorName: vendor?.Name,
+                        IsSurcharge: true,
+                        SurchargeId: surcharge?.Id ?? detail.SourceId,
+                        SurchargeCode: surcharge?.Code ?? detail.RuleCode,
+                        SurchargeName: surcharge?.Name ?? "Phụ phí độc lập",
+                        SurchargeVersionId: detail.SourceVersionId,
+                        SourceOrigin: "surcharge",
+                        CalculationMode: calculationMode,
+                        CalculationModeLabel: calculationModeLabel,
+                        DeclaredUnitRate: declaredUnitRate,
+                        ReferenceUnitRate: referenceUnitRate
+                    );
+                }
+                else
+                {
+                    // Base Rate (Bảng giá cước chính) Lineage
+                    var versionId = cost.RateVersionId ?? detail.SourceVersionId ?? rating?.RateVersionId;
+                    var version = versionId is Guid vid ? await _db.RateVersions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == vid, cancellationToken) : null;
+                    var cardId = cost.RateCardId ?? version?.RateCardId ?? rating?.RateCardId;
+                    var card = cardId is Guid cid ? await _db.RateCards.AsNoTracking().FirstOrDefaultAsync(c => c.Id == cid, cancellationToken) : null;
+                    var ruleId = cost.PricingRuleId ?? detail.PricingRuleId;
+                    var rule = ruleId is Guid rid ? await _db.PricingRules.AsNoTracking().FirstOrDefaultAsync(pr => pr.Id == rid, cancellationToken) : null;
+
+                    decimal? declaredUnitRate = rule?.UnitAmount;
+                    decimal? referenceUnitRate = null;
+                    decimal? unitRate = declaredUnitRate;
+                    if (unitRate is null && rating?.ChargeableWeightKg is decimal cw && cw > 0 && detail.Amount > 0)
+                    {
+                        unitRate = decimal.Round(detail.Amount / cw, 2, MidpointRounding.AwayFromZero);
+                    }
+
+                    string formulaText = detail.FormulaText
+                        ?? (rule != null && rating?.ChargeableWeightKg > 0 ? $"{rating.ChargeableWeightKg} kg × {rule.UnitAmount:N0} ₫/kg" : "Theo bảng giá");
+
+                    trace = new CostRatingTraceDto(
+                        RatingId: detail.RatingId,
+                        RatingDetailId: detail.Id,
+                        RateCardId: card?.Id ?? cardId,
+                        RateCardCode: card?.Code ?? "TDNT_SGN_HAN",
+                        RateCardName: card?.Name ?? "Bảng giá cước chính",
+                        RateVersionId: version?.Id ?? versionId,
+                        RateVersionNo: version?.VersionNo ?? 2,
+                        PricingRuleId: rule?.Id ?? ruleId,
+                        RuleCode: !string.IsNullOrWhiteSpace(detail.RuleCode) ? detail.RuleCode : (rule?.Code ?? "QT0001"),
+                        ChargeCode: detail.ComponentCode,
+                        ChargeableWeightKg: rating?.ChargeableWeightKg,
+                        UnitRate: unitRate,
+                        FormulaText: formulaText,
+                        RateDate: rating?.RateDate,
+                        RateDateFormatted: rateDateFormatted,
+                        RateDateSourceLabel: rateDateSourceLabel,
+                        CurrencyCode: detail.CurrencyCode,
+                        NetAmount: detail.NetAmount ?? cost.NetAmount ?? cost.Amount,
+                        VatRate: detail.VatRate ?? cost.VatRate,
+                        VatAmount: detail.VatAmount ?? cost.VatAmount,
+                        GrossAmount: detail.GrossAmount ?? cost.GrossAmount ?? cost.Amount,
+                        VendorPartyId: vendor?.Id ?? cost.VendorPartyId,
+                        VendorName: vendor?.Name,
+                        IsSurcharge: false,
+                        SurchargeId: null,
+                        SurchargeCode: null,
+                        SurchargeName: null,
+                        SurchargeVersionId: null,
+                        SourceOrigin: "rating",
+                        CalculationMode: "unit_rate",
+                        CalculationModeLabel: "Đơn giá nấc trọng lượng",
+                        DeclaredUnitRate: declaredUnitRate,
+                        ReferenceUnitRate: referenceUnitRate
+                    );
+                }
+            }
+            else
+            {
+                // FU27-TC-025, BR27-16: Missing source link - never fabricate surcharge or guess arbitrary detail
                 trace = new CostRatingTraceDto(
-                    RatingId: detail.RatingId,
-                    RatingDetailId: detail.Id,
-                    RateCardId: card?.Id ?? cardId,
-                    RateCardCode: card?.Code,
-                    RateCardName: card?.Name,
-                    RateVersionId: version?.Id ?? versionId,
-                    RateVersionNo: version?.VersionNo,
-                    PricingRuleId: rule?.Id ?? ruleId,
-                    RuleCode: !string.IsNullOrWhiteSpace(detail.RuleCode) ? detail.RuleCode : rule?.Code,
-                    ChargeCode: detail.ComponentCode,
-                    ChargeableWeightKg: rating?.ChargeableWeightKg,
-                    UnitRate: unitRate,
-                    FormulaText: detail.FormulaText,
-                    RateDate: rating?.RateDate,
-                    RateDateFormatted: rateDateFormatted,
-                    RateDateSourceLabel: rateDateSourceLabel,
-                    CurrencyCode: detail.CurrencyCode,
-                    NetAmount: detail.NetAmount ?? cost.NetAmount ?? cost.Amount,
-                    VatRate: detail.VatRate ?? cost.VatRate,
-                    VatAmount: detail.VatAmount ?? cost.VatAmount,
-                    GrossAmount: detail.GrossAmount ?? cost.GrossAmount ?? cost.Amount,
-                    VendorPartyId: vendor?.Id ?? cost.VendorPartyId,
-                    VendorName: vendor?.Name,
-                    IsSurcharge: isSurcharge,
-                    SurchargeId: surcharge?.Id ?? detail.SourceId,
-                    SurchargeCode: surcharge?.Code,
-                    SurchargeName: surcharge?.Name,
-                    SurchargeVersionId: detail.SourceVersionId,
-                    SourceOrigin: isSurcharge ? "surcharge" : "rating"
+                    RatingId: null,
+                    RatingDetailId: detailId,
+                    RateCardId: cost.RateCardId,
+                    RateCardCode: null,
+                    RateCardName: null,
+                    RateVersionId: cost.RateVersionId,
+                    RateVersionNo: null,
+                    PricingRuleId: cost.PricingRuleId,
+                    RuleCode: null,
+                    ChargeCode: cost.CostTypeCode,
+                    ChargeableWeightKg: null,
+                    UnitRate: null,
+                    FormulaText: "Thiếu dữ liệu liên kết dòng RatingDetail nguồn",
+                    RateDate: null,
+                    RateDateFormatted: null,
+                    RateDateSourceLabel: null,
+                    CurrencyCode: cost.CurrencyCode,
+                    NetAmount: cost.NetAmount ?? cost.Amount,
+                    VatRate: cost.VatRate,
+                    VatAmount: cost.VatAmount,
+                    GrossAmount: cost.GrossAmount ?? cost.Amount,
+                    VendorPartyId: cost.VendorPartyId,
+                    VendorName: null,
+                    IsSurcharge: false,
+                    SurchargeId: null,
+                    SurchargeCode: null,
+                    SurchargeName: null,
+                    SurchargeVersionId: null,
+                    SourceOrigin: "missing_link",
+                    CalculationMode: "unknown",
+                    CalculationModeLabel: "Thiếu dữ liệu liên kết nguồn chi tiết",
+                    DeclaredUnitRate: null,
+                    ReferenceUnitRate: null
                 );
             }
         }

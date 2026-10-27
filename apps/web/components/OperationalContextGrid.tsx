@@ -18,6 +18,7 @@ type Row = {
   etaAt?: string | null;
   customerReference?: string | null;
   description?: string | null;
+  serviceTypeCode?: string | null;
   context?: OperationalContext | null;
 };
 
@@ -76,7 +77,7 @@ export function OperationalContextGrid({ row }: { row: Row }) {
       <Kv label="Reference khách" value={row.customerReference} />
       <Kv label="Mô tả" value={row.description} />
       <Kv label="Incoterm" value={optionLabel(INCOTERMS, ctx?.incoterm) ?? ctx?.incoterm} />
-      <Kv label="Dịch vụ" value={ctx?.serviceType} />
+      <Kv label="Dịch vụ" value={row.serviceTypeCode ?? ctx?.serviceType} />
       <Kv label="Người gửi" value={ctx?.shipperName} />
       <Kv label="Người nhận" value={ctx?.consigneeName} />
       <Kv label="Hàng hóa" value={ctx?.commodity || ctx?.cargoDescription} />

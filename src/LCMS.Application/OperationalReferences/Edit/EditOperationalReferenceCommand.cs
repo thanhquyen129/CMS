@@ -216,6 +216,14 @@ public sealed class EditOperationalReferenceCommandHandler
         if (def.Code == OperationalFieldCodes.ServiceTypeCode && !string.IsNullOrWhiteSpace(value))
         {
             var trimmedSvc = value.Trim();
+            if (string.Equals(trimmedSvc, "AIR", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(old, "AIR", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ValidationAppException("Mã dịch vụ 'AIR' là mã di sản không hợp lệ cho giao dịch mới. Vui lòng chọn dịch vụ chuẩn (ví dụ 'FREIGHT').");
+                }
+            }
+
             var exists = await _db.MasterCatalogItems.AsNoTracking()
                 .AnyAsync(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive && m.Code.ToLower() == trimmedSvc.ToLower(), cancellationToken);
             if (!exists)
@@ -224,7 +232,11 @@ public sealed class EditOperationalReferenceCommandHandler
             }
         }
 
-        if (string.Equals(old, value, StringComparison.Ordinal))
+        bool isEquivalent = def.Kind is OperationalFieldKinds.TransportMode or OperationalFieldKinds.ServiceType
+            ? string.Equals(old?.Trim(), value?.Trim(), StringComparison.OrdinalIgnoreCase)
+            : string.Equals(old, value, StringComparison.Ordinal);
+
+        if (isEquivalent)
         {
             return null;
         }
@@ -649,10 +661,21 @@ public sealed class EditOperationalReferenceCommandHandler
                     return (false, null, $"{def.Label} tối đa 32 ký tự.");
                 }
 
-                if (ShipmentModePolicy.IsMultimodal(mode)
-                    && !string.Equals(objectType, OperationalObjectTypes.Shipment, StringComparison.Ordinal))
+                if (ShipmentModePolicy.IsMultimodal(mode))
                 {
-                    return (false, null, "Đa phương thức chỉ là phân loại của Shipment, không gán cho chặng.");
+                    if (!string.Equals(objectType, OperationalObjectTypes.Shipment, StringComparison.Ordinal))
+                    {
+                        return (false, null, "Đa phương thức chỉ là phân loại của Shipment, không gán cho chặng.");
+                    }
+                }
+                else
+                {
+                    var exists = await _db.MasterCatalogItems.AsNoTracking()
+                        .AnyAsync(m => m.Kind == MasterCatalogKinds.TransportMode && m.IsActive && m.Code.ToLower() == mode, cancellationToken);
+                    if (!exists)
+                    {
+                        return (false, null, $"Phương thức vận chuyển '{text}' không tồn tại hoặc đã ngừng sử dụng trong danh mục.");
+                    }
                 }
 
                 return (true, mode, null);
@@ -709,6 +732,15 @@ public sealed class EditOperationalReferenceCommandHandler
     {
         var parts = changes
             .Where(c => OperationalFieldCatalog.Find(type, c.Code)?.RatingRelevant == true)
+            .Where(c =>
+            {
+                var kind = OperationalFieldCatalog.Find(type, c.Code)?.Kind;
+                if (kind is OperationalFieldKinds.TransportMode or OperationalFieldKinds.ServiceType)
+                {
+                    return !string.Equals(c.OldValue?.Trim(), c.NewValue?.Trim(), StringComparison.OrdinalIgnoreCase);
+                }
+                return true;
+            })
             .Select(c => $"{OperationalFieldCatalog.Label(type, c.Code)}: {c.OldValue ?? "trống"} → {c.NewValue ?? "trống"}")
             .Distinct();
         return $"{OperationalFieldCatalog.ObjectLabel(type)} {code} thay đổi — {string.Join("; ", parts)}";

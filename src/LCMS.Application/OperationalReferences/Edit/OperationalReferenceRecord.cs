@@ -259,10 +259,30 @@ internal sealed class OperationalReferenceRecord
                 if (Leg is not null) Leg.TransportMode = value;
                 break;
             case OperationalFieldCodes.ServiceTypeCode:
-                if (Bill is not null) Bill.ServiceTypeCode = value;
-                if (Order is not null) Order.ServiceTypeCode = value;
-                if (Shipment is not null) Shipment.ServiceTypeCode = value;
-                if (Leg is not null) Leg.ServiceTypeCode = value;
+                if (Bill is not null)
+                {
+                    Bill.ServiceTypeCode = value;
+                    EnsureContext().ServiceType = value;
+                    ContextDirty = true;
+                }
+                if (Order is not null)
+                {
+                    Order.ServiceTypeCode = value;
+                    EnsureContext().ServiceType = value;
+                    ContextDirty = true;
+                }
+                if (Shipment is not null)
+                {
+                    Shipment.ServiceTypeCode = value;
+                    EnsureContext().ServiceType = value;
+                    ContextDirty = true;
+                }
+                if (Leg is not null)
+                {
+                    Leg.ServiceTypeCode = value;
+                    EnsureContext().ServiceType = value;
+                    ContextDirty = true;
+                }
                 break;
             case OperationalFieldCodes.OriginCode:
                 if (Bill is not null) Bill.OriginCode = value;

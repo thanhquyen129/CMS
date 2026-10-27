@@ -75,7 +75,7 @@ export async function loadCreateFormOptions(): Promise<CreateFormOptions> {
           destinationCode: r.destinationCode,
         }))
       : [],
-    services: services.ok ? catalogToOptions(services.data) : [],
+    services: services.ok ? catalogToOptions(services.data.filter((s) => s.code.toUpperCase() !== "AIR")) : [],
     currencies: currencies.ok
       ? currencies.data.filter((c) => c.isActive).map((c) => ({ value: c.code, label: c.code }))
       : [{ value: "VND", label: "VND" }],

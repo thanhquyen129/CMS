@@ -80,6 +80,7 @@ export type OprefEditView = {
   linkedBillCount: number;
   commodities: OprefOption[];
   services?: OprefOption[];
+  transportModes?: OprefOption[];
 };
 
 export type OprefEditResult = {

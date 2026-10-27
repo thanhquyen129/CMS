@@ -68,6 +68,9 @@ function normalize(field: OprefFieldState | null, raw: string): string | null {
 function sameValue(field: OprefFieldState | null, original: string | null, next: string | null): boolean {
   if (original === next) return true;
   if (original === null || next === null) return false;
+  if (field && (field.kind === "transport_mode" || field.kind === "service_type")) {
+    return original.trim().toLowerCase() === next.trim().toLowerCase();
+  }
   if (!field || field.kind === "decimal" || field.kind === "integer") {
     return Number(original) === Number(next);
   }
@@ -420,6 +423,7 @@ export function OperationalReferenceEditor({ objectType, objectId, ratingHref }:
                       value={draft[f.code] ?? ""}
                       commodities={view.commodities}
                       services={view.services ?? []}
+                      transportModes={view.transportModes ?? []}
                       disabled={busy}
                       allowMultimodal={objectType === "shipment"}
                       onChange={(v) => setDraft((d) => ({ ...d, [f.code]: v }))}
@@ -497,6 +501,7 @@ function FieldInput({
   value,
   commodities,
   services,
+  transportModes,
   disabled,
   allowMultimodal,
   onChange,
@@ -506,6 +511,7 @@ function FieldInput({
   value: string;
   commodities: { value: string; label: string }[];
   services?: { value: string; label: string }[];
+  transportModes?: { value: string; label: string }[];
   disabled: boolean;
   allowMultimodal?: boolean;
   onChange: (value: string) => void;
@@ -516,12 +522,19 @@ function FieldInput({
   let control: ReactNode;
   switch (field.kind) {
     case "transport_mode": {
-      const catalog = allowMultimodal ? SHIPMENT_MODE_OPTIONS : TRANSPORT_MODE_OPTIONS;
-      const options = catalog.some((o) => o.value === value) || !value
+      const canonicalCatalog = (transportModes && transportModes.length > 0)
+        ? transportModes
+        : (allowMultimodal ? SHIPMENT_MODE_OPTIONS : TRANSPORT_MODE_OPTIONS);
+      const catalog = allowMultimodal && !canonicalCatalog.some((o) => o.value.toLowerCase() === "multimodal")
+        ? [...canonicalCatalog, { value: "multimodal", label: "Đa phương thức (Multimodal)" }]
+        : canonicalCatalog;
+      const lowerVal = (value || "").toLowerCase();
+      const hasMatch = catalog.some((o) => o.value.toLowerCase() === lowerVal);
+      const options = hasMatch || !value
         ? catalog
-        : [{ value, label: value }, ...catalog];
+        : [{ value: lowerVal, label: `${value} (Mã hiện tại)` }, ...catalog];
       control = (
-        <select id={id} value={value} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
+        <select id={id} value={lowerVal} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
           <option value="">Chưa chọn</option>
           {options.map((o) => (
             <option key={o.value} value={o.value}>

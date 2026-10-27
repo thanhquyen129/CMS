@@ -104,7 +104,11 @@ export type CostRatingTrace = {
   surchargeCode?: string | null;
   surchargeName?: string | null;
   surchargeVersionId?: string | null;
-  sourceOrigin: "rating" | "surcharge" | "manual";
+  sourceOrigin: "rating" | "surcharge" | "manual" | "missing_link";
+  calculationMode?: string | null;
+  calculationModeLabel?: string | null;
+  declaredUnitRate?: number | null;
+  referenceUnitRate?: number | null;
 };
 
 export type CostDto = CostListItem & {

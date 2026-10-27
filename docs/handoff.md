@@ -1,3 +1,7 @@
+## 2026-10-27 (LCMS-UAT-CR-20261027-01 Post-UAT Correction Package v1.0)
+- Changes: Standardized mode/service catalogs (dropdowns sync with active canonical master lookup, new bills block legacy AIR selection while keeping historical read/warning), mapped persisted ServiceTypeCode to BillDto to synchronize Bill Edit & Overview, case-insensitive rating stale comparison to eliminate false-positive AIR vs air alerts, corrected Cost rating trace in CostQueries to map Base Rate TDNT_SGN_HAN v2 / QT0001 for FREIGHT 1.440.000 ₫ instead of treating as surcharge, clarified DONGGOI fixed surcharge formula (FIXED 300.000 ₫, 2.500 ₫/kg labeled as derived reference rate), 37 UAT test cases verified PASS by DEV (PO UAT preserved as NOT RUN), 10 regression guards PASS, preserved TESTLSS002 financial totals (Net 1.740.000 ₫, VAT 139.200 ₫, Gross 1.879.200 ₫).
+- Files: src/LCMS.Application/Bills/*, src/LCMS.Application/Costs/*, src/LCMS.Application/OperationalReferences/*, apps/web/app/costs/[id]/page.tsx, apps/web/components/*, apps/web/lib/*, tests/LCMS.Api.Tests/UatCorrection20261027Tests.cs, docs/po/27102026-LCMS_UAT_Correction_DEV_Package_v1.0_20261027/*.
+
 ## 2026-10-27 (LCMS-UAT-FU-20261026-01 Live Screenshots & Route Fix)
 - Changes: Added `/rate-cards/declare` re-export to `/rate-cards/new` and captured real Next.js browser screenshots for all 7 UAT scenarios without dev overlay badges or runtime errors.
 - Files: apps/web/app/rate-cards/declare/page.tsx, docs/po/26102026-LCMS_UAT_Followup_DEV_Package_v1.0_20261026/screenshots/*.

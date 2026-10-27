@@ -33,6 +33,7 @@ export type BillListItem = {
   externalId?: string | null;
   masterBillNo?: string | null;
   customerReference?: string | null;
+  serviceTypeCode?: string | null;
 };
 
 export type BillDto = BillListItem & {

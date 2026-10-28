@@ -4,7 +4,7 @@ Ngày: 2026-10-28. Nhánh: `main`.
 
 ## Commit
 
-SHA đầy đủ được ghi ở commit cuối của gói này (xem `git log -1 --format=%H` trên `main` sau khi đẩy). File này được cập nhật trong commit bàn giao.
+Implementation commit: `d2c7c1ce658c5cb0f8c6fd0c3cda4ccfc301a510` trên `main`.
 
 ## Phạm vi đã ship
 

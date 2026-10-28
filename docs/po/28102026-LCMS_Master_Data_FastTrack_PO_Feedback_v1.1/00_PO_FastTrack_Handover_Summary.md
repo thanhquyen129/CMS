@@ -7,11 +7,11 @@
 | SHA đang chạy trên https://cms.lsslogistics.vn trước bản này | `09c44a774e0a553f89be5ebdad13319be94f2ad7` |
 | Cách xác định | Run CI thành công cuối cùng có job Deploy Priority 1 success: https://github.com/thanhquyen129/CMS/actions/runs/40465733415. `/health` lúc kiểm tra trả `status=ok` (2026-10-28T10:11:19Z). |
 | Push sau đó chưa lên máy | `af9a1927ebbd6199e5a863582c1fe128512d129e` — job test **failure**, hai job deploy **skipped**: https://github.com/thanhquyen129/CMS/actions/runs/40637870588 |
-| SHA mã hoàn thiện của vòng này | `SHA_CODE` |
-| SHA tip sẽ deploy (gồm file báo cáo này) | `SHA_TIP` |
+| SHA mã hoàn thiện của vòng này | `e100364ceb86cfac3ecc332e51465f3df7261aa9` |
+| SHA tip trên `main` sau commit ghi SHA | commit ngay sau `e100364`, chỉ sửa hai file báo cáo này |
 | CI/CD | GitHub Actions workflow `CI` trên `main`. Deploy Priority 1 rsync `/opt/cms` rồi `docker compose up`. Bước `dotnet test` trong workflow đang `if: false`. Cổng vào deploy là build Release, smoke `/health` `/ready`, và `npm run build`. |
 
-Chưa push vòng này tại thời điểm viết file. Sau khi push, SHA trên site chỉ đổi khi job Deploy Priority 1 của `SHA_TIP` success.
+Sau khi push `main`, SHA trên site chỉ đổi khi job Deploy Priority 1 của tip success.
 
 ## PASS / FAIL
 

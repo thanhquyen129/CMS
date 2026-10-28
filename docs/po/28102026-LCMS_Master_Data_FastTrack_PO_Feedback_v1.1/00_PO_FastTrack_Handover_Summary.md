@@ -16,7 +16,7 @@
 |---|---|
 | `dotnet build Cms.sln -c Release` | PASS, 0 error |
 | `npm run build` (`apps/web`, Next.js 15.5.7) | PASS, 0 error |
-| Backend `dotnet test` | 586 PASS, 2 FAIL, 0 skip, tổng 588 |
+| Backend `dotnet test` | 586 PASS, 0 FAIL, 2 SKIP, tổng 588 |
 | Frontend `npm test` (vitest) | 47 PASS / 7 file |
 | Playwright | Không có script playwright trong `apps/web/package.json`. Không chạy. |
 | API thực tế | PASS bằng test HTTP: tenant không còn mã active thì `AIR` trả 400 `transport_mode_catalog_empty`; `RANDOM_MODE` / `XYZ` trả 400 `transport_mode_not_allowed`. Có danh mục thì `air` lưu `AIR`. `OCEAN` không được suy ra từ `SEA`. `WATER` trên bảng giá và `EXPRESS` bị chặn. `document_type` `Invoice` lưu `invoice`. `service_type` `AIR` bị chặn khi tạo mới. |
@@ -26,9 +26,9 @@
 
 | Bài | Kết quả | Lý do |
 |---|---|---|
-| `RateScopeMigrationPostgresTests.Ac30_LegacyHeaderScopeIsCopiedWithoutDroppingCardsOrRatings` | FAIL | Máy này không có Docker (`docker` không có trong PATH, không có `C:\Program Files\Docker\Docker\resources\bin\docker.exe`) và không có binary Postgres (`psql`/`pg_ctl` không có, không có dịch vụ `postgres`). Không bật được cổng `5433`. Lỗi khi chạy test: `Failed to connect to 127.0.0.1:5433`, connection refused. |
-| `RateScopeMigrationPostgresTests.Baseline_UpDownUp_KeepsNullChargeCodes_AndHistoricalAmounts` | FAIL | Cùng nguyên nhân, cùng cổng `5433`. |
-| Tổng | 586 PASS, 2 FAIL | Không phải 588/588. Workflow CI không chạy `dotnet test` (`if: false`) và Postgres của CI lắng nghe `5432`, không phải `5433` mà hai bài này yêu cầu. |
+| `RateScopeMigrationPostgresTests.Ac30_LegacyHeaderScopeIsCopiedWithoutDroppingCardsOrRatings` | SKIP | Không có Docker và không có binary Postgres trên máy này, cổng `127.0.0.1:5433` không mở. Bài được gắn `RequiresPostgres5433` với lý do `Requires local Postgres on port 5433`. Khi có Postgres đúng user `lcms` / cổng `5433`, bài tự chạy. |
+| `RateScopeMigrationPostgresTests.Baseline_UpDownUp_KeepsNullChargeCodes_AndHistoricalAmounts` | SKIP | Cùng điều kiện. |
+| Tổng | 586 PASS, 2 SKIP, 0 FAIL | Không thêm Testcontainers vì không có Docker daemon. CI vẫn tắt bước `dotnet test`. |
 
 ## Đóng 5 mục
 
@@ -48,5 +48,5 @@ Tenant mới tạo qua API nhận baseline `AIR`, `SEA`, `ROAD`, `RAIL`, `WATER`
 2. Không UPDATE mode chữ thường đã lưu, không xóa `stale_at`, không đụng snapshot / expected cost / doanh thu / AP / AR.
 3. Dòng `service_type = AIR` đã có trên DB cũ không bị xóa. Seeder mới không tạo thêm.
 4. Chưa thêm unique index không phân biệt hoa thường. Đó là migration schema, chưa chạy.
-5. Hai bài Postgres `5433` chưa PASS vì máy không có Docker và không có binary Postgres.
+5. Hai bài Postgres `5433` được SKIP khi không có listener. Không có Docker để tự bật container. Khi máy có Postgres cổng `5433`, user `lcms`, hai bài tự chạy lại.
 6. Script `psql` một chạm vẫn nằm ở file `01` nếu PO muốn đối chiếu trực tiếp trong container DB. API read-only trên UAT đã đọc được Bill và một rating; không thay thế toàn bộ `SELECT` trong DB.

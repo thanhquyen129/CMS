@@ -123,27 +123,92 @@ Một rating `01a17724-20ef-7f69-97d5-d0295f361acd`, `completed`, chiều `vendo
 
 ### Script một chạm trên máy chủ UAT
 
-Chạy trong `/opt/cms`, chỉ in ra, không ghi.
+Chỉ đọc. Không có `INSERT`, `UPDATE`, `DELETE`.
+
+1. Đăng nhập máy `cms-lss-01` bằng user `deploy`.
+2. Vào thư mục ứng dụng:
 
 ```bash
 cd /opt/cms
-docker compose -f infra/docker-compose.host.yml --env-file infra/.env exec -T db \
-  psql -U lcms -d lcms -c "SELECT b.bill_no, b.transport_mode, b.service_type_code, b.etd_at, r.id, r.total_amount, r.stale_at, r.stale_reason, r.context_json->>'transportMode' AS snap_mode FROM bills b LEFT JOIN ratings r ON r.bill_id = b.id AND r.deleted_at IS NULL WHERE b.bill_no = 'TESTLSS002' AND b.deleted_at IS NULL;"
 ```
 
-Đối chiếu danh mục:
+3. Dán nguyên khối dưới đây rồi Enter. Khối in ba việc: tenant `ops` có tồn tại không, danh mục của tenant đó, và Bill `TESTLSS002` cùng rating. Nếu Bill không nằm trên `ops`, dòng cuối vẫn hiện tenant thật của Bill để khỏi đọc nhầm.
 
 ```bash
 docker compose -f infra/docker-compose.host.yml --env-file infra/.env exec -T db \
-  psql -U lcms -d lcms -c "SELECT kind, code, is_active FROM master_catalog_items WHERE tenant_id = '01a1007b-75da-73b5-b57d-0f580c5286c1' AND deleted_at IS NULL AND kind IN ('transport_mode','service_type','document_type') ORDER BY kind, code;"
+  psql -U lcms -d lcms -v ON_ERROR_STOP=1 <<'SQL'
+\echo '=== 1. Tenant code = ops ==='
+SELECT id, code, name, is_active
+FROM tenants
+WHERE deleted_at IS NULL AND code = 'ops';
+
+\echo '=== 2. Danh mục của tenant ops ==='
+SELECT i.kind, i.code, i.is_active, count(*) AS n
+FROM master_catalog_items i
+JOIN tenants t ON t.id = i.tenant_id
+WHERE t.deleted_at IS NULL
+  AND t.code = 'ops'
+  AND i.deleted_at IS NULL
+  AND i.kind IN ('transport_mode', 'service_type', 'document_type', 'location')
+GROUP BY i.kind, i.code, i.is_active
+ORDER BY i.kind, i.code;
+
+\echo '=== 3. Bill TESTLSS002, đo lường, rating, snapshot ==='
+SELECT t.code AS tenant_code,
+       b.id AS bill_id,
+       b.bill_no,
+       b.transport_mode,
+       b.service_type_code,
+       b.route_code,
+       b.etd_at,
+       b.eta_at
+FROM bills b
+JOIN tenants t ON t.id = b.tenant_id
+WHERE b.deleted_at IS NULL
+  AND b.bill_no = 'TESTLSS002';
+
+SELECT m.measure_code, m.quantity, m.uom
+FROM operational_measurements m
+JOIN bills b ON b.id = m.object_id AND b.deleted_at IS NULL
+WHERE b.bill_no = 'TESTLSS002'
+  AND m.deleted_at IS NULL
+ORDER BY m.measure_code;
+
+SELECT r.id,
+       r.status,
+       r.party_type_code,
+       r.total_amount,
+       r.currency_code,
+       r.chargeable_weight_kg,
+       r.stale_at,
+       r.stale_reason,
+       r.context_json->>'transportMode' AS snap_mode,
+       r.context_json->>'serviceType' AS snap_service
+FROM ratings r
+JOIN bills b ON b.id = r.bill_id
+WHERE b.deleted_at IS NULL
+  AND r.deleted_at IS NULL
+  AND b.bill_no = 'TESTLSS002'
+ORDER BY r.rated_at;
+
+\echo '=== 4. Bill có cùng tenant ops hay không ==='
+SELECT t.code AS bill_tenant,
+       (t.code = 'ops') AS on_ops_tenant
+FROM bills b
+JOIN tenants t ON t.id = b.tenant_id
+WHERE b.deleted_at IS NULL
+  AND b.bill_no = 'TESTLSS002';
+SQL
 ```
 
-Không có `UPDATE` trong hai lệnh.
+Đọc kết quả: mục 2 là danh mục tenant `ops`. Mục 3 là Bill và cờ stale. Mục 4 bằng `t` thì Bill thuộc `ops`; bằng `f` thì Bill đang ở tenant khác, lấy `bill_tenant` để khỏi gán số liệu sang `ops`.
+
+API đã đọc trước đó (không phải kết quả của script này): Bill `TESTLSS002` nằm trên tenant `01a1007b-75da-73b5-b57d-0f580c5286c1`, cột mode `air`, snapshot `AIR`, `stale_reason` là `AIR → air`. Script trên là cách PO tự xác nhận lại trong Postgres.
 
 ## Mục 5 — Test
 
 - Release build: PASS.
-- `dotnet test`: 586 PASS, 2 FAIL. Hai bài `RateScopeMigrationPostgresTests` nối `127.0.0.1:5433`. Máy không có Docker và không có binary Postgres nên không bật được cổng đó.
+- `dotnet test`: 586 PASS, 2 SKIP, 0 FAIL. Hai bài `RateScopeMigrationPostgresTests` bỏ qua khi `127.0.0.1:5433` không mở (`Requires local Postgres on port 5433`). Máy không có Docker daemon và không có binary Postgres nên không tự dựng container.
 - vitest: 47 PASS.
 - `next build`: PASS.
 - Trình duyệt local: bốn màn ở file `00` mở được, log dev không có lỗi runtime. Gửi mã `Invoice` trên form danh mục giữ `invoice` chữ thường.

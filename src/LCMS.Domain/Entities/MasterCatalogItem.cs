@@ -45,6 +45,31 @@ public static class MasterCatalogKinds
     };
 }
 
+/// <summary>
+/// One normalizer for catalog admin and business writes.
+/// Lowercase kinds keep snake_case. Location keeps the entered code.
+/// Transport mode, service type, charge-style kinds stay UPPERCASE.
+/// </summary>
+public static class CatalogCodePolicy
+{
+    public static string Normalize(string kind, string code)
+    {
+        var trimmed = code.Trim();
+        var normalizedKind = kind.Trim().ToLowerInvariant();
+        if (normalizedKind is MasterCatalogKinds.DocumentType or "party_role" or "special_flag")
+        {
+            return trimmed.ToLowerInvariant();
+        }
+
+        if (normalizedKind == MasterCatalogKinds.Location)
+        {
+            return trimmed;
+        }
+
+        return trimmed.ToUpperInvariant();
+    }
+}
+
 /// <summary>Source-system value for Manual Reference Entry when LCMS is SoT (SCP-003).</summary>
 public static class OperationalSourceSystems
 {

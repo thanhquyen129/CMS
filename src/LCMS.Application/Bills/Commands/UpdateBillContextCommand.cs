@@ -232,7 +232,7 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
             if (request.ApplyExtendedContext)
             {
                 bill.TransportMode = await TransportModeCatalog.ResolveAsync(
-                    _db, request.TransportMode, allowMultimodal: false, cancellationToken);
+                    _db, request.TransportMode, allowMultimodal: false, cancellationToken, bill.TransportMode);
                 bill.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
                 bill.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
                 bill.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);

@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -71,7 +72,7 @@ public sealed class UpsertMasterCatalogItemCommandHandler
 
         var tenantId = _tenantContext.TenantId!.Value;
         var kind = request.Kind.Trim().ToLowerInvariant();
-        var code = request.Code.Trim().ToUpperInvariant();
+        var code = CatalogCodePolicy.Normalize(kind, request.Code);
         var name = request.Name.Trim();
         var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         var attributes = string.IsNullOrWhiteSpace(request.AttributesJson) ? null : request.AttributesJson.Trim();
@@ -86,9 +87,22 @@ public sealed class UpsertMasterCatalogItemCommandHandler
             }
         }
 
+        var codeKey = code.ToUpperInvariant();
         var existing = await _db.MasterCatalogItems.FirstOrDefaultAsync(
-            i => i.Kind == kind && i.Code == code,
+            i => i.Kind == kind && i.Code.ToUpper() == codeKey,
             cancellationToken);
+
+        if (kind == MasterCatalogKinds.TransportMode)
+        {
+            TransportModeCatalog.CatalogItem(code, existing is not null).Require();
+        }
+
+        if (kind == MasterCatalogKinds.ServiceType
+            && RateFieldPolicy.IsLegacyServiceAir(code)
+            && existing is null)
+        {
+            throw ValidationAppException.Coded(RateFieldPolicy.ServiceAirBlocked, "service_type_not_a_mode");
+        }
 
         if (existing is null)
         {
@@ -111,7 +125,7 @@ public sealed class UpsertMasterCatalogItemCommandHandler
             catch (DbUpdateException)
             {
                 existing = await _db.MasterCatalogItems.FirstOrDefaultAsync(
-                    i => i.Kind == kind && i.Code == code,
+                    i => i.Kind == kind && i.Code.ToUpper() == codeKey,
                     cancellationToken);
                 if (existing is null)
                 {

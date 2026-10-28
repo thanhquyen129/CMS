@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common;
 using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
@@ -154,7 +155,8 @@ public sealed class CreateRateCardCommandHandler : IRequestHandler<CreateRateCar
             PartyType = partyType,
             CurrencyCode = request.CurrencyCode.Trim().ToUpperInvariant(),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-            TransportMode = RateFieldPolicy.ToStoredMode(request.TransportMode),
+            TransportMode = await TransportModeCatalog.ResolveAsync(
+                _db, request.TransportMode, allowMultimodal: false, cancellationToken, forRateRule: true),
             RouteCode = RateCardText.Clean(request.RouteCode),
             CarrierName = RateCardText.Clean(request.CarrierName),
             SupplierPartyId = request.SupplierPartyId,
@@ -268,11 +270,8 @@ public sealed class UpdateRateCardCommandHandler : IRequestHandler<UpdateRateCar
         card.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
         if (request.TransportMode is not null)
         {
-            var nextMode = RateFieldPolicy.ToStoredMode(request.TransportMode);
-            if (!RateFieldPolicy.SameMode(card.TransportMode, nextMode))
-            {
-                card.TransportMode = nextMode;
-            }
+            card.TransportMode = await TransportModeCatalog.ResolveAsync(
+                _db, request.TransportMode, allowMultimodal: false, cancellationToken, card.TransportMode, forRateRule: true);
         }
         if (request.RouteCode is not null && request.RouteId is null) card.RouteCode = RateCardText.Clean(request.RouteCode);
         if (request.CarrierName is not null) card.CarrierName = RateCardText.Clean(request.CarrierName);

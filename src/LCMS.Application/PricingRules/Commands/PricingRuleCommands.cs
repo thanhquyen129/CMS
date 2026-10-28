@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.EconomicCharges;
@@ -205,7 +206,8 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             WeightBasis = basis,
             WeightMin = basis is null ? null : request.WeightMin,
             WeightMax = basis is null ? null : request.WeightMax,
-            TransportMode = RateFieldPolicy.ToStoredMode(request.TransportMode),
+            TransportMode = await TransportModeCatalog.ResolveAsync(
+                _db, request.TransportMode, allowMultimodal: false, cancellationToken, forRateRule: true),
             OriginCode = string.IsNullOrWhiteSpace(request.OriginCode) ? null : request.OriginCode.Trim(),
             DestinationCode = string.IsNullOrWhiteSpace(request.DestinationCode) ? null : request.DestinationCode.Trim(),
             CommodityCode = string.IsNullOrWhiteSpace(request.CommodityCode) ? null : request.CommodityCode.Trim(),

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.EconomicCharges;
 using LCMS.Application.Ratings;
 using LCMS.Application.Surcharges;
@@ -62,6 +63,7 @@ public sealed class DemoDataSeeder
             .AnyAsync(b => b.TenantId == tenant.Id && b.BillNo == MarkerBillNo && b.DeletedAt == null, cancellationToken);
 
         await EnsureDefaultCatalogAsync(tenant.Id, cancellationToken);
+        await TransportModeCatalog.EnsureBaselineAsync(_db, tenant.Id, cancellationToken);
 
         string scenarioSummary;
         if (exists)
@@ -680,7 +682,7 @@ public sealed class DemoDataSeeder
                 Name = "SGN-HAN",
                 OriginLocationId = locSgn.Id,
                 DestinationLocationId = locHan.Id,
-                TransportModeCode = "air",
+                TransportModeCode = "AIR",
                 ServiceTypeCode = "FREIGHT",
                 IsActive = true
             };
@@ -700,7 +702,7 @@ public sealed class DemoDataSeeder
                 SupplierPartyId = null,
                 CurrencyCode = "VND",
                 DeclarationMode = "basic",
-                TransportMode = "air",
+                TransportMode = "AIR",
                 RouteId = routeSgnHan.Id,
                 RouteCode = "SGN-HAN",
                 CarrierName = "VN Cargo",
@@ -733,7 +735,7 @@ public sealed class DemoDataSeeder
                 UnitAmount = 12000m,
                 CurrencyCode = "VND",
                 ServiceTypeCode = "FREIGHT",
-                TransportMode = "air",
+                TransportMode = "AIR",
                 RouteId = routeSgnHan.Id,
                 RouteCode = "SGN-HAN",
                 AppliesAnyRoute = false,
@@ -860,7 +862,7 @@ public sealed class DemoDataSeeder
             (MasterCatalogKinds.RevenueType, "FREIGHT-REV", "Doanh thu cước", 10),
             (MasterCatalogKinds.RevenueType, "AR-FREIGHT", "Doanh thu phải thu", 20),
             (MasterCatalogKinds.ServiceType, "FREIGHT", "Vận tải hàng", 10),
-            (MasterCatalogKinds.ServiceType, "AIR", "Hàng không", 20),
+            (MasterCatalogKinds.ServiceType, "DOOR_TO_DOOR", "Cửa đến cửa", 20),
             (MasterCatalogKinds.PricingComponent, "FREIGHT", "Cước chính", 10),
             (MasterCatalogKinds.DocumentType, "invoice", "Hóa đơn", 10),
             (MasterCatalogKinds.DocumentType, "debit_note", "Debit note", 20),
@@ -1254,7 +1256,7 @@ public sealed class DemoDataSeeder
                 if (LegacyComponentClassifier.IsAdditionalCharge(ruleSpec.Code, ruleSpec.Name, ruleSpec.ChargeCode))
                 {
                     var perGross = string.Equals(ruleSpec.Applicability, RatingEngine.PerGrossKg, StringComparison.OrdinalIgnoreCase);
-                    SurchargeGraph.AddPublished(
+                    await SurchargeGraph.AddPublishedAsync(
                         _db,
                         tenantId,
                         ruleSpec.Code,

@@ -75,7 +75,6 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
-        var mode = await TransportModeCatalog.ResolveAsync(_db, request.TransportMode, allowMultimodal: false, cancellationToken);
         var shipmentExists = await _db.Shipments.AnyAsync(s => s.Id == request.ShipmentId, cancellationToken);
         if (!shipmentExists)
         {
@@ -97,6 +96,8 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
                  && l.SourceSystem == sourceSystem
                  && l.ExternalId == externalId,
             cancellationToken);
+        var mode = await TransportModeCatalog.ResolveAsync(
+            _db, request.TransportMode, allowMultimodal: false, cancellationToken, existing?.TransportMode);
 
         if (existing is null)
         {

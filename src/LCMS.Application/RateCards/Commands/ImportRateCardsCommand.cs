@@ -1,4 +1,5 @@
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Ratings;
 using LCMS.Domain.Entities;
@@ -59,7 +60,7 @@ public sealed record RateImportCard(
     string? Note,
     IReadOnlyList<RateImportRule>? Rules);
 
-public sealed record RateImportIssue(int Row, string Field, string Message);
+public sealed record RateImportIssue(int Row, string Field, string Message, string? ErrorCode = null);
 
 public sealed record RateImportPreview(bool CanCommit, IReadOnlyList<RateImportIssue> Issues);
 
@@ -127,6 +128,7 @@ public sealed class RateImportBatch
         var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
             .Where(t => t.TenantId == tenantId && t.IsActive)
             .ToListAsync(cancellationToken);
+        var activeModes = await TransportModeCatalog.ActiveCodesAsync(_db, cancellationToken);
         for (var i = 0; i < cards.Count; i++)
         {
             var row = i + 1;
@@ -156,10 +158,10 @@ public sealed class RateImportBatch
                 issues.Add(new RateImportIssue(row, "currencyCode", "Mã tiền tệ phải gồm 3 ký tự."));
             }
 
-            var headerMode = RateFieldPolicy.NewModeBlock(card.TransportMode);
-            if (headerMode is not null)
+            var headerMode = TransportModeCatalog.Decide(card.TransportMode, activeModes, allowMultimodal: false, forRateRule: true);
+            if (!headerMode.Accepted)
             {
-                issues.Add(new RateImportIssue(row, "transportMode", headerMode));
+                issues.Add(new RateImportIssue(row, "transportMode", headerMode.Message!, headerMode.ErrorCode));
             }
 
             var rules = card.Rules ?? [];
@@ -176,10 +178,10 @@ public sealed class RateImportBatch
                     issues.Add(new RateImportIssue(row, "calcMethod", "Phương pháp tính giá không hợp lệ."));
                 }
 
-                var fieldIssue = ImportFieldIssue(rule, party is "customer" or "vendor" ? party : null, chargeTypes);
+                var fieldIssue = ImportFieldIssue(rule, party is "customer" or "vendor" ? party : null, chargeTypes, activeModes);
                 if (fieldIssue is not null)
                 {
-                    issues.Add(new RateImportIssue(row, fieldIssue.Value.Field, fieldIssue.Value.Message));
+                    issues.Add(new RateImportIssue(row, fieldIssue.Value.Field, fieldIssue.Value.Message, fieldIssue.Value.ErrorCode));
                 }
 
                 var sequences = new HashSet<int>();
@@ -241,6 +243,7 @@ public sealed class RateImportBatch
         var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
             .Where(t => t.TenantId == tenantId && t.IsActive)
             .ToListAsync(cancellationToken);
+        var activeModes = await TransportModeCatalog.ActiveCodesAsync(_db, cancellationToken);
         foreach (var card in cards)
         {
             var entity = new RateCard
@@ -250,7 +253,7 @@ public sealed class RateImportBatch
                 Name = card.Name.Trim(),
                 PartyType = card.PartyType.Trim().ToLowerInvariant(),
                 CurrencyCode = card.CurrencyCode.Trim().ToUpperInvariant(),
-                TransportMode = Trim(card.TransportMode),
+                TransportMode = TransportModeCatalog.Decide(card.TransportMode, activeModes, allowMultimodal: false, forRateRule: true).Require(),
                 RouteCode = Trim(card.RouteCode),
                 CarrierName = Trim(card.CarrierName),
                 IsActive = true
@@ -293,7 +296,7 @@ public sealed class RateImportBatch
                         ? rule.LineRole!.Trim().ToLowerInvariant()
                         : RateLineRoles.BaseRate,
                     ServiceTypeCode = Trim(rule.ServiceTypeCode),
-                    TransportMode = RateFieldPolicy.ToStoredMode(rule.TransportMode),
+                    TransportMode = TransportModeCatalog.Decide(rule.TransportMode, activeModes, allowMultimodal: false, forRateRule: true).Require(),
                     CommodityCode = Trim(rule.CommodityCode)?.ToUpperInvariant(),
                     MinAmount = rule.MinAmount,
                     RoundingStep = rule.RoundingStep,
@@ -350,17 +353,18 @@ public sealed class RateImportBatch
         return cards.Count;
     }
 
-    private static (string Field, string Message)? ImportFieldIssue(
+    private static (string Field, string Message, string? ErrorCode)? ImportFieldIssue(
         RateImportRule rule,
         string? partyType,
-        IReadOnlyList<EconomicChargeType> chargeTypes)
+        IReadOnlyList<EconomicChargeType> chargeTypes,
+        IReadOnlyList<string> activeModes)
     {
         if (partyType is not null)
         {
             var party = RateFieldPolicy.PartyTypeConflict(partyType, rule.PartyTypeCode);
             if (party is not null)
             {
-                return ("partyTypeCode", party);
+                return ("partyTypeCode", party, null);
             }
         }
 
@@ -369,25 +373,25 @@ public sealed class RateImportBatch
             var weightError = WeightBand.DeclarationError(rule.WeightBasis, rule.WeightMin, rule.WeightMax);
             if (weightError is not null)
             {
-                return ("weightBasis", weightError);
+                return ("weightBasis", weightError, null);
             }
         }
 
         var service = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false);
         if (service is not null)
         {
-            return ("serviceTypeCode", service);
+            return ("serviceTypeCode", service, "service_type_not_a_mode");
         }
 
-        var mode = RateFieldPolicy.NewModeBlock(rule.TransportMode);
-        if (mode is not null)
+        var mode = TransportModeCatalog.Decide(rule.TransportMode, activeModes, allowMultimodal: false, forRateRule: true);
+        if (!mode.Accepted)
         {
-            return ("transportMode", mode);
+            return ("transportMode", mode.Message!, mode.ErrorCode);
         }
 
         if (RateLineRoles.IsSurcharge(rule.LineRole))
         {
-            return ("lineRole", RateFieldPolicy.SurchargeRedirect);
+            return ("lineRole", RateFieldPolicy.SurchargeRedirect, null);
         }
 
         if (rule.EconomicChargeTypeId is Guid id && id != Guid.Empty)
@@ -395,13 +399,13 @@ public sealed class RateImportBatch
             var picked = chargeTypes.FirstOrDefault(t => t.Id == id);
             if (picked is null)
             {
-                return ("economicChargeTypeId", RateFieldPolicy.ChargeNotInCatalog);
+                return ("economicChargeTypeId", RateFieldPolicy.ChargeNotInCatalog, null);
             }
 
             if (!string.IsNullOrWhiteSpace(rule.ChargeCode)
                 && !string.Equals(rule.ChargeCode.Trim(), picked.Code.Trim(), StringComparison.OrdinalIgnoreCase))
             {
-                return ("chargeCode", RateFieldPolicy.ChargeCodeMismatch);
+                return ("chargeCode", RateFieldPolicy.ChargeCodeMismatch, null);
             }
 
             return null;
@@ -409,12 +413,12 @@ public sealed class RateImportBatch
 
         if (string.IsNullOrWhiteSpace(rule.ChargeCode))
         {
-            return ("chargeCode", RateFieldPolicy.ChargeRequired);
+            return ("chargeCode", RateFieldPolicy.ChargeRequired, null);
         }
 
         if (!chargeTypes.Any(t => string.Equals(t.Code.Trim(), rule.ChargeCode.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
-            return ("chargeCode", RateFieldPolicy.ChargeNotInCatalog);
+            return ("chargeCode", RateFieldPolicy.ChargeNotInCatalog, null);
         }
 
         return null;

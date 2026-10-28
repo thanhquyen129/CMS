@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
@@ -327,11 +328,8 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
         if (!string.IsNullOrWhiteSpace(request.TransportMode))
         {
-            var nextMode = RateFieldPolicy.ToStoredMode(request.TransportMode);
-            if (!RateFieldPolicy.SameMode(card.TransportMode, nextMode))
-            {
-                card.TransportMode = nextMode;
-            }
+            card.TransportMode = await TransportModeCatalog.ResolveAsync(
+                _db, request.TransportMode, allowMultimodal: false, cancellationToken, card.TransportMode, forRateRule: true);
         }
 
         card.SupplierPartyId = request.SupplierPartyId;
@@ -354,9 +352,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
         var serviceCodes = explicitGroups
             ? await ActiveCatalogCodesAsync(tenantId, MasterCatalogKinds.ServiceType, cancellationToken)
             : null;
-        var modeCodes = explicitGroups
-            ? await ActiveCatalogCodesAsync(tenantId, MasterCatalogKinds.TransportMode, cancellationToken)
-            : null;
+        var modeCodes = await ActiveCatalogCodesAsync(tenantId, MasterCatalogKinds.TransportMode, cancellationToken);
         var commodityCodes = explicitGroups
             ? await _db.CommodityTypes.AsNoTracking()
                 .Where(c => c.TenantId == tenantId && c.IsActive)
@@ -413,7 +409,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                     card,
                     tenantId,
                     serviceCodes!,
-                    modeCodes!,
+                    modeCodes,
                     commodityCodes!,
                     cancellationToken);
                 if (fieldError is not null)
@@ -435,12 +431,13 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             }
             else
             {
-                var legacyBlock = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false)
-                    ?? RateFieldPolicy.NewModeBlock(rule.TransportMode);
+                var legacyBlock = RateFieldPolicy.ServiceBlock(rule.ServiceTypeCode, alreadyStored: false);
                 if (legacyBlock is not null)
                 {
                     throw new ConflictAppException(legacyBlock, "invalid_rate_field");
                 }
+
+                TransportModeCatalog.Decide(rule.TransportMode, modeCodes, allowMultimodal: false, forRateRule: true).Require();
             }
 
             if (!seenInRequest.Add(code))
@@ -516,7 +513,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
                 ServiceTypeCode = Clean(rule.ServiceTypeCode),
                 PartyTypeCode = null,
                 CommodityCode = Clean(rule.CommodityCode)?.ToUpperInvariant(),
-                TransportMode = RateFieldPolicy.ToStoredMode(rule.TransportMode),
+                TransportMode = TransportModeCatalog.Decide(rule.TransportMode, modeCodes, allowMultimodal: false, forRateRule: true).Require(),
                 MinAmount = rule.MinAmount,
                 MaxAmount = rule.MaxAmount,
                 ChargeCode = rule.ChargeCode,
@@ -700,26 +697,7 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
             }
         }
 
-        var modeBlock = RateFieldPolicy.NewModeBlock(rule.TransportMode);
-        if (modeBlock is not null)
-        {
-            return modeBlock;
-        }
-
-        if (!string.IsNullOrWhiteSpace(rule.TransportMode))
-        {
-            if (modeCodes.Count == 0)
-            {
-                return RateFieldPolicy.CatalogEmpty;
-            }
-
-            var canonical = RateFieldPolicy.ToCanonicalMode(rule.TransportMode);
-            if (!modeCodes.Any(code => string.Equals(code, canonical, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(code, RateFieldPolicy.ToStoredMode(rule.TransportMode), StringComparison.OrdinalIgnoreCase)))
-            {
-                return RateFieldPolicy.ModeNotInCatalog;
-            }
-        }
+        TransportModeCatalog.Decide(rule.TransportMode, modeCodes, allowMultimodal: false, forRateRule: true).Require();
 
         if (!string.IsNullOrWhiteSpace(rule.CommodityCode))
         {

@@ -313,6 +313,8 @@ public sealed class ChangeBatch20261013Tests : IAsyncLifetime
     public async Task ImportMultimodal_RoundTripsInListAndReport()
     {
         var tenantId = await CreateTenantAsync("TN-MM-IMP", "Import multimodal");
+        await SeedModeAsync(tenantId, "ROAD");
+        await SeedModeAsync(tenantId, "MULTIMODAL");
         using (var commit = Tenant(HttpMethod.Post, "/api/operational-import/commit", tenantId))
         {
             commit.Content = JsonContent.Create(new
@@ -408,6 +410,13 @@ public sealed class ChangeBatch20261013Tests : IAsyncLifetime
             }
         });
         Assert.Equal(HttpStatusCode.Conflict, (await _client.SendAsync(badCommit)).StatusCode);
+    }
+
+    private async Task SeedModeAsync(Guid tenantId, string code)
+    {
+        using var req = Tenant(HttpMethod.Put, "/api/master-catalog", tenantId);
+        req.Content = JsonContent.Create(new { kind = "transport_mode", code, name = code, isActive = true });
+        (await _client.SendAsync(req)).EnsureSuccessStatusCode();
     }
 
     private async Task<Guid> CreateTenantAsync(string code, string name)

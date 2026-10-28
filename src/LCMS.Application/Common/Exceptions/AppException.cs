@@ -35,6 +35,16 @@ public sealed class ValidationAppException : AppException
     {
         Errors = new Dictionary<string, string[]> { { field, new[] { error } } };
     }
+
+    public static ValidationAppException Coded(string vietnameseMessage, string errorCode) =>
+        new(vietnameseMessage, errorCode, coded: true);
+
+    private ValidationAppException(string vietnameseMessage, string errorCode, bool coded)
+        : base(vietnameseMessage, StatusCodes.BadRequest, errorCode)
+    {
+        _ = coded;
+        Errors = new Dictionary<string, string[]> { { string.Empty, new[] { vietnameseMessage } } };
+    }
 }
 
 /// <summary>Well-formed request whose field combination breaks a business rule (HTTP 422).</summary>

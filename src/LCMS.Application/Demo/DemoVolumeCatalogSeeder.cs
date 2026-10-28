@@ -27,7 +27,7 @@ public sealed class DemoVolumeCatalogSeeder
         ("HUI", "FRA", "HUI-FRA")
     ];
 
-    private static readonly string[] Modes = ["air", "sea", "road", "rail"];
+    private static readonly string[] Modes = ["AIR", "SEA", "ROAD", "RAIL"];
 
     private readonly ILcmsDbContext _db;
     private readonly ILogger<DemoVolumeCatalogSeeder> _logger;
@@ -1154,7 +1154,7 @@ public sealed class DemoVolumeCatalogSeeder
     private static OperationalContextDocument SampleContext(
         int i, (string Origin, string Dest, string Route) lane, string mode, bool customer) => new()
     {
-        ServiceType = mode == "air" ? "AIR" : "FREIGHT",
+        ServiceType = "FREIGHT",
         Incoterm = i % 2 == 0 ? "FOB" : "CIF",
         PickupLocation = lane.Origin,
         DeliveryLocation = lane.Dest,

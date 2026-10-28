@@ -156,12 +156,15 @@ export function SurchargeForm({
           <label htmlFor="transportMode">Phương thức</label>
           <select id="transportMode" name="transportMode" defaultValue={(initial?.transportMode ?? "").trim().toUpperCase()}>
             <option value="">Không giới hạn</option>
-            {(initial?.transportMode && !modes.some((mode) => mode.value === initial.transportMode.trim().toUpperCase())
-              ? [{ value: initial.transportMode.trim().toUpperCase(), label: `${initial.transportMode.trim().toUpperCase()} (Mã hiện tại)` }, ...modes]
-              : modes
-            ).map((mode) => (
-              <option key={mode.value} value={mode.value}>{mode.label}</option>
-            ))}
+            {(() => {
+              const currentMode = (initial?.transportMode ?? "").trim().toUpperCase();
+              const options = currentMode && !modes.some((mode) => mode.value === currentMode)
+                ? [{ value: currentMode, label: `${currentMode} (Mã hiện tại)` }, ...modes]
+                : modes;
+              return options.map((mode) => (
+                <option key={mode.value} value={mode.value}>{mode.label}</option>
+              ));
+            })()}
           </select>
         </div>
         <div className="field">

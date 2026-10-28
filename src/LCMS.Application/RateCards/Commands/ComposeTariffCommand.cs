@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.RateCards;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Ratings;
@@ -120,6 +121,8 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var transportMode = await TransportModeCatalog.ResolveAsync(
+            _db, request.TransportMode, allowMultimodal: false, cancellationToken, forRateRule: true);
         var columns = request.Columns
             .Select(c => new ComposeTariffColumn(c.Code.Trim().ToUpperInvariant(), c.Name.Trim()))
             .ToList();
@@ -181,7 +184,7 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 PartyType = partyType,
                 CurrencyCode = request.CurrencyCode!.Trim().ToUpperInvariant(),
                 Description = Clean(request.Description),
-                TransportMode = RateFieldPolicy.ToStoredMode(request.TransportMode),
+                TransportMode = transportMode,
                 RouteCode = Clean(request.RouteCode),
                 CarrierName = Clean(request.CarrierName),
                 SupplierPartyId = request.SupplierPartyId,
@@ -249,7 +252,7 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             .Where(t => t.TenantId == tenantId && t.IsActive)
             .ToListAsync(cancellationToken);
         var resolvedCharge = ResolveCharge(request.EconomicChargeTypeId, request.ChargeCode, chargeCatalog);
-        var mode = Clean(request.TransportMode) ?? card.TransportMode;
+        var mode = transportMode ?? card.TransportMode;
         var air = mode is not null && mode.Equals("air", StringComparison.OrdinalIgnoreCase);
         var sea = mode is not null && (mode.Equals("sea", StringComparison.OrdinalIgnoreCase) || mode.Equals("ocean", StringComparison.OrdinalIgnoreCase));
         var currency = card.CurrencyCode;
@@ -301,7 +304,7 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
                 ChargeCode = resolvedCharge?.Code.Trim().ToUpperInvariant(),
                 PartyTypeCode = null,
                 CommodityCode = columns[col].Code,
-                TransportMode = RateFieldPolicy.ToStoredMode(request.TransportMode),
+                TransportMode = transportMode,
                 MinAmount = minAmount,
                 VolumetricFactor = air ? RatingEngine.DefaultAirFactor : null,
                 SortOrder = (col + 1) * 10,
@@ -346,7 +349,7 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             }
 
             var cap = delivery.UnderQuantity - Gap;
-            SurchargeGraph.AddPublished(
+            await SurchargeGraph.AddPublishedAsync(
                 _db,
                 tenantId,
                 FitCode(card.Code + "-DELIVERY"),
@@ -403,7 +406,7 @@ public sealed class ComposeTariffCommandHandler : IRequestHandler<ComposeTariffC
             var sort = 60;
             foreach (var destination in destinations)
             {
-                SurchargeGraph.AddPublished(
+                await SurchargeGraph.AddPublishedAsync(
                     _db,
                     tenantId,
                     FitCode(card.Code + "-REMOTE-" + destination),

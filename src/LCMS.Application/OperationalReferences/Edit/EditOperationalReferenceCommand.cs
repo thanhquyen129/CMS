@@ -115,7 +115,8 @@ public sealed class EditOperationalReferenceCommandHandler
                 continue;
             }
 
-            var (ok, value, message) = await NormalizeAsync(type, def, rawValue, cancellationToken);
+            var currentMode = def.Kind == OperationalFieldKinds.TransportMode ? record.Get(def.Code) : null;
+            var (ok, value, message) = await NormalizeAsync(type, def, rawValue, cancellationToken, currentMode);
             if (!ok)
             {
                 errors[code] = [message!];
@@ -236,7 +237,7 @@ public sealed class EditOperationalReferenceCommandHandler
                 throw new ValidationAppException($"Mã loại dịch vụ '{trimmedSvc}' không hợp lệ hoặc không tồn tại trong danh mục hoạt động.");
             }
 
-            value = trimmedSvc.ToUpperInvariant();
+            value = CatalogCodePolicy.Normalize(MasterCatalogKinds.ServiceType, trimmedSvc);
         }
 
         bool isEquivalent = def.Kind is OperationalFieldKinds.TransportMode or OperationalFieldKinds.ServiceType
@@ -621,7 +622,8 @@ public sealed class EditOperationalReferenceCommandHandler
         string objectType,
         OperationalFieldDef def,
         string? raw,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? currentStored = null)
     {
         var text = OperationalFieldValues.Trim(raw);
         if (text is null)
@@ -668,10 +670,11 @@ public sealed class EditOperationalReferenceCommandHandler
                         _db,
                         text,
                         allowMultimodal: string.Equals(objectType, OperationalObjectTypes.Shipment, StringComparison.Ordinal),
-                        cancellationToken);
+                        cancellationToken,
+                        currentStored);
                     return (true, mode, null);
                 }
-                catch (ValidationAppException ex)
+                catch (ValidationAppException ex) when (ex.ErrorCode == "validation_failed")
                 {
                     return (false, null, ex.Message);
                 }

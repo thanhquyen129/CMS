@@ -70,7 +70,6 @@ public sealed class UpsertTransportMovementCommandHandler
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
-        var mode = await TransportModeCatalog.ResolveAsync(_db, request.TransportMode, allowMultimodal: false, cancellationToken);
         var sourceSystem = request.SourceSystem.Trim();
         var externalId = request.ExternalId.Trim();
         var movementNo = request.MovementNo.Trim();
@@ -86,6 +85,8 @@ public sealed class UpsertTransportMovementCommandHandler
                  && m.SourceSystem == sourceSystem
                  && m.ExternalId == externalId,
             cancellationToken);
+        var mode = await TransportModeCatalog.ResolveAsync(
+            _db, request.TransportMode, allowMultimodal: false, cancellationToken, existing?.TransportMode);
 
         if (existing is null)
         {

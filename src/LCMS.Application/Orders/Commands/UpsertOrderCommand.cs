@@ -213,7 +213,7 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
         order.CustomerPartyId = request.CustomerPartyId;
         order.AssignedUserId = request.AssignedUserId;
         order.TransportMode = await TransportModeCatalog.ResolveAsync(
-            _db, request.TransportMode, allowMultimodal: false, cancellationToken);
+            _db, request.TransportMode, allowMultimodal: false, cancellationToken, order.TransportMode);
         order.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
         order.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
         var route = OperationalContextJson.TrimOrNull(request.RouteCode);

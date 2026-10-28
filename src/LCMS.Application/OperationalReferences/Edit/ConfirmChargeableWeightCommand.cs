@@ -83,7 +83,7 @@ public sealed class ConfirmChargeableWeightCommandHandler : IRequestHandler<Conf
                 ObjectId = record.Id,
                 MeasureCode = MeasureCodes.ChargeableWeightKg,
                 Quantity = state.Value.Value,
-                Uom = ChargeableWeightPolicy.IsSea(record.TransportMode) ? "wm" : "kg",
+                Uom = ChargeableWeightPolicy.UomFor(record.TransportMode),
                 SourceChannel = MeasureSourceChannels.System,
                 RuleCode = state.RuleCode
             };

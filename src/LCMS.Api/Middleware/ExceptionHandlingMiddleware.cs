@@ -87,6 +87,7 @@ public sealed class ExceptionHandlingMiddleware
         {
             ["correlationId"] = correlationId,
             ["code"] = code,
+            ["error_code"] = code,
             ["message"] = message
         };
 

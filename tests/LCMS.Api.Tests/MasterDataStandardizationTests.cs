@@ -37,6 +37,8 @@ public sealed class MasterDataStandardizationTests : IAsyncLifetime
     public async Task HistoricalAir_SavedAsAir_DoesNotStale_SeaAndWeightStillDo_SnapshotStays()
     {
         var tenantId = await CreateTenantAsync();
+        await SeedModeAsync(tenantId, "AIR");
+        await SeedModeAsync(tenantId, "SEA");
         var billId = await CreateBillAsync(tenantId, "BL-CANON-AIR");
         await EditAsync(tenantId, "bill", billId, new { transport_mode = "air", gross_weight_kg = "85", volume_cbm = "0.9" });
         var versionId = await PublishedUnitRateAsync(tenantId, "RC-CANON-AIR");
@@ -84,6 +86,7 @@ public sealed class MasterDataStandardizationTests : IAsyncLifetime
     public async Task PublishedRateCard_KeepsStoredModeBytes_WhenTheSameModeIsSentInAnotherCase()
     {
         var tenantId = await CreateTenantAsync();
+        await SeedModeAsync(tenantId, "AIR");
         using var create = Tenant(HttpMethod.Post, "/api/rate-cards", tenantId);
         create.Content = JsonContent.Create(new
         {
@@ -231,6 +234,13 @@ public sealed class MasterDataStandardizationTests : IAsyncLifetime
         using var req = Tenant(HttpMethod.Post, "/api/bills", tenantId);
         req.Content = JsonContent.Create(new { billNo, billType = "house", sourceSystem = "lcms_manual", externalId = billNo });
         return (await ReadAsync<IdBody>(await _client.SendAsync(req))).Id;
+    }
+
+    private async Task SeedModeAsync(Guid tenantId, string code)
+    {
+        using var req = Tenant(HttpMethod.Put, "/api/master-catalog", tenantId);
+        req.Content = JsonContent.Create(new { kind = "transport_mode", code, name = code, isActive = true });
+        (await _client.SendAsync(req)).EnsureSuccessStatusCode();
     }
 
     private async Task<Guid> CreateTenantAsync()

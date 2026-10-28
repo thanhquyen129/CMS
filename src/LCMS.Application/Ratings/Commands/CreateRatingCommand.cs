@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs.Commands;
 using LCMS.Application.Fx;
@@ -148,7 +149,8 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         var serviceType = ctx.ServiceType;
         var partyType = ctx.PartyType;
         var routeCode = ctx.RouteCode;
-        var transportMode = RateFieldPolicy.ToStoredMode(ctx.TransportMode);
+        var transportMode = await TransportModeCatalog.ResolveAsync(
+            _db, ctx.TransportMode, allowMultimodal: false, cancellationToken);
         var originCode = ctx.OriginCode;
         var destinationCode = ctx.DestinationCode;
         var commodityCode = ctx.CommodityCode;

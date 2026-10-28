@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Pricing;
@@ -80,15 +81,21 @@ public sealed class UpsertRouteCommandHandler : IRequestHandler<UpsertRouteComma
         }
 
         var code = request.Code.Trim().ToUpperInvariant();
+        string? serviceCode = null;
         if (!string.IsNullOrWhiteSpace(request.ServiceTypeCode))
         {
-            var sCode = request.ServiceTypeCode.Trim();
+            serviceCode = CatalogCodePolicy.Normalize(MasterCatalogKinds.ServiceType, request.ServiceTypeCode);
             var serviceExists = await _db.MasterCatalogItems.AnyAsync(
-                m => m.TenantId == _tenant.TenantId!.Value && m.Kind == MasterCatalogKinds.ServiceType && m.Code == sCode && m.IsActive,
+                m => m.TenantId == _tenant.TenantId!.Value
+                     && m.Kind == MasterCatalogKinds.ServiceType
+                     && m.IsActive
+                     && m.Code.ToUpper() == serviceCode,
                 cancellationToken);
             if (!serviceExists)
             {
-                throw new ValidationAppException("serviceTypeCode", $"Mã dịch vụ '{sCode}' không tồn tại hoặc không ở trạng thái hoạt động trong danh mục Master Dịch vụ.");
+                throw ValidationAppException.Coded(
+                    $"Mã loại dịch vụ '{serviceCode}' không có trong danh mục đang dùng.",
+                    "service_type_not_in_catalog");
             }
         }
         var row = await _db.Routes.FirstOrDefaultAsync(r => r.Code == code, cancellationToken);
@@ -101,12 +108,9 @@ public sealed class UpsertRouteCommandHandler : IRequestHandler<UpsertRouteComma
         row.Name = request.Name.Trim();
         row.OriginLocationId = request.OriginLocationId;
         row.DestinationLocationId = request.DestinationLocationId;
-        var nextMode = RateFieldPolicy.ToStoredMode(request.TransportModeCode);
-        if (!RateFieldPolicy.SameMode(row.TransportModeCode, nextMode))
-        {
-            row.TransportModeCode = nextMode;
-        }
-        row.ServiceTypeCode = string.IsNullOrWhiteSpace(request.ServiceTypeCode) ? null : request.ServiceTypeCode.Trim();
+        row.TransportModeCode = await TransportModeCatalog.ResolveAsync(
+            _db, request.TransportModeCode, allowMultimodal: false, cancellationToken, row.TransportModeCode);
+        row.ServiceTypeCode = serviceCode;
         row.IsActive = request.IsActive;
 
         var existing = await _db.RouteStops.Where(s => s.RouteId == row.Id).ToListAsync(cancellationToken);

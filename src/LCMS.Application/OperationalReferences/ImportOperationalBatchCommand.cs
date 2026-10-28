@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Domain.Entities;
@@ -22,7 +23,7 @@ public sealed record OperationalImportRow(
     DateTimeOffset? MovementOn = null,
     string? TransportMode = null);
 
-public sealed record OperationalImportIssue(int Row, string Field, string Message);
+public sealed record OperationalImportIssue(int Row, string Field, string Message, string? ErrorCode = null);
 
 public sealed record OperationalImportPreview(bool CanCommit, IReadOnlyList<OperationalImportIssue> Issues);
 
@@ -162,24 +163,13 @@ public sealed class OperationalImportBatch
                 issues.Add(new OperationalImportIssue(rowNo, "destinationCode", "Điểm đi và điểm đến không được trùng."));
             }
 
-            var mode = ShipmentModePolicy.Normalize(row.TransportMode);
-            if (mode is not null && mode.Length > 32)
+            var modeDecision = TransportModeCatalog.Decide(
+                row.TransportMode,
+                activeModes,
+                allowMultimodal: type == OperationalObjectTypes.Shipment);
+            if (!modeDecision.Accepted)
             {
-                issues.Add(new OperationalImportIssue(rowNo, "transportMode", "Phương thức không được vượt quá 32 ký tự."));
-            }
-            else if (ShipmentModePolicy.IsMultimodal(mode) && type != OperationalObjectTypes.Shipment)
-            {
-                issues.Add(new OperationalImportIssue(
-                    rowNo,
-                    "transportMode",
-                    "Đa phương thức chỉ là phân loại của Shipment, không gán cho chặng."));
-            }
-            else if (mode is not null
-                && !ShipmentModePolicy.IsMultimodal(mode)
-                && activeModes.Count > 0
-                && !activeModes.Any(c => RateFieldPolicy.SameMode(c, mode)))
-            {
-                issues.Add(new OperationalImportIssue(rowNo, "transportMode", RateFieldPolicy.ModeNotInCatalog));
+                issues.Add(new OperationalImportIssue(rowNo, "transportMode", modeDecision.Message!, modeDecision.ErrorCode));
             }
 
             if (type == OperationalObjectTypes.Leg)
@@ -291,10 +281,14 @@ public sealed class OperationalImportBatch
 
             leg.OriginCode = Trim(row.OriginCode) ?? leg.OriginCode;
             leg.DestinationCode = Trim(row.DestinationCode) ?? leg.DestinationCode;
-            var legMode = ShipmentModePolicy.Normalize(row.TransportMode);
-            if (legMode is not null && !ShipmentModePolicy.IsMultimodal(legMode))
+            if (!string.IsNullOrWhiteSpace(row.TransportMode))
             {
-                leg.TransportMode = legMode;
+                leg.TransportMode = await TransportModeCatalog.ResolveAsync(
+                    _db,
+                    row.TransportMode,
+                    allowMultimodal: false,
+                    cancellationToken,
+                    leg.TransportMode);
             }
             leg.SequenceNo = row.SequenceNo ?? leg.SequenceNo;
             await OperationalOverrideGuard.ReapplyEntityOverridesAsync(_db, OperationalObjectTypes.Leg, leg.Id, cancellationToken);
@@ -391,10 +385,14 @@ public sealed class OperationalImportBatch
 
             shipment.OriginCode = origin ?? shipment.OriginCode;
             shipment.DestinationCode = destination ?? shipment.DestinationCode;
-            var shipmentMode = ShipmentModePolicy.Normalize(row.TransportMode);
-            if (shipmentMode is not null)
+            if (!string.IsNullOrWhiteSpace(row.TransportMode))
             {
-                shipment.TransportMode = shipmentMode;
+                shipment.TransportMode = await TransportModeCatalog.ResolveAsync(
+                    _db,
+                    row.TransportMode,
+                    allowMultimodal: true,
+                    cancellationToken,
+                    shipment.TransportMode);
             }
             shipments[external] = shipment;
             await OwnAsync(type, shipment.Id, tenantId, source, origin, cancellationToken);

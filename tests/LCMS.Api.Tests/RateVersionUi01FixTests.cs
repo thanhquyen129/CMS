@@ -63,6 +63,7 @@ public sealed class RateVersionUi01FixTests : IAsyncLifetime
         };
         db.Tenants.Add(tenant);
         await db.SaveChangesAsync(CancellationToken.None);
+        await LCMS.Application.Catalog.TransportModeCatalog.EnsureBaselineAsync(db, tenant.Id, CancellationToken.None);
         return tenant.Id;
     }
 

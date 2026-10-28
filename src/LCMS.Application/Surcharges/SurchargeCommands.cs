@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.EconomicCharges;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Common;
@@ -174,7 +175,7 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
         _db.Surcharges.Add(surcharge);
         _db.SurchargeVersions.Add(version);
         SurchargePartnerRules.Ensure(direction, request.Rule);
-        SurchargeGraph.AddRule(_db, tenantId, version.Id, request.Rule);
+        await SurchargeGraph.AddRuleAsync(_db, tenantId, version.Id, request.Rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return new CreateSurchargeResult(surcharge.Id, version.Id);
     }
@@ -274,7 +275,7 @@ public sealed class AddSurchargeRuleCommandHandler : IRequestHandler<AddSurcharg
         var surcharge = await _db.Surcharges.FirstAsync(s => s.Id == version.SurchargeId, cancellationToken);
         await SurchargeWriteGuard.EnsureDirectionAsync(_db, _permissions, surcharge.Direction, write: true, cancellationToken);
         SurchargePartnerRules.Ensure(surcharge.Direction, request.Rule);
-        var rule = SurchargeGraph.AddRule(_db, _tenant.TenantId!.Value, version.Id, request.Rule);
+        var rule = await SurchargeGraph.AddRuleAsync(_db, _tenant.TenantId!.Value, version.Id, request.Rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         return rule.Id;
     }
@@ -474,8 +475,16 @@ internal static class SurchargePartnerRules
 
 internal static class SurchargeGraph
 {
-    public static SurchargeRule AddRule(ILcmsDbContext db, Guid tenantId, Guid versionId, SurchargeRuleInput input)
+    public static async Task<SurchargeRule> AddRuleAsync(
+        ILcmsDbContext db,
+        Guid tenantId,
+        Guid versionId,
+        SurchargeRuleInput input,
+        CancellationToken cancellationToken)
     {
+        IReadOnlyList<string> modes = string.IsNullOrWhiteSpace(input.TransportMode)
+            ? []
+            : await TransportModeCatalog.ActiveCodesAsync(db, cancellationToken);
         var rule = new SurchargeRule
         {
             TenantId = tenantId,
@@ -490,7 +499,7 @@ internal static class SurchargeGraph
             ContainerType = Clean(input.ContainerType)
         };
         db.SurchargeRules.Add(rule);
-        AddCondition(db, tenantId, rule.Id, "transport_mode", input.TransportMode);
+        AddCondition(db, tenantId, rule.Id, "transport_mode", input.TransportMode, modes);
         AddCondition(db, tenantId, rule.Id, "service", input.ServiceTypeCode);
         AddCondition(db, tenantId, rule.Id, "route", input.RouteCode);
         AddCondition(db, tenantId, rule.Id, "origin", input.OriginCode);
@@ -555,7 +564,7 @@ internal static class SurchargeGraph
         return rule;
     }
 
-    public static void AddPublished(
+    public static async Task AddPublishedAsync(
         ILcmsDbContext db,
         Guid tenantId,
         string code,
@@ -583,7 +592,7 @@ internal static class SurchargeGraph
         };
         db.Surcharges.Add(surcharge);
         db.SurchargeVersions.Add(version);
-        AddRule(db, tenantId, version.Id, rule);
+        await AddRuleAsync(db, tenantId, version.Id, rule, CancellationToken.None);
     }
 
     public static async Task ReplaceRulesAsync(
@@ -606,7 +615,7 @@ internal static class SurchargeGraph
             }
         }
 
-        AddRule(db, tenantId, versionId, input);
+        await AddRuleAsync(db, tenantId, versionId, input, cancellationToken);
     }
 
     public static async Task CloneRulesAsync(
@@ -685,14 +694,22 @@ internal static class SurchargeGraph
         }
     }
 
-    private static void AddCondition(ILcmsDbContext db, Guid tenantId, Guid ruleId, string dimension, string? value)
+    private static void AddCondition(
+        ILcmsDbContext db,
+        Guid tenantId,
+        Guid ruleId,
+        string dimension,
+        string? value,
+        IReadOnlyList<string>? transportModes = null)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
             return;
         }
 
-        var stored = dimension == "transport_mode" ? RateFieldPolicy.ToStoredMode(value) : value.Trim();
+        var stored = dimension == "transport_mode"
+            ? TransportModeCatalog.Decide(value, transportModes ?? [], allowMultimodal: false).Require()
+            : value.Trim();
         if (string.IsNullOrWhiteSpace(stored))
         {
             return;

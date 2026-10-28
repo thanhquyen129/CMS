@@ -245,7 +245,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
 
         shipment.AssignedUserId = request.AssignedUserId;
         shipment.TransportMode = await TransportModeCatalog.ResolveAsync(
-            _db, request.TransportMode, allowMultimodal: true, cancellationToken);
+            _db, request.TransportMode, allowMultimodal: true, cancellationToken, shipment.TransportMode);
         shipment.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
         shipment.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
         var route = OperationalContextJson.TrimOrNull(request.RouteCode);

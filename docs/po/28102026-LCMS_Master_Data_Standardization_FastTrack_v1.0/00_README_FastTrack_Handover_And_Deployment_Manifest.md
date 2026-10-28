@@ -8,7 +8,7 @@ Ngày kiểm kê: 2026-10-28. Nhánh: `main`. Remote: `origin` (`https://github.
 |---|---|---|
 | Code Backend, Frontend, test | `d2c7c1ce658c5cb0f8c6fd0c3cda4ccfc301a510` | Có, từ `09c44a7..af9a192` |
 | Dòng SHA trong hồ sơ vòng 1 | `af9a1927ebbd6199e5a863582c1fe128512d129e` | Có |
-| Hồ sơ bổ sung số liệu DB, ma trận 6 chiều, SQL rollback | Ghi ở cuối file này sau khi commit tài liệu | Tài liệu không đổi binary đang chạy |
+| Hồ sơ bổ sung số liệu DB, ma trận 6 chiều, SQL rollback | `f59d8c189eeb08dde48a38e10929c8d58e9efe90` | Chưa đẩy. Chỉ markdown/xlsx, không đổi binary API |
 
 `git show --name-status d2c7c1ce658c5cb0f8c6fd0c3cda4ccfc301a510`
 

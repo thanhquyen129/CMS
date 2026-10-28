@@ -52,7 +52,7 @@ public sealed class BillCreateTotalsTests : IAsyncLifetime
         }
 
         var bill = await GetAsync<BillBody>(tenantId, $"/api/bills/{billId}");
-        Assert.Equal("air", bill.TransportMode);
+        Assert.Equal("AIR", bill.TransportMode);
         Assert.NotNull(bill.Context);
         Assert.Null(bill.Context!.PackageCount);
         Assert.Null(bill.Context.ContainerCount);

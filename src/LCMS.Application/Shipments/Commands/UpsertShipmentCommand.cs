@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Audit;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences;
@@ -138,7 +139,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
                 OperationalStatus = status,
                 IsActive = request.IsActive
             };
-            ApplyContext(shipment, request);
+            await ApplyContextAsync(shipment, request, cancellationToken);
             await ApplyCarrierAsync(shipment, request.CarrierPartyId, tenantId, cancellationToken);
             _db.Shipments.Add(shipment);
             AuditQuickCreate(shipment.Id, shipmentNo, externalId, request);
@@ -175,7 +176,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         existing.ExternalVersion = externalVersion;
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
-        ApplyContext(existing, request);
+        await ApplyContextAsync(existing, request, cancellationToken);
         await ApplyCarrierAsync(existing, request.CarrierPartyId, tenantId, cancellationToken);
         if (request.ApplyContext)
         {
@@ -235,7 +236,7 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         shipment.CarrierPartyId = carrierId;
     }
 
-    private static void ApplyContext(Shipment shipment, UpsertShipmentCommand request)
+    private async Task ApplyContextAsync(Shipment shipment, UpsertShipmentCommand request, CancellationToken cancellationToken)
     {
         if (!request.ApplyContext)
         {
@@ -243,7 +244,8 @@ public sealed class UpsertShipmentCommandHandler : IRequestHandler<UpsertShipmen
         }
 
         shipment.AssignedUserId = request.AssignedUserId;
-        shipment.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
+        shipment.TransportMode = await TransportModeCatalog.ResolveAsync(
+            _db, request.TransportMode, allowMultimodal: true, cancellationToken);
         shipment.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
         shipment.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
         var route = OperationalContextJson.TrimOrNull(request.RouteCode);

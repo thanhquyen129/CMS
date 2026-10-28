@@ -1,3 +1,7 @@
+## 2026-10-28 (Master data standardization — transport mode UPPERCASE, no historical migration)
+- Changes: New transport-mode writes store UPPERCASE and match historical `air`/`AIR` in memory. Rating stale ignores case-only mode changes and still marks a real mode or weight change. Published rate-card mode bytes and rating snapshots are not rewritten. Same-calendar-day rate and surcharge effective dates still apply.
+- Files: `src/LCMS.Domain/Pricing/RateFieldPolicy.cs`, `src/LCMS.Domain/Entities/ShipmentModePolicy.cs`, `src/LCMS.Application/Catalog/TransportModeCatalog.cs`, `src/LCMS.Application/Ratings/RatingStalenessService.cs`, `src/LCMS.Application/Bills/Commands/UpdateBillContextCommand.cs`, `apps/web` catalog dropdowns, `tests/LCMS.Api.Tests/MasterDataStandardizationTests.cs`, `docs/po/28102026-LCMS_Master_Data_Standardization_FastTrack_v1.0/`.
+
 ## 2026-10-27 (LCMS-UAT-CR-20261027-01 Hotfix Audit: Real Live Screenshots & BR27-13 Trace Lineage)
 - Changes: Replaced all 8 screenshots with live Next.js AppShell + real DB captures via Playwright, synchronized master mode catalog strictly to active air (no unmanaged options in dropdown), verified direct 1-1 identifier lineage (cost.source_id -> rating_detail.id) per BR27-13, synchronized Excel matrix sheets 03_TruongDuLieu and 05_XacMinh, verified 41/41 C# and 47/47 vitest tests PASS.
 - Files: apps/web/app/costs/[id]/page.tsx, apps/web/lib/opref-edit.ts, docs/po/27102026-LCMS_UAT_Correction_DEV_Package_v1.0_20261027/*, scripts/capture_all_8_screenshots.py.

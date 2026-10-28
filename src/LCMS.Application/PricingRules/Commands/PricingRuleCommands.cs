@@ -205,7 +205,7 @@ public sealed class AddPricingRuleCommandHandler : IRequestHandler<AddPricingRul
             WeightBasis = basis,
             WeightMin = basis is null ? null : request.WeightMin,
             WeightMax = basis is null ? null : request.WeightMax,
-            TransportMode = string.IsNullOrWhiteSpace(request.TransportMode) ? null : request.TransportMode.Trim(),
+            TransportMode = RateFieldPolicy.ToStoredMode(request.TransportMode),
             OriginCode = string.IsNullOrWhiteSpace(request.OriginCode) ? null : request.OriginCode.Trim(),
             DestinationCode = string.IsNullOrWhiteSpace(request.DestinationCode) ? null : request.DestinationCode.Trim(),
             CommodityCode = string.IsNullOrWhiteSpace(request.CommodityCode) ? null : request.CommodityCode.Trim(),

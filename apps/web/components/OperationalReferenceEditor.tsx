@@ -7,8 +7,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { SPECIAL_FLAGS } from "@/lib/create-workspace";
 import {
   FIELD_GROUP_LABELS,
-  SHIPMENT_MODE_OPTIONS,
-  TRANSPORT_MODE_OPTIONS,
   chargeableStateLabel,
   formatChargeable,
   sourceBadgeClass,
@@ -522,19 +520,19 @@ function FieldInput({
   let control: ReactNode;
   switch (field.kind) {
     case "transport_mode": {
-      const canonicalCatalog = (transportModes && transportModes.length > 0)
-        ? transportModes
-        : (allowMultimodal ? SHIPMENT_MODE_OPTIONS : TRANSPORT_MODE_OPTIONS);
-      const catalog = allowMultimodal && !canonicalCatalog.some((o) => o.value.toLowerCase() === "multimodal")
-        ? [...canonicalCatalog, { value: "multimodal", label: "Đa phương thức (Multimodal)" }]
+      const canonicalCatalog = (transportModes ?? [])
+        .map((o) => ({ value: o.value.trim().toUpperCase(), label: o.label }))
+        .filter((o) => o.value && o.value !== "MULTIMODAL");
+      const catalog = allowMultimodal && !canonicalCatalog.some((o) => o.value === "MULTIMODAL")
+        ? [...canonicalCatalog, { value: "MULTIMODAL", label: "Đa phương thức (Multimodal)" }]
         : canonicalCatalog;
-      const lowerVal = (value || "").toLowerCase();
-      const hasMatch = catalog.some((o) => o.value.toLowerCase() === lowerVal);
-      const options = hasMatch || !value
+      const selected = (value || "").trim().toUpperCase();
+      const hasMatch = catalog.some((o) => o.value === selected);
+      const options = hasMatch || !selected
         ? catalog
-        : [{ value: lowerVal, label: `${value} (Mã hiện tại)` }, ...catalog];
+        : [{ value: selected, label: `${selected} (Mã hiện tại)` }, ...catalog];
       control = (
-        <select id={id} value={lowerVal} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
+        <select id={id} value={selected} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
           <option value="">Chưa chọn</option>
           {options.map((o) => (
             <option key={o.value} value={o.value}>

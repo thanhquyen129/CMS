@@ -139,12 +139,12 @@ public sealed class RatingContextResolver
             rateDateSourceLabel = "Chính sách mặc định (Ngày tạo Bill: " + bill.CreatedAt.ToString("dd/MM/yyyy") + ")";
         }
 
-        if (version.EffectiveFrom is DateTimeOffset from && rateDate < from)
+        if (version.EffectiveFrom is DateTimeOffset from && RatingEngine.IsBeforeEffectiveDay(rateDate, from))
         {
             throw new ConflictAppException("Phiên bản bảng giá chưa đến ngày hiệu lực.");
         }
 
-        if (version.EffectiveTo is DateTimeOffset to && rateDate > to)
+        if (version.EffectiveTo is DateTimeOffset to && RatingEngine.IsAfterEffectiveDay(rateDate, to))
         {
             throw new ConflictAppException("Phiên bản bảng giá không còn hiệu lực theo ngày áp dụng.");
         }

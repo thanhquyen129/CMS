@@ -159,7 +159,7 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
         Assert.Equal(customerId, prefill.CustomerPartyId);
         Assert.Equal(customerId, prefill.PayerPartyId);
         Assert.Equal(customerId, prefill.BillToPartyId);
-        Assert.Equal("air", prefill.TransportMode);
+        Assert.Equal("AIR", prefill.TransportMode);
         Assert.Equal("SGN", prefill.OriginCode);
         Assert.Equal("HAN", prefill.DestinationCode);
         Assert.Equal("SGN-HAN", prefill.RouteCode);
@@ -408,7 +408,7 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
 
         Assert.NotNull(rollup);
         // UT-08: Different modes -> suggest multimodal
-        Assert.Equal("multimodal", rollup.TransportMode);
+        Assert.Equal("MULTIMODAL", rollup.TransportMode);
     }
 
     [Fact]
@@ -502,7 +502,7 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
 
         var prefill = await res.Content.ReadFromJsonAsync<MovementPrefillFromLegsDto>(JsonOptions);
         Assert.NotNull(prefill);
-        Assert.Equal("road", prefill.TransportMode);
+        Assert.Equal("ROAD", prefill.TransportMode);
         Assert.Contains("đồng nhất", prefill.NoticeMessage);
 
         // Expectation: Unified suggestion created as a single movement serving both legs (no duplicate movements)

@@ -2,6 +2,7 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -100,7 +101,11 @@ public sealed class UpsertRouteCommandHandler : IRequestHandler<UpsertRouteComma
         row.Name = request.Name.Trim();
         row.OriginLocationId = request.OriginLocationId;
         row.DestinationLocationId = request.DestinationLocationId;
-        row.TransportModeCode = string.IsNullOrWhiteSpace(request.TransportModeCode) ? null : request.TransportModeCode.Trim().ToLowerInvariant();
+        var nextMode = RateFieldPolicy.ToStoredMode(request.TransportModeCode);
+        if (!RateFieldPolicy.SameMode(row.TransportModeCode, nextMode))
+        {
+            row.TransportModeCode = nextMode;
+        }
         row.ServiceTypeCode = string.IsNullOrWhiteSpace(request.ServiceTypeCode) ? null : request.ServiceTypeCode.Trim();
         row.IsActive = request.IsActive;
 

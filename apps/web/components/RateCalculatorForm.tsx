@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/money";
 import { basisLabel, formatChargeable } from "@/lib/opref-edit";
 
 type Option = { id: string; label: string };
+type ModeOption = { value: string; label: string };
 
 type Detail = {
   componentName: string;
@@ -38,9 +39,11 @@ type RatingResult = {
 export function RateCalculatorForm({
   bills,
   versions,
+  modes,
 }: {
   bills: Option[];
   versions: Option[];
+  modes: ModeOption[];
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -134,10 +137,11 @@ export function RateCalculatorForm({
             </div>
             <div className="field">
               <label htmlFor="transportMode">Phương thức <span className="req">*</span></label>
-              <select id="transportMode" name="transportMode" defaultValue="air">
-                <option value="air">Air</option>
-                <option value="sea">Sea</option>
-                <option value="road">Road</option>
+              <select id="transportMode" name="transportMode" defaultValue={modes[0]?.value ?? ""} required>
+                {modes.length === 0 ? <option value="">Chưa có danh mục phương thức</option> : null}
+                {modes.map((mode) => (
+                  <option key={mode.value} value={mode.value}>{mode.label}</option>
+                ))}
               </select>
             </div>
             <div className="field">

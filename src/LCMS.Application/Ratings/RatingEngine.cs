@@ -28,9 +28,8 @@ public static class RatingEngine
             return null;
         }
 
-        var mode = transportMode?.Trim().ToLowerInvariant();
         decimal raw;
-        if (mode is "sea" or "ocean")
+        if (ShipmentModePolicy.IsSeaFamily(transportMode))
         {
             var tons = (grossKg ?? 0m) / 1000m;
             raw = Math.Max(tons, volumeCbm ?? 0m);
@@ -214,7 +213,7 @@ public static class RatingEngine
         if (!Eq(rule.PartyTypeCode, partyType)) return false;
         if (!RouteMatches(rule, routeId, routeCode)) return false;
         if (!CarrierMatches(rule, carrierPartyId, carrierName)) return false;
-        if (!Eq(rule.TransportMode, transportMode)) return false;
+        if (!ModeMatches(rule.TransportMode, transportMode)) return false;
         if (!Eq(rule.OriginCode, originCode)) return false;
         if (!Eq(rule.DestinationCode, destinationCode)) return false;
         if (!Eq(rule.CommodityCode, commodityCode)) return false;
@@ -289,6 +288,12 @@ public static class RatingEngine
         return WeightBand.Contains(value.Value, min, rule.WeightMax);
     }
 
+    public static bool IsBeforeEffectiveDay(DateTimeOffset rateDate, DateTimeOffset effectiveFrom) =>
+        DateOnly.FromDateTime(rateDate.UtcDateTime) < DateOnly.FromDateTime(effectiveFrom.UtcDateTime);
+
+    public static bool IsAfterEffectiveDay(DateTimeOffset rateDate, DateTimeOffset effectiveTo) =>
+        DateOnly.FromDateTime(rateDate.UtcDateTime) > DateOnly.FromDateTime(effectiveTo.UtcDateTime);
+
     public static decimal Round(decimal value) =>
         decimal.Round(value, 4, MidpointRounding.AwayFromZero);
 
@@ -301,6 +306,16 @@ public static class RatingEngine
         string.IsNullOrWhiteSpace(rule.ChargeCode)
             ? rule.Id.ToString("N")
             : rule.ChargeCode.Trim().ToUpperInvariant();
+
+    private static bool ModeMatches(string? ruleMode, string? actual)
+    {
+        if (string.IsNullOrWhiteSpace(ruleMode))
+        {
+            return true;
+        }
+
+        return RateFieldPolicy.SameMode(ruleMode, actual);
+    }
 
     private static bool Eq(string? filter, string? value)
     {

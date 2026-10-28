@@ -154,7 +154,7 @@ public sealed class GetOperationalReferenceEditQueryHandler
             .ThenBy(m => m.Code)
             .Select(m => new { m.Code, m.Name })
             .ToListAsync(cancellationToken))
-            .Select(m => new OperationalOptionDto(m.Code.ToLowerInvariant(), $"{m.Name} ({m.Code.ToUpperInvariant()})"))
+            .Select(m => new OperationalOptionDto(m.Code.Trim().ToUpperInvariant(), $"{m.Name} ({m.Code.Trim().ToUpperInvariant()})"))
             .ToList();
 
         return new OperationalReferenceEditDto(

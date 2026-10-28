@@ -146,12 +146,12 @@ public sealed class PreviewShipmentRollupQueryHandler : IRequestHandler<PreviewS
         // 1. Transport Mode (UT-08): Different modes -> suggest "multimodal"
         string? suggestedMode;
         var distinctModes = bills.Where(b => !string.IsNullOrWhiteSpace(b.TransportMode))
-            .Select(b => b.TransportMode!.Trim().ToLowerInvariant())
+            .Select(b => ShipmentModePolicy.Normalize(b.TransportMode))
             .Distinct().ToList();
 
         if (distinctModes.Count > 1)
         {
-            suggestedMode = "multimodal";
+            suggestedMode = ShipmentModePolicy.Multimodal;
             conflicts.Add($"Lô hàng gom các Bill có nhiều phương thức ({string.Join(", ", distinctModes)}). Đã gợi ý chế độ MULTIMODAL.");
         }
         else

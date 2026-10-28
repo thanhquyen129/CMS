@@ -9,6 +9,8 @@ import { fetchTerminology } from "@/lib/api";
 import { formatDateOnlyVi, formatDateTimeVi } from "@/lib/money";
 import { listEconomicChargeTypes, listRateCards, getSurcharge } from "@/lib/rate-cards-server";
 import { unwrapPaged } from "@/lib/paging";
+import { listCatalog } from "@/lib/catalog";
+import { catalogModeOptions } from "@/lib/create-workspace";
 
 type Params = Promise<{ id: string }>;
 
@@ -35,6 +37,8 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
     : [];
   const chargeTypes = await listEconomicChargeTypes();
   const activeTypes = chargeTypes.ok ? chargeTypes.data.filter((row) => row.isActive) : [];
+  const modeCatalog = await listCatalog("transport_mode");
+  const modeOptions = catalogModeOptions(modeCatalog.ok ? modeCatalog.data : []);
   const row = detail.data;
   const current = row.versions[0];
   const rule = current?.rules[0];
@@ -88,6 +92,7 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
             <SurchargeForm
               cards={options}
               chargeTypes={activeTypes}
+              modes={modeOptions}
               lockCode
               surchargeId={row.id}
               versionId={current.id}

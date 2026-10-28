@@ -1,11 +1,13 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.BusinessParties;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Identity;
 using LCMS.Application.OperationalReferences;
 using LCMS.Application.ReferenceMasters;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -170,14 +172,17 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
                 }
             }
 
-            var exists = await _db.MasterCatalogItems.AsNoTracking()
-                .AnyAsync(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive && m.Code.ToLower() == trimmedSvc.ToLower(), cancellationToken);
-            if (!exists)
+            var serviceCodes = await _db.MasterCatalogItems.AsNoTracking()
+                .Where(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive)
+                .Select(m => m.Code)
+                .ToListAsync(cancellationToken);
+            if (serviceCodes.Count > 0
+                && !serviceCodes.Any(c => string.Equals(c, trimmedSvc, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new ValidationAppException($"Mã loại dịch vụ '{trimmedSvc}' không hợp lệ trong danh mục hoạt động.");
             }
 
-            bill.ServiceTypeCode = trimmedSvc;
+            bill.ServiceTypeCode = trimmedSvc.ToUpperInvariant();
         }
 
         if (request.CustomerPartyId is Guid partyId)
@@ -226,7 +231,8 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
         {
             if (request.ApplyExtendedContext)
             {
-                bill.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
+                bill.TransportMode = await TransportModeCatalog.ResolveAsync(
+                    _db, request.TransportMode, allowMultimodal: false, cancellationToken);
                 bill.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
                 bill.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
                 bill.CustomerReference = OperationalContextJson.TrimOrNull(request.CustomerReference);
@@ -253,7 +259,7 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
             .Where(m => m.ObjectType == OperationalObjectTypes.Bill && m.ObjectId == bill.Id && m.DeletedAt == null)
             .ToList());
         var changed = ratingInputsBefore.Keys
-            .Where(k => !string.Equals(ratingInputsBefore[k], ratingInputsAfter[k], StringComparison.Ordinal))
+            .Where(k => !SameRatingInput(k, ratingInputsBefore[k], ratingInputsAfter[k]))
             .ToList();
         if (changed.Count > 0)
         {
@@ -271,6 +277,7 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
     {
         string? M(string code) => LCMS.Application.OperationalReferences.Edit.OperationalFieldValues.FormatDecimal(
             measures.FirstOrDefault(m => m.MeasureCode == code)?.Quantity);
+        var context = OperationalContextJson.Deserialize(bill.ContextJson);
         return new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["route_code"] = bill.RouteCode,
@@ -279,10 +286,31 @@ public sealed class UpdateBillContextCommandHandler : IRequestHandler<UpdateBill
             ["destination_code"] = bill.DestinationCode,
             ["service_type_code"] = bill.ServiceTypeCode,
             ["commodity_type_id"] = bill.CommodityTypeId?.ToString(),
+            ["customer_party_id"] = bill.CustomerPartyId?.ToString(),
+            ["vendor_party_id"] = bill.VendorPartyId?.ToString(),
+            ["rate_date_policy"] = bill.RateDatePolicy,
+            ["rate_date"] = context?.RateDate?.ToUniversalTime().ToString("O"),
             [MeasureCodes.GrossWeightKg] = M(MeasureCodes.GrossWeightKg),
             [MeasureCodes.VolumeCbm] = M(MeasureCodes.VolumeCbm),
             [MeasureCodes.ChargeableWeightKg] = M(MeasureCodes.ChargeableWeightKg)
         };
+    }
+
+    private static bool SameRatingInput(string key, string? before, string? after)
+    {
+        if (key == "transport_mode")
+        {
+            return RateFieldPolicy.SameMode(before, after);
+        }
+
+        if (key is "service_type_code" or "route_code" or "origin_code" or "destination_code" or "rate_date_policy")
+        {
+            var left = string.IsNullOrWhiteSpace(before) ? null : before.Trim();
+            var right = string.IsNullOrWhiteSpace(after) ? null : after.Trim();
+            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(before, after, StringComparison.Ordinal);
     }
 
     private async Task BindPlacesAsync(Bill bill, UpdateBillContextCommand request, CancellationToken cancellationToken)

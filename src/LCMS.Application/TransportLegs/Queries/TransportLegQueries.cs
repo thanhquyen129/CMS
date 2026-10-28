@@ -209,10 +209,10 @@ public sealed class GetTransportLegOptionsQueryHandler
 
         if (!string.IsNullOrWhiteSpace(request.TransportMode))
         {
-            var mode = request.TransportMode.Trim().ToLowerInvariant();
+            var mode = LCMS.Domain.Pricing.RateFieldPolicy.ToStoredMode(request.TransportMode);
             query = query.Where(x =>
-                (x.Leg.TransportMode != null && x.Leg.TransportMode.ToLower() == mode) ||
-                (x.Leg.TransportMode == null && x.Shipment.TransportMode != null && x.Shipment.TransportMode.ToLower() == mode));
+                (x.Leg.TransportMode != null && x.Leg.TransportMode.ToUpper() == mode) ||
+                (x.Leg.TransportMode == null && x.Shipment.TransportMode != null && x.Shipment.TransportMode.ToUpper() == mode));
         }
 
         var rows = await query
@@ -468,7 +468,7 @@ public sealed class PrefillMovementFromLegsQueryHandler : IRequestHandler<Prefil
 
         // UT-13: Validate physical transport modes across combined legs!
         var distinctModes = legs.Where(l => !string.IsNullOrWhiteSpace(l.TransportMode))
-            .Select(l => l.TransportMode!.Trim().ToLowerInvariant())
+            .Select(l => ShipmentModePolicy.Normalize(l.TransportMode))
             .Distinct()
             .ToList();
 
@@ -494,7 +494,7 @@ public sealed class PrefillMovementFromLegsQueryHandler : IRequestHandler<Prefil
             .ToListAsync(cancellationToken);
 
         return new MovementPrefillFromLegsDto(
-            TransportMode: firstLeg.TransportMode ?? shipment?.TransportMode,
+            TransportMode: ShipmentModePolicy.Normalize(firstLeg.TransportMode ?? shipment?.TransportMode),
             CarrierPartyId: carrierId,
             OriginLocationId: firstLeg.OriginLocationId ?? shipment?.OriginLocationId,
             DestinationLocationId: firstLeg.DestinationLocationId ?? shipment?.DestinationLocationId,

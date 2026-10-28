@@ -123,12 +123,12 @@ public static class SurchargeRating
 
     public static bool IsEffective(SurchargeCandidate candidate, DateTimeOffset asOf)
     {
-        if (candidate.ValidFrom is DateTimeOffset from && asOf < from)
+        if (candidate.ValidFrom is DateTimeOffset from && RatingEngine.IsBeforeEffectiveDay(asOf, from))
         {
             return false;
         }
 
-        if (candidate.ValidTo is DateTimeOffset to && asOf > to)
+        if (candidate.ValidTo is DateTimeOffset to && RatingEngine.IsAfterEffectiveDay(asOf, to))
         {
             return false;
         }
@@ -418,8 +418,8 @@ public static class SurchargeRatingApplier
         var versions = (await db.SurchargeVersions.AsNoTracking()
             .Where(v => v.PublishStatus == SurchargeVersionStatuses.Published)
             .ToListAsync(cancellationToken))
-            .Where(v => v.ValidFrom is null || v.ValidFrom <= rateDate)
-            .Where(v => v.ValidTo is null || v.ValidTo >= rateDate)
+            .Where(v => v.ValidFrom is null || !RatingEngine.IsBeforeEffectiveDay(rateDate, v.ValidFrom.Value))
+            .Where(v => v.ValidTo is null || !RatingEngine.IsAfterEffectiveDay(rateDate, v.ValidTo.Value))
             .ToList();
         if (versions.Count == 0)
         {

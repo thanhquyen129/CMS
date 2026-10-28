@@ -692,13 +692,19 @@ internal static class SurchargeGraph
             return;
         }
 
+        var stored = dimension == "transport_mode" ? RateFieldPolicy.ToStoredMode(value) : value.Trim();
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return;
+        }
+
         db.SurchargeConditions.Add(new SurchargeCondition
         {
             TenantId = tenantId,
             SurchargeRuleId = ruleId,
             Dimension = dimension,
             Operator = "eq",
-            ValueText = value.Trim()
+            ValueText = stored
         });
     }
 

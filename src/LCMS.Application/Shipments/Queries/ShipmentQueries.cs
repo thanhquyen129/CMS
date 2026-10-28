@@ -96,8 +96,8 @@ public sealed class ListShipmentsQueryHandler : IRequestHandler<ListShipmentsQue
 
         if (!string.IsNullOrWhiteSpace(request.TransportMode))
         {
-            var mode = request.TransportMode.Trim().ToLowerInvariant();
-            query = query.Where(s => s.TransportMode != null && s.TransportMode.ToLower() == mode);
+            var mode = LCMS.Domain.Pricing.RateFieldPolicy.ToStoredMode(request.TransportMode);
+            query = query.Where(s => s.TransportMode != null && s.TransportMode.ToUpper() == mode);
         }
 
         // ORDER BY DateTimeOffset is rejected by SQLite tests; Postgres accepts in-memory sort equally.

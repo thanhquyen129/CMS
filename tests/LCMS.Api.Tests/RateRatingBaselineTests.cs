@@ -20,15 +20,15 @@ public sealed class RateRatingBaselineTests
     [Fact]
     public void Uat02_mode_adapter_is_bidirectional_and_does_not_collapse_water_or_express()
     {
-        Assert.Equal("air", RateFieldPolicy.ToStoredMode("AIR"));
+        Assert.Equal("AIR", RateFieldPolicy.ToStoredMode("AIR"));
         Assert.Equal("AIR", RateFieldPolicy.ToCanonicalMode("air"));
-        Assert.Equal("sea", RateFieldPolicy.ToStoredMode("SEA"));
-        Assert.Equal("road", RateFieldPolicy.ToStoredMode("ROAD"));
-        Assert.Equal("rail", RateFieldPolicy.ToStoredMode("RAIL"));
-        Assert.Equal("water", RateFieldPolicy.ToStoredMode("WATER"));
-        Assert.Equal("express", RateFieldPolicy.ToStoredMode("EXPRESS"));
-        Assert.NotEqual("sea", RateFieldPolicy.ToStoredMode("WATER"));
-        Assert.NotEqual("air", RateFieldPolicy.ToStoredMode("EXPRESS"));
+        Assert.Equal("SEA", RateFieldPolicy.ToStoredMode("SEA"));
+        Assert.Equal("ROAD", RateFieldPolicy.ToStoredMode("ROAD"));
+        Assert.Equal("RAIL", RateFieldPolicy.ToStoredMode("RAIL"));
+        Assert.Equal("WATER", RateFieldPolicy.ToStoredMode("WATER"));
+        Assert.Equal("EXPRESS", RateFieldPolicy.ToStoredMode("EXPRESS"));
+        Assert.NotEqual("SEA", RateFieldPolicy.ToStoredMode("WATER"));
+        Assert.NotEqual("AIR", RateFieldPolicy.ToStoredMode("EXPRESS"));
         Assert.Equal(RateFieldPolicy.WaterBlocked, RateFieldPolicy.NewModeBlock("WATER"));
         Assert.Equal(RateFieldPolicy.ExpressBlocked, RateFieldPolicy.NewModeBlock("express"));
         Assert.False(RateFieldPolicy.ExpressContextSupported);

@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.BusinessParties;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences;
@@ -144,7 +145,7 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
                 OperationalStatus = status,
                 IsActive = request.IsActive
             };
-            ApplyContext(order, request);
+            await ApplyContextAsync(order, request, cancellationToken);
             await BindPlacesAsync(order, request, cancellationToken);
             _db.Orders.Add(order);
             if (request.ApplyContext && order.CustomerPartyId is Guid newCustomer)
@@ -185,7 +186,7 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
         existing.ExternalVersion = externalVersion;
         existing.OperationalStatus = status;
         existing.IsActive = request.IsActive;
-        ApplyContext(existing, request);
+        await ApplyContextAsync(existing, request, cancellationToken);
         await BindPlacesAsync(existing, request, cancellationToken);
         if (request.ApplyContext && existing.CustomerPartyId is Guid customer)
         {
@@ -202,7 +203,7 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
         return existing.Id;
     }
 
-    private static void ApplyContext(Order order, UpsertOrderCommand request)
+    private async Task ApplyContextAsync(Order order, UpsertOrderCommand request, CancellationToken cancellationToken)
     {
         if (!request.ApplyContext)
         {
@@ -211,7 +212,8 @@ public sealed class UpsertOrderCommandHandler : IRequestHandler<UpsertOrderComma
 
         order.CustomerPartyId = request.CustomerPartyId;
         order.AssignedUserId = request.AssignedUserId;
-        order.TransportMode = OperationalContextJson.TrimOrNull(request.TransportMode);
+        order.TransportMode = await TransportModeCatalog.ResolveAsync(
+            _db, request.TransportMode, allowMultimodal: false, cancellationToken);
         order.OriginCode = OperationalContextJson.TrimOrNull(request.OriginCode);
         order.DestinationCode = OperationalContextJson.TrimOrNull(request.DestinationCode);
         var route = OperationalContextJson.TrimOrNull(request.RouteCode);

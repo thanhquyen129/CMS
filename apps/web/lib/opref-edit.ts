@@ -119,13 +119,10 @@ export type ApiError = {
   missing?: RatingMissingField[];
 };
 
-export const TRANSPORT_MODE_OPTIONS: OprefOption[] = [
-  { value: "air", label: "Đường hàng không (AIR)" },
-];
+export const TRANSPORT_MODE_OPTIONS: OprefOption[] = [];
 
 export const SHIPMENT_MODE_OPTIONS: OprefOption[] = [
-  ...TRANSPORT_MODE_OPTIONS,
-  { value: "multimodal", label: "Đa phương thức (Multimodal)" },
+  { value: "MULTIMODAL", label: "Đa phương thức (Multimodal)" },
 ];
 
 export const FIELD_GROUP_LABELS: Record<string, string> = {

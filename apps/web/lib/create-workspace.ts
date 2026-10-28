@@ -37,22 +37,42 @@ export type OperationalContext = {
   chargeableOverrideReason?: string | null;
 };
 
-export const TRANSPORT_MODES: CatalogOption[] = [
-  { value: "air", label: "Air" },
-  { value: "sea", label: "Sea" },
-  { value: "road", label: "Road" },
-  { value: "rail", label: "Rail" },
-];
-
-/** Physical modes only. MULTIMODAL is a shipment classification, not a leg mode. */
+/** Physical modes from the tenant catalog. MULTIMODAL is a shipment classification, not a leg mode. */
 export function physicalModeOptions(catalog: CatalogOption[]): CatalogOption[] {
-  return mergeCatalog(catalog, TRANSPORT_MODES).filter(
-    (m) => m.value.toLowerCase() !== "multimodal"
+  const seen = new Set<string>();
+  const result: CatalogOption[] = [];
+  for (const item of catalog) {
+    const value = item.value.trim().toUpperCase();
+    if (!value || value === "MULTIMODAL" || seen.has(value)) continue;
+    seen.add(value);
+    result.push({ value, label: item.label });
+  }
+  return result;
+}
+
+export function catalogModeOptions(
+  items: { code: string; name: string; isActive?: boolean }[] | undefined,
+): CatalogOption[] {
+  return physicalModeOptions(
+    (items ?? [])
+      .filter((item) => item.isActive !== false && item.code.trim())
+      .map((item) => {
+        const code = item.code.trim().toUpperCase();
+        const name = item.name?.trim();
+        return {
+          value: code,
+          label: name && name.toUpperCase() !== code ? `${code} — ${name}` : code,
+        };
+      }),
   );
 }
 
 export function shipmentModeOptions(catalog: CatalogOption[]): CatalogOption[] {
-  return [...physicalModeOptions(catalog), { value: "multimodal", label: "Đa phương thức" }];
+  const modes = physicalModeOptions(catalog);
+  if (!modes.some((item) => item.value === "MULTIMODAL")) {
+    modes.push({ value: "MULTIMODAL", label: "Đa phương thức" });
+  }
+  return modes;
 }
 
 export const BILL_TYPES: CatalogOption[] = [

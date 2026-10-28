@@ -215,14 +215,14 @@ public static class BillRateSuggestion
             return BillRateNotices.RetiredShort;
         }
 
-        if (version.EffectiveFrom is DateTimeOffset from && rateDate < from)
+        if (version.EffectiveFrom is DateTimeOffset from && RatingEngine.IsBeforeEffectiveDay(rateDate, from))
         {
             category = "VERSION_NOT_EFFECTIVE";
             detail = $"Ngày áp dụng {rateDate:dd/MM/yyyy} trước ngày hiệu lực của v{version.VersionNo} ({from:dd/MM/yyyy})";
             return BillRateNotices.OutsideDate;
         }
 
-        if (version.EffectiveTo is DateTimeOffset to && rateDate > to)
+        if (version.EffectiveTo is DateTimeOffset to && RatingEngine.IsAfterEffectiveDay(rateDate, to))
         {
             category = "VERSION_NOT_EFFECTIVE";
             detail = $"Ngày áp dụng {rateDate:dd/MM/yyyy} sau ngày hiệu lực của v{version.VersionNo} ({to:dd/MM/yyyy})";

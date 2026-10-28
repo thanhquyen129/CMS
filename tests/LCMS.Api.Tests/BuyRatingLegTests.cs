@@ -272,7 +272,7 @@ public sealed class BuyRatingLegTests : IAsyncLifetime
         var leg = Assert.Single(body!.Legs);
         Assert.Equal(linked, leg.Id);
         Assert.Equal("SH-SUG", leg.ShipmentNo);
-        Assert.Equal("road", leg.TransportMode);
+        Assert.Equal("ROAD", leg.TransportMode);
         Assert.Equal("HAN", leg.OriginCode);
         Assert.Equal(2, body.Vendors.Count);
         Assert.Null(body.VendorPartyId);

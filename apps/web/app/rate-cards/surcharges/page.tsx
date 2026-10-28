@@ -12,6 +12,8 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { formatDateOnlyVi, formatDateTimeVi } from "@/lib/money";
 import { listSurcharges } from "@/lib/rate-cards-server";
+import { listCatalog } from "@/lib/catalog";
+import { catalogModeOptions } from "@/lib/create-workspace";
 import { MigrateLegacySurchargesButton } from "@/components/MigrateLegacySurchargesButton";
 
 type SearchParams = Promise<{ q?: string; mode?: string; status?: string; direction?: string; charge?: string }>;
@@ -26,7 +28,9 @@ export default async function SurchargesPage({
   const terms = await fetchTerminology();
   const sp = await searchParams;
   const q = (sp.q ?? "").trim().toLowerCase();
-  const mode = (sp.mode ?? "").trim().toLowerCase();
+  const mode = (sp.mode ?? "").trim().toUpperCase();
+  const modeCatalog = await listCatalog("transport_mode");
+  const modeOptions = catalogModeOptions(modeCatalog.ok ? modeCatalog.data : []);
   const status = (sp.status ?? "").trim().toLowerCase();
   const direction = (sp.direction ?? "").trim().toLowerCase();
   const charge = (sp.charge ?? "").trim().toLowerCase();
@@ -38,7 +42,7 @@ export default async function SurchargesPage({
       const hay = `${row.code} ${row.name}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (mode && (row.transportMode ?? "").toLowerCase() !== mode) return false;
+    if (mode && (row.transportMode ?? "").trim().toUpperCase() !== mode) return false;
     if (status === "published" && row.versionStatus !== "published") return false;
     if (status === "draft" && row.versionStatus === "published") return false;
     if (direction && (row.direction ?? "").toLowerCase() !== direction) return false;
@@ -49,7 +53,7 @@ export default async function SurchargesPage({
 
   const published = all.filter((r) => r.versionStatus === "published").length;
   const draft = all.length - published;
-  const modes = new Set(all.map((r) => (r.transportMode || "").toLowerCase()).filter(Boolean));
+  const modes = new Set(all.map((r) => (r.transportMode || "").trim().toUpperCase()).filter(Boolean));
 
   const kpis: StatCardModel[] = [
     { key: "all", label: "Tổng phụ phí", value: String(all.length), tone: "default" },
@@ -94,14 +98,8 @@ export default async function SurchargesPage({
               kind: "select",
               name: "mode",
               label: "Phương thức",
-              defaultValue: sp.mode ?? "",
-              options: [
-                { value: "", label: "Tất cả" },
-                { value: "air", label: "Air" },
-                { value: "sea", label: "Sea" },
-                { value: "road", label: "Road" },
-                { value: "rail", label: "Rail" },
-              ],
+              defaultValue: (sp.mode ?? "").toUpperCase(),
+              options: [{ value: "", label: "Tất cả" }, ...modeOptions],
             },
             {
               kind: "select",

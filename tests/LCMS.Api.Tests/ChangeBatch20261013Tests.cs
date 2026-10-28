@@ -11,12 +11,12 @@ public sealed class ShipmentModePolicyTests
     [Fact]
     public void Derive_MixedFamilies_IsMultimodal_AndDoesNotTreatWaterAsASecondMode()
     {
-        Assert.Equal("multimodal", ShipmentModePolicy.Derive(["road", "air", "sea"]));
-        Assert.Equal("multimodal", ShipmentModePolicy.Derive(["sea", "water"]));
-        Assert.Equal("sea", ShipmentModePolicy.Derive(["sea", "ocean"]));
-        Assert.Equal("water", ShipmentModePolicy.Derive(["water"]));
+        Assert.Equal("MULTIMODAL", ShipmentModePolicy.Derive(["road", "air", "sea"]));
+        Assert.Equal("MULTIMODAL", ShipmentModePolicy.Derive(["sea", "water"]));
+        Assert.Equal("SEA", ShipmentModePolicy.Derive(["sea", "ocean"]));
+        Assert.Equal("WATER", ShipmentModePolicy.Derive(["water"]));
         Assert.Null(ShipmentModePolicy.Derive([null, "multimodal"]));
-        Assert.Equal("road", ShipmentModePolicy.Derive(["road"]));
+        Assert.Equal("ROAD", ShipmentModePolicy.Derive(["road"]));
     }
 
     [Fact]
@@ -25,8 +25,8 @@ public sealed class ShipmentModePolicyTests
         Assert.False(ChargeableWeightPolicy.IsSea("water"));
         Assert.True(ChargeableWeightPolicy.IsSea("sea"));
         Assert.True(ChargeableWeightPolicy.IsSea("ocean"));
-        Assert.Equal("water", ShipmentModePolicy.PhysicalFamily("water"));
-        Assert.Equal("sea", ShipmentModePolicy.PhysicalFamily("ocean"));
+        Assert.Equal("WATER", ShipmentModePolicy.PhysicalFamily("water"));
+        Assert.Equal("SEA", ShipmentModePolicy.PhysicalFamily("ocean"));
 
         var water = ChargeableWeightPolicy.Compute("WATER", 1000m, 2m);
         Assert.Null(water.Value);
@@ -42,12 +42,12 @@ public sealed class ShipmentModePolicyTests
     [Fact]
     public void Mismatch_KeepsSource_AndLegRatingIgnoresMultimodal()
     {
-        Assert.True(ShipmentModePolicy.IsMismatch("air", "multimodal"));
-        Assert.True(ShipmentModePolicy.IsMismatch("water", "sea"));
-        Assert.False(ShipmentModePolicy.IsMismatch("ocean", "sea"));
-        Assert.False(ShipmentModePolicy.IsMismatch(null, "road"));
-        Assert.Equal("road", ShipmentModePolicy.LegRatingMode("road", "multimodal", "multimodal"));
-        Assert.Equal("air", ShipmentModePolicy.LegRatingMode(null, "air", null));
+        Assert.True(ShipmentModePolicy.IsMismatch("air", "MULTIMODAL"));
+        Assert.True(ShipmentModePolicy.IsMismatch("water", "SEA"));
+        Assert.False(ShipmentModePolicy.IsMismatch("ocean", "SEA"));
+        Assert.False(ShipmentModePolicy.IsMismatch(null, "ROAD"));
+        Assert.Equal("ROAD", ShipmentModePolicy.LegRatingMode("road", "multimodal", "multimodal"));
+        Assert.Equal("AIR", ShipmentModePolicy.LegRatingMode(null, "air", null));
         Assert.Null(ShipmentModePolicy.LegRatingMode(null, "multimodal", null));
     }
 }
@@ -107,23 +107,23 @@ public sealed class ChangeBatch20261013Tests : IAsyncLifetime
         await PatchMode(tenantId, "leg", airId, "air");
 
         var mixed = await GetShipment(tenantId, shipmentId);
-        Assert.Equal("air", mixed.TransportMode);
-        Assert.Equal("multimodal", mixed.DerivedTransportMode);
+        Assert.Equal("AIR", mixed.TransportMode);
+        Assert.Equal("MULTIMODAL", mixed.DerivedTransportMode);
         Assert.True(mixed.TransportModeMismatch);
-        Assert.Equal("road", mixed.Legs.Single(l => l.Id == roadId).TransportMode);
-        Assert.Equal("air", mixed.Legs.Single(l => l.Id == airId).TransportMode);
+        Assert.Equal("ROAD", mixed.Legs.Single(l => l.Id == roadId).TransportMode);
+        Assert.Equal("AIR", mixed.Legs.Single(l => l.Id == airId).TransportMode);
 
         var rejected = await PatchMode(tenantId, "leg", roadId, "multimodal", expectOk: false);
         Assert.Equal(HttpStatusCode.BadRequest, rejected);
         var stillRoad = await GetShipment(tenantId, shipmentId);
-        Assert.Equal("road", stillRoad.Legs.Single(l => l.Id == roadId).TransportMode);
-        Assert.Equal("air", stillRoad.TransportMode);
+        Assert.Equal("ROAD", stillRoad.Legs.Single(l => l.Id == roadId).TransportMode);
+        Assert.Equal("AIR", stillRoad.TransportMode);
 
         await PatchMode(tenantId, "leg", airId, "road");
         var oneMode = await GetShipment(tenantId, shipmentId);
-        Assert.Equal("road", oneMode.DerivedTransportMode);
+        Assert.Equal("ROAD", oneMode.DerivedTransportMode);
         Assert.True(oneMode.TransportModeMismatch);
-        Assert.Equal("air", oneMode.TransportMode);
+        Assert.Equal("AIR", oneMode.TransportMode);
     }
 
     [Fact]
@@ -159,11 +159,11 @@ public sealed class ChangeBatch20261013Tests : IAsyncLifetime
         await PatchMode(tenantId, "leg", waterId, "water");
 
         var row = await GetShipment(tenantId, shipmentId);
-        Assert.Equal("water", row.TransportMode);
-        Assert.Equal("multimodal", row.DerivedTransportMode);
+        Assert.Equal("WATER", row.TransportMode);
+        Assert.Equal("MULTIMODAL", row.DerivedTransportMode);
         Assert.True(row.TransportModeMismatch);
-        Assert.Equal("sea", row.Legs.Single(l => l.Id == seaId).TransportMode);
-        Assert.Equal("water", row.Legs.Single(l => l.Id == waterId).TransportMode);
+        Assert.Equal("SEA", row.Legs.Single(l => l.Id == seaId).TransportMode);
+        Assert.Equal("WATER", row.Legs.Single(l => l.Id == waterId).TransportMode);
     }
 
     [Fact]
@@ -359,7 +359,7 @@ public sealed class ChangeBatch20261013Tests : IAsyncLifetime
         listRes.EnsureSuccessStatusCode();
         var rows = await listRes.Content.ReadFromJsonAsync<List<ShipmentListItem>>(Json);
         var imported = Assert.Single(rows!);
-        Assert.Equal("multimodal", imported.TransportMode);
+        Assert.Equal("MULTIMODAL", imported.TransportMode);
 
         using var roadFilter = Tenant(HttpMethod.Get, "/api/shipments?transportMode=road", tenantId);
         var roadRes = await _client.SendAsync(roadFilter);

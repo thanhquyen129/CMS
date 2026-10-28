@@ -1,11 +1,13 @@
 using System.Globalization;
 using System.Text.Json;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Identity;
 using LCMS.Application.Ratings;
 using LCMS.Application.ReferenceMasters;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using LCMS.Domain.Identity;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -224,12 +226,17 @@ public sealed class EditOperationalReferenceCommandHandler
                 }
             }
 
-            var exists = await _db.MasterCatalogItems.AsNoTracking()
-                .AnyAsync(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive && m.Code.ToLower() == trimmedSvc.ToLower(), cancellationToken);
-            if (!exists)
+            var serviceCodes = await _db.MasterCatalogItems.AsNoTracking()
+                .Where(m => m.Kind == MasterCatalogKinds.ServiceType && m.IsActive)
+                .Select(m => m.Code)
+                .ToListAsync(cancellationToken);
+            if (serviceCodes.Count > 0
+                && !serviceCodes.Any(c => string.Equals(c, trimmedSvc, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new ValidationAppException($"Mã loại dịch vụ '{trimmedSvc}' không hợp lệ hoặc không tồn tại trong danh mục hoạt động.");
             }
+
+            value = trimmedSvc.ToUpperInvariant();
         }
 
         bool isEquivalent = def.Kind is OperationalFieldKinds.TransportMode or OperationalFieldKinds.ServiceType
@@ -655,30 +662,19 @@ public sealed class EditOperationalReferenceCommandHandler
             }
             case OperationalFieldKinds.TransportMode:
             {
-                var mode = text.ToLowerInvariant();
-                if (mode.Length > 32)
+                try
                 {
-                    return (false, null, $"{def.Label} tối đa 32 ký tự.");
+                    var mode = await TransportModeCatalog.ResolveAsync(
+                        _db,
+                        text,
+                        allowMultimodal: string.Equals(objectType, OperationalObjectTypes.Shipment, StringComparison.Ordinal),
+                        cancellationToken);
+                    return (true, mode, null);
                 }
-
-                if (ShipmentModePolicy.IsMultimodal(mode))
+                catch (ValidationAppException ex)
                 {
-                    if (!string.Equals(objectType, OperationalObjectTypes.Shipment, StringComparison.Ordinal))
-                    {
-                        return (false, null, "Đa phương thức chỉ là phân loại của Shipment, không gán cho chặng.");
-                    }
+                    return (false, null, ex.Message);
                 }
-                else
-                {
-                    var exists = await _db.MasterCatalogItems.AsNoTracking()
-                        .AnyAsync(m => m.Kind == MasterCatalogKinds.TransportMode && m.IsActive && m.Code.ToLower() == mode, cancellationToken);
-                    if (!exists)
-                    {
-                        return (false, null, $"Phương thức vận chuyển '{text}' không tồn tại hoặc đã ngừng sử dụng trong danh mục.");
-                    }
-                }
-
-                return (true, mode, null);
             }
             case OperationalFieldKinds.Commodity:
             {

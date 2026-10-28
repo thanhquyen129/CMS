@@ -77,7 +77,7 @@ public sealed class Ui02OperationalCreateContextTests : IAsyncLifetime
         var res = await _client.SendAsync(get);
         Assert.Equal(HttpStatusCode.OK, res.StatusCode);
         var order = await res.Content.ReadFromJsonAsync<OrderCtxResponse>(JsonOptions);
-        Assert.Equal("air", order!.TransportMode);
+        Assert.Equal("AIR", order!.TransportMode);
         Assert.Equal("SGN → LAX", order.RouteCode);
         Assert.Equal("Hàng điện tử", order.Description);
     }
@@ -178,7 +178,7 @@ public sealed class Ui02OperationalCreateContextTests : IAsyncLifetime
         var list = await listRes.Content.ReadFromJsonAsync<List<ShipmentListResponse>>(JsonOptions);
         Assert.NotNull(list);
         var row = Assert.Single(list!);
-        Assert.Equal("sea", row.TransportMode);
+        Assert.Equal("SEA", row.TransportMode);
         Assert.Equal("HPH → RTM", row.RouteCode);
         Assert.Equal(0, row.RelatedBillCount);
     }

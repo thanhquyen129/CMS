@@ -22,20 +22,20 @@ describe("rate field policy", () => {
   });
 
   it("maps mode codes both ways and blocks WATER and EXPRESS for new rules", () => {
-    expect(storedMode("AIR")).toBe("air");
-    expect(storedMode("sea")).toBe("sea");
-    expect(storedMode("ROAD")).toBe("road");
-    expect(storedMode("RAIL")).toBe("rail");
-    expect(storedMode("WATER")).toBe("water");
-    expect(storedMode("EXPRESS")).toBe("express");
-    expect(storedMode("WATER")).not.toBe("sea");
-    expect(storedMode("EXPRESS")).not.toBe("air");
+    expect(storedMode("AIR")).toBe("AIR");
+    expect(storedMode("sea")).toBe("SEA");
+    expect(storedMode("ROAD")).toBe("ROAD");
+    expect(storedMode("RAIL")).toBe("RAIL");
+    expect(storedMode("WATER")).toBe("WATER");
+    expect(storedMode("EXPRESS")).toBe("EXPRESS");
+    expect(storedMode("WATER")).not.toBe("SEA");
+    expect(storedMode("EXPRESS")).not.toBe("AIR");
     const modes = selectableModes([
       { code: "AIR", name: "Hàng không" },
       { code: "WATER", name: "WATER" },
       { code: "EXPRESS", name: "EXPRESS" },
     ]);
-    expect(modes.map((item) => item.value)).toEqual(["air"]);
+    expect(modes.map((item) => item.value)).toEqual(["AIR"]);
     expect(modes[0].label).toBe("Hàng không");
     expect(modeBlock("water")).toContain("WATER");
     expect(modeBlock("express")).toContain("EXPRESS");

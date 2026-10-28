@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -74,6 +75,7 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var mode = await TransportModeCatalog.ResolveAsync(_db, request.TransportMode, allowMultimodal: false, cancellationToken);
         var shipmentExists = await _db.Shipments.AnyAsync(s => s.Id == request.ShipmentId, cancellationToken);
         if (!shipmentExists)
         {
@@ -113,7 +115,7 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
                 DestinationCode = request.DestinationCode,
                 OriginLocationId = request.OriginLocationId,
                 DestinationLocationId = request.DestinationLocationId,
-                TransportMode = request.TransportMode
+                TransportMode = mode
             };
             _db.TransportLegs.Add(leg);
             try
@@ -148,6 +150,11 @@ public sealed class UpsertTransportLegCommandHandler : IRequestHandler<UpsertTra
         if (request.SequenceNo is int sequence)
         {
             existing.SequenceNo = sequence;
+        }
+
+        if (request.TransportMode is not null)
+        {
+            existing.TransportMode = mode;
         }
 
         existing.OriginCode = request.OriginCode ?? existing.OriginCode;

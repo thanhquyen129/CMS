@@ -7,16 +7,17 @@ namespace LCMS.Domain.Entities;
 /// </summary>
 public static class ShipmentModePolicy
 {
-    public const string Multimodal = "multimodal";
-    public const string SeaFamily = "sea";
+    public const string Multimodal = "MULTIMODAL";
+    public const string SeaFamily = "SEA";
 
+    /// <summary>In-memory canonical code. Does not rewrite a stored row.</summary>
     public static string? Normalize(string? mode) =>
-        string.IsNullOrWhiteSpace(mode) ? null : mode.Trim().ToLowerInvariant();
+        string.IsNullOrWhiteSpace(mode) ? null : mode.Trim().ToUpperInvariant();
 
     public static bool IsMultimodal(string? mode) => Normalize(mode) == Multimodal;
 
     public static bool IsSeaFamily(string? mode) =>
-        Normalize(mode) is "sea" or "ocean";
+        Normalize(mode) is "SEA" or "OCEAN";
 
     /// <summary>Null for blank or MULTIMODAL. OCEAN collapses to <see cref="SeaFamily"/>. WATER stays water.</summary>
     public static string? PhysicalFamily(string? mode)

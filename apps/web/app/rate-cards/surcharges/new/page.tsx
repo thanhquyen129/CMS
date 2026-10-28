@@ -7,6 +7,8 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listEconomicChargeTypes, listRateCards } from "@/lib/rate-cards-server";
 import { unwrapPaged } from "@/lib/paging";
+import { listCatalog } from "@/lib/catalog";
+import { catalogModeOptions } from "@/lib/create-workspace";
 
 export default async function NewSurchargePage() {
   const jar = await cookies();
@@ -18,6 +20,8 @@ export default async function NewSurchargePage() {
     : [];
   const chargeTypes = await listEconomicChargeTypes();
   const activeTypes = chargeTypes.ok ? chargeTypes.data.filter((row) => row.isActive) : [];
+  const modeCatalog = await listCatalog("transport_mode");
+  const modeOptions = catalogModeOptions(modeCatalog.ok ? modeCatalog.data : []);
 
   return (
     <AppShell terms={terms} active="rate-cards">
@@ -27,7 +31,7 @@ export default async function NewSurchargePage() {
         </p>
         <h1>Tạo phụ phí</h1>
         <p className="muted">Không cần chọn bảng giá. Bỏ trống các điều kiện nếu phụ phí áp dụng chung.</p>
-        <SurchargeForm cards={options} chargeTypes={activeTypes} />
+        <SurchargeForm cards={options} chargeTypes={activeTypes} modes={modeOptions} />
       </section>
     </AppShell>
   );

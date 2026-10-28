@@ -18,13 +18,6 @@ export const draftFinancialWarning =
   "Bản nháp còn dòng chưa có loại chi phí hoặc loại doanh thu. Có thể lưu, chưa phát hành được.";
 export const catalogEmpty = "Danh mục trống. Không tự sinh mã.";
 
-const canonicalModes = [
-  { code: "AIR", label: "Hàng không" },
-  { code: "SEA", label: "Đường biển" },
-  { code: "ROAD", label: "Đường bộ" },
-  { code: "RAIL", label: "Đường sắt" },
-];
-
 const knownLabels: Record<string, string> = {
   AIR: "Hàng không",
   SEA: "Đường biển",
@@ -37,11 +30,7 @@ const knownLabels: Record<string, string> = {
 
 export function storedMode(value: string | null | undefined): string | null {
   if (!value?.trim()) return null;
-  const key = value.trim().toUpperCase();
-  if (key === "AIR" || key === "SEA" || key === "ROAD" || key === "RAIL" || key === "WATER" || key === "EXPRESS") {
-    return key.toLowerCase();
-  }
-  return value.trim().toLowerCase();
+  return value.trim().toUpperCase();
 }
 
 export function sameMode(left: string | null | undefined, right: string | null | undefined): boolean {
@@ -62,16 +51,13 @@ export function selectableServices(items: CatalogChoice[] | undefined, keepCode?
 
 export function selectableModes(items: CatalogChoice[] | undefined): { value: string; label: string }[] {
   const active = (items ?? []).filter((item) => item.isActive !== false && item.code.trim());
-  const source = active.length > 0
-    ? active
-    : canonicalModes.map((item) => ({ code: item.code, name: item.label, isActive: true }));
-  return source
+  return active
     .filter((item) => {
       const code = item.code.trim().toUpperCase();
-      return code !== "WATER" && code !== "EXPRESS";
+      return code !== "WATER" && code !== "EXPRESS" && code !== "MULTIMODAL";
     })
     .map((item) => ({
-      value: storedMode(item.code) ?? item.code.toLowerCase(),
+      value: storedMode(item.code) ?? item.code.trim().toUpperCase(),
       label: catalogLabel(item.code, item.name),
     }));
 }
@@ -83,8 +69,8 @@ export function serviceBlock(code: string | null | undefined, alreadyStored: boo
 
 export function modeBlock(mode: string | null | undefined): string | null {
   const stored = storedMode(mode);
-  if (stored === "water") return waterBlocked;
-  if (stored === "express") return expressBlocked;
+  if (stored === "WATER") return waterBlocked;
+  if (stored === "EXPRESS") return expressBlocked;
   return null;
 }
 
@@ -96,7 +82,7 @@ export function routeModeConflictMessage(
   if (appliesAnyRoute) return null;
   const route = storedMode(routeMode);
   const rule = storedMode(ruleMode);
-  if (!route || !rule || route === "multimodal") return null;
+  if (!route || !rule || route === "MULTIMODAL") return null;
   return route === rule ? null : modeRouteConflict;
 }
 

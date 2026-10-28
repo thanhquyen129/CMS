@@ -866,10 +866,10 @@ public sealed class DemoDataSeeder
             (MasterCatalogKinds.DocumentType, "debit_note", "Debit note", 20),
             (MasterCatalogKinds.PaymentTerm, "NET15", "Net 15 ngày", 10),
             (MasterCatalogKinds.PaymentTerm, "NET30", "Net 30 ngày", 20),
-            (MasterCatalogKinds.TransportMode, "air", "Đường hàng không", 10),
-            (MasterCatalogKinds.TransportMode, "sea", "Đường biển", 20),
-            (MasterCatalogKinds.TransportMode, "road", "Đường bộ", 30),
-            (MasterCatalogKinds.TransportMode, "rail", "Đường sắt", 40)
+            (MasterCatalogKinds.TransportMode, "AIR", "Đường hàng không", 10),
+            (MasterCatalogKinds.TransportMode, "SEA", "Đường biển", 20),
+            (MasterCatalogKinds.TransportMode, "ROAD", "Đường bộ", 30),
+            (MasterCatalogKinds.TransportMode, "RAIL", "Đường sắt", 40)
         };
 
         var existing = await _db.MasterCatalogItems

@@ -8,14 +8,17 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listBills } from "@/lib/bills";
 import { listAppendices } from "@/lib/rate-cards-server";
+import { listCatalog } from "@/lib/catalog";
+import { catalogModeOptions } from "@/lib/create-workspace";
 
 export default async function RatePage() {
   const jar = await cookies();
   if (!jar.get(AUTH_COOKIE)?.value) redirect("/login");
   const terms = await fetchTerminology();
-  const [bills, versions] = await Promise.all([
+  const [bills, versions, modeCatalog] = await Promise.all([
     listBills(),
     listAppendices(),
+    listCatalog("transport_mode"),
   ]);
   const billOptions = bills.ok
     ? bills.data.items.map((b) => ({ id: b.id, label: b.billNo }))
@@ -44,7 +47,11 @@ export default async function RatePage() {
             {(bills.ok ? null : bills.message) || (versions.ok ? null : versions.message)}
           </div>
         ) : (
-          <RateCalculatorForm bills={billOptions} versions={versionOptions} />
+          <RateCalculatorForm
+            bills={billOptions}
+            versions={versionOptions}
+            modes={catalogModeOptions(modeCatalog.ok ? modeCatalog.data : [])}
+          />
         )}
       </section>
     </AppShell>

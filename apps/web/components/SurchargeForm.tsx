@@ -32,12 +32,14 @@ export type SurchargeFormValues = {
 export function SurchargeForm({
   cards,
   chargeTypes,
+  modes,
   initial,
   surchargeId,
   versionId,
   lockCode,
 }: {
   cards: CardOption[];
+  modes: { value: string; label: string }[];
   chargeTypes: ChargeTypeOption[];
   initial?: SurchargeFormValues;
   surchargeId?: string;
@@ -152,13 +154,14 @@ export function SurchargeForm({
         </div>
         <div className="field">
           <label htmlFor="transportMode">Phương thức</label>
-          <select id="transportMode" name="transportMode" defaultValue={initial?.transportMode ?? ""}>
+          <select id="transportMode" name="transportMode" defaultValue={(initial?.transportMode ?? "").trim().toUpperCase()}>
             <option value="">Không giới hạn</option>
-            <option value="air">Air</option>
-            <option value="sea">Sea</option>
-            <option value="road">Road</option>
-            <option value="rail">Rail</option>
-            <option value="express">Express</option>
+            {(initial?.transportMode && !modes.some((mode) => mode.value === initial.transportMode.trim().toUpperCase())
+              ? [{ value: initial.transportMode.trim().toUpperCase(), label: `${initial.transportMode.trim().toUpperCase()} (Mã hiện tại)` }, ...modes]
+              : modes
+            ).map((mode) => (
+              <option key={mode.value} value={mode.value}>{mode.label}</option>
+            ))}
           </select>
         </div>
         <div className="field">

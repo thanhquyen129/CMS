@@ -3,6 +3,7 @@ using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -109,6 +110,10 @@ public sealed class OperationalImportBatch
         }
 
         var source = sourceSystem.Trim();
+        var activeModes = await _db.MasterCatalogItems.AsNoTracking()
+            .Where(m => m.Kind == MasterCatalogKinds.TransportMode && m.IsActive)
+            .Select(m => m.Code)
+            .ToListAsync(cancellationToken);
         var issues = new List<OperationalImportIssue>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var shipmentExternals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -168,6 +173,13 @@ public sealed class OperationalImportBatch
                     rowNo,
                     "transportMode",
                     "Đa phương thức chỉ là phân loại của Shipment, không gán cho chặng."));
+            }
+            else if (mode is not null
+                && !ShipmentModePolicy.IsMultimodal(mode)
+                && activeModes.Count > 0
+                && !activeModes.Any(c => RateFieldPolicy.SameMode(c, mode)))
+            {
+                issues.Add(new OperationalImportIssue(rowNo, "transportMode", RateFieldPolicy.ModeNotInCatalog));
             }
 
             if (type == OperationalObjectTypes.Leg)

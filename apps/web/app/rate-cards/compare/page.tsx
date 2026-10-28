@@ -5,6 +5,8 @@ import { CompareRatesForm } from "@/components/CompareRatesForm";
 import { ListPageHeader } from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
+import { listCatalog } from "@/lib/catalog";
+import { catalogModeOptions } from "@/lib/create-workspace";
 
 type SearchParams = Promise<Record<string, string | undefined>>;
 
@@ -12,6 +14,7 @@ export default async function CompareRatesPage({ searchParams }: { searchParams:
   const jar = await cookies();
   if (!jar.get(AUTH_COOKIE)?.value) redirect("/login");
   const terms = await fetchTerminology();
+  const modeCatalog = await listCatalog("transport_mode");
   const sp = await searchParams;
   const initial: Record<string, string> = {};
   for (const [key, value] of Object.entries(sp)) {
@@ -30,7 +33,7 @@ export default async function CompareRatesPage({ searchParams }: { searchParams:
           title="So sánh giá"
           lede="So sánh nhiều Rate Card phù hợp trên cùng một Rating Context"
         />
-        <CompareRatesForm initial={initial} />
+        <CompareRatesForm initial={initial} modes={catalogModeOptions(modeCatalog.ok ? modeCatalog.data : [])} />
       </section>
     </AppShell>
   );

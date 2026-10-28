@@ -120,18 +120,18 @@ public sealed class GetSharedCostAllocationContextQueryHandler
         string suggestedBasis;
         string basisReason;
 
-        var normalizedMode = mode?.Trim().ToLowerInvariant() ?? "";
-        if (normalizedMode == "air")
+        var normalizedMode = ShipmentModePolicy.Normalize(mode) ?? "";
+        if (normalizedMode == "AIR")
         {
             suggestedBasis = "chargeable_weight";
             basisReason = "Hàng không: Gợi ý phân bổ theo Trọng lượng tính cước (CW).";
         }
-        else if (normalizedMode == "sea")
+        else if (ShipmentModePolicy.IsSeaFamily(normalizedMode))
         {
             suggestedBasis = "cbm";
             basisReason = "Đường biển: Gợi ý phân bổ theo Thể tích hàng hóa (CBM).";
         }
-        else if (normalizedMode is "road" or "rail")
+        else if (normalizedMode is "ROAD" or "RAIL")
         {
             suggestedBasis = "gross_weight";
             basisReason = "Đường bộ / đường sắt: Gợi ý phân bổ theo Trọng lượng thực tế (Gross Weight).";

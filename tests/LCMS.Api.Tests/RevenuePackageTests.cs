@@ -186,8 +186,8 @@ public sealed class RevenuePackageTests : IAsyncLifetime
 
         using var groups = Tenant(HttpMethod.Get, "/api/profitability/groups?groupBy=mode&view=expected", tenantId);
         var rows = await (await _client.SendAsync(groups)).Content.ReadFromJsonAsync<List<GroupRow>>(Json);
-        Assert.Contains(rows!, g => g.Label == "air · VND" && g.RevenueAmount == 80m);
-        Assert.Contains(rows!, g => g.Label == "sea · VND" && g.RevenueAmount == 20m);
+        Assert.Contains(rows!, g => g.Label == "AIR · VND" && g.RevenueAmount == 80m);
+        Assert.Contains(rows!, g => g.Label == "SEA · VND" && g.RevenueAmount == 20m);
     }
 
     [Fact]

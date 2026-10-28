@@ -1,5 +1,6 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Catalog;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Domain.Entities;
 using MediatR;
@@ -69,6 +70,7 @@ public sealed class UpsertTransportMovementCommandHandler
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        var mode = await TransportModeCatalog.ResolveAsync(_db, request.TransportMode, allowMultimodal: false, cancellationToken);
         var sourceSystem = request.SourceSystem.Trim();
         var externalId = request.ExternalId.Trim();
         var movementNo = request.MovementNo.Trim();
@@ -98,7 +100,7 @@ public sealed class UpsertTransportMovementCommandHandler
                 IsActive = request.IsActive,
                 MovementOn = request.MovementOn,
                 CarrierPartyId = request.CarrierPartyId,
-                TransportMode = request.TransportMode,
+                TransportMode = mode,
                 OriginLocationId = request.OriginLocationId,
                 DestinationLocationId = request.DestinationLocationId
             };
@@ -133,7 +135,7 @@ public sealed class UpsertTransportMovementCommandHandler
         existing.IsActive = request.IsActive;
         existing.MovementOn = request.MovementOn ?? existing.MovementOn;
         existing.CarrierPartyId = request.CarrierPartyId ?? existing.CarrierPartyId;
-        existing.TransportMode = request.TransportMode ?? existing.TransportMode;
+        existing.TransportMode = request.TransportMode is null ? existing.TransportMode : mode;
         existing.OriginLocationId = request.OriginLocationId ?? existing.OriginLocationId;
         existing.DestinationLocationId = request.DestinationLocationId ?? existing.DestinationLocationId;
         await LCMS.Application.OperationalReferences.Edit.OperationalOverrideGuard.ReapplyEntityOverridesAsync(

@@ -113,11 +113,11 @@ public sealed class PrefillBillFromOrdersQueryHandler : IRequestHandler<PrefillB
             
             // Recompute or extract CW:
             decimal? cw = null;
-            var modeNorm = single.TransportMode?.Trim().ToLowerInvariant();
+            var modeNorm = ShipmentModePolicy.Normalize(single.TransportMode);
             if (gross.HasValue || vol.HasValue)
             {
-                if (modeNorm == "air") cw = Math.Max(gross ?? 0, (vol ?? 0) * 167m);
-                else if (modeNorm == "sea") cw = vol ?? (gross.HasValue ? gross.Value / 1000m : 0);
+                if (modeNorm == "AIR") cw = Math.Max(gross ?? 0, (vol ?? 0) * 167m);
+                else if (ShipmentModePolicy.IsSeaFamily(modeNorm)) cw = vol ?? (gross.HasValue ? gross.Value / 1000m : 0);
                 else cw = gross;
             }
             if (!cw.HasValue)
@@ -134,7 +134,7 @@ public sealed class PrefillBillFromOrdersQueryHandler : IRequestHandler<PrefillB
                 fieldStatuses["shipperPartyId"] = "ManuallyOverridden";
             }
 
-            var transportMode = string.IsNullOrWhiteSpace(single.TransportMode) ? null : single.TransportMode;
+            var transportMode = ShipmentModePolicy.Normalize(single.TransportMode);
             if (transportMode == null)
             {
                 fieldStatuses["transportMode"] = "Missing";
@@ -276,7 +276,8 @@ public sealed class PrefillBillFromOrdersQueryHandler : IRequestHandler<PrefillB
         }
 
         var customerId = ResolveConsensus("customerPartyId", o => o.CustomerPartyId, v => v?.ToString(), "Khách hàng");
-        var transportModeConsensus = ResolveConsensusStr("transportMode", o => o.TransportMode, "Phương thức vận tải");
+        var transportModeConsensus = ShipmentModePolicy.Normalize(
+            ResolveConsensusStr("transportMode", o => o.TransportMode, "Phương thức vận tải"));
         var originCodeConsensus = ResolveConsensusStr("originCode", o => o.OriginCode, "Cảng/Điểm đi");
         var destCodeConsensus = ResolveConsensusStr("destinationCode", o => o.DestinationCode, "Cảng/Điểm đến");
         var etdConsensus = ResolveConsensusDate("etdAt", o => o.EtdAt, "Ngày khởi hành (ETD)");
@@ -340,12 +341,12 @@ public sealed class PrefillBillFromOrdersQueryHandler : IRequestHandler<PrefillB
         decimal? calculatedCw = null;
         if (hasCargo && !string.IsNullOrWhiteSpace(transportModeConsensus))
         {
-            var mode = transportModeConsensus.Trim().ToLowerInvariant();
-            if (mode == "air")
+            var mode = ShipmentModePolicy.Normalize(transportModeConsensus);
+            if (mode == "AIR")
             {
                 calculatedCw = Math.Max(totalGross, totalVol * 167m);
             }
-            else if (mode == "sea")
+            else if (ShipmentModePolicy.IsSeaFamily(mode))
             {
                 calculatedCw = totalVol;
             }

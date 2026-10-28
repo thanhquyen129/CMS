@@ -327,7 +327,11 @@ public sealed class SaveRateCardDeclarationCommandHandler : IRequestHandler<Save
 
         if (!string.IsNullOrWhiteSpace(request.TransportMode))
         {
-            card.TransportMode = request.TransportMode.Trim().ToLowerInvariant();
+            var nextMode = RateFieldPolicy.ToStoredMode(request.TransportMode);
+            if (!RateFieldPolicy.SameMode(card.TransportMode, nextMode))
+            {
+                card.TransportMode = nextMode;
+            }
         }
 
         card.SupplierPartyId = request.SupplierPartyId;

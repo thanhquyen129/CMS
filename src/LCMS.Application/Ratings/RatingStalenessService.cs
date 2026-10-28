@@ -2,6 +2,7 @@ using System.Text.Json;
 using LCMS.Application.Abstractions;
 using LCMS.Application.OperationalReferences.Edit;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using Microsoft.EntityFrameworkCore;
 
 namespace LCMS.Application.Ratings;
@@ -30,6 +31,11 @@ public interface IRatingStalenessService
 
 public sealed class RatingStalenessService : IRatingStalenessService
 {
+    private static readonly HashSet<string> PartyInputs = new(StringComparer.Ordinal)
+    {
+        "customer_party_id", "vendor_party_id", "rate_date_policy", "rate_date"
+    };
+
     private static readonly HashSet<string> SystemBases = new(StringComparer.OrdinalIgnoreCase) { "air_volumetric", "sea_wm" };
     private static readonly HashSet<string> BillCwBases = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -52,7 +58,8 @@ public sealed class RatingStalenessService : IRatingStalenessService
         CancellationToken cancellationToken)
     {
         var relevant = changedFields
-            .Where(f => OperationalFieldCatalog.Find(OperationalObjectTypes.Bill, f)?.RatingRelevant == true)
+            .Where(f => PartyInputs.Contains(f)
+                || OperationalFieldCatalog.Find(OperationalObjectTypes.Bill, f)?.RatingRelevant == true)
             .ToList();
         if (relevant.Count == 0)
         {
@@ -76,6 +83,19 @@ public sealed class RatingStalenessService : IRatingStalenessService
             var versionRules = rules.Where(r => r.RateVersionId == rating.RateVersionId).ToList();
             var (basis, usedRuleCodes) = ReadSnapshot(rating);
             var used = relevant.Where(f => UsesField(f, basis, usedRuleCodes, versionRules)).ToList();
+            var currentMode = _db.Bills.Local.FirstOrDefault(b => b.Id == billId)?.TransportMode;
+            if (used.Contains(OperationalFieldCodes.TransportMode)
+                && RateFieldPolicy.SameMode(ReadContextValue(rating, "transportMode"), currentMode))
+            {
+                used.Remove(OperationalFieldCodes.TransportMode);
+            }
+
+            if (used.Contains(OperationalFieldCodes.ServiceTypeCode)
+                && SameToken(ReadContextValue(rating, "serviceType"), _db.Bills.Local.FirstOrDefault(b => b.Id == billId)?.ServiceTypeCode))
+            {
+                used.Remove(OperationalFieldCodes.ServiceTypeCode);
+            }
+
             if (used.Count == 0)
             {
                 continue;
@@ -110,13 +130,30 @@ public sealed class RatingStalenessService : IRatingStalenessService
         }
 
         var ratings = await CurrentRatingsAsync(billIds, cancellationToken);
+        var modeOnly = relevant.All(f => f == OperationalFieldCodes.TransportMode);
+        var currentMode = TrackedMode(objectType, objectId);
         foreach (var rating in ratings)
         {
+            if (modeOnly && RateFieldPolicy.SameMode(ReadContextValue(rating, "transportMode"), currentMode))
+            {
+                continue;
+            }
+
             Mark(rating, reason, relevant);
         }
 
-        return ratings.Count;
+        return ratings.Count(r => r.StaleAt is not null);
     }
+
+    private string? TrackedMode(string objectType, Guid objectId) => objectType switch
+    {
+        OperationalObjectTypes.Bill => _db.Bills.Local.FirstOrDefault(x => x.Id == objectId)?.TransportMode,
+        OperationalObjectTypes.Order => _db.Orders.Local.FirstOrDefault(x => x.Id == objectId)?.TransportMode,
+        OperationalObjectTypes.Shipment => _db.Shipments.Local.FirstOrDefault(x => x.Id == objectId)?.TransportMode,
+        OperationalObjectTypes.Leg => _db.TransportLegs.Local.FirstOrDefault(x => x.Id == objectId)?.TransportMode,
+        OperationalObjectTypes.Movement => _db.TransportMovements.Local.FirstOrDefault(x => x.Id == objectId)?.TransportMode,
+        _ => null
+    };
 
     private async Task<List<Rating>> CurrentRatingsAsync(IReadOnlyCollection<Guid> billIds, CancellationToken cancellationToken)
     {
@@ -141,6 +178,11 @@ public sealed class RatingStalenessService : IRatingStalenessService
 
     private static bool UsesField(string field, string? basis, IReadOnlyCollection<string> ruleCodes, IReadOnlyList<PricingRule> versionRules)
     {
+        if (PartyInputs.Contains(field))
+        {
+            return true;
+        }
+
         var selected = versionRules.Where(r => ruleCodes.Contains(r.Code, StringComparer.OrdinalIgnoreCase)).ToList();
         switch (field)
         {
@@ -153,8 +195,7 @@ public sealed class RatingStalenessService : IRatingStalenessService
             case OperationalFieldCodes.ChargeableWeightKg:
                 return basis is not null && BillCwBases.Contains(basis);
             case OperationalFieldCodes.TransportMode:
-                return (basis is not null && SystemBases.Contains(basis))
-                    || versionRules.Any(r => !string.IsNullOrWhiteSpace(r.TransportMode));
+                return true;
             case OperationalFieldCodes.ServiceTypeCode:
                 return versionRules.Any(r => !string.IsNullOrWhiteSpace(r.ServiceTypeCode));
             case OperationalFieldCodes.OriginCode:
@@ -168,6 +209,42 @@ public sealed class RatingStalenessService : IRatingStalenessService
             default:
                 return false;
         }
+    }
+
+    private static bool SameToken(string? left, string? right)
+    {
+        var a = string.IsNullOrWhiteSpace(left) ? null : left.Trim();
+        var b = string.IsNullOrWhiteSpace(right) ? null : right.Trim();
+        return string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ReadContextValue(Rating rating, string name)
+    {
+        if (string.IsNullOrWhiteSpace(rating.ContextJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(rating.ContextJson);
+            if (doc.RootElement.TryGetProperty(name, out var camel) && camel.ValueKind == JsonValueKind.String)
+            {
+                return camel.GetString();
+            }
+
+            var pascal = char.ToUpperInvariant(name[0]) + name[1..];
+            if (doc.RootElement.TryGetProperty(pascal, out var upper) && upper.ValueKind == JsonValueKind.String)
+            {
+                return upper.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        return null;
     }
 
     private static (string? Basis, IReadOnlyCollection<string> Rules) ReadSnapshot(Rating rating)

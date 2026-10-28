@@ -12,6 +12,8 @@ import {
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { listRateCards } from "@/lib/rate-cards-server";
+import { listCatalog } from "@/lib/catalog";
+import { catalogModeOptions } from "@/lib/create-workspace";
 import {
   parsePage,
   parsePageSize,
@@ -38,6 +40,8 @@ export default async function RateCardsPage({
   }
 
   const sp = await searchParams;
+  const modeCatalog = await listCatalog("transport_mode");
+  const modeOptions = catalogModeOptions(modeCatalog.ok ? modeCatalog.data : []);
   const terms = await fetchTerminology();
   const billLabel = "Bill";
 
@@ -144,13 +148,9 @@ export default async function RateCardsPage({
               kind: "select",
               name: "mode",
               label: "Phương thức",
-              defaultValue: sp.mode,
+              defaultValue: (sp.mode ?? "").toUpperCase(),
               emptyLabel: "Tất cả",
-              options: [
-                { value: "air", label: "Air" },
-                { value: "sea", label: "Sea" },
-                { value: "road", label: "Road" },
-              ],
+              options: modeOptions,
             },
             {
               kind: "select",
@@ -172,10 +172,11 @@ export default async function RateCardsPage({
           </p>
           <div className="field">
             <label htmlFor="quick-mode">Phương thức</label>
-            <select id="quick-mode" name="transportMode" defaultValue="air">
-              <option value="air">Air</option>
-              <option value="sea">Sea</option>
-              <option value="road">Road</option>
+            <select id="quick-mode" name="transportMode" defaultValue={modeOptions[0]?.value ?? ""}>
+              {modeOptions.length === 0 ? <option value="">Chưa có danh mục phương thức</option> : null}
+              {modeOptions.map((mode) => (
+                <option key={mode.value} value={mode.value}>{mode.label}</option>
+              ))}
             </select>
           </div>
           <div className="field">

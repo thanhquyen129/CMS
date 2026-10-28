@@ -148,7 +148,7 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
         var serviceType = ctx.ServiceType;
         var partyType = ctx.PartyType;
         var routeCode = ctx.RouteCode;
-        var transportMode = ctx.TransportMode;
+        var transportMode = RateFieldPolicy.ToStoredMode(ctx.TransportMode);
         var originCode = ctx.OriginCode;
         var destinationCode = ctx.DestinationCode;
         var commodityCode = ctx.CommodityCode;

@@ -20,7 +20,13 @@ export type RateQuote = {
   error: string | null;
 };
 
-export function CompareRatesForm({ initial }: { initial: Record<string, string> }) {
+export function CompareRatesForm({
+  initial,
+  modes,
+}: {
+  initial: Record<string, string>;
+  modes: { value: string; label: string }[];
+}) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [quotes, setQuotes] = useState<RateQuote[] | null>(null);
@@ -66,10 +72,11 @@ export function CompareRatesForm({ initial }: { initial: Record<string, string> 
         <form className="form-grid" onSubmit={onSubmit}>
           <div className="field">
             <label htmlFor="transportMode">Phương thức</label>
-            <select id="transportMode" name="transportMode" defaultValue={initial.transportMode || "air"}>
-              <option value="air">Air</option>
-              <option value="sea">Sea</option>
-              <option value="road">Road</option>
+            <select id="transportMode" name="transportMode" defaultValue={(initial.transportMode || modes[0]?.value || "").toUpperCase()}>
+              {modes.length === 0 ? <option value="">Chưa có danh mục phương thức</option> : null}
+              {modes.map((mode) => (
+                <option key={mode.value} value={mode.value}>{mode.label}</option>
+              ))}
             </select>
           </div>
           <div className="field">

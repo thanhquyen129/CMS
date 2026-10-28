@@ -113,7 +113,7 @@ public sealed class RatingModeTests : IAsyncLifetime
         Assert.Equal("expected", revenue.FinancialMaturity);
 
         using var costs = Tenant(HttpMethod.Post, $"/api/ratings/{ratingId}/seed-expected-costs", tenantId);
-        Assert.Equal(HttpStatusCode.Conflict, (await _client.SendAsync(costs)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.SendAsync(costs)).StatusCode);
     }
 
     [Fact]

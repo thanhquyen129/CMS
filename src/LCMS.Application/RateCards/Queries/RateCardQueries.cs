@@ -178,8 +178,8 @@ public sealed class ListRateCardsQueryHandler : IRequestHandler<ListRateCardsQue
 
         if (!string.IsNullOrWhiteSpace(request.TransportMode))
         {
-            var mode = request.TransportMode.Trim().ToLowerInvariant();
-            query = query.Where(r => r.TransportMode != null && r.TransportMode.ToLower() == mode);
+            var mode = LCMS.Domain.Pricing.RateFieldPolicy.ToStoredMode(request.TransportMode);
+            query = query.Where(r => r.TransportMode != null && r.TransportMode.ToUpper() == mode);
         }
 
         if (!string.IsNullOrWhiteSpace(request.PartyType))

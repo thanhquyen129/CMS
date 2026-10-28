@@ -82,16 +82,7 @@ public static class RateFieldPolicy
             return null;
         }
 
-        return value.Trim().ToUpperInvariant() switch
-        {
-            "AIR" => "air",
-            "SEA" => "sea",
-            "ROAD" => "road",
-            "RAIL" => "rail",
-            "WATER" => "water",
-            "EXPRESS" => "express",
-            _ => value.Trim().ToLowerInvariant()
-        };
+        return value.Trim().ToUpperInvariant();
     }
 
     public static string? ToCanonicalMode(string? stored)
@@ -120,12 +111,12 @@ public static class RateFieldPolicy
             return null;
         }
 
-        if (stored == "water")
+        if (stored == "WATER")
         {
             return WaterBlocked;
         }
 
-        if (stored == "express" && !ExpressContextSupported)
+        if (stored == "EXPRESS" && !ExpressContextSupported)
         {
             return ExpressBlocked;
         }
@@ -142,7 +133,7 @@ public static class RateFieldPolicy
 
         var route = ToStoredMode(routeMode);
         var rule = ToStoredMode(ruleMode);
-        if (route is null || rule is null || route == "multimodal")
+        if (route is null || rule is null || route == "MULTIMODAL")
         {
             return null;
         }

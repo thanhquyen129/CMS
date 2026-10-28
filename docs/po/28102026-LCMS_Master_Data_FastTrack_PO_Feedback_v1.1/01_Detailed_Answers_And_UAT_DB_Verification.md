@@ -79,76 +79,71 @@ Test `SurchargeEffectiveDay_IsClosedOnTheCalendarDay`: trước 28/10 không áp
 
 ## Mục 4 — UAT và TESTLSS002
 
-### Môi trường đã chạm
+### Deploy
 
-- `GET https://cms.lsslogistics.vn/health` → `{"status":"ok","service":"cms-api"}` lúc 2026-10-28T10:11:19Z.
-- `GET /ready` → HTTP 200.
-- SSH `deploy@169.58.47.30` từ máy agent: `Permission denied (publickey,password)`.
-- Postgres trên VPS không publish ra internet. Local `127.0.0.1:5432` và `5433` đều refused.
+`main` đã ở `7f316935e308d7ac4bc5dc9635569d9eaccb6968`. Run https://github.com/thanhquyen129/CMS/actions/runs/40672732296: Deploy Priority 1 success 2026-10-28T10:41:27Z. Sau đó `/health` vẫn `ok`.
 
-Chưa chạy SELECT trên PostgreSQL UAT. Số liệu dưới đây là file SQLite local `src/LCMS.Api/lcms_dev.db`, mở `mode=ro`. Đây không phải DB của https://cms.lsslogistics.vn.
+Không thêm bước CI đọc DB. SSH vào `deploy@169.58.47.30` vẫn `Permission denied`. Postgres không mở ra internet.
 
-### File local (không phải UAT)
+### Đọc qua API GET trên UAT
 
-Tenant `ops` `01A16CF7-2EF2-7299-9730-0EC040B35EDA`.
+Chỉ `GET`. Không `POST`/`PUT`/`PATCH` sửa Bill, rating, hay danh mục. Tenant của phiên đăng nhập: `01a1007b-75da-73b5-b57d-0f580c5286c1`.
 
-Bill `TESTLSS002` `01A16CF7-30D8-731C-A50F-928FC7AA575B`:
+Danh mục active:
+
+| Kind | Mã |
+|---|---|
+| `transport_mode` | `AIR` (tên `AIR`, tạo 2026-10-05). Không có `SEA`/`ROAD`/`RAIL` trên tenant này. |
+| `service_type` | `FREIGHT`, `AIR` |
+| `document_type` | `invoice`, `debit_note` |
+
+Bill `TESTLSS002` `01a12e67-644c-7eb5-9e5c-dd218df54111`:
 
 | Trường | Giá trị |
 |---|---|
-| `transport_mode` | `air` |
-| `service_type_code` | `FREIGHT` |
-| `route_code` | `SGN-HAN` |
-| `etd_at` / `eta_at` | null |
-| Đo lường | một dòng `chargeable_weight_kg` = 120, `uom` = `kg`. Không có cột `gross_weight` trên `bills`. |
+| `transportMode` | `air` |
+| `serviceTypeCode` | `FREIGHT` |
+| `routeCode` | `SGN-HAN` |
+| `etdAt` | 2026-10-26T05:02:00Z |
+| `etaAt` | null |
+| Ngữ cảnh hàng | gross 120 kg, chargeable 120 kg. `context.serviceType` trong JSON ngữ cảnh là `AIR`, khác cột `serviceTypeCode`. |
 
-14 rating `completed`, chiều `vendor`, `stale_at` null, `stale_reason` null. Snapshot `transportMode` = `air`, `serviceType` = `FREIGHT`. Số tiền 1.440.000, 1.200.000, và một dòng 1.740.000 VND. Không có rating bán.
+Một rating `01a17724-20ef-7f69-97d5-d0295f361acd`, `completed`, chiều `vendor`, 1.740.000 VND, chargeable 120.
 
-Catalog local: `transport_mode` chỉ `air` active; `service_type` có `FREIGHT` và `AIR`; `document_type` là `invoice`, `debit_note`; `location` là 120 mã `VOL-LOC-*`.
+| | Bill đang lưu | Snapshot rating |
+|---|---|---|
+| Phương thức | cột `air` | `transportMode` = `AIR` |
+| Dịch vụ | cột `FREIGHT` | `serviceType` = `FREIGHT` |
+| Trọng lượng | 120 kg | gross 120, chargeable 120 |
+| Stale | — | `staleAt` 2026-10-27T02:49:44Z |
 
-Trên file này, `stale` không bật. Mode bill và snapshot cùng `air`. Nếu UAT vẫn hiện stale, đó là cờ đã lưu từ trước. Code vòng này không xóa cờ đó và không sửa snapshot.
+`staleReason`: `Bill TESTLSS002 thay đổi — Phương thức vận chuyển: AIR → air`.
 
-### SQL read-only để chạy trên PostgreSQL UAT
+Đó là cờ cũ do khác hoa/thường. Snapshot vẫn `AIR`, cột Bill vẫn `air`, số tiền không đổi. Code hiện so cùng mã không phân biệt hoa thường và không xóa cờ này. Không có lệnh sửa snapshot hay expected cost 1.740.000.
 
-Chạy trong container DB của `/opt/cms`, chỉ `SELECT`. Thay tên DB nếu khác `lcms`.
+### Script một chạm trên máy chủ UAT
 
-```sql
-SELECT id, code, name FROM tenants WHERE code = 'ops';
+Chạy trong `/opt/cms`, chỉ in ra, không ghi.
 
-SELECT kind, code, is_active, count(*) AS n
-FROM master_catalog_items
-WHERE tenant_id = (SELECT id FROM tenants WHERE code = 'ops')
-  AND deleted_at IS NULL
-GROUP BY kind, code, is_active
-ORDER BY kind, code;
-
-SELECT b.id, b.bill_no, b.transport_mode, b.service_type_code, b.route_code, b.etd_at, b.eta_at
-FROM bills b
-JOIN tenants t ON t.id = b.tenant_id
-WHERE t.code = 'ops' AND b.bill_no = 'TESTLSS002' AND b.deleted_at IS NULL;
-
-SELECT m.measure_code, m.quantity, m.uom
-FROM operational_measurements m
-JOIN bills b ON b.id = m.object_id
-JOIN tenants t ON t.id = b.tenant_id
-WHERE t.code = 'ops' AND b.bill_no = 'TESTLSS002';
-
-SELECT r.id, r.status, r.party_type_code, r.total_amount, r.currency_code,
-       r.chargeable_weight_kg, r.stale_at, r.stale_reason,
-       r.context_json->>'transportMode' AS snap_mode,
-       r.context_json->>'serviceType' AS snap_service
-FROM ratings r
-JOIN bills b ON b.id = r.bill_id
-JOIN tenants t ON t.id = b.tenant_id
-WHERE t.code = 'ops' AND b.bill_no = 'TESTLSS002' AND r.deleted_at IS NULL
-ORDER BY r.rated_at;
+```bash
+cd /opt/cms
+docker compose -f infra/docker-compose.host.yml --env-file infra/.env exec -T db \
+  psql -U lcms -d lcms -c "SELECT b.bill_no, b.transport_mode, b.service_type_code, b.etd_at, r.id, r.total_amount, r.stale_at, r.stale_reason, r.context_json->>'transportMode' AS snap_mode FROM bills b LEFT JOIN ratings r ON r.bill_id = b.id AND r.deleted_at IS NULL WHERE b.bill_no = 'TESTLSS002' AND b.deleted_at IS NULL;"
 ```
 
-Không có `UPDATE` trong script.
+Đối chiếu danh mục:
+
+```bash
+docker compose -f infra/docker-compose.host.yml --env-file infra/.env exec -T db \
+  psql -U lcms -d lcms -c "SELECT kind, code, is_active FROM master_catalog_items WHERE tenant_id = '01a1007b-75da-73b5-b57d-0f580c5286c1' AND deleted_at IS NULL AND kind IN ('transport_mode','service_type','document_type') ORDER BY kind, code;"
+```
+
+Không có `UPDATE` trong hai lệnh.
 
 ## Mục 5 — Test
 
 - Release build: PASS.
-- `dotnet test`: 586 PASS, 2 FAIL (hai bài Postgres `5433` ở trên).
+- `dotnet test`: 586 PASS, 2 FAIL. Hai bài `RateScopeMigrationPostgresTests` nối `127.0.0.1:5433`. Máy không có Docker và không có binary Postgres nên không bật được cổng đó.
 - vitest: 47 PASS.
-- `next build`: PASS sau khi sửa chỗ `transportMode` có thể null trong `SurchargeForm.tsx`.
+- `next build`: PASS.
+- Trình duyệt local: bốn màn ở file `00` mở được, log dev không có lỗi runtime. Gửi mã `Invoice` trên form danh mục giữ `invoice` chữ thường.

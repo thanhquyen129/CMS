@@ -11,7 +11,7 @@ Ngày bàn giao DEV remaster: 2026-11-02. UAT của PO vẫn **tạm hoãn**. C�
 | Bidirectional ≠ AppliesAnyRoute | PASS — `PricingRule.IsBidirectional` + `RatingEngine.DirectionMatches` |
 | TC-22 / TC-23 / TC-24 | PASS — `ConsolidatedUat20261102ApiTests` |
 | RateScopeMigrationPostgresTests | **PASS local** Failed:0 Passed:2 Skipped:0 trên Postgres 16.4 `:5433` + cùng cấu hình CI |
-| Excel 2 ma trận (đủ sheet) | Đã điền DEV PASS / evidence; PO UAT = NOT RUN |
+| Excel 2 ma trận (đủ sheet) | TV-01..TV-10 khớp BA; `03_TruongDuLieu` mapping DB/DTO/file; 37+32 evidence riêng từng dòng; PO UAT = NOT RUN |
 | Mục 8 BA trong 4 file `.md` | Audit-grade: root cause, API±, SQL, lineage, TV/BR |
 
 ## Release
@@ -20,10 +20,13 @@ Ngày bàn giao DEV remaster: 2026-11-02. UAT của PO vẫn **tạm hoãn**. C�
 |---|---|
 | Nhánh | `main` (chưa push — push sẽ deploy production) |
 | Commit gốc gói | `e6646debd8ba1bc25f1dcb92a15d8bc7cbbf1d25` |
-| Commit remaster | `a6c87691e108326170c98ccb2bdcf87bc62c9999` (local `main`, ahead of origin — **chưa push**, tránh deploy Production trước PO accept) |
+| Commit remaster | `a6c87691e108326170c98ccb2bdcf87bc62c9999` |
+| Commit final polish | *(điền SHA sau commit — local `main`, ahead of origin — **chưa push**)* |
 | CI | `.github/workflows/ci.yml`: `dotnet test` + service `postgres:16-alpine` + `LCMS_TEST_POSTGRES` |
+| `dotnet test Cms.sln -c Release` + `LCMS_TEST_POSTGRES` `:5433` | **Failed: 0, Passed: 598, Skipped: 0** |
 | `dotnet test` filter ConsolidatedUat20261102 | **Failed: 0, Passed: 10, Skipped: 0** |
-| `npm test` / `tsc` | Giữ baseline web suite |
+| `npm test` (apps/web) | **Test Files 7 passed · Tests 47 passed** |
+| `npx tsc --noEmit` (apps/web) | **exit 0** |
 
 **Không deploy Production** cho đến khi PO chấp nhận. Push `main` kích hoạt Actions deploy `cms.lsslogistics.vn`.
 

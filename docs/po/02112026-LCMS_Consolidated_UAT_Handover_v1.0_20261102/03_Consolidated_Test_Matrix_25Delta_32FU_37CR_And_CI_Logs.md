@@ -64,21 +64,32 @@ Sheet `06_HoiQuy`: `DEV Regression=PASS` + chú thích evidence cho cả 10 dòn
 | FT-07 | PASS — 37 TC sheet |
 | FT-08 | No Change — không gộp master trùng |
 
-## Log thực thi
+## Log thực thi (final polish — sau remaster)
 
-### ConsolidatedUat20261102 (2026-11-02 remaster)
+### Full suite `Cms.sln` Release + Postgres `:5433`
+
+```
+LCMS_TEST_POSTGRES="Host=127.0.0.1;Port=5433;Database=postgres;Username=lcms;Password=lcms"
+dotnet test Cms.sln -c Release
+Passed!  - Failed: 0, Passed: 598, Skipped: 0, Total: 598, Duration: 2 m 39 s - LCMS.Api.Tests.dll (net8.0)
+exit 0
+```
+
+Gồm `ConsolidatedUat20261102*` (10) + `RateScopeMigrationPostgresTests` (2, Skipped: 0) + toàn bộ suite API. Helper Sprint10 dùng `ExposureAnchor` (notes + role) khớp basis exposure sau remaster.
+
+### ConsolidatedUat20261102
 
 ```
 dotnet test tests/LCMS.Api.Tests/LCMS.Api.Tests.csproj -c Release --filter "FullyQualifiedName~ConsolidatedUat20261102"
 Passed!  - Failed: 0, Passed: 10, Skipped: 0, Total: 10
 ```
 
-### RateScopeMigrationPostgresTests — local PASS (Skipped: 0)
+### RateScopeMigrationPostgresTests
 
 ```
 LCMS_TEST_POSTGRES=Host=127.0.0.1;Port=5433;Database=postgres;Username=lcms;Password=lcms
 dotnet test ... --filter FullyQualifiedName~RateScopeMigrationPostgresTests
-Passed!  - Failed: 0, Passed: 2, Skipped: 0, Total: 2, Duration: 19 s
+Passed!  - Failed: 0, Passed: 2, Skipped: 0, Total: 2
 ```
 
 Postgres portable 16.4 local `:5433` (trust, user `lcms`). DB tạm `lcms_rate_ac30` / `lcms_rate_baseline_audit` — không đụng DB smoke `lcms`.
@@ -96,11 +107,16 @@ ALTER TABLE pricing_rules ADD COLUMN is_bidirectional boolean NOT NULL DEFAULT f
 ```
 File: `src/LCMS.Infrastructure/Persistence/Migrations/20261102120000_PricingRuleIsBidirectional.cs`
 
-### Web
+### Web (sau remaster / CreateExposureForm)
 
 ```
-cd apps/web && npm test   # baseline 47 PASS (trước remaster)
-npx tsc --noEmit          # chạy trong npm run build / CI Web production build
+cd apps/web && npm test
+ Test Files  7 passed (7)
+      Tests  47 passed (47)
+ Duration  14.83s
+
+npx tsc --noEmit
+exit 0
 ```
 
 ## CreditBlock

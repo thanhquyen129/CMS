@@ -163,16 +163,16 @@ Compare service (`CompareRatesQuery`), partner picker, audit confirm/actualize, 
 
 | ID | Kết quả DEV |
 |---|---|
-| TV-01 | PASS — master mode API/DB + `catalogModeOptions` |
-| TV-02 | PASS — service_type master; AIR lọc giao dịch mới |
-| TV-03 | PASS — FREIGHT lineage TDNT_SGN_HAN v2 QT0001 CW120×12000 |
-| TV-04 | PASS — DONGGOI FIXED 300.000 |
-| TV-05 | PASS — missing_link, không bịa mã |
-| TV-06 | PASS — WeightBand [min,max) |
-| TV-07 | PASS — Directed / Bidirectional / AppliesAnyRoute tách bạch |
-| TV-08 | PASS — Exposure notes+role; CreditBlock PASS |
-| TV-09 | PASS — Collection ≠ P&L (Tc22/23) |
-| TV-10 | PASS — Split conservation Tc24; Postgres CI `LCMS_TEST_POSTGRES` |
+| TV-01 | PASS — Xác minh bảng master_catalog_items (kind='transport_mode', is_active=true); API và catalogModeOptions chỉ trả mã active theo tenant (AIR). |
+| TV-02 | PASS — Toàn bộ form Order, Bill, Shipment, Leg, Movement, Rate Card, Surcharge (/rate-cards/surcharges/new) đều đọc chung catalogModeOptions từ master active; không tự seed ngầm hay hardcode SEA/ROAD/RAIL. |
+| TV-03 | PASS — Đã kiểm kê service_type: chặn chọn/gửi mã AIR cho giao dịch mới trên UI & UpdateBillContextCommand; giữ nguyên bản ghi lịch sử có nhãn di sản, không DELETE hay UPDATE hàng loạt sang FREIGHT. |
+| TV-04 | PASS — Xác minh GET/PUT Bill cùng ID: Bill.ServiceTypeCode (FREIGHT) tách biệt hoàn toàn với TransportMode (AIR) và BillType trên Edit Form, Overview (revenues/page.tsx) và RatingReadiness. |
+| TV-05 | PASS — RateFieldPolicy.SameMode chuẩn hóa canonical trước khi diff: AIR vs air không sinh stale mới; đổi mode/service/weight thật sinh đúng lý do stale; bảo toàn cờ stale lịch sử trên TESTLSS002. |
+| TV-06 | PASS — CostQueries join chính xác từng Cost.SourceId -> rating_details.id (source_type='base_rate' vs 'surcharge') + fallback Rating.ContextJson; không join bừa sang detail khác cùng Rating. |
+| TV-07 | PASS — Đã sửa CostQueries & costs/[id]/page.tsx: phân loại nguồn theo rating_detail.source_type (FREIGHT -> Base Rate TDNT_SGN_HAN v2 QT0001 CW120x12000; DONGGOI -> Surcharge v2); thiếu liên kết thực sự trả SourceOrigin='missing_link'. |
+| TV-08 | PASS — Xác minh snapshot DONGGOI v2 có calculation_mode='fixed' (300.000 ₫/khoản); UI hiển thị rõ Phí cố định 300.000 ₫/khoản, đơn giá 2.500 ₫/kg gắn nhãn 'Đơn giá quy đổi tham khảo', đổi CW không đổi tiền. |
+| TV-09 | PASS — Bảo toàn tuyệt đối 2 dòng Expected Cost của TESTLSS002 (FREIGHT 1.440.000 ₫ + DONGGOI 300.000 ₫ = Net 1.740.000 ₫, VAT 8% = 139.200 ₫, Gross = 1.879.200 ₫); không rerate hay nhân đôi. |
+| TV-10 | PASS — Commit trên local main (chưa push/deploy Production trước khi PO duyệt); đầy đủ test API dương & âm (ConsolidatedUat20261102Tests + ApiTests + PostgresTests PASS 100%); cột PO UAT giữ nguyên NOT RUN. |
 
 ## Trả lời BR27-01 → BR27-24
 

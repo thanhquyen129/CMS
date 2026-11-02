@@ -356,13 +356,16 @@ public sealed class Sprint10FullFinancialCloseTests : IAsyncLifetime
 
     private async Task<Guid> CreatePayableExposureAsync(Guid tenantId, Guid billId, decimal amount)
     {
+        var exposurePartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false);
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/payable-exposures")
         {
             Content = JsonContent.Create(new
             {
                 billId,
                 amount,
-                currencyCode = "VND"
+                currencyCode = "VND",
+                counterpartyId = exposurePartyId,
+                notes = ExposureAnchor.Note
             })
         };
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());

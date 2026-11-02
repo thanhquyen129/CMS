@@ -18,7 +18,7 @@ public sealed record SurchargeMatchContext(
     string? OriginCode,
     string? DestinationCode,
     string? CommodityCode,
-    bool DangerousGoods,
+    bool? DangerousGoods,
     Guid? VendorPartyId,
     Guid? CustomerPartyId,
     string? CustomerGroupCode,
@@ -26,7 +26,12 @@ public sealed record SurchargeMatchContext(
     decimal? GrossWeight,
     decimal Quantity,
     decimal BaseChargeAmount,
-    IReadOnlyList<RatingContainerQty> Containers);
+    IReadOnlyList<RatingContainerQty> Containers,
+    Guid? BillId = null,
+    Guid? ShipmentId = null,
+    Guid? TransportLegId = null,
+    bool? DeliveryOutsideHours = null,
+    IReadOnlyList<ServiceSelectionSnapshot>? Selections = null);
 
 public sealed record SurchargeCandidate(
     Guid SurchargeId,
@@ -50,30 +55,78 @@ public sealed record SurchargeCandidate(
     IReadOnlyList<SurchargeScope> Scopes,
     IReadOnlyList<SurchargeBreak> Breaks,
     decimal? VatRate = null,
-    Guid? EconomicChargeTypeId = null);
+    Guid? EconomicChargeTypeId = null,
+    string ActivationPolicy = SurchargeActivationPolicies.UnclassifiedLegacy,
+    string? ActivationConfigJson = null,
+    string? ApprovalRef = null);
 
 public sealed record SurchargeCharge(
     SurchargeCandidate Rule,
     decimal AmountOriginal,
-    string Formula);
+    string Formula,
+    string ReasonCode,
+    string ReasonMessageVi,
+    string? ActivationEvidenceRef,
+    decimal AppliedQuantity,
+    string ApplicationBucket);
+
+public sealed record SurchargeEvaluationItem(
+    SurchargeCandidate Rule,
+    string ApplicationBucket,
+    string ReasonCode,
+    string ReasonMessageVi,
+    string? ActivationEvidenceRef,
+    decimal? AmountOriginal,
+    string? Formula,
+    decimal? AppliedQuantity);
+
+public sealed record SurchargeEvaluationResult(
+    IReadOnlyList<SurchargeCharge> Applied,
+    IReadOnlyList<SurchargeEvaluationItem> EligibleNotActivated,
+    IReadOnlyList<SurchargeEvaluationItem> Excluded,
+    IReadOnlyList<string> UnpricedServices,
+    IReadOnlyList<string> UnclassifiedWarnings);
 
 public sealed record SurchargeApplyResult(
     IReadOnlyList<RatingDetail> Details,
     decimal CardCurrencyTotal,
-    IReadOnlyList<string> Trace);
+    IReadOnlyList<string> Trace,
+    SurchargeEvaluationResult Evaluation);
 
 public static class SurchargeRating
 {
     public const string AmbiguousCode = "AMBIGUOUS_SURCHARGE";
 
-    public static IReadOnlyList<SurchargeCharge> Select(
+    public static SurchargeEvaluationResult Evaluate(
         IReadOnlyList<SurchargeCandidate> candidates,
         SurchargeMatchContext ctx)
     {
-        var chosen = new List<SurchargeCharge>();
+        var applied = new List<SurchargeCharge>();
+        var eligible = new List<SurchargeEvaluationItem>();
+        var excluded = new List<SurchargeEvaluationItem>();
+        var unclassified = new List<string>();
+        var selections = ctx.Selections ?? [];
+
         foreach (var group in candidates.GroupBy(c => c.Code, StringComparer.OrdinalIgnoreCase))
         {
-            var effective = group.Where(c => IsEffective(c, ctx.AsOf)).ToList();
+            var step1 = group.ToList();
+            var directionOk = step1
+                .Where(c => string.Equals(c.Direction, SurchargeDirections.Both, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(c.Direction, ctx.Direction, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            foreach (var miss in step1.Except(directionOk))
+            {
+                excluded.Add(Item(miss, "excluded", SurchargeReasonCodes.ExcludedWrongDirection,
+                    "Phụ phí không khớp chiều mua/bán đang tính."));
+            }
+
+            var effective = directionOk.Where(c => IsEffective(c, ctx.AsOf)).ToList();
+            foreach (var miss in directionOk.Except(effective))
+            {
+                excluded.Add(Item(miss, "excluded", SurchargeReasonCodes.ExcludedInactive,
+                    "Phiên bản phụ phí ngoài thời gian hiệu lực."));
+            }
+
             if (effective.Count == 0)
             {
                 continue;
@@ -91,16 +144,21 @@ public static class SurchargeRating
                     $"{AmbiguousCode}: phụ phí {group.Key} có nhiều phiên bản cùng ngày hiệu lực.");
             }
 
-            var rules = effective
-                .Where(c => c.VersionId == versionIds[0] && Matches(c, ctx))
-                .ToList();
-            if (rules.Count == 0)
+            var versionRules = effective.Where(c => c.VersionId == versionIds[0]).ToList();
+            var matched = versionRules.Where(c => Matches(c, ctx)).ToList();
+            foreach (var miss in versionRules.Except(matched))
+            {
+                excluded.Add(Item(miss, "excluded", SurchargeReasonCodes.ExcludedScopeMismatch,
+                    "Không khớp phạm vi/điều kiện hợp lệ (tuyến, phương thức, đối tác hoặc trọng lượng)."));
+            }
+
+            if (matched.Count == 0)
             {
                 continue;
             }
 
-            var bestScore = rules.Max(Specificity);
-            var best = rules.Where(r => Specificity(r) == bestScore).ToList();
+            var bestScore = matched.Max(Specificity);
+            var best = matched.Where(r => Specificity(r) == bestScore).ToList();
             var bestPriority = best.Max(r => r.Priority);
             best = best.Where(r => r.Priority == bestPriority).ToList();
             if (best.Count > 1)
@@ -109,17 +167,78 @@ public static class SurchargeRating
                     $"{AmbiguousCode}: phụ phí {group.Key} khớp nhiều quy tắc cùng mức cụ thể và cùng ưu tiên.");
             }
 
-            var amount = Compute(best[0], ctx);
-            if (amount is null)
+            var winner = best[0];
+            foreach (var dup in matched.Where(m => m.RuleId != winner.RuleId))
             {
+                excluded.Add(Item(dup, "excluded", SurchargeReasonCodes.DuplicateSkipped,
+                    "Bỏ qua vì đã có quy tắc ưu tiên hơn trong cùng mã phụ phí."));
+            }
+
+            var config = SurchargeActivationConfigParser.Parse(winner.ActivationConfigJson);
+            var activation = SurchargeActivationResolver.Resolve(
+                winner.ActivationPolicy,
+                winner.ApprovalRef,
+                config,
+                ctx,
+                selections);
+
+            if (string.Equals(activation.ReasonCode, SurchargeReasonCodes.ExcludedUnclassified, StringComparison.OrdinalIgnoreCase))
+            {
+                unclassified.Add($"{winner.Code} v{winner.VersionNo}");
+            }
+
+            if (!activation.Activated)
+            {
+                var bucket = activation.Bucket ?? "eligible_not_activated";
+                var target = string.Equals(bucket, "excluded", StringComparison.OrdinalIgnoreCase) ? excluded : eligible;
+                target.Add(Item(
+                    winner,
+                    bucket,
+                    activation.ReasonCode,
+                    activation.ReasonMessageVi,
+                    activation.EvidenceRef));
                 continue;
             }
 
-            chosen.Add(amount);
+            var qty = activation.Quantity ?? 1m;
+            var amount = Compute(winner, ctx, qty);
+            if (amount is null)
+            {
+                eligible.Add(Item(
+                    winner,
+                    "eligible_not_activated",
+                    SurchargeReasonCodes.CalculationInvalid,
+                    "Không tính được số tiền phụ phí (thiếu cơ sở tính hoặc số lượng).",
+                    activation.EvidenceRef));
+                continue;
+            }
+
+            applied.Add(new SurchargeCharge(
+                winner,
+                amount.AmountOriginal,
+                amount.Formula,
+                SurchargeReasonCodes.Applied,
+                activation.ReasonMessageVi,
+                activation.EvidenceRef,
+                qty,
+                "applied"));
         }
 
-        return chosen;
+        var unpriced = SurchargeActivationResolver.UnpricedSelectedServices(
+            ctx.Direction,
+            selections,
+            candidates.Where(c =>
+                string.Equals(c.Direction, SurchargeDirections.Both, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(c.Direction, ctx.Direction, StringComparison.OrdinalIgnoreCase)).ToList());
+
+        return new SurchargeEvaluationResult(applied, eligible, excluded, unpriced, unclassified);
     }
+
+    /// <summary>Backward-compatible helper used by unit tests — returns only applied charges.</summary>
+    public static IReadOnlyList<SurchargeCharge> Select(
+        IReadOnlyList<SurchargeCandidate> candidates,
+        SurchargeMatchContext ctx) =>
+        Evaluate(candidates, ctx).Applied;
 
     public static bool IsEffective(SurchargeCandidate candidate, DateTimeOffset asOf)
     {
@@ -171,14 +290,15 @@ public static class SurchargeRating
         return score + candidate.Scopes.Max(ScopeScore);
     }
 
-    public static SurchargeCharge? Compute(SurchargeCandidate rule, SurchargeMatchContext ctx)
+    public static SurchargeCharge? Compute(SurchargeCandidate rule, SurchargeMatchContext ctx, decimal activationQty = 1m)
     {
         var mode = rule.CalculationMode;
+        var basis = rule.Basis?.Trim().ToLowerInvariant();
         decimal raw;
         string formula;
         if (string.Equals(mode, SurchargeCalcModes.UnitRate, StringComparison.OrdinalIgnoreCase))
         {
-            var qty = BasisQuantity(rule, ctx);
+            var qty = BasisQuantity(rule, ctx, activationQty);
             raw = rule.RateAmountPercent * qty;
             formula = $"{qty} × {rule.RateAmountPercent}";
         }
@@ -200,7 +320,7 @@ public static class SurchargeRating
         }
         else if (string.Equals(mode, SurchargeCalcModes.WeightBreak, StringComparison.OrdinalIgnoreCase))
         {
-            var qty = BasisQuantity(rule, ctx);
+            var qty = BasisQuantity(rule, ctx, activationQty);
             var band = rule.Breaks
                 .OrderBy(b => b.SequenceNo)
                 .FirstOrDefault(b => qty >= b.MinQuantity && (b.MaxQuantity is null || qty <= b.MaxQuantity));
@@ -215,15 +335,34 @@ public static class SurchargeRating
         }
         else if (string.Equals(mode, SurchargeCalcModes.Composite, StringComparison.OrdinalIgnoreCase))
         {
-            var qty = string.IsNullOrWhiteSpace(rule.Basis) ? 1m : BasisQuantity(rule, ctx);
+            var qty = string.IsNullOrWhiteSpace(rule.Basis) ? 1m : BasisQuantity(rule, ctx, activationQty);
             raw = rule.RateAmountPercent * qty;
             raw = Clamp(raw, rule.MinAmount, rule.MaxAmount);
             formula = $"composite {qty} × {rule.RateAmountPercent}";
         }
         else
         {
-            raw = rule.RateAmountPercent;
-            formula = $"fixed {rule.RateAmountPercent}";
+            // FIXED_RATE — basis decides whether amount is once or per unit.
+            if (basis is SurchargeCalcBases.PerUnit or SurchargeCalcBases.PerPackage or "unit" or "package")
+            {
+                if (activationQty <= 0)
+                {
+                    return null;
+                }
+
+                raw = rule.RateAmountPercent * activationQty;
+                formula = $"fixed {rule.RateAmountPercent} × {activationQty}";
+            }
+            else if (basis is SurchargeCalcBases.PerShipment or SurchargeCalcBases.PerLeg)
+            {
+                raw = rule.RateAmountPercent;
+                formula = $"fixed {rule.RateAmountPercent} ({basis})";
+            }
+            else
+            {
+                raw = rule.RateAmountPercent;
+                formula = $"fixed {rule.RateAmountPercent}";
+            }
         }
 
         if (!string.Equals(mode, SurchargeCalcModes.Composite, StringComparison.OrdinalIgnoreCase))
@@ -232,8 +371,24 @@ public static class SurchargeRating
         }
 
         raw = decimal.Round(raw, 4, MidpointRounding.AwayFromZero);
-        return new SurchargeCharge(rule, raw, $"v{rule.VersionNo} · {formula}");
+        return new SurchargeCharge(
+            rule,
+            raw,
+            $"v{rule.VersionNo} · {formula}",
+            SurchargeReasonCodes.Applied,
+            "Đã áp dụng",
+            null,
+            activationQty,
+            "applied");
     }
+
+    private static SurchargeEvaluationItem Item(
+        SurchargeCandidate rule,
+        string bucket,
+        string reasonCode,
+        string reasonVi,
+        string? evidence = null) =>
+        new(rule, bucket, reasonCode, reasonVi, evidence, null, null, null);
 
     private static bool ConditionMatches(SurchargeCondition condition, SurchargeMatchContext ctx)
     {
@@ -266,10 +421,21 @@ public static class SurchargeRating
             "origin" => ctx.OriginCode,
             "destination" => ctx.DestinationCode,
             "commodity" => ctx.CommodityCode,
-            "dangerous_goods" => ctx.DangerousGoods ? "true" : "false",
+            "dangerous_goods" => ctx.DangerousGoods switch
+            {
+                true => "true",
+                false => "false",
+                null => null
+            },
             "container_type" => ctx.Containers.FirstOrDefault(c => c.Quantity > 0)?.ContainerType,
             _ => null
         };
+
+        if (dimension == "dangerous_goods" && actual is null)
+        {
+            // Eligibility does not invent DG=false; treat unknown as not matching a concrete filter.
+            return false;
+        }
 
         if (op == "in")
         {
@@ -338,10 +504,10 @@ public static class SurchargeRating
         return score;
     }
 
-    private static decimal BasisQuantity(SurchargeCandidate rule, SurchargeMatchContext ctx)
+    private static decimal BasisQuantity(SurchargeCandidate rule, SurchargeMatchContext ctx, decimal activationQty)
     {
         var basis = rule.Basis?.Trim().ToLowerInvariant();
-        if (basis is "gross_weight" or "weight")
+        if (basis is "gross_weight" or "weight" or SurchargeCalcBases.PerKg)
         {
             if (ctx.GrossWeight is null || ctx.GrossWeight <= 0)
             {
@@ -351,9 +517,14 @@ public static class SurchargeRating
             return ctx.GrossWeight.Value;
         }
 
-        if (basis is "quantity" or "qty" or "teu")
+        if (basis is "quantity" or "qty" or "teu" or SurchargeCalcBases.PerUnit or SurchargeCalcBases.PerPackage)
         {
-            return ctx.Quantity;
+            return activationQty > 0 ? activationQty : ctx.Quantity;
+        }
+
+        if (basis is SurchargeCalcBases.PerBill or SurchargeCalcBases.PerShipment or SurchargeCalcBases.PerLeg)
+        {
+            return 1m;
         }
 
         return ctx.ChargeableQuantity;
@@ -413,7 +584,9 @@ public static class SurchargeRatingApplier
         string cardCurrency,
         string? reportingCurrency,
         IReadOnlyList<RatingContainerQty>? containers,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Guid? shipmentId = null,
+        Guid? transportLegId = null)
     {
         var versions = (await db.SurchargeVersions.AsNoTracking()
             .Where(v => v.PublishStatus == SurchargeVersionStatuses.Published)
@@ -423,7 +596,8 @@ public static class SurchargeRatingApplier
             .ToList();
         if (versions.Count == 0)
         {
-            return new SurchargeApplyResult([], 0m, []);
+            var empty = new SurchargeEvaluationResult([], [], [], [], []);
+            return new SurchargeApplyResult([], 0m, [], empty);
         }
 
         var surchargeIds = versions.Select(v => v.SurchargeId).Distinct().ToList();
@@ -434,7 +608,8 @@ public static class SurchargeRatingApplier
         versions = versions.Where(v => activeIds.Contains(v.SurchargeId)).ToList();
         if (versions.Count == 0)
         {
-            return new SurchargeApplyResult([], 0m, []);
+            var empty = new SurchargeEvaluationResult([], [], [], [], []);
+            return new SurchargeApplyResult([], 0m, [], empty);
         }
 
         var versionIds = versions.Select(v => v.Id).ToList();
@@ -461,6 +636,14 @@ public static class SurchargeRatingApplier
                 .Select(p => p.GroupCode)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        var resolvedShipmentId = shipmentId
+            ?? await db.BillShipmentLinks.AsNoTracking()
+                .Where(l => l.BillId == bill.Id)
+                .Select(l => (Guid?)l.ShipmentId)
+                .FirstOrDefaultAsync(cancellationToken);
+        var selections = await LoadSelectionsAsync(db, bill.Id, resolvedShipmentId, transportLegId, cancellationToken);
+
         var direction = string.Equals(card?.PartyType, "customer", StringComparison.OrdinalIgnoreCase)
             ? SurchargeDirections.Sell
             : SurchargeDirections.Buy;
@@ -492,7 +675,10 @@ public static class SurchargeRatingApplier
                 scopes.Where(s => s.SurchargeRuleId == rule.Id).ToList(),
                 breaks.Where(b => b.SurchargeRuleId == rule.Id).ToList(),
                 surchargeVersion.VatRate,
-                surchargeVersion.EconomicChargeTypeId);
+                surchargeVersion.EconomicChargeTypeId,
+                SurchargeActivationValidator.Normalize(surchargeVersion.ActivationPolicy),
+                surchargeVersion.ActivationConfigJson,
+                surchargeVersion.ApprovalRef);
         }).ToList();
 
         var ctx = new SurchargeMatchContext(
@@ -514,15 +700,21 @@ public static class SurchargeRatingApplier
             grossWeight,
             quantity,
             baseChargeAmount,
-            containers ?? []);
+            containers ?? [],
+            bill.Id,
+            resolvedShipmentId,
+            transportLegId,
+            null,
+            selections);
 
-        var charges = SurchargeRating.Select(candidates, ctx);
+        var evaluation = SurchargeRating.Evaluate(candidates, ctx);
         var nature = direction == SurchargeDirections.Sell ? "revenue" : "cost";
         var reporting = string.IsNullOrWhiteSpace(reportingCurrency) ? cardCurrency : reportingCurrency.Trim().ToUpperInvariant();
         var details = new List<RatingDetail>();
         decimal cardTotal = 0m;
         var trace = new List<string>();
-        foreach (var charge in charges)
+
+        foreach (var charge in evaluation.Applied)
         {
             var original = charge.AmountOriginal;
             var originalCcy = charge.Rule.CurrencyCode.ToUpperInvariant();
@@ -536,36 +728,104 @@ public static class SurchargeRatingApplier
             Guid? suggested = nature == "revenue"
                 ? scope?.CustomerPartyId ?? card?.CustomerPartyId ?? bill.CustomerPartyId
                 : scope?.VendorPartyId ?? card?.SupplierPartyId;
-            details.Add(new RatingDetail
-            {
-                TenantId = tenantId,
-                RuleCode = charge.Rule.Code,
-                ComponentCode = charge.Rule.Code,
-                ComponentName = charge.Rule.Name,
-                FinancialNature = nature,
-                FinancialMaturity = "expected",
-                Amount = cardAmount,
-                CurrencyCode = cardCurrency,
-                FormulaText = charge.Formula,
-                SourceType = RatingSourceTypes.Surcharge,
-                SourceId = charge.Rule.SurchargeId,
-                SourceVersionId = charge.Rule.VersionId,
-                AmountOriginal = original,
-                OriginalCurrency = originalCcy,
-                ReportingAmount = reportingAmount,
-                LineFxRate = reportingFx.Rate,
-                LineFxAsOf = reportingFx.AsOf,
-                LineFxSource = reportingFx.Source,
-                VatRate = charge.Rule.VatRate,
-                PartnerSuggestedId = suggested,
-                EconomicChargeTypeId = charge.Rule.EconomicChargeTypeId
-            });
+            details.Add(BuildDetail(
+                tenantId,
+                charge.Rule,
+                nature,
+                cardAmount,
+                cardCurrency,
+                charge.Formula,
+                original,
+                originalCcy,
+                reportingAmount,
+                reportingFx,
+                suggested,
+                "applied",
+                charge.ReasonCode,
+                charge.ReasonMessageVi,
+                charge.ActivationEvidenceRef,
+                charge.AppliedQuantity));
         }
 
-        return new SurchargeApplyResult(details, cardTotal, trace);
+        return new SurchargeApplyResult(details, cardTotal, trace, evaluation);
     }
 
-    private static async Task<bool> IsDangerousAsync(
+    private static RatingDetail BuildDetail(
+        Guid tenantId,
+        SurchargeCandidate rule,
+        string nature,
+        decimal cardAmount,
+        string cardCurrency,
+        string? formula,
+        decimal? original,
+        string? originalCcy,
+        decimal? reportingAmount,
+        FxStamp reportingFx,
+        Guid? suggested,
+        string bucket,
+        string reasonCode,
+        string reasonVi,
+        string? evidence,
+        decimal? qty) =>
+        new()
+        {
+            TenantId = tenantId,
+            RuleCode = rule.Code,
+            ComponentCode = rule.Code,
+            ComponentName = rule.Name,
+            FinancialNature = nature,
+            FinancialMaturity = "expected",
+            Amount = cardAmount,
+            CurrencyCode = cardCurrency,
+            FormulaText = formula,
+            SourceType = RatingSourceTypes.Surcharge,
+            SourceId = rule.SurchargeId,
+            SourceVersionId = rule.VersionId,
+            SourceRuleId = rule.RuleId,
+            AmountOriginal = original,
+            OriginalCurrency = originalCcy,
+            ReportingAmount = reportingAmount,
+            LineFxRate = reportingFx.Rate,
+            LineFxAsOf = reportingFx.AsOf,
+            LineFxSource = reportingFx.Source,
+            VatRate = rule.VatRate,
+            PartnerSuggestedId = suggested,
+            EconomicChargeTypeId = rule.EconomicChargeTypeId,
+            ApplicationBucket = bucket,
+            ActivationPolicySnapshot = rule.ActivationPolicy,
+            ActivationEvidenceRef = evidence,
+            ReasonCode = reasonCode,
+            ReasonMessageVi = reasonVi,
+            CalculationBasis = rule.Basis,
+            AppliedQuantity = qty
+        };
+
+    private static async Task<IReadOnlyList<ServiceSelectionSnapshot>> LoadSelectionsAsync(
+        ILcmsDbContext db,
+        Guid billId,
+        Guid? shipmentId,
+        Guid? legId,
+        CancellationToken cancellationToken)
+    {
+        var query = db.ServiceSelections.AsNoTracking()
+            .Where(s =>
+                (s.ContextType == ServiceSelectionContexts.Bill && s.ContextId == billId)
+                || (shipmentId != null && s.ContextType == ServiceSelectionContexts.Shipment && s.ContextId == shipmentId)
+                || (legId != null && s.ContextType == ServiceSelectionContexts.Leg && s.ContextId == legId));
+        var rows = await query.ToListAsync(cancellationToken);
+        return rows.Select(s => new ServiceSelectionSnapshot(
+            s.ContextType,
+            s.ContextId,
+            s.ServiceCode,
+            s.Scope,
+            s.Quantity,
+            s.IsSelected,
+            s.Revision,
+            s.ConfirmedByUserId,
+            s.ConfirmedAt)).ToList();
+    }
+
+    private static async Task<bool?> IsDangerousAsync(
         ILcmsDbContext db,
         Bill bill,
         string? commodityCode,
@@ -573,21 +833,23 @@ public static class SurchargeRatingApplier
     {
         if (bill.CommodityTypeId is Guid commodityId)
         {
-            return await db.CommodityTypes.AsNoTracking()
+            var row = await db.CommodityTypes.AsNoTracking()
                 .Where(c => c.Id == commodityId)
-                .Select(c => c.IsDangerousGoods)
+                .Select(c => (bool?)c.IsDangerousGoods)
                 .FirstOrDefaultAsync(cancellationToken);
+            return row;
         }
 
         if (string.IsNullOrWhiteSpace(commodityCode))
         {
-            return false;
+            return null;
         }
 
-        return await db.CommodityTypes.AsNoTracking()
-            .AnyAsync(
-                c => c.Code == commodityCode && c.IsDangerousGoods,
-                cancellationToken);
+        var byCode = await db.CommodityTypes.AsNoTracking()
+            .Where(c => c.Code == commodityCode)
+            .Select(c => (bool?)c.IsDangerousGoods)
+            .FirstOrDefaultAsync(cancellationToken);
+        return byCode;
     }
 
     private static async Task<(decimal Amount, FxStamp Stamp)> ConvertAsync(

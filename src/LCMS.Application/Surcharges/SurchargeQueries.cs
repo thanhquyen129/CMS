@@ -34,7 +34,12 @@ public sealed record SurchargeVersionDto(
     decimal? VatRate = null,
     Guid? EconomicChargeTypeId = null,
     string? EconomicChargeTypeCode = null,
-    string? EconomicChargeTypeName = null);
+    string? EconomicChargeTypeName = null,
+    string ActivationPolicy = SurchargeActivationPolicies.UnclassifiedLegacy,
+    string? ActivationConfigJson = null,
+    string? ApprovalRef = null,
+    Guid? ApprovedByUserId = null,
+    DateTimeOffset? ApprovedAt = null);
 
 public sealed record SurchargeDetailDto(
     Guid Id,
@@ -117,18 +122,7 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
                     scope?.CustomerGroupCode);
             }).ToList();
             chargeTypes.TryGetValue(version.EconomicChargeTypeId ?? Guid.Empty, out var chargeType);
-            return new SurchargeVersionDto(
-                version.Id,
-                version.VersionNo,
-                version.PublishStatus,
-                version.ValidFrom,
-                version.ValidTo,
-                version.PublishedAt,
-                ruleDtos,
-                version.VatRate,
-                version.EconomicChargeTypeId,
-                chargeType?.Code,
-                chargeType?.Name);
+            return MapVersion(version, ruleDtos, chargeType);
         }).ToList();
 
         return new SurchargeDetailDto(
@@ -139,5 +133,112 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
             surcharge.Status,
             surcharge.SourceLegacyComponentId,
             versionDtos);
+    }
+
+    internal static SurchargeVersionDto MapVersion(
+        SurchargeVersion version,
+        IReadOnlyList<SurchargeRuleDto> ruleDtos,
+        EconomicChargeType? chargeType) =>
+        new(
+            version.Id,
+            version.VersionNo,
+            version.PublishStatus,
+            version.ValidFrom,
+            version.ValidTo,
+            version.PublishedAt,
+            ruleDtos,
+            version.VatRate,
+            version.EconomicChargeTypeId,
+            chargeType?.Code,
+            chargeType?.Name,
+            SurchargeActivationValidator.Normalize(version.ActivationPolicy),
+            version.ActivationConfigJson,
+            version.ApprovalRef,
+            version.ApprovedByUserId,
+            version.ApprovedAt);
+}
+
+public sealed record GetSurchargeVersionQuery(Guid SurchargeId, Guid VersionId) : IRequest<SurchargeVersionDetailDto>;
+
+public sealed record SurchargeVersionDetailDto(
+    Guid SurchargeId,
+    string Code,
+    string Name,
+    string Direction,
+    SurchargeVersionDto Version,
+    bool ReadOnly);
+
+public sealed class GetSurchargeVersionQueryHandler : IRequestHandler<GetSurchargeVersionQuery, SurchargeVersionDetailDto>
+{
+    private readonly ILcmsDbContext _db;
+    private readonly ITenantContext _tenant;
+
+    public GetSurchargeVersionQueryHandler(ILcmsDbContext db, ITenantContext tenant)
+    {
+        _db = db;
+        _tenant = tenant;
+    }
+
+    public async Task<SurchargeVersionDetailDto> Handle(GetSurchargeVersionQuery request, CancellationToken cancellationToken)
+    {
+        if (!_tenant.HasTenant)
+        {
+            throw new TenantRequiredAppException();
+        }
+
+        var surcharge = await _db.Surcharges.AsNoTracking().FirstOrDefaultAsync(s => s.Id == request.SurchargeId, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy phụ phí.");
+        var version = await _db.SurchargeVersions.AsNoTracking()
+            .FirstOrDefaultAsync(v => v.Id == request.VersionId && v.SurchargeId == surcharge.Id, cancellationToken)
+            ?? throw new NotFoundAppException("Không tìm thấy phiên bản phụ phí đã chỉ định.");
+
+        var rules = await _db.SurchargeRules.AsNoTracking()
+            .Where(r => r.SurchargeVersionId == version.Id)
+            .ToListAsync(cancellationToken);
+        var ruleIds = rules.Select(r => r.Id).ToList();
+        var conditions = await _db.SurchargeConditions.AsNoTracking()
+            .Where(c => ruleIds.Contains(c.SurchargeRuleId))
+            .ToListAsync(cancellationToken);
+        var scopes = await _db.SurchargeScopes.AsNoTracking()
+            .Where(s => ruleIds.Contains(s.SurchargeRuleId))
+            .ToListAsync(cancellationToken);
+        EconomicChargeType? chargeType = null;
+        if (version.EconomicChargeTypeId is Guid chargeTypeId)
+        {
+            chargeType = await _db.EconomicChargeTypes.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == chargeTypeId, cancellationToken);
+        }
+
+        var ruleDtos = rules.Select(rule =>
+        {
+            string? Text(string dimension) => conditions
+                .FirstOrDefault(c => c.SurchargeRuleId == rule.Id && c.Dimension == dimension)?.ValueText;
+            var dg = Text("dangerous_goods");
+            var scope = scopes.FirstOrDefault(s => s.SurchargeRuleId == rule.Id);
+            return new SurchargeRuleDto(
+                rule.Id,
+                rule.CalculationMode,
+                rule.Basis,
+                rule.CurrencyCode,
+                rule.RateAmountPercent,
+                rule.Priority,
+                rule.ContainerType,
+                Text("transport_mode"),
+                Text("route"),
+                dg is null ? null : string.Equals(dg, "true", StringComparison.OrdinalIgnoreCase),
+                scope?.RateCardId,
+                scope?.RateVersionId,
+                scope?.VendorPartyId,
+                scope?.CustomerPartyId,
+                scope?.CustomerGroupCode);
+        }).ToList();
+
+        return new SurchargeVersionDetailDto(
+            surcharge.Id,
+            surcharge.Code,
+            surcharge.Name,
+            surcharge.Direction,
+            GetSurchargeQueryHandler.MapVersion(version, ruleDtos, chargeType),
+            version.IsPublished);
     }
 }

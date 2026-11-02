@@ -20,12 +20,21 @@ public static class SurchargeEndpoints
                     body.Publish,
                     ToRule(body),
                     body.VatRate,
-                    body.EconomicChargeTypeId),
+                    body.EconomicChargeTypeId,
+                    body.ActivationPolicy,
+                    ToActivation(body),
+                    body.ApprovalRef),
                 ct);
             return Results.Created($"/api/surcharges/{result.SurchargeId}", result);
         });
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetSurchargeQuery(id), ct)));
+        group.MapGet("/{id:guid}/versions/{versionId:guid}", async (
+            Guid id,
+            Guid versionId,
+            ISender sender,
+            CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetSurchargeVersionQuery(id, versionId), ct)));
         group.MapPut("/{id:guid}/versions/{versionId:guid}", async (
             Guid id,
             Guid versionId,
@@ -34,7 +43,19 @@ public static class SurchargeEndpoints
             CancellationToken ct) =>
         {
             await sender.Send(
-                new UpdateSurchargeVersionCommand(id, versionId, body.Name, body.Direction, body.ValidFrom, body.ValidTo, ToRule(body), body.VatRate, body.EconomicChargeTypeId),
+                new UpdateSurchargeVersionCommand(
+                    id,
+                    versionId,
+                    body.Name,
+                    body.Direction,
+                    body.ValidFrom,
+                    body.ValidTo,
+                    ToRule(body),
+                    body.VatRate,
+                    body.EconomicChargeTypeId,
+                    body.ActivationPolicy,
+                    ToActivation(body),
+                    body.ApprovalRef),
                 ct);
             return Results.NoContent();
         });
@@ -63,6 +84,24 @@ public static class SurchargeEndpoints
         });
         group.MapPost("/migrate-legacy", async (ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new MigrateLegacySurchargesCommand(), ct)));
+
+        var selections = app.MapGroup("/api/service-selections").WithTags("ServiceSelections");
+        selections.MapGet("/", async (
+            string contextType,
+            Guid contextId,
+            ISender sender,
+            CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListServiceSelectionsQuery(contextType, contextId), ct)));
+        selections.MapPut("/", async (UpsertServiceSelectionCommand body, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(body, ct)));
+        selections.MapGet("/audits", async (
+            string contextType,
+            Guid contextId,
+            string? serviceCode,
+            ISender sender,
+            CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListServiceSelectionAuditsQuery(contextType, contextId, serviceCode), ct)));
+
         return app;
     }
 
@@ -91,6 +130,23 @@ public static class SurchargeEndpoints
             body.CustomerPartyId,
             body.Breaks,
             body.CustomerGroupCode);
+
+    private static ActivationConfigInput? ToActivation(SaveSurchargeRequest body)
+    {
+        if (body.ActivationConfig is not null)
+        {
+            return body.ActivationConfig;
+        }
+
+        if (string.IsNullOrWhiteSpace(body.ServiceCode)
+            && string.IsNullOrWhiteSpace(body.SelectionScope)
+            && (body.Predicates is null || body.Predicates.Count == 0))
+        {
+            return null;
+        }
+
+        return new ActivationConfigInput(body.ServiceCode, body.SelectionScope, body.Predicates);
+    }
 }
 
 public sealed record SaveSurchargeRequest(
@@ -124,4 +180,10 @@ public sealed record SaveSurchargeRequest(
     IReadOnlyList<SurchargeBreakInput>? Breaks = null,
     decimal? VatRate = null,
     string? CustomerGroupCode = null,
-    Guid? EconomicChargeTypeId = null);
+    Guid? EconomicChargeTypeId = null,
+    string? ActivationPolicy = null,
+    ActivationConfigInput? ActivationConfig = null,
+    string? ApprovalRef = null,
+    string? ServiceCode = null,
+    string? SelectionScope = null,
+    IReadOnlyList<ActivationPredicateInput>? Predicates = null);

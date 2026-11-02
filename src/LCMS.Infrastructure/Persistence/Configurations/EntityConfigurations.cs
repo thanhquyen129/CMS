@@ -1234,8 +1234,17 @@ internal sealed class RatingDetailConfiguration : IEntityTypeConfiguration<Ratin
         builder.Property(e => e.VatRate).HasPrecision(9, 4);
         builder.Property(e => e.VatAmount).HasPrecision(18, 4);
         builder.Property(e => e.GrossAmount).HasPrecision(18, 4);
+        builder.Property(e => e.ApplicationBucket).HasMaxLength(32);
+        builder.Property(e => e.ActivationPolicySnapshot).HasMaxLength(64);
+        builder.Property(e => e.ActivationEvidenceRef).HasMaxLength(256);
+        builder.Property(e => e.ReasonCode).HasMaxLength(64);
+        builder.Property(e => e.ReasonMessageVi).HasMaxLength(512);
+        builder.Property(e => e.CalculationBasis).HasMaxLength(32);
+        builder.Property(e => e.AppliedQuantity).HasPrecision(18, 4);
+        builder.Property(e => e.SourceRuleId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.RatingId });
         builder.HasIndex(e => new { e.TenantId, e.SourceType, e.SourceVersionId });
+        builder.HasIndex(e => new { e.TenantId, e.ApplicationBucket });
 
         builder.HasOne(e => e.Rating)
             .WithMany()

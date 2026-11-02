@@ -80,6 +80,9 @@ public sealed class LcmsDbContext : DbContext, ILcmsDbContext
     public DbSet<SurchargeScope> SurchargeScopes => Set<SurchargeScope>();
     public DbSet<SurchargeBreak> SurchargeBreaks => Set<SurchargeBreak>();
     public DbSet<SurchargeMigrationLog> SurchargeMigrationLogs => Set<SurchargeMigrationLog>();
+    public DbSet<ServiceSelection> ServiceSelections => Set<ServiceSelection>();
+    public DbSet<ServiceSelectionAudit> ServiceSelectionAudits => Set<ServiceSelectionAudit>();
+    public DbSet<SurchargeActivationMigrationAudit> SurchargeActivationMigrationAudits => Set<SurchargeActivationMigrationAudit>();
     public DbSet<EconomicChargeType> EconomicChargeTypes => Set<EconomicChargeType>();
     public DbSet<ChargeTypeMapping> ChargeTypeMappings => Set<ChargeTypeMapping>();
     public DbSet<FinancialDocument> FinancialDocuments => Set<FinancialDocument>();

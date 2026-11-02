@@ -27,6 +27,13 @@ export type SurchargeFormValues = {
   vendorPartyId?: string | null;
   customerPartyId?: string | null;
   customerGroupCode?: string | null;
+  activationPolicy?: string | null;
+  approvalRef?: string | null;
+  serviceCode?: string | null;
+  selectionScope?: string | null;
+  predicateSourceField?: string | null;
+  predicateOperator?: string | null;
+  predicateExpectedValue?: string | null;
 };
 
 export function SurchargeForm({
@@ -49,6 +56,7 @@ export function SurchargeForm({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [activationPolicy, setActivationPolicy] = useState(initial?.activationPolicy ?? "OPTIONAL_OPT_IN");
   const editing = Boolean(surchargeId && versionId);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -78,6 +86,18 @@ export function SurchargeForm({
       setBusy(false);
       return;
     }
+    const policy = String(fd.get("activationPolicy") ?? activationPolicy);
+    const serviceCode = String(fd.get("serviceCode") ?? "").trim() || null;
+    const selectionScope = String(fd.get("selectionScope") ?? "").trim() || null;
+    const predicateSourceField = String(fd.get("predicateSourceField") ?? "").trim();
+    const predicates = predicateSourceField
+      ? [{
+          sourceField: predicateSourceField,
+          operator: String(fd.get("predicateOperator") ?? "eq"),
+          expectedValue: String(fd.get("predicateExpectedValue") ?? "true"),
+          unknownBehavior: "BLOCK_NEEDS_CONTEXT",
+        }]
+      : [];
     const body = {
       code: String(fd.get("code") ?? "").trim(),
       name: String(fd.get("name") ?? "").trim(),
@@ -98,6 +118,13 @@ export function SurchargeForm({
       vendorPartyId,
       customerPartyId,
       customerGroupCode,
+      activationPolicy: policy,
+      approvalRef: String(fd.get("approvalRef") ?? "").trim() || null,
+      activationConfig: {
+        serviceCode,
+        selectionScope,
+        predicates,
+      },
     };
     try {
       const url = editing
@@ -168,6 +195,61 @@ export function SurchargeForm({
           </select>
         </div>
         <div className="field">
+          <label htmlFor="activationPolicy">Chính sách kích hoạt <span className="req">*</span></label>
+          <select
+            id="activationPolicy"
+            name="activationPolicy"
+            value={activationPolicy}
+            onChange={(e) => setActivationPolicy(e.target.value)}
+          >
+            <option value="OPTIONAL_OPT_IN">Tùy chọn có xác nhận</option>
+            <option value="AUTO_CONDITIONAL">Tự động theo điều kiện dữ liệu</option>
+            <option value="MANDATORY_BY_POLICY">Bắt buộc theo chính sách</option>
+          </select>
+        </div>
+        {activationPolicy === "MANDATORY_BY_POLICY" ? (
+          <div className="field">
+            <label htmlFor="approvalRef">Căn cứ chính sách / Mã phê duyệt <span className="req">*</span></label>
+            <input id="approvalRef" name="approvalRef" required maxLength={128} defaultValue={initial?.approvalRef ?? ""} />
+          </div>
+        ) : null}
+        {activationPolicy === "OPTIONAL_OPT_IN" ? (
+          <>
+            <div className="field">
+              <label htmlFor="serviceCode">Mã dịch vụ liên kết <span className="req">*</span></label>
+              <input id="serviceCode" name="serviceCode" required maxLength={64} defaultValue={initial?.serviceCode ?? initial?.code ?? ""} />
+            </div>
+            <div className="field">
+              <label htmlFor="selectionScope">Phạm vi xác nhận</label>
+              <select id="selectionScope" name="selectionScope" defaultValue={initial?.selectionScope ?? "BILL"}>
+                <option value="BILL">Bill</option>
+                <option value="SHIPMENT">Shipment</option>
+                <option value="LEG">Chặng</option>
+              </select>
+            </div>
+          </>
+        ) : null}
+        {activationPolicy === "AUTO_CONDITIONAL" ? (
+          <>
+            <div className="field">
+              <label htmlFor="predicateSourceField">Trường dữ liệu nguồn <span className="req">*</span></label>
+              <input id="predicateSourceField" name="predicateSourceField" required defaultValue={initial?.predicateSourceField ?? "dangerous_goods"} />
+            </div>
+            <div className="field">
+              <label htmlFor="predicateOperator">Toán tử</label>
+              <select id="predicateOperator" name="predicateOperator" defaultValue={initial?.predicateOperator ?? "eq"}>
+                <option value="eq">Bằng</option>
+                <option value="neq">Khác</option>
+                <option value="in">Thuộc danh sách</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="predicateExpectedValue">Giá trị kỳ vọng</label>
+              <input id="predicateExpectedValue" name="predicateExpectedValue" defaultValue={initial?.predicateExpectedValue ?? "true"} />
+            </div>
+          </>
+        ) : null}
+        <div className="field">
           <label htmlFor="calculationMode">Cách tính <span className="req">*</span></label>
           <select id="calculationMode" name="calculationMode" defaultValue={initial?.calculationMode ?? "unit_rate"}>
             <option value="unit_rate">Đơn giá × số lượng</option>
@@ -184,7 +266,10 @@ export function SurchargeForm({
             <option value="chargeable_weight">Trọng lượng tính cước</option>
             <option value="gross_weight">Trọng lượng thực</option>
             <option value="quantity">Số lượng</option>
-            <option value="bill">Bill</option>
+            <option value="per_bill">Theo Bill</option>
+            <option value="per_unit">Theo đơn vị</option>
+            <option value="per_shipment">Theo Shipment</option>
+            <option value="per_leg">Theo chặng</option>
           </select>
         </div>
         <div className="field">

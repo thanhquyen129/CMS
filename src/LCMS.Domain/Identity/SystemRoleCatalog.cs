@@ -58,6 +58,8 @@ public static class SystemRoleCatalog
                 (PermissionCodes.RateSellRead, DataScopes.All),
                 (PermissionCodes.RateBuyPublish, DataScopes.All),
                 (PermissionCodes.RateSellPublish, DataScopes.All),
+                (PermissionCodes.RateSurchargeMandatoryApprove, DataScopes.All),
+                (PermissionCodes.RateServiceSelect, DataScopes.All),
                 (PermissionCodes.RateQuantityOverride, DataScopes.All),
                 (PermissionCodes.RateRerate, DataScopes.All),
                 (PermissionCodes.ShipmentCreate, DataScopes.All),
@@ -90,7 +92,8 @@ public static class SystemRoleCatalog
                 (PermissionCodes.FxOverride, DataScopes.Organization),
                 (PermissionCodes.RateBuyRead, DataScopes.Organization),
                 (PermissionCodes.RateBuyWrite, DataScopes.Organization),
-                (PermissionCodes.RateBuyPublish, DataScopes.Organization)
+                (PermissionCodes.RateBuyPublish, DataScopes.Organization),
+                (PermissionCodes.RateServiceSelect, DataScopes.Organization)
             ]),
 
         new(
@@ -110,7 +113,8 @@ public static class SystemRoleCatalog
                 (PermissionCodes.FxOverride, DataScopes.Organization),
                 (PermissionCodes.RateSellRead, DataScopes.Organization),
                 (PermissionCodes.RateSellWrite, DataScopes.Organization),
-                (PermissionCodes.RateSellPublish, DataScopes.Organization)
+                (PermissionCodes.RateSellPublish, DataScopes.Organization),
+                (PermissionCodes.RateServiceSelect, DataScopes.Organization)
             ]),
 
         new(

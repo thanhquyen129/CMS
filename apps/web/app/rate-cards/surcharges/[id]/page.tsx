@@ -40,9 +40,11 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
   const modeCatalog = await listCatalog("transport_mode");
   const modeOptions = catalogModeOptions(modeCatalog.ok ? modeCatalog.data : []);
   const row = detail.data;
-  const current = row.versions[0];
-  const rule = current?.rules[0];
-  const draft = current?.publishStatus === "draft";
+  const draft = row.versions.find((v) => v.publishStatus === "draft");
+  const latestPublished = row.versions.find((v) => v.publishStatus === "published");
+  const actionVersion = draft ?? latestPublished;
+  const rule = draft?.rules[0];
+  const unclassified = row.versions.some((v) => v.activationPolicy === "UNCLASSIFIED_LEGACY");
 
   return (
     <AppShell terms={terms} active="rate-cards">
@@ -55,8 +57,17 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
           <code>{row.code}</code> · {row.direction === "sell" ? "Bán" : row.direction === "both" ? "Cả hai" : "Mua"}
           {row.sourceLegacyComponentId ? " · chuyển từ thành phần bảng giá nháp" : ""}
         </p>
-        {current ? (
-          <SurchargeVersionActions surchargeId={row.id} versionId={current.id} published={!draft} />
+        {unclassified ? (
+          <div className="alert alert-warning" role="status">
+            Có phiên bản chưa phân loại chính sách áp dụng – Hệ thống không tự động cộng vào tính giá mới.
+          </div>
+        ) : null}
+        {actionVersion ? (
+          <SurchargeVersionActions
+            surchargeId={row.id}
+            versionId={actionVersion.id}
+            published={actionVersion.publishStatus === "published"}
+          />
         ) : null}
         <table className="data-table">
           <thead>
@@ -64,11 +75,13 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
               <th>Phiên bản</th>
               <th>Khoản mục kinh tế</th>
               <th>Trạng thái</th>
+              <th>Chính sách kích hoạt</th>
               <th>Hiệu lực từ</th>
               <th>Hiệu lực đến</th>
               <th>Phát hành lúc</th>
               <th>Cách tính</th>
               <th>Giá trị</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -77,25 +90,33 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
                 <td>v{version.versionNo}</td>
                 <td>{version.economicChargeTypeCode ? `${version.economicChargeTypeCode} — ${version.economicChargeTypeName}` : "Chưa gắn"}</td>
                 <td>{version.publishStatus === "published" ? "Đã phát hành" : "Nháp"}</td>
+                <td>{version.activationPolicy || "—"}</td>
                 <td>{formatDateOnlyVi(version.validFrom)}</td>
                 <td>{formatDateOnlyVi(version.validTo)}</td>
                 <td>{version.publishedAt ? formatDateTimeVi(version.publishedAt) : "—"}</td>
                 <td>{version.rules.map((item) => item.calculationMode).join(", ") || "—"}</td>
                 <td>{version.rules.map((item) => `${item.rateAmountPercent} ${item.currencyCode}`).join(", ") || "—"}</td>
+                <td>
+                  {version.publishStatus === "published" ? (
+                    <Link className="row-link" href={`/rate-cards/surcharges/${row.id}/versions/${version.id}`}>Xem chi tiết</Link>
+                  ) : (
+                    <Link className="row-link" href={`#draft-edit`}>Chỉnh sửa</Link>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {draft && current && rule ? (
+        {draft && rule ? (
           <>
-            <h2>Sửa phiên bản nháp</h2>
+            <h2 id="draft-edit">Sửa phiên bản nháp v{draft.versionNo}</h2>
             <SurchargeForm
               cards={options}
               chargeTypes={activeTypes}
               modes={modeOptions}
               lockCode
               surchargeId={row.id}
-              versionId={current.id}
+              versionId={draft.id}
               initial={{
                 code: row.code,
                 name: row.name,
@@ -108,13 +129,16 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
                 routeCode: rule.routeCode,
                 dangerousGoods: rule.dangerousGoods,
                 rateCardId: rule.rateCardId,
-                validFrom: current.validFrom,
-                validTo: current.validTo,
-                vatRate: current.vatRate,
-                economicChargeTypeId: current.economicChargeTypeId,
+                validFrom: draft.validFrom,
+                validTo: draft.validTo,
+                vatRate: draft.vatRate,
+                economicChargeTypeId: draft.economicChargeTypeId,
                 vendorPartyId: rule.vendorPartyId,
                 customerPartyId: rule.customerPartyId,
                 customerGroupCode: rule.customerGroupCode,
+                activationPolicy: draft.activationPolicy,
+                approvalRef: draft.approvalRef,
+                serviceCode: row.code,
               }}
             />
           </>

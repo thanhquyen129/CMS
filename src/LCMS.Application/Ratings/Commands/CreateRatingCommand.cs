@@ -425,7 +425,9 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
             cardCurrency,
             reportingCurrency,
             request.Containers,
-            cancellationToken);
+            cancellationToken,
+            ctx.ShipmentId,
+            ctx.TransportLegId);
         total += surchargeResult.CardCurrencyTotal;
         details.AddRange(surchargeResult.Details);
 
@@ -520,7 +522,42 @@ public sealed class CreateRatingCommandHandler : IRequestHandler<CreateRatingCom
                 matched_rule_id = r.Id
             }).ToArray(),
             surcharges = surchargeResult.Trace,
-            excludedLegacySurcharges = ctx.ExcludedLegacySurchargeCodes
+            excludedLegacySurcharges = ctx.ExcludedLegacySurchargeCodes,
+            appliedCharges = surchargeResult.Evaluation.Applied.Select(c => new
+            {
+                code = c.Rule.Code,
+                versionNo = c.Rule.VersionNo,
+                versionId = c.Rule.VersionId,
+                amount = c.AmountOriginal,
+                currency = c.Rule.CurrencyCode,
+                formula = c.Formula,
+                activationPolicy = c.Rule.ActivationPolicy,
+                evidence = c.ActivationEvidenceRef,
+                reasonCode = c.ReasonCode,
+                reasonMessageVi = c.ReasonMessageVi,
+                quantity = c.AppliedQuantity,
+                basis = c.Rule.Basis
+            }).ToArray(),
+            eligibleNotActivatedCharges = surchargeResult.Evaluation.EligibleNotActivated.Select(c => new
+            {
+                code = c.Rule.Code,
+                versionNo = c.Rule.VersionNo,
+                versionId = c.Rule.VersionId,
+                activationPolicy = c.Rule.ActivationPolicy,
+                reasonCode = c.ReasonCode,
+                reasonMessageVi = c.ReasonMessageVi
+            }).ToArray(),
+            excludedCharges = surchargeResult.Evaluation.Excluded.Select(c => new
+            {
+                code = c.Rule.Code,
+                versionNo = c.Rule.VersionNo,
+                versionId = c.Rule.VersionId,
+                activationPolicy = c.Rule.ActivationPolicy,
+                reasonCode = c.ReasonCode,
+                reasonMessageVi = c.ReasonMessageVi
+            }).ToArray(),
+            unpricedServices = surchargeResult.Evaluation.UnpricedServices,
+            unclassifiedWarnings = surchargeResult.Evaluation.UnclassifiedWarnings
         });
 
         if (prior is not null)

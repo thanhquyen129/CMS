@@ -1,4 +1,8 @@
-﻿## 2026-11-02 — Consolidated UAT remaster (100/100 gate)
+﻿## 2026-11-02 — Surcharge Application P0 (eligibility ≠ activation ≠ calculation)
+- Rating applies surcharge only after activation policy (Mandatory/Auto/Optional); legacy Published → UNCLASSIFIED_LEGACY (no auto-add). Exact version GET + UI read-only. service_selections + ContextJson 3 buckets. No Production deploy.
+- Files: `SurchargeRating.cs`, `SurchargeActivation.cs`, `ServiceSelection*`, migration `20261102170000`, surcharge UI/API, `SurchargeApplicationP0Tests`, `docs/po/02112026-LCMS_Surcharge_Application_P0_DEV_Handover_v1.0_20261102/`
+
+## 2026-11-02 — Consolidated UAT remaster (100/100 gate)
 - COST-RATING-SOURCE/TRACE: FREIGHT+DONGGOI from rating_details/context_json; Exposure exception notes+roles; IsBidirectional vs AppliesAnyRoute; TC-22/23/24 + RateScopeMigrationPostgres PASS (Skipped:0); Excel+MD audit package under docs/po/02112026-LCMS_Consolidated_UAT_Handover_v1.0_20261102/
 - Files: CostQueries.cs, Create*ExposureCommand.cs, RatingEngine.cs, PricingRule+migration IsBidirectional, ConsolidatedUat20261102*Tests, CreateExposureForm.tsx, handover md/xlsx
 ## 2026-11-02 (Consolidated UAT handover, no historical money rewrite, no production deploy)

@@ -196,6 +196,36 @@ export function listSurcharges(): Promise<ApiResult<SurchargeRow[]>> {
   return apiGet<SurchargeRow[]>("/api/surcharges");
 }
 
+export type SurchargeVersionRow = {
+  id: string;
+  versionNo: number;
+  publishStatus: string;
+  validFrom: string | null;
+  validTo: string | null;
+  publishedAt: string | null;
+  vatRate?: number | null;
+  economicChargeTypeId?: string | null;
+  economicChargeTypeCode?: string | null;
+  economicChargeTypeName?: string | null;
+  activationPolicy?: string;
+  activationConfigJson?: string | null;
+  approvalRef?: string | null;
+  rules: {
+    id: string;
+    calculationMode: string;
+    basis: string | null;
+    currencyCode: string;
+    rateAmountPercent: number;
+    transportMode: string | null;
+    routeCode: string | null;
+    dangerousGoods: boolean | null;
+    rateCardId: string | null;
+    vendorPartyId?: string | null;
+    customerPartyId?: string | null;
+    customerGroupCode?: string | null;
+  }[];
+};
+
 export type SurchargeDetail = {
   id: string;
   code: string;
@@ -203,36 +233,25 @@ export type SurchargeDetail = {
   direction: string;
   status: string;
   sourceLegacyComponentId: string | null;
-  versions: {
-    id: string;
-    versionNo: number;
-    publishStatus: string;
-    validFrom: string | null;
-    validTo: string | null;
-    publishedAt: string | null;
-    vatRate?: number | null;
-    economicChargeTypeId?: string | null;
-    economicChargeTypeCode?: string | null;
-    economicChargeTypeName?: string | null;
-    rules: {
-      id: string;
-      calculationMode: string;
-      basis: string | null;
-      currencyCode: string;
-      rateAmountPercent: number;
-      transportMode: string | null;
-      routeCode: string | null;
-      dangerousGoods: boolean | null;
-      rateCardId: string | null;
-      vendorPartyId?: string | null;
-      customerPartyId?: string | null;
-      customerGroupCode?: string | null;
-    }[];
-  }[];
+  versions: SurchargeVersionRow[];
+};
+
+export type SurchargeVersionDetail = {
+  surchargeId: string;
+  code: string;
+  name: string;
+  direction: string;
+  readOnly: boolean;
+  version: SurchargeVersionRow;
 };
 
 export function getSurcharge(id: string): Promise<ApiResult<SurchargeDetail>> {
   return apiGet<SurchargeDetail>(`/api/surcharges/${encodeURIComponent(id)}`);
+}
+
+export function getSurchargeVersion(id: string, versionId: string): Promise<ApiResult<SurchargeVersionDetail>> {
+  return apiGet<SurchargeVersionDetail>(
+    `/api/surcharges/${encodeURIComponent(id)}/versions/${encodeURIComponent(versionId)}`);
 }
 
 export function listAppendices(): Promise<ApiResult<AppendixRow[]>> {

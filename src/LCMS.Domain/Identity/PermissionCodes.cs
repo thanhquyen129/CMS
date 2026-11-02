@@ -41,6 +41,10 @@ public static class PermissionCodes
     public const string RateSellRead = "rate.sell.read";
     public const string RateSellWrite = "rate.sell.write";
     public const string RateSellPublish = "rate.sell.publish";
+    /// <summary>Approve/publish MANDATORY_BY_POLICY surcharge versions (BR-SUR-023).</summary>
+    public const string RateSurchargeMandatoryApprove = "rate.surcharge.mandatory.approve";
+    /// <summary>Select or clear OPTIONAL_OPT_IN services on Bill/Shipment/Leg.</summary>
+    public const string RateServiceSelect = "rate.service.select";
     public const string RateQuantityOverride = "rate.quantity.override";
     public const string RateRerate = "rate.rerate";
     /// <summary>Create or upsert a Shipment (PUT /api/shipments), including quick-create from a leg.</summary>
@@ -87,6 +91,8 @@ public static class PermissionCodes
         (RateSellRead, "Xem bảng giá bán"),
         (RateSellWrite, "Sửa bảng giá bán"),
         (RateSellPublish, "Phát hành bảng giá bán"),
+        (RateSurchargeMandatoryApprove, "Duyệt phụ phí bắt buộc theo chính sách"),
+        (RateServiceSelect, "Chọn dịch vụ phụ phí tùy chọn"),
         (RateQuantityOverride, "Ghi đè số lượng tính giá"),
         (RateRerate, "Tính lại giá"),
         (ShipmentCreate, "Tạo Shipment"),
@@ -130,6 +136,8 @@ public static class PermissionCodes
         RateSellRead,
         RateSellWrite,
         RateSellPublish,
+        RateSurchargeMandatoryApprove,
+        RateServiceSelect,
         RateQuantityOverride,
         RateRerate,
         ShipmentCreate,

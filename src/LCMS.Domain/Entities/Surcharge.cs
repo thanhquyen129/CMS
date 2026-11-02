@@ -36,6 +36,16 @@ public sealed class SurchargeVersion : TenantEntityBase
     /// <summary>Snapshot of the economic charge. Null on legacy rows means unmapped, not a guess from the surcharge code.</summary>
     public Guid? EconomicChargeTypeId { get; set; }
 
+    /// <summary>MANDATORY_BY_POLICY | AUTO_CONDITIONAL | OPTIONAL_OPT_IN | UNCLASSIFIED_LEGACY</summary>
+    public string ActivationPolicy { get; set; } = SurchargeActivationPolicies.UnclassifiedLegacy;
+
+    /// <summary>JSON: serviceCode, selectionScope, predicates, policy notes.</summary>
+    public string? ActivationConfigJson { get; set; }
+
+    public string? ApprovalRef { get; set; }
+    public Guid? ApprovedByUserId { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+
     public Surcharge? Surcharge { get; set; }
 
     public bool IsPublished =>
@@ -164,4 +174,65 @@ public static class SurchargeMigrationOutcomes
     public const string SkippedUnknown = "skipped_unknown";
     public const string SkippedPublished = "skipped_published";
     public const string AlreadyMapped = "already_mapped";
+}
+
+public static class SurchargeActivationPolicies
+{
+    public const string MandatoryByPolicy = "MANDATORY_BY_POLICY";
+    public const string AutoConditional = "AUTO_CONDITIONAL";
+    public const string OptionalOptIn = "OPTIONAL_OPT_IN";
+    public const string UnclassifiedLegacy = "UNCLASSIFIED_LEGACY";
+
+    public static readonly HashSet<string> Publishable = new(StringComparer.OrdinalIgnoreCase)
+    {
+        MandatoryByPolicy, AutoConditional, OptionalOptIn
+    };
+
+    public static readonly HashSet<string> All = new(StringComparer.OrdinalIgnoreCase)
+    {
+        MandatoryByPolicy, AutoConditional, OptionalOptIn, UnclassifiedLegacy
+    };
+}
+
+public static class SurchargeReasonCodes
+{
+    public const string ExcludedInactive = "EXCLUDED_INACTIVE";
+    public const string ExcludedWrongDirection = "EXCLUDED_WRONG_DIRECTION";
+    public const string ExcludedScopeMismatch = "EXCLUDED_SCOPE_MISMATCH";
+    public const string ExcludedMissingContext = "EXCLUDED_MISSING_CONTEXT";
+    public const string ExcludedUnclassified = "EXCLUDED_UNCLASSIFIED";
+    public const string NotSelected = "NOT_SELECTED";
+    public const string NotActivatedConditionFalse = "NOT_ACTIVATED_CONDITION_FALSE";
+    public const string NeedsContext = "NEEDS_CONTEXT";
+    public const string DataUnknown = "DATA_UNKNOWN";
+    public const string DataConflict = "DATA_CONFLICT";
+    public const string Ambiguous = "AMBIGUOUS";
+    public const string DuplicateSkipped = "DUPLICATE_SKIPPED";
+    public const string Unpriced = "UNPRICED";
+    public const string MissingBasis = "MISSING_BASIS";
+    public const string CalculationInvalid = "CALCULATION_INVALID";
+    public const string Applied = "APPLIED";
+}
+
+public static class ServiceSelectionContexts
+{
+    public const string Bill = "BILL";
+    public const string Shipment = "SHIPMENT";
+    public const string Leg = "LEG";
+
+    public static readonly HashSet<string> All = new(StringComparer.OrdinalIgnoreCase) { Bill, Shipment, Leg };
+}
+
+public static class SurchargeCalcBases
+{
+    public const string PerBill = "per_bill";
+    public const string PerShipment = "per_shipment";
+    public const string PerLeg = "per_leg";
+    public const string PerUnit = "per_unit";
+    public const string PerPackage = "per_package";
+    public const string PerKg = "per_kg";
+    public const string PerContainer = "per_container";
+    public const string ChargeableWeight = "chargeable_weight";
+    public const string GrossWeight = "gross_weight";
+    public const string Quantity = "quantity";
 }

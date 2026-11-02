@@ -35,10 +35,73 @@ internal sealed class SurchargeVersionConfiguration : IEntityTypeConfiguration<S
         builder.Property(e => e.PublishStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.VatRate).HasPrecision(9, 4);
         builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
+        builder.Property(e => e.ActivationPolicy).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ActivationConfigJson).HasColumnType("jsonb");
+        builder.Property(e => e.ApprovalRef).HasMaxLength(128);
+        builder.Property(e => e.ApprovedByUserId).HasColumnType("uuid");
         builder.HasIndex(e => new { e.TenantId, e.SurchargeId, e.VersionNo }).IsUnique().HasFilter("deleted_at IS NULL");
         builder.HasIndex(e => new { e.TenantId, e.EconomicChargeTypeId });
         builder.HasIndex(e => new { e.TenantId, e.PublishStatus, e.ValidFrom });
+        builder.HasIndex(e => new { e.TenantId, e.ActivationPolicy });
         builder.HasOne(e => e.Surcharge).WithMany().HasForeignKey(e => e.SurchargeId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+internal sealed class ServiceSelectionConfiguration : IEntityTypeConfiguration<ServiceSelection>
+{
+    public void Configure(EntityTypeBuilder<ServiceSelection> builder)
+    {
+        builder.ToTable("service_selections");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ContextType).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.ContextId).IsRequired();
+        builder.Property(e => e.ServiceCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Scope).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.Quantity).HasPrecision(18, 4);
+        builder.Property(e => e.Uom).HasMaxLength(32);
+        builder.Property(e => e.SourceRef).HasMaxLength(256);
+        builder.Property(e => e.ConfirmedByUserId).HasColumnType("uuid");
+        builder.HasIndex(e => new { e.TenantId, e.ContextType, e.ContextId, e.ServiceCode })
+            .IsUnique()
+            .HasFilter("deleted_at IS NULL");
+    }
+}
+
+internal sealed class ServiceSelectionAuditConfiguration : IEntityTypeConfiguration<ServiceSelectionAudit>
+{
+    public void Configure(EntityTypeBuilder<ServiceSelectionAudit> builder)
+    {
+        builder.ToTable("service_selection_audits");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.ServiceSelectionId).IsRequired();
+        builder.Property(e => e.ContextType).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.ContextId).IsRequired();
+        builder.Property(e => e.ServiceCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.OldQuantity).HasPrecision(18, 4);
+        builder.Property(e => e.NewQuantity).HasPrecision(18, 4);
+        builder.Property(e => e.ActorUserId).HasColumnType("uuid");
+        builder.Property(e => e.Notes).HasMaxLength(512);
+        builder.HasIndex(e => new { e.TenantId, e.ServiceSelectionId, e.Revision });
+        builder.HasIndex(e => new { e.TenantId, e.ContextType, e.ContextId, e.ServiceCode });
+    }
+}
+
+internal sealed class SurchargeActivationMigrationAuditConfiguration : IEntityTypeConfiguration<SurchargeActivationMigrationAudit>
+{
+    public void Configure(EntityTypeBuilder<SurchargeActivationMigrationAudit> builder)
+    {
+        builder.ToTable("surcharge_activation_migration_audits");
+        EntityBaseConfiguration.ConfigureEntityBase(builder);
+        builder.Property(e => e.TenantId).HasColumnType("uuid").IsRequired();
+        builder.Property(e => e.SurchargeCode).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.Direction).HasMaxLength(16).IsRequired();
+        builder.Property(e => e.MappingPolicy).HasMaxLength(64).IsRequired();
+        builder.Property(e => e.ApprovalRef).HasMaxLength(128);
+        builder.Property(e => e.Approver).HasMaxLength(256);
+        builder.Property(e => e.Notes).HasMaxLength(1024);
+        builder.HasIndex(e => new { e.TenantId, e.SurchargeCode, e.Direction, e.ExecutedAt });
     }
 }
 

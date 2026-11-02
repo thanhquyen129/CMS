@@ -40,6 +40,18 @@ public sealed record SurchargeRuleInput(
     IReadOnlyList<SurchargeBreakInput>? Breaks,
     string? CustomerGroupCode = null);
 
+public sealed record ActivationConfigInput(
+    string? ServiceCode = null,
+    string? SelectionScope = null,
+    IReadOnlyList<ActivationPredicateInput>? Predicates = null,
+    string? PolicyNotes = null);
+
+public sealed record ActivationPredicateInput(
+    string SourceField,
+    string Operator = "eq",
+    string? ExpectedValue = null,
+    string UnknownBehavior = "BLOCK_NEEDS_CONTEXT");
+
 public sealed record CreateSurchargeCommand(
     string Code,
     string Name,
@@ -49,7 +61,10 @@ public sealed record CreateSurchargeCommand(
     bool Publish,
     SurchargeRuleInput Rule,
     decimal? VatRate = null,
-    Guid? EconomicChargeTypeId = null) : IRequest<CreateSurchargeResult>;
+    Guid? EconomicChargeTypeId = null,
+    string? ActivationPolicy = null,
+    ActivationConfigInput? ActivationConfig = null,
+    string? ApprovalRef = null) : IRequest<CreateSurchargeResult>;
 
 public sealed record CreateSurchargeResult(Guid SurchargeId, Guid VersionId);
 
@@ -154,6 +169,8 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
         };
         var chargeTypeId = await EconomicChargeTypeRules.RequireActiveAsync(
             _db, request.EconomicChargeTypeId, cancellationToken);
+        var policy = SurchargeActivationValidator.Normalize(request.ActivationPolicy);
+        var config = SurchargeActivationFields.ToConfig(request.ActivationConfig);
         var version = new SurchargeVersion
         {
             TenantId = tenantId,
@@ -163,10 +180,15 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
             ValidFrom = request.ValidFrom,
             ValidTo = request.ValidTo,
             VatRate = request.VatRate,
-            EconomicChargeTypeId = chargeTypeId
+            EconomicChargeTypeId = chargeTypeId,
+            ActivationPolicy = policy,
+            ActivationConfigJson = SurchargeActivationConfigParser.Serialize(config),
+            ApprovalRef = string.IsNullOrWhiteSpace(request.ApprovalRef) ? null : request.ApprovalRef.Trim()
         };
         if (request.Publish)
         {
+            await SurchargeActivationFields.PreparePublishAsync(
+                _permissions, version, config, cancellationToken);
             version.PublishStatus = SurchargeVersionStatuses.Published;
             version.PublishedAt = DateTimeOffset.UtcNow;
             version.ValidFrom ??= version.PublishedAt;
@@ -190,7 +212,10 @@ public sealed record UpdateSurchargeVersionCommand(
     DateTimeOffset? ValidTo,
     SurchargeRuleInput Rule,
     decimal? VatRate = null,
-    Guid? EconomicChargeTypeId = null) : IRequest<Guid>;
+    Guid? EconomicChargeTypeId = null,
+    string? ActivationPolicy = null,
+    ActivationConfigInput? ActivationConfig = null,
+    string? ApprovalRef = null) : IRequest<Guid>;
 
 public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<UpdateSurchargeVersionCommand, Guid>
 {
@@ -236,6 +261,25 @@ public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<Updat
         {
             await EconomicChargeTypeRules.RequireActiveAsync(_db, null, cancellationToken);
         }
+
+        if (request.ActivationPolicy is not null || request.ActivationConfig is not null || request.ApprovalRef is not null)
+        {
+            version.ActivationPolicy = SurchargeActivationValidator.Normalize(
+                request.ActivationPolicy ?? version.ActivationPolicy);
+            if (request.ActivationConfig is not null)
+            {
+                version.ActivationConfigJson = SurchargeActivationConfigParser.Serialize(
+                    SurchargeActivationFields.ToConfig(request.ActivationConfig));
+            }
+
+            if (request.ApprovalRef is not null)
+            {
+                version.ApprovalRef = string.IsNullOrWhiteSpace(request.ApprovalRef)
+                    ? null
+                    : request.ApprovalRef.Trim();
+            }
+        }
+
         SurchargePartnerRules.Ensure(direction, request.Rule);
         await SurchargeGraph.ReplaceRulesAsync(_db, _tenant.TenantId!.Value, version.Id, request.Rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
@@ -325,6 +369,8 @@ public sealed class PublishSurchargeVersionCommandHandler : IRequestHandler<Publ
             throw new ConflictAppException("Chọn khoản mục kinh tế trước khi phát hành. Dữ liệu cũ chưa gắn khoản mục không được đoán.");
         }
 
+        var config = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
+        await SurchargeActivationFields.PreparePublishAsync(_permissions, version, config, cancellationToken);
         version.PublishStatus = SurchargeVersionStatuses.Published;
         version.PublishedAt = DateTimeOffset.UtcNow;
         version.ValidFrom ??= version.PublishedAt;
@@ -374,7 +420,15 @@ public sealed class CreateSurchargeVersionCommandHandler : IRequestHandler<Creat
             ValidFrom = latest.ValidFrom,
             ValidTo = latest.ValidTo,
             VatRate = latest.VatRate,
-            EconomicChargeTypeId = latest.EconomicChargeTypeId
+            EconomicChargeTypeId = latest.EconomicChargeTypeId,
+            ActivationPolicy = string.Equals(
+                SurchargeActivationValidator.Normalize(latest.ActivationPolicy),
+                SurchargeActivationPolicies.UnclassifiedLegacy,
+                StringComparison.OrdinalIgnoreCase)
+                ? SurchargeActivationPolicies.OptionalOptIn
+                : SurchargeActivationValidator.Normalize(latest.ActivationPolicy),
+            ActivationConfigJson = latest.ActivationConfigJson,
+            ApprovalRef = latest.ApprovalRef
         };
         _db.SurchargeVersions.Add(next);
         await SurchargeGraph.CloneRulesAsync(_db, tenantId, latest.Id, next.Id, cancellationToken);
@@ -726,4 +780,47 @@ internal static class SurchargeGraph
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+internal static class SurchargeActivationFields
+{
+    public static ActivationConfig ToConfig(ActivationConfigInput? input)
+    {
+        if (input is null)
+        {
+            return new ActivationConfig(null, null, []);
+        }
+
+        var predicates = (input.Predicates ?? [])
+            .Where(p => !string.IsNullOrWhiteSpace(p.SourceField))
+            .Select(p => new ActivationPredicate(
+                p.SourceField.Trim(),
+                string.IsNullOrWhiteSpace(p.Operator) ? "eq" : p.Operator.Trim(),
+                p.ExpectedValue,
+                string.IsNullOrWhiteSpace(p.UnknownBehavior) ? "BLOCK_NEEDS_CONTEXT" : p.UnknownBehavior.Trim()))
+            .ToList();
+        return new ActivationConfig(
+            string.IsNullOrWhiteSpace(input.ServiceCode) ? null : input.ServiceCode.Trim(),
+            string.IsNullOrWhiteSpace(input.SelectionScope) ? null : input.SelectionScope.Trim().ToUpperInvariant(),
+            predicates,
+            input.PolicyNotes);
+    }
+
+    public static async Task PreparePublishAsync(
+        IPermissionService permissions,
+        SurchargeVersion version,
+        ActivationConfig config,
+        CancellationToken cancellationToken)
+    {
+        version.ActivationPolicy = SurchargeActivationValidator.Normalize(version.ActivationPolicy);
+        SurchargeActivationValidator.EnsurePublishable(version, config);
+        if (string.Equals(
+                version.ActivationPolicy,
+                SurchargeActivationPolicies.MandatoryByPolicy,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await SurchargeActivationPermissions.EnsureMandatoryApproveAsync(permissions, cancellationToken);
+            version.ApprovedAt ??= DateTimeOffset.UtcNow;
+        }
+    }
 }

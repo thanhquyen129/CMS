@@ -48,5 +48,16 @@ public sealed class RatingDetail : TenantEntityBase
     public decimal? VatAmount { get; set; }
     public decimal? GrossAmount { get; set; }
 
+    /// <summary>applied | eligible_not_activated | excluded — null on historical rows.</summary>
+    public string? ApplicationBucket { get; set; }
+
+    public string? ActivationPolicySnapshot { get; set; }
+    public string? ActivationEvidenceRef { get; set; }
+    public string? ReasonCode { get; set; }
+    public string? ReasonMessageVi { get; set; }
+    public string? CalculationBasis { get; set; }
+    public decimal? AppliedQuantity { get; set; }
+    public Guid? SourceRuleId { get; set; }
+
     public Rating? Rating { get; set; }
 }

@@ -531,6 +531,12 @@ public sealed class IndependentSurchargeTests : IAsyncLifetime
             node["economicChargeTypeId"] = typeId.ToString();
         }
 
+        if (!node.ContainsKey("activationPolicy"))
+        {
+            node["activationPolicy"] = "MANDATORY_BY_POLICY";
+            node["approvalRef"] = "TEST-APPROVAL";
+        }
+
         var res = await PostAsync(tenantId, "/api/surcharges", node);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<CreatedSurcharge>(Json))!;

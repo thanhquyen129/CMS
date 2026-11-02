@@ -21,7 +21,7 @@ Ngày bàn giao DEV remaster: 2026-11-02. UAT của PO vẫn **tạm hoãn**. C�
 | Nhánh | `main` (chưa push — push sẽ deploy production) |
 | Commit gốc gói | `e6646debd8ba1bc25f1dcb92a15d8bc7cbbf1d25` |
 | Commit remaster | `a6c87691e108326170c98ccb2bdcf87bc62c9999` |
-| Commit final polish | *(điền SHA sau commit — local `main`, ahead of origin — **chưa push**)* |
+| Commit final polish | `c44b6870221c77467510bff458e0e0b5121f323f` (local `main`, ahead of origin — **chưa push**, tránh deploy Production trước PO accept) |
 | CI | `.github/workflows/ci.yml`: `dotnet test` + service `postgres:16-alpine` + `LCMS_TEST_POSTGRES` |
 | `dotnet test Cms.sln -c Release` + `LCMS_TEST_POSTGRES` `:5433` | **Failed: 0, Passed: 598, Skipped: 0** |
 | `dotnet test` filter ConsolidatedUat20261102 | **Failed: 0, Passed: 10, Skipped: 0** |

@@ -11,6 +11,7 @@ type Props = {
   approvalId: string;
   currentLevel: number;
   requiredLevel: number;
+  makerBlocked?: boolean;
 };
 
 export function DecideApprovalButton({
@@ -18,6 +19,7 @@ export function DecideApprovalButton({
   approvalId,
   currentLevel,
   requiredLevel,
+  makerBlocked = false,
 }: Props) {
   const router = useRouter();
   const dialogTitleId = useId();
@@ -103,10 +105,14 @@ export function DecideApprovalButton({
             setReason("");
             setOpen("approve");
           }}
-          disabled={isPending}
+          disabled={isPending || makerBlocked}
+          title={makerBlocked ? "Người tạo đề xuất không được tự phê duyệt (PC-21)" : undefined}
         >
           Phê duyệt
         </button>
+        {makerBlocked ? (
+          <span className="muted small">Người tạo đề xuất không được tự phê duyệt (PC-21).</span>
+        ) : null}
         <button
           type="button"
           className="btn btn-ghost btn-sm"

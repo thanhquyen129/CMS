@@ -139,6 +139,31 @@ public sealed class RecognizeReceivableExposureCommandHandler
                 $"Số tiền ghi nhận ({amount}) vượt phần còn lại của exposure ({open}).");
         }
 
+        if (exposure.RevenueId is Guid sourceRevenueId)
+        {
+            var source = await _db.Revenues.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == sourceRevenueId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy doanh thu nguồn của quyền thu dự kiến.");
+            var ceiling = source.ActualAmount ?? source.ConfirmedAmount ?? source.ExpectedAmount;
+            var siblingIds = await _db.ReceivableExposures.AsNoTracking()
+                .Where(e => e.RevenueId == sourceRevenueId && e.RecordStatus == "active")
+                .Select(e => e.Id)
+                .ToListAsync(cancellationToken);
+            var recognizedRows = siblingIds.Count == 0
+                ? []
+                : await _db.AccountsReceivable.AsNoTracking()
+                    .Where(a => siblingIds.Contains(a.ReceivableExposureId)
+                        && a.RecordStatus == "active")
+                    .Select(a => a.RecognizedAmount)
+                    .ToListAsync(cancellationToken);
+            var recognizedOnRevenue = recognizedRows.Sum();
+            if (decimal.Round(recognizedOnRevenue + amount, 4, MidpointRounding.AwayFromZero) > ceiling)
+            {
+                throw new ConflictAppException(
+                    $"Tổng công nợ phải thu đã ghi nhận không được vượt doanh thu nguồn ({ceiling}).");
+            }
+        }
+
         await _recognitionApproval.EnsureReceivableRecognizeAllowedAsync(exposure, cancellationToken);
 
         var costCountBefore = await _db.Costs.CountAsync(cancellationToken);

@@ -4,6 +4,8 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BillTypeahead } from "@/components/BillTypeahead";
+import { DateInputVi } from "@/components/DateInputVi";
+import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { CurrencySelect } from "@/components/CurrencySelect";
 import { term, type TerminologyMap } from "@/lib/terminology";
 import { formatMoney } from "@/lib/money";
@@ -55,8 +57,10 @@ export function CreateExposureForm({
   const [linkedId, setLinkedId] = useState(
     kind === "payable" ? defaultCostId ?? "" : defaultRevenueId ?? ""
   );
-
   const isPayable = kind === "payable";
+  const initialLinks = isPayable ? costOptions : revenueOptions;
+  const [options, setOptions] = useState(initialLinks);
+  const [exception, setException] = useState(false);
   const exposureLabel = isPayable
     ? term(terms, "PAYABLE_EXPOSURE", "Nghĩa vụ phải trả (exposure)")
     : term(terms, "RECEIVABLE_EXPOSURE", "Quyền thu dự kiến (exposure)");
@@ -66,12 +70,33 @@ export function CreateExposureForm({
   const costLabel = term(terms, "COST", "Chi phí");
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
   const recognizedTarget = isPayable ? apLabel : arLabel;
-  const linkOptions = isPayable ? costOptions : revenueOptions;
   const linkLabel = isPayable ? costLabel : revenueLabel;
+
+  async function loadForBill(id: string) {
+    if (!id) {
+      setOptions([]);
+      return;
+    }
+    const path = isPayable ? `/bff/costs?billId=${encodeURIComponent(id)}` : `/bff/revenues?billId=${encodeURIComponent(id)}`;
+    const res = await fetch(path, { headers: { Accept: "application/json" }, cache: "no-store" });
+    if (!res.ok) return;
+    const payload = (await res.json()) as { items?: Array<Record<string, unknown>> } | Array<Record<string, unknown>>;
+    const rows = Array.isArray(payload) ? payload : payload.items ?? [];
+    setOptions(
+      rows
+        .filter((row) => !row.recordStatus || row.recordStatus === "active")
+        .map((row) => ({
+          id: String(row.id),
+          label: `${String(isPayable ? row.costTypeCode || "Chi phí" : row.revenueTypeCode || "Doanh thu")} · ${String(row.financialMaturity || "")}`,
+          amount: Number(row.amount ?? 0),
+          currencyCode: String(row.currencyCode || "VND"),
+        }))
+    );
+  }
 
   function onLinkChange(id: string) {
     setLinkedId(id);
-    const opt = linkOptions.find((o) => o.id === id);
+    const opt = options.find((o) => o.id === id);
     if (opt) {
       setAmount(String(opt.amount));
       setCurrency(opt.currencyCode);
@@ -93,6 +118,19 @@ export function CreateExposureForm({
     }
 
     const billIdRaw = String(fd.get("billId") ?? "").trim();
+    const linkRawEarly = String(fd.get("linkedId") ?? "").trim();
+    const notesEarly = String(fd.get("notes") ?? "").trim();
+    const partyEarly = String(fd.get("counterpartyId") ?? "").trim();
+    if (!exception && !linkRawEarly && !billIdRaw) {
+      setError(`Chọn Bill hoặc khoản ${linkLabel.toLowerCase()}, hoặc bật luồng ngoại lệ có đối tác và lý do.`);
+      setSubmitting(false);
+      return;
+    }
+    if (exception && (!partyEarly || !notesEarly)) {
+      setError("Luồng ngoại lệ cần đối tác và lý do. Không tạo số tiền treo.");
+      setSubmitting(false);
+      return;
+    }
     const effectiveDateRaw = String(fd.get("effectiveDate") ?? "").trim();
     const dueDateRaw = String(fd.get("dueDate") ?? "").trim();
     const linkRaw = String(fd.get("linkedId") ?? "").trim();
@@ -105,10 +143,10 @@ export function CreateExposureForm({
       effectiveDate: effectiveDateRaw || null,
       dueDate: dueDateRaw || null,
       billId: billIdRaw || null,
-      counterpartyId: null,
+      counterpartyId: partyEarly || null,
       financialDocumentId: null,
-      notes: String(fd.get("notes") ?? "").trim() || null,
-      sourceType: null,
+      notes: notesEarly || null,
+      sourceType: exception ? "exception" : null,
       sourceId: null,
     };
 
@@ -175,11 +213,8 @@ export function CreateExposureForm({
   return (
     <form className="receive-form" onSubmit={onSubmit} noValidate>
       <p className="note">
-        Exposure ≠ {recognizedTarget}. Đây là nghĩa vụ / quyền{" "}
-        <strong>dự kiến</strong> — chưa phải {isPayable ? costLabel : revenueLabel}{" "}
-        và chưa phải sổ đã ghi nhận. Có thể gắn {linkLabel.toLowerCase()} (liên
-        kết, không tạo thêm {linkLabel.toLowerCase()}). Sau khi tạo → ghi nhận
-        sang {recognizedTarget}.
+        {exposureLabel} khác {isPayable ? costLabel : revenueLabel} lớp dự kiến và khác {recognizedTarget}.
+        Phải gắn khoản nguồn, chứng từ, hoặc luồng ngoại lệ có đối tác và lý do. Không nhập UUID.
       </p>
 
       {error ? (
@@ -215,16 +250,11 @@ export function CreateExposureForm({
             />
             <div className="field">
               <label htmlFor="effectiveDate">Ngày hiệu lực</label>
-              <input
-                id="effectiveDate"
-                name="effectiveDate"
-                type="date"
-                disabled={busy}
-              />
+              <DateInputVi id="effectiveDate" name="effectiveDate" disabled={busy} />
             </div>
             <div className="field">
-              <label htmlFor="dueDate">Hạn</label>
-              <input id="dueDate" name="dueDate" type="date" disabled={busy} />
+              <label htmlFor="dueDate">Ngày đến hạn thanh toán</label>
+              <DateInputVi id="dueDate" name="dueDate" disabled={busy} />
             </div>
           </div>
         </fieldset>
@@ -232,50 +262,47 @@ export function CreateExposureForm({
           <legend>Liên kết</legend>
           <div className="form-grid">
             <BillTypeahead
-              label={`${billLabel} (tuỳ chọn)`}
+              label={billLabel}
               defaultId={defaultBillId}
               defaultLabel={defaultBillNo}
               disabled={busy}
+              onSelect={(bill) => {
+                void loadForBill(bill?.id ?? "");
+                if (!bill) setLinkedId("");
+              }}
             />
-            {linkOptions.length > 0 ? (
-              <div className="field">
-                <label htmlFor="linkedId">
-                  Gắn {linkLabel.toLowerCase()} (tuỳ chọn)
-                </label>
-                <select
-                  id="linkedId"
-                  name="linkedId"
-                  disabled={busy}
-                  value={linkedId}
-                  onChange={(e) => onLinkChange(e.target.value)}
-                >
-                  <option value="">— Không gắn —</option>
-                  {linkOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.label} · {formatMoney(o.amount, o.currencyCode)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div className="field">
-                <label htmlFor="linkedId">
-                  Mã {linkLabel.toLowerCase()} (UUID, tuỳ chọn)
-                </label>
-                <input
-                  id="linkedId"
-                  name="linkedId"
-                  defaultValue={
-                    kind === "payable"
-                      ? defaultCostId ?? ""
-                      : defaultRevenueId ?? ""
-                  }
-                  disabled={busy}
-                  autoComplete="off"
-                  placeholder={`Gắn ${linkLabel.toLowerCase()} nếu biết UUID`}
-                />
-              </div>
-            )}
+            <div className="field">
+              <label htmlFor="linkedId">Khoản {linkLabel.toLowerCase()}</label>
+              <select
+                id="linkedId"
+                name="linkedId"
+                disabled={busy || exception}
+                value={linkedId}
+                onChange={(e) => onLinkChange(e.target.value)}
+              >
+                <option value="">{options.length === 0 ? "Chọn Bill để tải danh sách" : "Chọn khoản nguồn"}</option>
+                {options.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label} · {formatMoney(o.amount, o.currencyCode)}
+                  </option>
+                ))}
+              </select>
+              <p className="note">Danh sách lọc theo Bill. Không nhập UUID.</p>
+            </div>
+            <div className="field field-span">
+              <label>
+                <input type="checkbox" checked={exception} disabled={busy} onChange={(e) => setException(e.target.checked)} />
+                {" "}Luồng ngoại lệ (đối tác + lý do, có kiểm soát)
+              </label>
+            </div>
+            {exception ? (
+              <PartyTypeahead
+                name="counterpartyId"
+                label="Đối tác ngoại lệ"
+                disabled={busy}
+                required
+              />
+            ) : null}
             <div className="field field-span">
               <label htmlFor="notes">Ghi chú</label>
               <input id="notes" name="notes" maxLength={2048} disabled={busy} />

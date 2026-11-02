@@ -1,4 +1,3 @@
-using System.Net.Sockets;
 using LCMS.Application.Abstractions;
 using LCMS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,36 +7,77 @@ using Npgsql;
 
 namespace LCMS.Api.Tests;
 
-/// <summary>Runs only when something accepts TCP on 127.0.0.1:5433. Otherwise the suite stays green.</summary>
-public sealed class RequiresPostgres5433Attribute : FactAttribute
+/// <summary>Runs on an isolated Postgres (CI service port 5432, or local 5433). Never UAT or Production.</summary>
+public sealed class RequiresIsolatedPostgresAttribute : FactAttribute
 {
-    public RequiresPostgres5433Attribute()
+    public RequiresIsolatedPostgresAttribute()
     {
-        try
+        if (RateScopeMigrationPostgresTests.AdminConnectionString() is null)
         {
-            using var client = new TcpClient();
-            var connect = client.ConnectAsync("127.0.0.1", 5433);
-            if (!connect.Wait(TimeSpan.FromSeconds(2)) || !client.Connected)
-            {
-                Skip = "Requires local Postgres on port 5433";
-            }
-        }
-        catch (Exception)
-        {
-            Skip = "Requires local Postgres on port 5433";
+            Skip = "Requires isolated Postgres via LCMS_TEST_POSTGRES or localhost 5432/5433. Not UAT/Production.";
         }
     }
 }
 
 public sealed class RateScopeMigrationPostgresTests
 {
-    [RequiresPostgres5433]
+    public static string? AdminConnectionString()
+    {
+        var configured = Environment.GetEnvironmentVariable("LCMS_TEST_POSTGRES");
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return CanOpen(configured) ? configured : null;
+        }
+
+        var ports = new List<int>();
+        if (int.TryParse(Environment.GetEnvironmentVariable("LCMS_TEST_POSTGRES_PORT"), out var envPort))
+        {
+            ports.Add(envPort);
+        }
+
+        ports.Add(5432);
+        ports.Add(5433);
+        foreach (var port in ports.Distinct())
+        {
+            var candidate = $"Host=127.0.0.1;Port={port};Database=postgres;Username=lcms;Password=lcms";
+            if (CanOpen(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static string DatabaseConnection(string admin, string database)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(admin) { Database = database };
+        return builder.ConnectionString;
+    }
+
+    private static bool CanOpen(string connectionString)
+    {
+        try
+        {
+            using var conn = new NpgsqlConnection(connectionString);
+            var open = conn.OpenAsync();
+            if (!open.Wait(TimeSpan.FromSeconds(2)))
+            {
+                return false;
+            }
+
+            return conn.State == System.Data.ConnectionState.Open;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    [RequiresIsolatedPostgres]
     public async Task Ac30_LegacyHeaderScopeIsCopiedWithoutDroppingCardsOrRatings()
     {
-        const string user = "lcms";
-        const string password = "lcms";
-        const int port = 5433;
-        var admin = $"Host=127.0.0.1;Port={port};Database=postgres;Username={user};Password={password}";
+        var admin = AdminConnectionString() ?? throw new InvalidOperationException("Isolated Postgres was not reachable.");
         const string name = "lcms_rate_ac30";
         await using (var adminConn = new NpgsqlConnection(admin))
         {
@@ -56,7 +96,7 @@ public sealed class RateScopeMigrationPostgresTests
             await create.ExecuteNonQueryAsync();
         }
 
-        var cs = $"Host=127.0.0.1;Port={port};Database={name};Username={user};Password={password}";
+        var cs = DatabaseConnection(admin, name);
         await using (var db = NewContext(cs))
         {
             await db.GetService<IMigrator>()!.MigrateAsync("20261014061119_RateCardDeclarationMode");
@@ -146,13 +186,10 @@ public sealed class RateScopeMigrationPostgresTests
         Assert.Equal(1, await ScalarAsync<long>(check, "SELECT COUNT(*) FROM ratings"));
     }
 
-    [RequiresPostgres5433]
+    [RequiresIsolatedPostgres]
     public async Task Baseline_UpDownUp_KeepsNullChargeCodes_AndHistoricalAmounts()
     {
-        const string user = "lcms";
-        const string password = "lcms";
-        const int port = 5433;
-        var admin = $"Host=127.0.0.1;Port={port};Database=postgres;Username={user};Password={password}";
+        var admin = AdminConnectionString() ?? throw new InvalidOperationException("Isolated Postgres was not reachable.");
         const string name = "lcms_rate_baseline_audit";
         const string previous = "20261014100816_RateRuleScopeWeightBand";
         await using (var adminConn = new NpgsqlConnection(admin))
@@ -172,7 +209,7 @@ public sealed class RateScopeMigrationPostgresTests
             await create.ExecuteNonQueryAsync();
         }
 
-        var cs = $"Host=127.0.0.1;Port={port};Database={name};Username={user};Password={password}";
+        var cs = DatabaseConnection(admin, name);
         await using (var db = NewContext(cs))
         {
             await db.GetService<IMigrator>()!.MigrateAsync(previous);

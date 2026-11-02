@@ -128,9 +128,15 @@ export default async function DocumentDetailPage({
 
         <h2 className="section-title">Ba chiều trạng thái</h2>
         <p className="note">
-          Nhận ≠ Chấp nhận ≠ Khớp — độc lập. Chứng từ ≠ {costLabel}; chấp nhận ≠{" "}
-          {paymentLabel}.
+          Đã nhận, Đã chấp nhận và Đã khớp là ba chiều độc lập. Đã khớp dòng nguồn khi tạo từ LCMS không có nghĩa chứng từ đã được chấp nhận, và không tự ghi nhận công nợ hay thu tiền.
         </p>
+        {doc.direction === "receivable" && doc.acceptanceStatus?.toLowerCase() === "accepted" && doc.billId ? (
+          <p className="note">
+            Chính sách ghi nhận đang là thủ công: chấp nhận chứng từ không tự sinh công nợ phải thu.
+            <Link href={`/ap-ar/exposures/new?kind=receivable&billId=${doc.billId}`}> Tạo quyền thu dự kiến từ Bill này</Link>
+            . Ghi nhận lặp cho cùng doanh thu bị chặn để không vượt số nguồn.
+          </p>
+        ) : null}
         <DocumentStatusTriad
           terms={terms}
           receiptStatus={doc.receiptStatus}

@@ -99,17 +99,17 @@ export default async function RevenuesPage({
     { key: "count", label: "Số dòng", value: kpiItems.length },
     {
       key: "expected",
-      label: expectedLabel,
+      label: `Số dư ${expectedLabel} (trạng thái hiện hành)`,
       value: formatMoney(sumByMaturity("expected"), kpiCurrency),
     },
     {
       key: "confirmed",
-      label: confirmedLabel,
+      label: `Số dư ${confirmedLabel} (trạng thái hiện hành)`,
       value: formatMoney(sumByMaturity("confirmed"), kpiCurrency),
     },
     {
       key: "actual",
-      label: actualLabel,
+      label: `Số dư ${actualLabel} (trạng thái hiện hành)`,
       value: formatMoney(sumByMaturity("actual"), kpiCurrency),
     },
     {
@@ -144,6 +144,7 @@ export default async function RevenuesPage({
         />
 
         {kpiRes.ok ? <StatCardGrid cards={statCards} /> : null}
+        <p className="note">Thẻ KPI là số dư theo trạng thái hiện hành. Ba cột trên cùng một dòng là các lớp đã lưu của một khoản, không cộng thành ba lần số tiền.</p>
 
         <h2>Theo {billLabel}</h2>
         {!board.ok ? (
@@ -160,6 +161,7 @@ export default async function RevenuesPage({
                     <th>Khách hàng</th>
                     <th>Tuyến</th>
                     <th>Loại DV</th>
+                    <th>Phương thức</th>
                     <th className="num">Dự kiến</th>
                     <th className="num">Đã xác nhận</th>
                     <th className="num">Thực tế</th>
@@ -174,7 +176,8 @@ export default async function RevenuesPage({
                       <td><Link className="row-link" href={`/bills/${row.billId}`}>{row.billNo}</Link></td>
                       <td>{row.customerName ?? "—"}</td>
                       <td>{row.routeCode ?? "—"}</td>
-                      <td>{row.serviceTypeCode ?? row.transportMode ?? "—"}</td>
+                      <td>{row.serviceTypeCode || "—"}</td>
+                      <td>{row.transportMode || "—"}</td>
                       <td className="num">{formatMoney(row.expectedRevenue, row.currencyCode)}</td>
                       <td className="num">{formatMoney(row.confirmedRevenue, row.currencyCode)}</td>
                       <td className="num">{formatMoney(row.actualRevenue, row.currencyCode)}</td>

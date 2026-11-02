@@ -56,6 +56,16 @@ export type BillFinancialProfile = {
   note: string;
   asOfLimitationNote: string | null;
   reporting?: BillReportingSummary | null;
+  finalizedAllocations?: FinalizedAllocationLine[] | null;
+};
+
+export type FinalizedAllocationLine = {
+  detailId: string;
+  allocationId: string;
+  costId: string;
+  amount: number;
+  currencyCode: string;
+  costTypeCode: string | null;
 };
 
 export type ReportingLine = {

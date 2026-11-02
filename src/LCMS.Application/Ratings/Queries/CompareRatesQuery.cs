@@ -35,7 +35,8 @@ public sealed record CompareRatesQuery(
     DateTimeOffset? RateDate,
     decimal? Quantity,
     decimal? GrossWeightKg,
-    decimal? VolumeCbm) : IRequest<IReadOnlyList<RateQuoteDto>>;
+    decimal? VolumeCbm,
+    string? ServiceTypeCode = null) : IRequest<IReadOnlyList<RateQuoteDto>>;
 
 public sealed class CompareRatesQueryHandler : IRequestHandler<CompareRatesQuery, IReadOnlyList<RateQuoteDto>>
 {
@@ -55,7 +56,7 @@ public sealed class CompareRatesQueryHandler : IRequestHandler<CompareRatesQuery
             throw new TenantRequiredAppException();
         }
 
-        var rateDate = request.RateDate ?? DateTimeOffset.UtcNow;
+        var rateDate = CivilRateDate(request.RateDate ?? DateTimeOffset.UtcNow);
         var published = await _db.RateVersions.AsNoTracking()
             .Where(v => v.Status == RateVersionStatuses.Published)
             .ToListAsync(cancellationToken);
@@ -102,15 +103,55 @@ public sealed class CompareRatesQueryHandler : IRequestHandler<CompareRatesQuery
             .Where(p => ruleIds.Contains(p.PricingRuleId))
             .ToListAsync(cancellationToken);
 
+        var requestedRoute = RatingEngine.DirectedRoute(request.RouteCode, request.OriginCode, request.DestinationCode);
+        var matchContext = new BillRateMatchContext(
+            requestedRoute,
+            mode,
+            string.IsNullOrWhiteSpace(request.ServiceTypeCode) ? null : request.ServiceTypeCode.Trim(),
+            request.OriginCode,
+            request.DestinationCode,
+            null,
+            request.Quantity,
+            request.GrossWeightKg ?? request.Quantity);
+        var suggestionCards = cards.Select(c => new RateSuggestionCard(
+            c.Id, c.Code, c.Name, c.PartyType, c.IsActive, c.RouteCode, c.TransportMode, c.CurrencyCode)).ToList();
+        var suggestionVersions = versions.Select(v => new RateSuggestionVersion(
+            v.Id, v.RateCardId, v.VersionNo, v.Status, v.EffectiveFrom, v.EffectiveTo)).ToList();
+        var suggestionRules = rules.Select(r => new RateSuggestionRule(
+            r.RateVersionId,
+            r.Code,
+            r.Name,
+            r.ChargeCode,
+            r.ServiceTypeCode,
+            r.PartyTypeCode,
+            r.RouteCode,
+            r.TransportMode,
+            r.OriginCode,
+            r.DestinationCode,
+            r.CommodityCode,
+            r.AppliesAnyRoute == true,
+            r.WeightMin,
+            r.WeightMax,
+            r.WeightBasis)).ToList();
+        var classified = BillRateSuggestion.Classify(
+            suggestionCards, suggestionVersions, suggestionRules, matchContext, rateDate);
+
         var quotes = new List<RateQuoteDto>();
-        foreach (var version in versions.Where(v => cardById.ContainsKey(v.RateCardId)))
+        foreach (var option in classified.Options.Where(o => o.Selectable))
         {
+            var version = versions.First(v => v.Id == option.VersionId);
             var card = cardById[version.RateCardId];
             var applicable = rules
                 .Where(r => r.RateVersionId == version.Id)
                 .Where(r => RatingEngine.Matches(
-                    r, null, null, request.RouteCode ?? card.RouteCode,
-                    mode ?? card.TransportMode, request.OriginCode, request.DestinationCode, null))
+                    r,
+                    matchContext.ServiceTypeCode,
+                    card.PartyType,
+                    requestedRoute,
+                    mode ?? card.TransportMode,
+                    request.OriginCode,
+                    request.DestinationCode,
+                    null))
                 .ToList();
             try
             {
@@ -150,7 +191,10 @@ public sealed class CompareRatesQueryHandler : IRequestHandler<CompareRatesQuery
             }
             catch (ConflictAppException ex) when (ex.Message.Contains("NO_APPLICABLE_RATE", StringComparison.Ordinal))
             {
-                continue;
+                quotes.Add(new RateQuoteDto(
+                    card.Id, version.Id, card.Code, card.Name, card.CarrierName, card.PartyType,
+                    version.VersionNo, card.CurrencyCode, 0, 0, 0, "", version.EffectiveTo,
+                    ex.Message.Replace("NO_APPLICABLE_RATE: ", "", StringComparison.Ordinal)));
             }
             catch (ConflictAppException ex)
             {
@@ -160,7 +204,46 @@ public sealed class CompareRatesQueryHandler : IRequestHandler<CompareRatesQuery
             }
         }
 
-        return quotes.OrderBy(q => q.Error is null ? 0 : 1).ThenBy(q => q.TotalAmount).ToList();
+        if (quotes.All(q => q.Error is not null))
+        {
+            foreach (var option in classified.Options.Where(o => !o.Selectable).Take(12))
+            {
+                var version = versions.First(v => v.Id == option.VersionId);
+                if (!cardById.TryGetValue(version.RateCardId, out var card))
+                {
+                    continue;
+                }
+
+                if (quotes.Any(q => q.RateVersionId == version.Id))
+                {
+                    continue;
+                }
+
+                quotes.Add(new RateQuoteDto(
+                    card.Id, version.Id, card.Code, card.Name, card.CarrierName, card.PartyType,
+                    version.VersionNo, card.CurrencyCode, 0, 0, 0, option.Reason ?? "", version.EffectiveTo,
+                    option.DetailedReason ?? option.Reason));
+            }
+        }
+
+        return quotes
+            .OrderBy(q => q.Error is null ? 0 : 1)
+            .ThenBy(q => q.TotalAmount)
+            .ToList();
+    }
+
+    /// <summary>A date-only picker is midnight. Noon UTC keeps the civil day used by effective-day checks.</summary>
+    private static DateTimeOffset CivilRateDate(DateTimeOffset value)
+    {
+        if (value.TimeOfDay != TimeSpan.Zero)
+        {
+            return value;
+        }
+
+        var civil = value.Offset == TimeSpan.Zero
+            ? DateOnly.FromDateTime(value.UtcDateTime)
+            : DateOnly.FromDateTime(value.DateTime);
+        return new DateTimeOffset(civil.Year, civil.Month, civil.Day, 12, 0, 0, TimeSpan.Zero);
     }
 
     private static (decimal Total, decimal First, string Codes) Price(

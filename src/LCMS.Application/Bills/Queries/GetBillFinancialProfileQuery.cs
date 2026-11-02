@@ -40,7 +40,16 @@ public sealed record BillFinancialProfileDto(
     bool HasMixedCurrencies,
     string Note,
     string? AsOfLimitationNote,
-    BillReportingSummaryDto? Reporting = null);
+    BillReportingSummaryDto? Reporting = null,
+    IReadOnlyList<FinalizedAllocationLineDto>? FinalizedAllocations = null);
+
+public sealed record FinalizedAllocationLineDto(
+    Guid DetailId,
+    Guid AllocationId,
+    Guid CostId,
+    decimal Amount,
+    string CurrencyCode,
+    string? CostTypeCode);
 
 /// <summary>Bill totals in the tenant reporting currency only (FX-ARCH-10); lines carry the FX trace.</summary>
 public sealed record BillReportingSummaryDto(
@@ -154,7 +163,8 @@ public sealed class GetBillFinancialProfileQueryHandler
                 c.FxStatus,
                 c.FxSourceType,
                 c.FxSourceName,
-                c.FxRateDate
+                c.FxRateDate,
+                c.CostTypeCode
             }
         ).ToListAsync(cancellationToken);
 
@@ -403,7 +413,14 @@ public sealed class GetBillFinancialProfileQueryHandler
             mixed,
             note,
             asOfLimitation,
-            reportingSummary);
+            reportingSummary,
+            allocatedList.Select(x => new FinalizedAllocationLineDto(
+                x.DetailId,
+                x.AllocationId,
+                x.CostId,
+                x.AllocatedAmount,
+                x.CurrencyCode,
+                x.CostTypeCode)).ToList());
     }
 
     private sealed record AllocatedLine(

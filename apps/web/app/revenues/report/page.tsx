@@ -63,6 +63,11 @@ export default async function RevenueReportPage({
         <p className="lede">
           Tổng hợp theo một lớp maturity từ API lợi nhuận. Bill nhiều tiền tệ không được cộng vào nhóm.
         </p>
+        <p className="note">
+          Best Available trên hồ sơ Bill lấy lớp cao nhất của từng khoản (Actual, rồi Confirmed, rồi Expected), không cộng ba lớp.
+          Current bucket là số đang đứng ở trạng thái đó. Chi phí phân bổ đã chốt nằm trong lợi nhuận Bill và không cộng thêm vào chi phí gốc dùng chung.
+          Nhóm Chưa xác định chỉ gồm bản ghi thật sự thiếu tuyến hoặc phương thức.
+        </p>
         <p className="cta-row">
           {groups.map(([id, label]) => (
             <Link key={id} className={id === groupBy ? "btn btn-sm" : "btn btn-sm btn-ghost"} href={`/revenues/report?groupBy=${id}&view=${view}`}>

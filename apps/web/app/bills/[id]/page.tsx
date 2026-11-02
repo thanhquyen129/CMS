@@ -88,6 +88,55 @@ function MaturityRow({
   );
 }
 
+function FxLineTable({
+  lines,
+  ccy,
+  kindLabel,
+  fxSourceLabel,
+}: {
+  lines: BillReportingSummary["lines"];
+  ccy: string;
+  kindLabel: Record<string, string>;
+  fxSourceLabel: (source: string | null | undefined) => string;
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <caption className="sr-only">Chi tiết quy đổi tiền tệ</caption>
+        <thead>
+          <tr>
+            <th scope="col">Dòng</th>
+            <th scope="col">Gốc</th>
+            <th scope="col">Tỷ giá</th>
+            <th scope="col">Nguồn quy đổi</th>
+            <th scope="col" className="num">Báo cáo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line, index) => (
+            <tr key={`${line.kind}-${line.id}-${index}`}>
+              <td>
+                {kindLabel[line.kind] ?? line.kind}
+                {line.label ? ` · ${line.label}` : ""}
+              </td>
+              <td>{formatMoney(line.originalAmount, line.currencyCode)}</td>
+              <td>{line.fxRate ?? "—"}</td>
+              <td>
+                {line.fxStatus === "missing" || line.fxStatus === "requires_review"
+                  ? "Thiếu tỷ giá"
+                  : fxSourceLabel(line.fxSourceName ?? line.fxSourceType)}
+              </td>
+              <td className="num">
+                {line.reportingAmount == null ? "—" : formatMoney(line.reportingAmount, ccy)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ReportingProfile({
   summary,
   terms,
@@ -102,10 +151,17 @@ function ReportingProfile({
   const kindLabel: Record<string, string> = {
     revenue: "Doanh thu",
     cost: "Chi phí",
-    allocated: "Phân bổ",
-    ap: "Phải trả",
-    ar: "Phải thu",
+    allocated: "Chi phí phân bổ",
+    ap: "Công nợ phải trả đã ghi nhận",
+    ar: "Công nợ phải thu đã ghi nhận",
   };
+  const fxSourceLabel = (source: string | null | undefined) => {
+    if (!source) return "—";
+    if (source.toLowerCase() === "identity") return "Không quy đổi (cùng tiền tệ)";
+    return source;
+  };
+  const pnlLines = summary.lines.filter((line) => line.kind === "revenue" || line.kind === "cost" || line.kind === "allocated");
+  const debtLines = summary.lines.filter((line) => line.kind === "ap" || line.kind === "ar");
   return (
     <div className="currency-card">
       <h3 className="currency-title">Tiền tệ báo cáo {ccy}</h3>
@@ -138,46 +194,19 @@ function ReportingProfile({
           </div>
         ) : null}
       </dl>
-      {summary.lines.length > 0 ? (
-        <details>
-          <summary>Chi tiết gốc × tỷ giá ({summary.lines.length})</summary>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Dòng</th>
-                  <th scope="col">Gốc</th>
-                  <th scope="col">Tỷ giá</th>
-                  <th scope="col">Nguồn</th>
-                  <th scope="col" className="num">
-                    Báo cáo
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.lines.map((line, index) => (
-                  <tr key={`${line.kind}-${line.id}-${index}`}>
-                    <td>
-                      {kindLabel[line.kind] ?? line.kind}
-                      {line.label ? ` · ${line.label}` : ""}
-                    </td>
-                    <td>{formatMoney(line.originalAmount, line.currencyCode)}</td>
-                    <td>{line.fxRate ?? "—"}</td>
-                    <td>
-                      {line.fxStatus === "missing" || line.fxStatus === "requires_review"
-                        ? "Thiếu tỷ giá"
-                        : line.fxSourceName ?? line.fxSourceType ?? "—"}
-                    </td>
-                    <td className="num">
-                      {line.reportingAmount == null
-                        ? "—"
-                        : formatMoney(line.reportingAmount, ccy)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <h3 className="currency-title">Chi tiết quy đổi tiền tệ</h3>
+      {pnlLines.length > 0 ? (
+        <details open>
+          <summary>Doanh thu &amp; chi phí — tham gia lợi nhuận ({pnlLines.length})</summary>
+          <p className="note">Nhóm này tính lợi nhuận. Công nợ phải thu/phải trả không cộng vào đây.</p>
+          <FxLineTable lines={pnlLines} ccy={ccy} kindLabel={kindLabel} fxSourceLabel={fxSourceLabel} />
+        </details>
+      ) : null}
+      {debtLines.length > 0 ? (
+        <details open>
+          <summary>Công nợ phải thu / phải trả đã ghi nhận ({debtLines.length})</summary>
+          <p className="note">Nhóm công nợ đứng riêng. Không cộng vào doanh thu, chi phí hoặc lợi nhuận.</p>
+          <FxLineTable lines={debtLines} ccy={ccy} kindLabel={kindLabel} fxSourceLabel={fxSourceLabel} />
         </details>
       ) : null}
     </div>
@@ -681,11 +710,12 @@ export default async function BillDetailPage({
                 {chargeRes.ok ? <ChargeProfitTable data={chargeRes.data} /> : null}
                 <div className="mt-8">
                   <h3 className="section-title text-base font-semibold mb-3">Hồ sơ chi phí 3 nhóm (Trực tiếp / Phân bổ / Chờ phân bổ)</h3>
+                  <p className="note">Chi phí phân bổ đã chốt lấy cùng nguồn với hồ sơ tài chính (phiên phân bổ đã chốt). Không cộng lại chi phí gốc dùng chung.</p>
                   <BillFinancialViewPanel
                     billId={bill.id}
                     billNo={bill.billNo}
                     directCosts={(costsRes.ok ? costsRes.data : [])
-                      .filter((c) => c.attributionType === "DIRECT" || (!c.attributionType && !c.sourceCostId))
+                      .filter((c) => (c.attributionType || "").toUpperCase() === "DIRECT" || (!c.attributionType && !c.sourceCostId))
                       .map((c) => ({
                         id: c.id,
                         costNo: c.costTypeCode || c.id.slice(0, 8),
@@ -695,21 +725,19 @@ export default async function BillDetailPage({
                         currency: c.currencyCode,
                         maturity: (c.financialMaturity?.toUpperCase() || "CONFIRMED") as "EXPECTED" | "CONFIRMED" | "ACTUAL",
                       }))}
-                    allocatedCosts={(costsRes.ok ? costsRes.data : [])
-                      .filter((c) => c.attributionType === "ALLOCATED" || Boolean(c.sourceCostId))
-                      .map((c) => ({
-                        id: c.id,
-                        costNo: c.costTypeCode || c.id.slice(0, 8),
+                    allocatedCosts={(profileRes.ok ? profileRes.data.finalizedAllocations ?? [] : []).map((line) => ({
+                        id: line.detailId,
+                        costNo: line.costTypeCode || line.allocationId.slice(0, 8),
                         category: "ALLOCATED" as const,
-                        name: c.costTypeCode || "Chi phí phân bổ",
-                        amount: c.amount,
-                        currency: c.currencyCode,
-                        maturity: (c.financialMaturity?.toUpperCase() || "CONFIRMED") as "EXPECTED" | "CONFIRMED" | "ACTUAL",
+                        name: line.costTypeCode || "Chi phí phân bổ đã chốt",
+                        amount: line.amount,
+                        currency: line.currencyCode,
+                        maturity: "ACTUAL" as const,
                         sourceType: "LEG" as const,
-                        sourceRef: c.legNo || c.transportLegId || undefined,
+                        sourceRef: line.allocationId,
                       }))}
                     pendingSharedCosts={(costsRes.ok ? costsRes.data : [])
-                      .filter((c) => c.attributionType === "SHARED")
+                      .filter((c) => (c.attributionType || "").toUpperCase() === "SHARED")
                       .map((c) => ({
                         id: c.id,
                         costNo: c.costTypeCode || c.id.slice(0, 8),

@@ -171,11 +171,12 @@ public static class VietnameseUiTerms
         ["UNMATCHED"] = "Chưa khớp",
 
         // Exposure & AP/AR (D08 / E09) — Exposure ≠ Recognized ≠ Settled
-        ["PAYABLE_EXPOSURE"] = "Nghĩa vụ phải trả (exposure)",
-        ["RECEIVABLE_EXPOSURE"] = "Quyền thu dự kiến (exposure)",
-        ["ACCOUNTS_PAYABLE"] = "Khoản phải trả",
-        ["ACCOUNTS_RECEIVABLE"] = "Khoản phải thu",
-        ["EXPOSURE"] = "Exposure",
+        ["PAYABLE_EXPOSURE"] = "Nghĩa vụ phải trả",
+        ["RECEIVABLE_EXPOSURE"] = "Quyền thu dự kiến",
+        ["ACCOUNTS_PAYABLE"] = "Công nợ phải trả đã ghi nhận",
+        ["ACCOUNTS_RECEIVABLE"] = "Công nợ phải thu đã ghi nhận",
+        ["EXPOSURE"] = "Công nợ dự kiến",
+        ["DUE_DATE"] = "Ngày đến hạn thanh toán",
         ["RECOGNITION"] = "Ghi nhận",
         ["OUTSTANDING"] = "Số dư còn lại",
         ["PARTIAL_RECOGNITION"] = "Ghi nhận một phần",

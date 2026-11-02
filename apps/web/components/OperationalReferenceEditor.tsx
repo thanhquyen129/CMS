@@ -573,14 +573,19 @@ function FieldInput({
     }
     case "commodity":
       control = (
-        <select id={id} value={value} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
-          <option value="">Chưa chọn loại hàng</option>
-          {commodities.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        <div>
+          <select id={id} value={value} disabled={locked} onChange={(ev) => onChange(ev.target.value)}>
+            <option value="">Chưa chọn loại hàng</option>
+            {commodities.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          {commodities.length === 0 ? (
+            <p className="note">Thuê bao chưa cấu hình loại hàng. Bổ sung tại Danh mục trước khi dùng loại hàng cho tính giá. Trường này không bắt buộc cho mọi thuê bao.</p>
+          ) : null}
+        </div>
       );
       break;
     case "flags": {

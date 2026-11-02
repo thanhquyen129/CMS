@@ -235,12 +235,12 @@ public static class RatingEngine
                 return true;
             }
 
-            return !string.IsNullOrWhiteSpace(rule.RouteCode) && Eq(rule.RouteCode, routeCode);
+            return !string.IsNullOrWhiteSpace(rule.RouteCode) && SameDirectedRoute(rule.RouteCode, routeCode);
         }
 
         if (!string.IsNullOrWhiteSpace(rule.RouteCode))
         {
-            return Eq(rule.RouteCode, routeCode);
+            return SameDirectedRoute(rule.RouteCode, routeCode);
         }
 
         return rule.AppliesAnyRoute is null;
@@ -306,6 +306,50 @@ public static class RatingEngine
         string.IsNullOrWhiteSpace(rule.ChargeCode)
             ? rule.Id.ToString("N")
             : rule.ChargeCode.Trim().ToUpperInvariant();
+
+    /// <summary>
+    /// Directed route key. SGN→HAN, SGN - HAN and SGN/HAN are the same direction.
+    /// HAN-SGN is the opposite direction and does not match.
+    /// </summary>
+    public static string? CanonicalRoute(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var parts = value.Trim().ToUpperInvariant()
+            .Replace('→', '-')
+            .Replace('—', '-')
+            .Replace('–', '-')
+            .Replace('/', '-')
+            .Replace('\\', '-')
+            .Split([' ', '-'], StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 0 ? null : string.Join("-", parts);
+    }
+
+    public static bool SameDirectedRoute(string? left, string? right)
+    {
+        var a = CanonicalRoute(left);
+        var b = CanonicalRoute(right);
+        return a is not null && b is not null && string.Equals(a, b, StringComparison.Ordinal);
+    }
+
+    public static string? DirectedRoute(string? routeCode, string? originCode, string? destinationCode)
+    {
+        var explicitRoute = CanonicalRoute(routeCode);
+        if (explicitRoute is not null)
+        {
+            return explicitRoute;
+        }
+
+        if (string.IsNullOrWhiteSpace(originCode) || string.IsNullOrWhiteSpace(destinationCode))
+        {
+            return null;
+        }
+
+        return CanonicalRoute($"{originCode}-{destinationCode}");
+    }
 
     private static bool ModeMatches(string? ruleMode, string? actual)
     {

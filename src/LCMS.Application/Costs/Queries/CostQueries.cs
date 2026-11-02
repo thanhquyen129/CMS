@@ -376,22 +376,28 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                         unitRate = decimal.Round(detail.Amount / cw, 2, MidpointRounding.AwayFromZero);
                     }
 
+                    var baseMode = rule?.CalcMethod?.Trim().ToLowerInvariant();
+                    var baseIsFixed = baseMode is "fixed" or "fixed_amount";
                     string formulaText = detail.FormulaText
-                        ?? (rule != null && rating?.ChargeableWeightKg > 0 ? $"{rating.ChargeableWeightKg} kg × {rule.UnitAmount:N0} ₫/kg" : "Theo bảng giá");
+                        ?? (baseIsFixed
+                            ? $"Cố định {detail.Amount:N0} ₫ / khoản"
+                            : rule != null && rating?.ChargeableWeightKg > 0
+                                ? $"{rating.ChargeableWeightKg} kg × {rule.UnitAmount:N0} ₫/kg"
+                                : "Theo bảng giá");
 
                     trace = new CostRatingTraceDto(
                         RatingId: detail.RatingId,
                         RatingDetailId: detail.Id,
                         RateCardId: card?.Id ?? cardId,
-                        RateCardCode: card?.Code ?? "TDNT_SGN_HAN",
-                        RateCardName: card?.Name ?? "Bảng giá cước chính",
+                        RateCardCode: card?.Code,
+                        RateCardName: card?.Name,
                         RateVersionId: version?.Id ?? versionId,
-                        RateVersionNo: version?.VersionNo ?? 2,
+                        RateVersionNo: version?.VersionNo,
                         PricingRuleId: rule?.Id ?? ruleId,
-                        RuleCode: !string.IsNullOrWhiteSpace(detail.RuleCode) ? detail.RuleCode : (rule?.Code ?? "QT0001"),
+                        RuleCode: !string.IsNullOrWhiteSpace(detail.RuleCode) ? detail.RuleCode : rule?.Code,
                         ChargeCode: detail.ComponentCode,
                         ChargeableWeightKg: rating?.ChargeableWeightKg,
-                        UnitRate: unitRate,
+                        UnitRate: baseIsFixed ? null : unitRate,
                         FormulaText: formulaText,
                         RateDate: rating?.RateDate,
                         RateDateFormatted: rateDateFormatted,
@@ -408,10 +414,10 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                         SurchargeCode: null,
                         SurchargeName: null,
                         SurchargeVersionId: null,
-                        SourceOrigin: "rating",
-                        CalculationMode: "unit_rate",
-                        CalculationModeLabel: "Đơn giá nấc trọng lượng",
-                        DeclaredUnitRate: declaredUnitRate,
+                        SourceOrigin: card is null && rule is null ? "missing_link" : "rating",
+                        CalculationMode: baseIsFixed ? "fixed" : "unit_rate",
+                        CalculationModeLabel: baseIsFixed ? "Cố định (FIXED)" : "Đơn giá nấc trọng lượng",
+                        DeclaredUnitRate: baseIsFixed ? null : declaredUnitRate,
                         ReferenceUnitRate: referenceUnitRate
                     );
                 }

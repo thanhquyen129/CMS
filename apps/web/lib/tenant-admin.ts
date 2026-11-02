@@ -73,6 +73,13 @@ export function getSampleDataStatus() {
   return apiGet<SampleDataStatus>("/api/sample-data");
 }
 
+export function getTenantSettings() {
+  return apiGet<{
+    financialJson: string | null;
+    financial?: { revenueMaturityModel?: string | null; recognitionPolicyMode?: string | null };
+  }>("/api/tenant-settings");
+}
+
 export function listAuditEvents(qs: string) {
   return apiGet<AuditEventItem[]>(`/api/audit-events${qs ? `?${qs}` : ""}`);
 }

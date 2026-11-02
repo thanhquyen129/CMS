@@ -247,7 +247,7 @@ public static class BillRateSuggestion
 
         if (!rulesCarryRoute
             && !string.IsNullOrWhiteSpace(card.RouteCode)
-            && !string.Equals(card.RouteCode.Trim(), bill.RouteCode?.Trim(), StringComparison.OrdinalIgnoreCase))
+            && !RatingEngine.SameDirectedRoute(card.RouteCode, bill.RouteCode))
         {
             category = "MISMATCH_BY_FIELD";
             detail = $"Tuyến: Bill = {bill.RouteCode ?? "—"} ≠ Bảng giá = {card.RouteCode}";
@@ -399,7 +399,7 @@ public static class BillRateSuggestion
     private static bool HasHardConflict(RateSuggestionRule rule, string partyType, BillRateMatchContext bill) =>
         Hard(rule.ServiceTypeCode, bill.ServiceTypeCode)
         || Hard(rule.PartyTypeCode, partyType)
-        || Hard(rule.RouteCode, bill.RouteCode)
+        || DirectedHard(rule.RouteCode, bill.RouteCode)
         || Hard(rule.TransportMode, bill.TransportMode)
         || Hard(rule.OriginCode, bill.OriginCode)
         || Hard(rule.DestinationCode, bill.DestinationCode)
@@ -412,6 +412,11 @@ public static class BillRateSuggestion
         || Missing(rule.OriginCode, bill.OriginCode)
         || Missing(rule.DestinationCode, bill.DestinationCode)
         || Missing(rule.CommodityCode, bill.CommodityCode);
+
+    private static bool DirectedHard(string? filter, string? value) =>
+        !string.IsNullOrWhiteSpace(filter)
+        && !string.IsNullOrWhiteSpace(value)
+        && !RatingEngine.SameDirectedRoute(filter, value);
 
     private static bool Hard(string? filter, string? value) =>
         !string.IsNullOrWhiteSpace(filter)

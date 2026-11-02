@@ -139,7 +139,11 @@ public sealed class ListPendingApprovalQueueQueryHandler
 
         var query = _db.Approvals.AsNoTracking().AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(request.Status))
+        if (string.Equals(request.Status, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            // Chờ duyệt / Đã duyệt / Từ chối / Tất cả — all keeps every status.
+        }
+        else if (!string.IsNullOrWhiteSpace(request.Status))
         {
             var status = request.Status.Trim().ToLowerInvariant();
             query = query.Where(a => a.Status == status);

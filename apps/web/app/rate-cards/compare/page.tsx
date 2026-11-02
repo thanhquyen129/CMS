@@ -15,6 +15,7 @@ export default async function CompareRatesPage({ searchParams }: { searchParams:
   if (!jar.get(AUTH_COOKIE)?.value) redirect("/login");
   const terms = await fetchTerminology();
   const modeCatalog = await listCatalog("transport_mode");
+  const serviceCatalog = await listCatalog("service_type");
   const sp = await searchParams;
   const initial: Record<string, string> = {};
   for (const [key, value] of Object.entries(sp)) {
@@ -33,7 +34,13 @@ export default async function CompareRatesPage({ searchParams }: { searchParams:
           title="So sánh giá"
           lede="So sánh nhiều Rate Card phù hợp trên cùng một Rating Context"
         />
-        <CompareRatesForm initial={initial} modes={catalogModeOptions(modeCatalog.ok ? modeCatalog.data : [])} />
+        <CompareRatesForm
+          initial={initial}
+          modes={catalogModeOptions(modeCatalog.ok ? modeCatalog.data : [])}
+          services={(serviceCatalog.ok ? serviceCatalog.data : [])
+            .filter((item) => item.isActive !== false && item.code.toUpperCase() !== "AIR")
+            .map((item) => ({ value: item.code, label: `${item.code} — ${item.name}` }))}
+        />
       </section>
     </AppShell>
   );

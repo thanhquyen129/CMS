@@ -8,6 +8,7 @@ import { FilterBar, ListPageHeader } from "@/components/list";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { getBill, listBills } from "@/lib/bills";
+import { listCatalog } from "@/lib/catalog";
 import {
   billTypeLabel,
   operationalStatusLabel,
@@ -35,6 +36,7 @@ export default async function NewRevenuePage({
   const costLabel = term(terms, "COST", "Chi phí");
   const profitLabel = term(terms, "PROFIT", "Lợi nhuận");
 
+  const revenueTypes = await listCatalog("revenue_type");
   const bills = await listBills(q?.trim() || undefined, {
     page: 1,
     pageSize: 50,
@@ -106,7 +108,11 @@ export default async function NewRevenuePage({
         ) : null}
 
         {billId && selected ? (
-          <CreateRevenueForm terms={terms} billId={billId} />
+          <CreateRevenueForm
+            terms={terms}
+            billId={billId}
+            revenueTypes={(revenueTypes.ok ? revenueTypes.data : []).filter((item) => item.isActive).map((item) => ({ code: item.code, name: item.name }))}
+          />
         ) : (
           <>
             <FilterBar

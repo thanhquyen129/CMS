@@ -1,10 +1,12 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
+using LCMS.Application.Audit;
 using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.FinancialCloses;
 using LCMS.Application.FinancialControl;
 using LCMS.Application.Revenues;
+using LCMS.Application.Tenancy;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using MediatR;
@@ -47,6 +49,8 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
     private readonly IPermissionService _permissions;
     private readonly IRowVersionGuard _versions;
     private readonly IIdempotencyGate _idempotency;
+    private readonly ITenantSettingsService _settings;
+    private readonly IAuditWriter _audit;
 
     public ConfirmRevenueCommandHandler(
         ILcmsDbContext db,
@@ -58,7 +62,9 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         IPeriodLockGate periodLockGate,
         IPermissionService permissions,
         IRowVersionGuard versions,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        ITenantSettingsService settings,
+        IAuditWriter audit)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -70,6 +76,8 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         _permissions = permissions;
         _versions = versions;
         _idempotency = idempotency;
+        _settings = settings;
+        _audit = audit;
     }
 
     public async Task Handle(ConfirmRevenueCommand request, CancellationToken cancellationToken)
@@ -103,6 +111,12 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
             throw new ConflictAppException("Chỉ được xác nhận doanh thu đang hiệu lực.");
         }
 
+        if (RevenueMaturityModels.IsTwoLayer(await _settings.GetFinancialAsync(cancellationToken)))
+        {
+            throw new ConflictAppException(
+                "Thuê bao dùng mô hình 2 lớp Expected → Actual. Không tạo lớp Confirmed.");
+        }
+
         if (!string.Equals(revenue.FinancialMaturity, RevenueMaturities.Expected, StringComparison.OrdinalIgnoreCase))
         {
             throw new ConflictAppException("Chỉ chuyển Expected → Confirmed; không ghi đè mức độ trước.");
@@ -133,6 +147,13 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
             request.ConfirmedAmount ?? revenue.ExpectedAmount,
             4,
             MidpointRounding.AwayFromZero);
+        var beforeJson = AuditJson.Serialize(new
+        {
+            maturity = revenue.FinancialMaturity,
+            expected = revenue.ExpectedAmount,
+            confirmed = revenue.ConfirmedAmount,
+            actual = revenue.ActualAmount
+        });
 
         revenue.ConfirmedAmount = confirmed;
         revenue.Amount = confirmed;
@@ -141,6 +162,20 @@ public sealed class ConfirmRevenueCommandHandler : IRequestHandler<ConfirmRevenu
         revenue.ConfirmedBy = _user.UserId;
         await _fx.ApplyToRevenueAsync(revenue, confirmed, cancellationToken);
 
+        _audit.Append(
+            AuditActions.RevenueConfirm,
+            AuditObjectTypes.Revenue,
+            revenue.Id,
+            beforeJson,
+            AuditJson.Serialize(new
+            {
+                maturity = revenue.FinancialMaturity,
+                expected = revenue.ExpectedAmount,
+                confirmed = revenue.ConfirmedAmount,
+                actor = _user.UserId,
+                source = "maturity_transition"
+            }),
+            "Expected → Confirmed");
         _idempotency.Remember(
             IdempotencyScopes.RevenueConfirm,
             request.IdempotencyKey ?? "",
@@ -182,6 +217,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
     private readonly IAuditWriter _audit;
     private readonly IRowVersionGuard _versions;
     private readonly IIdempotencyGate _idempotency;
+    private readonly ITenantSettingsService _settings;
 
     public ActualizeRevenueCommandHandler(
         ILcmsDbContext db,
@@ -191,7 +227,8 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         IPermissionService permissions,
         IAuditWriter audit,
         IRowVersionGuard versions,
-        IIdempotencyGate idempotency)
+        IIdempotencyGate idempotency,
+        ITenantSettingsService settings)
     {
         _db = db;
         _tenantContext = tenantContext;
@@ -201,6 +238,7 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         _audit = audit;
         _versions = versions;
         _idempotency = idempotency;
+        _settings = settings;
     }
 
     public async Task Handle(ActualizeRevenueCommand request, CancellationToken cancellationToken)
@@ -234,7 +272,17 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
             throw new ConflictAppException("Chỉ được thực tế hóa doanh thu đang hiệu lực.");
         }
 
-        if (!string.Equals(revenue.FinancialMaturity, RevenueMaturities.Confirmed, StringComparison.OrdinalIgnoreCase))
+        var twoLayer = RevenueMaturityModels.IsTwoLayer(await _settings.GetFinancialAsync(cancellationToken));
+        var fromExpected = string.Equals(revenue.FinancialMaturity, RevenueMaturities.Expected, StringComparison.OrdinalIgnoreCase);
+        var fromConfirmed = string.Equals(revenue.FinancialMaturity, RevenueMaturities.Confirmed, StringComparison.OrdinalIgnoreCase);
+        if (twoLayer)
+        {
+            if (!fromExpected && !fromConfirmed)
+            {
+                throw new ConflictAppException("Mô hình 2 lớp chỉ chuyển Expected hoặc Confirmed lịch sử → Actual.");
+            }
+        }
+        else if (!fromConfirmed)
         {
             throw new ConflictAppException("Chỉ chuyển Confirmed → Actual; không ghi đè mức độ trước.");
         }
@@ -262,9 +310,16 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         }
 
         var actual = decimal.Round(
-            request.ActualAmount ?? revenue.ConfirmedAmount ?? revenue.ExpectedAmount,
+            request.ActualAmount ?? (twoLayer && fromExpected ? revenue.ExpectedAmount : revenue.ConfirmedAmount ?? revenue.ExpectedAmount),
             4,
             MidpointRounding.AwayFromZero);
+        var beforeActual = AuditJson.Serialize(new
+        {
+            maturity = revenue.FinancialMaturity,
+            expected = revenue.ExpectedAmount,
+            confirmed = revenue.ConfirmedAmount,
+            actual = revenue.ActualAmount
+        });
 
         revenue.ActualAmount = actual;
         revenue.Amount = actual;
@@ -273,6 +328,22 @@ public sealed class ActualizeRevenueCommandHandler : IRequestHandler<ActualizeRe
         revenue.ActualizedBy = _user.UserId;
         await _fx.ApplyToRevenueAsync(revenue, actual, cancellationToken);
 
+        _audit.Append(
+            AuditActions.RevenueActualize,
+            AuditObjectTypes.Revenue,
+            revenue.Id,
+            beforeActual,
+            AuditJson.Serialize(new
+            {
+                maturity = revenue.FinancialMaturity,
+                expected = revenue.ExpectedAmount,
+                confirmed = revenue.ConfirmedAmount,
+                actual = revenue.ActualAmount,
+                actor = _user.UserId,
+                model = twoLayer ? RevenueMaturityModels.Two : RevenueMaturityModels.Three,
+                source = string.IsNullOrWhiteSpace(request.SourceSystem) ? OperationalSourceSystems.LcmsManual : request.SourceSystem.Trim()
+            }),
+            request.OverrideReason ?? (twoLayer && fromExpected ? "Expected → Actual" : "Confirmed → Actual"));
         _idempotency.Remember(
             IdempotencyScopes.RevenueActualize,
             request.IdempotencyKey ?? "",

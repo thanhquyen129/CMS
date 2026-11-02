@@ -380,7 +380,7 @@ export function BillCostRevenuePanel({
                             className="btn btn-ghost btn-sm"
                             href={`/ap-ar/exposures/new?kind=payable&billId=${encodeURIComponent(billId)}&costId=${encodeURIComponent(c.id)}&amount=${encodeURIComponent(String(c.amount))}&currency=${encodeURIComponent(c.currencyCode)}`}
                           >
-                            Exposure
+                            Nghĩa vụ phải trả
                           </Link>
                         ) : null}
                       </div>
@@ -514,7 +514,7 @@ export function BillCostRevenuePanel({
                             className="btn btn-ghost btn-sm"
                             href={`/ap-ar/exposures/new?kind=receivable&billId=${encodeURIComponent(billId)}&revenueId=${encodeURIComponent(r.id)}&amount=${encodeURIComponent(String(r.amount))}&currency=${encodeURIComponent(r.currencyCode)}`}
                           >
-                            Exposure
+                            Quyền thu dự kiến
                           </Link>
                         ) : null}
                       </div>

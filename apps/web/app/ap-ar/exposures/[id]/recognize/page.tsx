@@ -68,7 +68,7 @@ export default async function RecognizeExposurePage({
     <AppShell terms={terms} active="ap">
       <section className="panel panel-wide">
         <p className="breadcrumb">
-          <Link href="/ap-ar?tab=exposure">Exposure</Link>
+          <Link href="/ap-ar?tab=exposure">Công nợ dự kiến</Link>
           {" / "}
           Ghi nhận
         </p>

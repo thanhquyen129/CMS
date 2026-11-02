@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { DateInputVi } from "@/components/DateInputVi";
 import { formatMoney } from "@/lib/money";
 import { partyTypeLabel } from "@/lib/rate-cards";
 
@@ -23,9 +24,11 @@ export type RateQuote = {
 export function CompareRatesForm({
   initial,
   modes,
+  services = [],
 }: {
   initial: Record<string, string>;
   modes: { value: string; label: string }[];
+  services?: { value: string; label: string }[];
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,8 +44,11 @@ export function CompareRatesForm({
       transportMode: String(fd.get("transportMode") ?? ""),
       originCode: String(fd.get("originCode") ?? "").trim() || null,
       destinationCode: String(fd.get("destinationCode") ?? "").trim() || null,
+      routeCode: null,
+      serviceTypeCode: String(fd.get("serviceTypeCode") ?? "").trim() || null,
       rateDate: String(fd.get("rateDate") ?? "") || null,
       quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : null,
+      grossWeightKg: Number.isFinite(quantity) && quantity > 0 ? quantity : null,
       partyType: String(fd.get("partyType") ?? "") || null,
     };
     try {
@@ -88,8 +94,17 @@ export function CompareRatesForm({
             <input id="destinationCode" name="destinationCode" defaultValue={initial.destinationCode || ""} placeholder="FRA" />
           </div>
           <div className="field">
+            <label htmlFor="serviceTypeCode">Loại dịch vụ</label>
+            <select id="serviceTypeCode" name="serviceTypeCode" defaultValue={initial.serviceTypeCode || ""}>
+              <option value="">Chưa chọn</option>
+              {services.filter((s) => s.value.toUpperCase() !== "AIR").map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
             <label htmlFor="rateDate">Ngày đi</label>
-            <input id="rateDate" name="rateDate" type="date" defaultValue={initial.rateDate || ""} />
+            <DateInputVi id="rateDate" name="rateDate" defaultValue={initial.rateDate || ""} />
           </div>
           <div className="field">
             <label htmlFor="quantity">Trọng lượng tính cước (kg)</label>
@@ -109,6 +124,13 @@ export function CompareRatesForm({
       </fieldset>
       {error ? <div className="alert alert-error" role="alert">{error}</div> : null}
       {quotes && quotes.length === 0 ? <p className="empty-state">Không có bảng giá phù hợp đang hiệu lực.</p> : null}
+      {quotes && quotes.some((q) => q.error) ? (
+        <ul className="note">
+          {quotes.filter((q) => q.error).map((q) => (
+            <li key={`${q.rateCardId}-${q.versionNo}`}>{q.cardCode} v{q.versionNo}: {q.error}</li>
+          ))}
+        </ul>
+      ) : null}
       {quotes && quotes.length > 0 ? (
         <>
           <div className="stat-grid stat-grid-3">

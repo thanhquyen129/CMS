@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { DecideApprovalButton } from "@/components/DecideApprovalButton";
 import { ListPageHeader } from "@/components/list/ListPageHeader";
 import { AUTH_COOKIE } from "@/lib/auth";
+import { readJwtSub } from "@/lib/jwt-payload";
 import { fetchTerminology, term } from "@/lib/api";
 import {
   approvalStatusLabel,
@@ -15,11 +16,26 @@ import {
 } from "@/lib/control-desk";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 
-export default async function ApprovalQueuePage() {
+const queueTabs = [
+  ["pending", "Chờ duyệt"],
+  ["approved", "Đã duyệt"],
+  ["rejected", "Từ chối"],
+  ["all", "Tất cả"],
+] as const;
+
+export default async function ApprovalQueuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const jar = await cookies();
-  if (!jar.get(AUTH_COOKIE)?.value) {
+  const token = jar.get(AUTH_COOKIE)?.value;
+  if (!token) {
     redirect("/login");
   }
+  const currentUserId = readJwtSub(token);
+  const { status: statusRaw } = await searchParams;
+  const status = queueTabs.some(([id]) => id === statusRaw) ? statusRaw! : "pending";
 
   const terms = await fetchTerminology();
   const queueLabel = term(terms, "APPROVAL_QUEUE", "Hàng đợi phê duyệt");
@@ -29,7 +45,7 @@ export default async function ApprovalQueuePage() {
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ tài chính");
   const dashboardLabel = term(terms, "DASHBOARD", "Bảng điều khiển");
 
-  const result = await listApprovalQueue();
+  const result = await listApprovalQueue(status);
 
   return (
     <AppShell terms={terms} active="control">
@@ -41,8 +57,15 @@ export default async function ApprovalQueuePage() {
             { label: queueLabel },
           ]}
           title={queueLabel}
-          lede={`${approvalLabel} đang chờ quyết định. Phê duyệt / từ chối tại đây — ${approvalLabel} ≠ quyền hệ thống. Mở ${billLabel} / ${docLabel} khi có màn chi tiết.`}
+          lede={`${approvalLabel} theo trạng thái. Người tạo đề xuất không tự phê duyệt (PC-21). ${approvalLabel} ≠ quyền hệ thống.`}
         />
+        <div className="filter-tabs" role="tablist" aria-label="Lọc hàng đợi phê duyệt">
+          {queueTabs.map(([id, label]) => (
+            <Link key={id} className={status === id ? "active" : undefined} href={id === "pending" ? "/queues/approvals" : `/queues/approvals?status=${id}`} role="tab" aria-selected={status === id}>
+              {label}
+            </Link>
+          ))}
+        </div>
 
         {!result.ok ? (
           <div className="alert alert-error" role="alert">
@@ -50,7 +73,7 @@ export default async function ApprovalQueuePage() {
           </div>
         ) : result.data.length === 0 ? (
           <div className="empty-state" role="status">
-            Không có {approvalLabel} đang chờ trong phạm vi của bạn.
+            Không có hồ sơ trong bộ lọc này.
           </div>
         ) : (
           <div className="table-wrap">
@@ -63,6 +86,7 @@ export default async function ApprovalQueuePage() {
                   <th scope="col">Trạng thái</th>
                   <th scope="col">{levelLabel}</th>
                   <th scope="col">Yêu cầu lúc</th>
+                  <th scope="col">Quyết định lúc</th>
                   <th scope="col">Lý do</th>
                   <th scope="col">Liên kết</th>
                   <th scope="col">Thao tác</th>
@@ -103,7 +127,8 @@ export default async function ApprovalQueuePage() {
                         {item.currentLevel}/{item.requiredLevel}
                       </td>
                       <td>{formatDateTimeVi(item.requestedAt)}</td>
-                      <td>{item.requestReason?.trim() || "—"}</td>
+                      <td>{item.decidedAt ? formatDateTimeVi(item.decidedAt) : "—"}</td>
+                      <td>{item.decisionReason?.trim() || item.requestReason?.trim() || "—"}</td>
                       <td>
                         {href ? (
                           <Link className="row-link" href={href}>
@@ -125,6 +150,11 @@ export default async function ApprovalQueuePage() {
                             approvalId={item.id}
                             currentLevel={item.currentLevel}
                             requiredLevel={item.requiredLevel}
+                            makerBlocked={Boolean(
+                              currentUserId &&
+                                item.requestedBy &&
+                                item.requestedBy.toLowerCase() === currentUserId.toLowerCase()
+                            )}
                           />
                         ) : (
                           "—"

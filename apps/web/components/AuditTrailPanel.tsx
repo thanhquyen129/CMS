@@ -29,6 +29,8 @@ type Props = {
 };
 
 const ACTION_LABELS: Record<string, string> = {
+  "revenue.confirm": "Chuyển Expected → Confirmed",
+  "revenue.actualize": "Chuyển sang Actual",
   "payment.cancel": "Hủy phiếu chi",
   "collection.cancel": "Hủy phiếu thu",
   "payment_allocation.finalize": "Chốt phân bổ thanh toán",

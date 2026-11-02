@@ -47,6 +47,27 @@ public sealed class TenantFinancialSettings
 
     /// <summary>Require a reason when overriding a provider/book FX rate (default true).</summary>
     public bool? FxOverrideReasonRequired { get; set; }
+
+    /// <summary>
+    /// Revenue maturity workflow. <c>three</c> (default, including null) is Expected → Confirmed → Actual.
+    /// <c>two</c> is Expected → Actual and must not write a Confirmed amount.
+    /// Changing this value does not rewrite historical rows.
+    /// </summary>
+    public string? RevenueMaturityModel { get; set; }
+
+    public string? RevenueMaturityPolicyVersion { get; set; }
+
+    /// <summary>ISO date the current maturity model became effective. Historical rows stay as stored.</summary>
+    public string? RevenueMaturityEffectiveFrom { get; set; }
+}
+
+public static class RevenueMaturityModels
+{
+    public const string Two = "two";
+    public const string Three = "three";
+
+    public static bool IsTwoLayer(TenantFinancialSettings? settings) =>
+        string.Equals(settings?.RevenueMaturityModel, Two, StringComparison.OrdinalIgnoreCase);
 }
 
 public static class RecognitionPolicyModes

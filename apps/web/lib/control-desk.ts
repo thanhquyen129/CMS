@@ -186,8 +186,11 @@ export function listExceptionQueue(opts?: {
   return apiGet<ExceptionQueueItem[]>(`/api/queues/exceptions${qs}`);
 }
 
-export function listApprovalQueue(): Promise<ApiResult<ApprovalQueueItem[]>> {
-  return apiGet<ApprovalQueueItem[]>("/api/queues/approvals");
+export function listApprovalQueue(status?: string): Promise<ApiResult<ApprovalQueueItem[]>> {
+  if (!status || status === "pending") {
+    return apiGet<ApprovalQueueItem[]>("/api/queues/approvals");
+  }
+  return apiGet<ApprovalQueueItem[]>(`/api/queues/approvals?status=${encodeURIComponent(status)}`);
 }
 
 export type VarianceItem = {

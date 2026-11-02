@@ -31,6 +31,9 @@ public sealed class CreateReceivableExposureCommandValidator : AbstractValidator
             .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.");
         RuleFor(x => x.Notes).MaximumLength(2048).When(x => x.Notes is not null);
         RuleFor(x => x.SourceType).MaximumLength(64).When(x => x.SourceType is not null);
+        RuleFor(x => x)
+            .Must(x => ReceivableExposureCoverage.HasBasis(x.BillId, x.RevenueId, x.FinancialDocumentId, x.CounterpartyId))
+            .WithMessage(ReceivableExposureCoverage.MissingBasis);
     }
 }
 
@@ -53,6 +56,8 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
         }
 
         var tenantId = _tenantContext.TenantId!.Value;
+        Guid? billId = request.BillId;
+        Guid? counterpartyId = request.CounterpartyId;
 
         if (request.BillId.HasValue)
         {
@@ -66,16 +71,30 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
 
         if (request.RevenueId.HasValue)
         {
-            var revenueExists = await _db.Revenues.AsNoTracking()
-                .AnyAsync(r => r.Id == request.RevenueId, cancellationToken);
-            if (!revenueExists)
+            var revenue = await _db.Revenues.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == request.RevenueId, cancellationToken)
+                ?? throw new NotFoundAppException("Không tìm thấy doanh thu.");
+            if (request.BillId is Guid billForRevenue && revenue.BillId != billForRevenue)
             {
-                throw new NotFoundAppException("Không tìm thấy doanh thu.");
+                throw new ConflictAppException("Khoản doanh thu không thuộc Bill đã chọn.");
+            }
+
+            billId ??= revenue.BillId;
+            var ceiling = revenue.ActualAmount ?? revenue.ConfirmedAmount ?? revenue.ExpectedAmount;
+            var openExposure = await _db.ReceivableExposures.AsNoTracking()
+                .Where(e => e.RevenueId == revenue.Id
+                    && e.RecordStatus == "active"
+                    && e.Status != ExposureStatuses.Cancelled)
+                .Select(e => e.Amount)
+                .ToListAsync(cancellationToken);
+            var next = decimal.Round(openExposure.Sum() + request.Amount, 4, MidpointRounding.AwayFromZero);
+            if (next > ceiling)
+            {
+                throw new ConflictAppException(
+                    $"Tổng quyền thu dự kiến ({next}) vượt doanh thu nguồn ({ceiling}). Không ghi nhận trùng.");
             }
         }
 
-        Guid? billId = request.BillId;
-        Guid? counterpartyId = request.CounterpartyId;
         Guid? financialDocumentId = request.FinancialDocumentId;
 
         if (financialDocumentId.HasValue)
@@ -129,4 +148,13 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
 
         return exposure.Id;
     }
+}
+
+internal static class ReceivableExposureCoverage
+{
+    public const string MissingBasis =
+        "Công nợ dự kiến phải gắn khoản doanh thu, chứng từ, hoặc luồng ngoại lệ có đối tác và lý do. Không tạo số tiền treo.";
+
+    public static bool HasBasis(Guid? billId, Guid? lineId, Guid? documentId, Guid? counterpartyId) =>
+        billId.HasValue || lineId.HasValue || documentId.HasValue || counterpartyId.HasValue;
 }

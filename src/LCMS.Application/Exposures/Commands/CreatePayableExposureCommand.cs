@@ -31,6 +31,9 @@ public sealed class CreatePayableExposureCommandValidator : AbstractValidator<Cr
             .Length(3).WithMessage("Mã tiền tệ phải gồm 3 ký tự.");
         RuleFor(x => x.Notes).MaximumLength(2048).When(x => x.Notes is not null);
         RuleFor(x => x.SourceType).MaximumLength(64).When(x => x.SourceType is not null);
+        RuleFor(x => x)
+            .Must(x => ReceivableExposureCoverage.HasBasis(x.BillId, x.CostId, x.FinancialDocumentId, x.CounterpartyId))
+            .WithMessage("Nghĩa vụ phải trả phải gắn khoản chi phí, chứng từ, hoặc luồng ngoại lệ có đối tác và lý do. Không tạo số tiền treo.");
     }
 }
 

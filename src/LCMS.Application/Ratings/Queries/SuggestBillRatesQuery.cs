@@ -150,7 +150,7 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
         var context = new BillRateMatchContext(
             bill.RouteCode,
             bill.TransportMode,
-            string.IsNullOrWhiteSpace(bill.ServiceTypeCode) ? bill.BillType : bill.ServiceTypeCode,
+            bill.ServiceTypeCode,
             bill.OriginCode,
             bill.DestinationCode,
             commodity,

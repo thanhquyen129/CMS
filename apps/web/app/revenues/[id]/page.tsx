@@ -11,6 +11,7 @@ import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { CancelRevenueMappingButton } from "@/components/CancelRevenueMappingButton";
 import { MapRevenueForm } from "@/components/MapRevenueForm";
 import { MaturityTransitionButton } from "@/components/MaturityTransitionButton";
+import { AuditTrailPanel } from "@/components/AuditTrailPanel";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology, term } from "@/lib/api";
 import { listBills } from "@/lib/bills";
@@ -21,6 +22,7 @@ import {
   maturityLabelKey,
 } from "@/lib/costs-revenues";
 import { formatMoney } from "@/lib/money";
+import { getTenantSettings } from "@/lib/tenant-admin";
 
 type Params = Promise<{ id: string }>;
 
@@ -36,6 +38,8 @@ export default async function RevenueDetailPage({
 
   const { id } = await params;
   const terms = await fetchTerminology();
+  const settings = await getTenantSettings();
+  const twoLayer = settings.ok && settings.data.financial?.revenueMaturityModel === "two";
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
   const billLabel = term(terms, "BILL", "Bill");
   const expected = term(terms, "EXPECTED", "Dự kiến");
@@ -122,7 +126,7 @@ export default async function RevenueDetailPage({
 
         {revenue.recordStatus === "active" ? (
           <p className="cta-row">
-            {canConfirm(revenue.financialMaturity, revenue.recordStatus) ? (
+            {canConfirm(revenue.financialMaturity, revenue.recordStatus) && !twoLayer ? (
               <MaturityTransitionButton
                 terms={terms}
                 kind="revenue"
@@ -133,7 +137,7 @@ export default async function RevenueDetailPage({
                 rowVersion={revenue.rowVersion}
               />
             ) : null}
-            {canActualize(revenue.financialMaturity, revenue.recordStatus) ? (
+            {(canActualize(revenue.financialMaturity, revenue.recordStatus) || (twoLayer && canConfirm(revenue.financialMaturity, revenue.recordStatus))) ? (
               <MaturityTransitionButton
                 terms={terms}
                 kind="revenue"
@@ -201,6 +205,7 @@ export default async function RevenueDetailPage({
           adjustments={adjustments}
           currencyCode={revenue.currencyCode}
         />
+        <AuditTrailPanel terms={terms} objectType="revenue" objectId={revenue.id} title="Chuyển lớp — lịch sử" />
       </section>
     </AppShell>
   );

@@ -41,6 +41,8 @@ public static class AuditActions
     public const string RevenuePartnerChange = "revenue.partner_change";
     public const string CostConfirm = "cost.confirm";
     public const string RevenueCreate = "revenue.create";
+    public const string RevenueConfirm = "revenue.confirm";
+    public const string RevenueActualize = "revenue.actualize";
     public const string RevenueMappingFinalize = "revenue.mapping.finalize";
     public const string RevenueMappingCancel = "revenue.mapping.cancel";
     public const string PaymentAllocationFinalize = "payment_allocation.finalize";

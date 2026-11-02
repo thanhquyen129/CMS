@@ -125,7 +125,7 @@ export function CreateExposuresFromMatchButton({
 
   return (
     <div className="stack" style={{ marginTop: "1rem" }}>
-      <h2 className="section-title sm">Exposure từ khớp</h2>
+      <h2 className="section-title sm">Công nợ dự kiến từ khớp</h2>
       <p className="note">
         Đề xuất / tạo exposure gắn Cost hoặc Revenue đã khớp — không invent chi phí /
         doanh thu (Received ≠ Accepted ≠ Matched ≠ Recognized).

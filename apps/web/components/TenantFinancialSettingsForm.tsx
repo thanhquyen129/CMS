@@ -11,6 +11,9 @@ type TenantSettings = {
     confirmApprovalThresholdBase?: number | null;
     recognitionPolicyMode?: string | null;
     recognitionPolicyVersion?: string | null;
+    revenueMaturityModel?: string | null;
+    revenueMaturityPolicyVersion?: string | null;
+    revenueMaturityEffectiveFrom?: string | null;
   };
 };
 
@@ -20,6 +23,9 @@ export function TenantFinancialSettingsForm() {
   const [confirmThreshold, setConfirmThreshold] = useState("");
   const [policyMode, setPolicyMode] = useState("manual");
   const [policyVersion, setPolicyVersion] = useState("tenant-default-v1");
+  const [maturityModel, setMaturityModel] = useState("three");
+  const [maturityVersion, setMaturityVersion] = useState("v1");
+  const [maturityFrom, setMaturityFrom] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,6 +61,9 @@ export function TenantFinancialSettingsForm() {
         setPolicyVersion(
           json.financial?.recognitionPolicyVersion || "tenant-default-v1"
         );
+        setMaturityModel(json.financial?.revenueMaturityModel === "two" ? "two" : "three");
+        setMaturityVersion(json.financial?.revenueMaturityPolicyVersion || "v1");
+        setMaturityFrom(json.financial?.revenueMaturityEffectiveFrom || "");
       } catch {
         setError("Không kết nối được máy chủ.");
       }
@@ -65,7 +74,14 @@ export function TenantFinancialSettingsForm() {
     setBusy(true);
     setError(null);
     setInfo(null);
+    let existing: Record<string, unknown> = {};
+    try {
+      existing = data?.financialJson ? (JSON.parse(data.financialJson) as Record<string, unknown>) : {};
+    } catch {
+      existing = {};
+    }
     const financial = {
+      ...existing,
       maxWriteOffAmount: maxWriteOff.trim()
         ? Number(maxWriteOff.replace(",", "."))
         : null,
@@ -74,6 +90,9 @@ export function TenantFinancialSettingsForm() {
         : null,
       recognitionPolicyMode: policyMode,
       recognitionPolicyVersion: policyVersion.trim() || "tenant-default-v1",
+      revenueMaturityModel: maturityModel === "two" ? "two" : "three",
+      revenueMaturityPolicyVersion: maturityVersion.trim() || "v1",
+      revenueMaturityEffectiveFrom: maturityFrom.trim() || null,
     };
     try {
       const res = await fetch("/bff/tenant-settings", {
@@ -168,6 +187,22 @@ export function TenantFinancialSettingsForm() {
                     require_document_link — cần chứng từ gắn exposure
                   </option>
                 </select>
+              </div>
+              <div className="field">
+                <label htmlFor="rev-maturity">Mô hình doanh thu</label>
+                <select id="rev-maturity" value={maturityModel} onChange={(e) => setMaturityModel(e.target.value)} disabled={busy}>
+                  <option value="three">3 lớp — Expected → Confirmed → Actual (mặc định)</option>
+                  <option value="two">2 lớp — Expected → Actual (không tạo Confirmed)</option>
+                </select>
+                <p className="note">Đổi mô hình không sửa doanh thu lịch sử. Mặc định giữ 3 lớp cho đến khi PO chọn 2 lớp cho thuê bao.</p>
+              </div>
+              <div className="field">
+                <label htmlFor="rev-maturity-ver">Phiên bản mô hình</label>
+                <input id="rev-maturity-ver" value={maturityVersion} onChange={(e) => setMaturityVersion(e.target.value)} disabled={busy} maxLength={64} />
+              </div>
+              <div className="field">
+                <label htmlFor="rev-maturity-from">Ngày hiệu lực mô hình</label>
+                <input id="rev-maturity-from" placeholder="YYYY-MM-DD" value={maturityFrom} onChange={(e) => setMaturityFrom(e.target.value)} disabled={busy} />
               </div>
               <div className="field">
                 <label htmlFor="pol-ver">Phiên bản chính sách</label>

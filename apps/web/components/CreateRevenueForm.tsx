@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CurrencySelect } from "@/components/CurrencySelect";
+import { DateInputVi } from "@/components/DateInputVi";
 import { FxRateBox, readFx } from "@/components/FxRateBox";
 import { PartyTypeahead } from "@/components/PartyTypeahead";
 import { withIdempotency } from "@/lib/idempotency";
@@ -15,12 +16,14 @@ type Props = {
   terms: TerminologyMap;
   billId: string;
   defaultCurrency?: string;
+  revenueTypes?: { code: string; name: string }[];
 };
 
 export function CreateRevenueForm({
   terms,
   billId,
   defaultCurrency = "VND",
+  revenueTypes = [],
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -163,33 +166,26 @@ export function CreateRevenueForm({
           <div className="form-grid">
             <div className="field">
               <label htmlFor="effectiveDate">Ngày hiệu lực</label>
-              <input
-                id="effectiveDate"
-                name="effectiveDate"
-                type="date"
-                disabled={busy}
-                value={asOf}
-                onChange={(e) => setAsOf(e.target.value)}
-              />
+              <DateInputVi id="effectiveDate" name="effectiveDate" value={asOf} onChange={setAsOf} disabled={busy} />
             </div>
             <div className="field">
-              <label htmlFor="revenueTypeCode">
-                Mã loại {revenueLabel.toLowerCase()}
-              </label>
-              <input
-                id="revenueTypeCode"
-                name="revenueTypeCode"
-                maxLength={64}
-                disabled={busy}
-                placeholder="VD: FREIGHT"
-                autoComplete="off"
-              />
+              <label htmlFor="revenueTypeCode">Loại {revenueLabel.toLowerCase()}</label>
+              <select id="revenueTypeCode" name="revenueTypeCode" disabled={busy} defaultValue="">
+                <option value="">Chưa phân loại</option>
+                {revenueTypes.map((item) => (
+                  <option key={item.code} value={item.code}>{item.code} — {item.name}</option>
+                ))}
+              </select>
+              {revenueTypes.length === 0 ? (
+                <p className="note">Danh mục loại doanh thu chưa có mã. Có thể để Chưa phân loại rồi phân loại sau, không tạo thêm một khoản doanh thu mới.</p>
+              ) : null}
             </div>
             <PartyTypeahead
               name="customerPartyId"
               label="Khách hàng"
+              roleCode="customer"
               disabled={busy}
-              hint="Cần vai trò khách hàng hoặc bên trả tiền."
+              hint="Chỉ đối tác có vai trò khách hàng, bên trả tiền hoặc bill-to. Nhà cung cấp cùng tên không được chọn."
             />
           </div>
         </fieldset>

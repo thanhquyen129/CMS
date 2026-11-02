@@ -209,6 +209,9 @@ public sealed class ProfitabilityBoard
                 b.RouteId,
                 b.TransportMode,
                 b.ServiceTypeCode,
+                b.RouteCode,
+                b.OriginCode,
+                b.DestinationCode,
                 b.BillDate,
                 b.OperationalStatus
             })
@@ -299,7 +302,11 @@ public sealed class ProfitabilityBoard
                 bill.Id,
                 bill.BillNo,
                 parties.FirstOrDefault(p => p.Id == bill.CustomerPartyId)?.Name,
-                routes.FirstOrDefault(r => r.Id == bill.RouteId)?.Code,
+                routes.FirstOrDefault(r => r.Id == bill.RouteId)?.Code
+                    ?? bill.RouteCode
+                    ?? (string.IsNullOrWhiteSpace(bill.OriginCode) || string.IsNullOrWhiteSpace(bill.DestinationCode)
+                        ? null
+                        : $"{bill.OriginCode}-{bill.DestinationCode}"),
                 bill.TransportMode,
                 bill.ServiceTypeCode,
                 bill.BillDate,

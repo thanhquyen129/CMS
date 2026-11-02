@@ -310,7 +310,7 @@ export default async function ApArPage({
                 activeTab === "ar"
                   ? arLabel
                   : activeTab === "exposure"
-                    ? "Exposure"
+                    ? "Công nợ dự kiến"
                     : apLabel,
             },
           ]}
@@ -319,13 +319,8 @@ export default async function ApArPage({
               {activeTab === "ar"
                 ? arLabel
                 : activeTab === "exposure"
-                  ? "Exposure"
+                  ? "Công nợ dự kiến"
                   : apLabel}
-              {activeTab === "exposure"
-                ? ""
-                : activeTab === "ar"
-                  ? " (AR)"
-                  : " (AP)"}
             </>
           }
           lede={
@@ -420,7 +415,7 @@ export default async function ApArPage({
             role="tab"
             aria-selected={activeTab === "exposure"}
           >
-            Exposure
+            Công nợ dự kiến
           </Link>
         </div>
 
@@ -607,9 +602,8 @@ export default async function ApArPage({
         {activeTab === "exposure" ? (
           <>
             <p className="note">
-              Exposure = nghĩa vụ / quyền dự kiến trước khi ghi nhận AP/AR.
-              Chưa phải {paymentLabel}. Ghi nhận tạo sổ {apLabel}/{arLabel}{" "}
-              riêng — không đổi {costLabel}/{revenueLabel}.
+              Công nợ dự kiến là quyền thu dự kiến hoặc nghĩa vụ phải trả, trước khi ghi nhận {apLabel}/{arLabel}.
+              Không phải {costLabel}/{revenueLabel} lớp Expected, và chưa phải {paymentLabel}.
             </p>
             <p className="cta-row" style={{ marginTop: 0 }}>
               <Link

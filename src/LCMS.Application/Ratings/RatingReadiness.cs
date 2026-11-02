@@ -207,7 +207,7 @@ public sealed class RatingContextResolver
         var serviceType = N(input.ServiceTypeCode)
             ?? (legContext
                 ? N(leg?.ServiceTypeCode) ?? N(shipment?.ServiceTypeCode)
-                : N(bill.ServiceTypeCode) ?? N(bill.BillType));
+                : N(bill.ServiceTypeCode));
         var partyType = N(card?.PartyType) ?? N(input.PartyTypeCode);
         var originCode = N(input.OriginCode)
             ?? (legContext ? N(leg?.OriginCode) ?? N(shipment?.OriginCode) : N(bill.OriginCode));

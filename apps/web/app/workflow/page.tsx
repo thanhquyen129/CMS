@@ -75,8 +75,8 @@ export default async function WorkflowMapPage() {
     },
     {
       no: "06",
-      title: "Exposure",
-      desc: "Nghĩa vụ / quyền dự kiến — trước khi ghi nhận AP/AR",
+      title: "Công nợ dự kiến",
+      desc: "Quyền thu dự kiến / nghĩa vụ phải trả — trước khi ghi nhận công nợ",
       href: "/ap-ar?tab=exposure",
     },
     {

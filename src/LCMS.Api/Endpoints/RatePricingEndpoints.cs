@@ -392,7 +392,8 @@ public static class RatePricingEndpoints
                     body.RateDate,
                     body.Quantity,
                     body.GrossWeightKg,
-                    body.VolumeCbm),
+                    body.VolumeCbm,
+                    body.ServiceTypeCode),
                 ct);
             return Results.Ok(quotes);
         });
@@ -675,4 +676,5 @@ public sealed record CompareRatesRequest(
     DateTimeOffset? RateDate,
     decimal? Quantity,
     decimal? GrossWeightKg,
-    decimal? VolumeCbm);
+    decimal? VolumeCbm,
+    string? ServiceTypeCode = null);

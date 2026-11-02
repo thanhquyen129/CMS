@@ -142,7 +142,7 @@ export function RecognizeExposureForm({
 
       {!canRecognize ? (
         <div className="alert alert-error" role="status">
-          Exposure đã ghi nhận hết hoặc không còn số mở.
+          Công nợ dự kiến đã ghi nhận hết hoặc không còn số mở.
         </div>
       ) : null}
 

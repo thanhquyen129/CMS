@@ -667,7 +667,7 @@ export default async function DashboardPage() {
               {result.data.apAr ? (
                 <div className="po-bestgrid">
                   <div className="po-bestbox">
-                    <b>{apLabel} (AP)</b>
+                    <b>{apLabel}</b>
                     <div className="po-mini3" style={{ marginTop: 8 }}>
                       <div>
                         <strong>
@@ -679,12 +679,12 @@ export default async function DashboardPage() {
                         <strong>
                           {result.data.apAr.openPayableExposureCount}
                         </strong>
-                        <small>Exposure mở</small>
+                        <small>Nghĩa vụ phải trả đang mở</small>
                       </div>
                     </div>
                   </div>
                   <div className="po-bestbox" style={{ gridColumn: "span 2" }}>
-                    <b className="po-text-green">{arLabel} (AR)</b>
+                    <b className="po-text-green">{arLabel}</b>
                     <div className="po-mini3" style={{ marginTop: 8 }}>
                       <div>
                         <strong className="po-text-green">
@@ -696,7 +696,7 @@ export default async function DashboardPage() {
                         <strong className="po-text-green">
                           {result.data.apAr.openReceivableExposureCount}
                         </strong>
-                        <small>Exposure mở</small>
+                        <small>Quyền thu dự kiến đang mở</small>
                       </div>
                     </div>
                   </div>

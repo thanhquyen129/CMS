@@ -14,8 +14,9 @@ Không có `UPDATE` hàng loạt `air`/`AIR`, không đổi `service_type` lịc
 
 | Mục | Giá trị |
 |---|---|
-| Nhánh | `main` (chưa push) |
-| Commit | Ghi ở cuối file sau khi commit |
+| Nhánh | `main` (chưa push — push sẽ deploy production) |
+| Commit | `e6646debd8ba1bc25f1dcb92a15d8bc7cbbf1d25` |
+| Diff | 54 files, +1110 / −257 (`git show --stat e6646de`) |
 | CI | `.github/workflows/ci.yml`: bỏ `if: false` trên `dotnet test`; thêm `npm test` |
 | Postgres test | `LCMS_TEST_POSTGRES` hoặc cổng 5432 rồi 5433. DB tên `lcms_rate_ac30` / `lcms_rate_baseline_audit`, không đụng DB `lcms` của smoke |
 | `/health` | Chưa gọi production. Job CI vẫn có health smoke local sau test |

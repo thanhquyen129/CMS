@@ -1,0 +1,96 @@
+{
+  "commitSha": "__GIT_SHA__",
+  "capturedAt": "2026-11-02T10:50:00Z",
+  "samples": [
+    {
+      "scenario": "TC-19 GET exact published v2",
+      "request": {
+        "method": "GET",
+        "path": "/api/surcharges/{surchargeId}/versions/{v2Id}",
+        "headers": { "X-Tenant-Id": "{tenantId}" }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "surchargeId": "{surchargeId}",
+          "version": {
+            "id": "{v2Id}",
+            "versionNo": 2,
+            "publishStatus": "published",
+            "activationPolicy": "OPTIONAL_OPT_IN",
+            "readOnly": true,
+            "rules": [{ "calculationMode": "fixed_rate", "rateAmountPercent": 300000, "currencyCode": "VND" }]
+          }
+        }
+      }
+    },
+    {
+      "scenario": "TC-02 PUT service selection qty=1",
+      "request": {
+        "method": "PUT",
+        "path": "/api/service-selections",
+        "body": {
+          "contextType": "BILL",
+          "contextId": "{billId}",
+          "serviceCode": "DONGGOI",
+          "isSelected": true,
+          "quantity": 1,
+          "scope": "BILL"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "serviceCode": "DONGGOI",
+          "isSelected": true,
+          "quantity": 1,
+          "revision": 1,
+          "confirmedAt": "2026-11-02T10:50:00Z"
+        }
+      }
+    },
+    {
+      "scenario": "TC-01 POST ratings without selection",
+      "request": {
+        "method": "POST",
+        "path": "/api/ratings",
+        "body": { "billId": "{billId}", "rateVersionId": "{buyVersionId}", "quantity": 1, "routeCode": "SGN-HAN" }
+      },
+      "response": {
+        "status": 200,
+        "ratingContextJsonExcerpt": {
+          "appliedCharges": [{ "code": "FREIGHT" }],
+          "eligibleNotActivatedCharges": [{ "code": "DONGGOI", "reasonCode": "NOT_SELECTED", "reasonMessageVi": "Chưa đăng ký dịch vụ đóng gói trên vận đơn" }],
+          "excludedCharges": []
+        }
+      }
+    },
+    {
+      "scenario": "TC-02 POST ratings with selection",
+      "request": {
+        "method": "POST",
+        "path": "/api/ratings",
+        "body": { "billId": "{billId}", "rateVersionId": "{buyVersionId}", "quantity": 1, "routeCode": "SGN-HAN" }
+      },
+      "response": {
+        "status": 200,
+        "ratingDetails": [{ "componentCode": "DONGGOI", "amount": 300000, "sourceType": "surcharge" }],
+        "ratingContextJsonExcerpt": {
+          "appliedCharges": [{ "code": "DONGGOI", "amount": 300000, "activationPolicySnapshot": "OPTIONAL_OPT_IN" }]
+        }
+      }
+    },
+    {
+      "scenario": "TC-11 / TC-30 publish mandatory without approval / permission",
+      "request": {
+        "method": "POST",
+        "path": "/api/surcharges/{id}/versions/{vId}/publish",
+        "notes": "version.activationPolicy=MANDATORY_BY_POLICY, approvalRef missing or user thiếu RateSurchargeMandatoryApprove"
+      },
+      "responses": [
+        { "status": 400, "error_code": "MANDATORY_APPROVAL_REQUIRED" },
+        { "status": 403, "error_code": "forbidden", "when": "missing permission" }
+      ]
+    }
+  ]
+}

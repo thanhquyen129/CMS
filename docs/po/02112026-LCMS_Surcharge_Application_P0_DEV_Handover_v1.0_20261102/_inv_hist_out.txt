@@ -1,0 +1,4 @@
+﻿bill_no|rating_id|total_amount|status|rated_at|component_code|amount|source_type|financial_maturity
+TESTLSS002|01a17724-20ef-7f69-97d5-d0295f361acd|1740000.0000|completed|2026-10-26 07:36:58.863462+00|DONGGOI_SGN_HAN_MUA|300000.0000|surcharge|expected
+TESTLSS002|01a17724-20ef-7f69-97d5-d0295f361acd|1740000.0000|completed|2026-10-26 07:36:58.863462+00|FREIGHT|1440000.0000|base_rate|expected
+(2 rows)

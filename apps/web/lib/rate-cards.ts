@@ -154,6 +154,7 @@ export type Rating = RatingHistoryItem & {
   routeCode: string | null;
   baseAmount: number | null;
   details: RatingDetail[];
+  contextJson?: string | null;
 };
 
 export function partyTypeLabel(partyType: string): string {

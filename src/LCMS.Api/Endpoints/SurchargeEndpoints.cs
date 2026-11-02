@@ -101,6 +101,8 @@ public static class SurchargeEndpoints
             ISender sender,
             CancellationToken ct) =>
             Results.Ok(await sender.Send(new ListServiceSelectionAuditsQuery(contextType, contextId, serviceCode), ct)));
+        selections.MapGet("/optional-catalog", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListOptionalServiceOptionsQuery(), ct)));
 
         return app;
     }

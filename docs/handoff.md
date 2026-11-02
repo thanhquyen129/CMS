@@ -1,4 +1,8 @@
-﻿## 2026-11-02 — Surcharge Application P0 (eligibility ≠ activation ≠ calculation)
+﻿## 2026-11-02 — Surcharge Application P0 remediation (audit-grade handover)
+- Bill `ServiceSelectionPanel` + Rating 3-bucket UI; 32 TC methods PASS; Prod inventory 9 versions; Excel/MD/screenshots AC-16; commit no Production push.
+- Files: `ServiceSelectionPanel.tsx`, `RatingSurchargeBuckets.tsx`, `BillRatingPanel.tsx`, `SurchargeApplicationP0Tests.cs`, `docs/po/02112026-LCMS_Surcharge_Application_P0_DEV_Handover_v1.0_20261102/`
+
+## 2026-11-02 — Surcharge Application P0 (eligibility ≠ activation ≠ calculation)
 - Rating applies surcharge only after activation policy (Mandatory/Auto/Optional); legacy Published → UNCLASSIFIED_LEGACY (no auto-add). Exact version GET + UI read-only. service_selections + ContextJson 3 buckets. No Production deploy.
 - Files: `SurchargeRating.cs`, `SurchargeActivation.cs`, `ServiceSelection*`, migration `20261102170000`, surcharge UI/API, `SurchargeApplicationP0Tests`, `docs/po/02112026-LCMS_Surcharge_Application_P0_DEV_Handover_v1.0_20261102/`
 

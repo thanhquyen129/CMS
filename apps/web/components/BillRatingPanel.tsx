@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { RateBillForm } from "@/components/RateBillForm";
 import { RerateRatingButton } from "@/components/RerateRatingButton";
+import { RatingSurchargeBuckets } from "@/components/RatingSurchargeBuckets";
+import { ServiceSelectionPanel, type ServiceOption } from "@/components/ServiceSelectionPanel";
 import { basisLabel, formatChargeable, ratingStatusView } from "@/lib/opref-edit";
 import { SeedExpectedCostsButton } from "@/components/SeedExpectedCostsButton";
 import { SeedExpectedRevenuesButton } from "@/components/SeedExpectedRevenuesButton";
@@ -9,6 +11,7 @@ import { partyTypeLabel, type Rating } from "@/lib/rate-cards";
 import {
   getBillRatingMargin,
   getRating,
+  listOptionalServiceOptions,
   listRatingsByBill as fetchRatingsByBill,
 } from "@/lib/rate-cards-server";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -22,10 +25,20 @@ export async function BillRatingPanel({ terms, billId }: Props) {
   const billLabel = term(terms, "BILL", "Bill");
   const expected = term(terms, "EXPECTED", "Dự kiến");
 
-  const [ratingsRes, marginRes] = await Promise.all([
+  const [ratingsRes, marginRes, optionalRes] = await Promise.all([
     fetchRatingsByBill(billId),
     getBillRatingMargin(billId),
+    listOptionalServiceOptions(),
   ]);
+  const optionalOptions: ServiceOption[] = optionalRes.ok
+    ? optionalRes.data.map((row) => ({
+        serviceCode: row.serviceCode,
+        name: row.name,
+        selectionScope: row.selectionScope,
+        hasBuyPrice: row.hasBuyPrice,
+        hasSellPrice: row.hasSellPrice,
+      }))
+    : [];
 
   const ratings = ratingsRes.ok ? ratingsRes.data : [];
   const activeRatings = ratings.filter((r) => r.status?.toLowerCase() !== "superseded");
@@ -59,6 +72,8 @@ export async function BillRatingPanel({ terms, billId }: Props) {
       </p>
 
       <RateBillForm terms={terms} billId={billId} />
+
+      <ServiceSelectionPanel contextType="BILL" contextId={billId} options={optionalOptions} />
 
       <h3 className="section-title sm">Lợi nhuận dự kiến</h3>
       {!margin ? (
@@ -236,6 +251,7 @@ function RatingBreakdown({ rating }: { rating: Rating }) {
             </tbody>
           </table>
         </div>
+        <RatingSurchargeBuckets contextJson={rating.contextJson} currencyCode={rating.currencyCode} />
       </div>
     </div>
   );

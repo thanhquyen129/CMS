@@ -1,56 +1,108 @@
-# AS-IS Root Cause & Technical Implementation — Surcharge Application P0
+# AS-IS Root Cause & Technical Implementation
 
-## 1. Root cause
+**Commit:** `__GIT_SHA__`
 
-| Hiện tượng | Nguyên nhân mã nguồn |
+## Root cause
+
+Rating AS-IS coi mọi surcharge Published khớp eligibility là **Applied**. Không có cổng Activation; UI lấy `versions[0]` nên nhầm draft/published; không có `service_selections`.
+
+## After (P0)
+
+1. **Eligibility** (published/effective/direction/scope/conditions)  
+2. **Activation** (`MANDATORY_BY_POLICY` / `AUTO_CONDITIONAL` / `OPTIONAL_OPT_IN` / `UNCLASSIFIED_LEGACY`)  
+3. **Calculation** chỉ khi Activated  
+
+Buckets ghi vào `Rating.ContextJson`: `appliedCharges` / `eligibleNotActivatedCharges` / `excludedCharges` (+ `unpricedSelectedServices`).
+
+### Code anchors
+
+| Area | File |
 |---|---|
-| Phụ phí tự cộng khi Tính giá | `SurchargeRating.Select` chỉ lọc effective + Matches(scope/condition); không có activation |
-| Điều kiện trống → cộng | Scope/condition trống = pass eligibility (đúng BA) nhưng AS-IS coi luôn Applied |
-| DG unknown bị coi false | `IsDangerousAsync` trả `false` khi thiếu commodity |
-| Không mở v2 Published | UI `versions[0]` + không có GET exact version |
+| Activation resolve | `src/LCMS.Application/Surcharges/SurchargeActivation.cs` |
+| Evaluate pipeline | `src/LCMS.Application/Surcharges/SurchargeRating.cs` |
+| Exact version query | `src/LCMS.Application/Surcharges/SurchargeQueries.cs` (`GetSurchargeVersionQuery`) |
+| Service selection API | `ServiceSelectionCommands.cs` + `SurchargeEndpoints` `/api/service-selections` |
+| UI form / version RO | `apps/web/.../SurchargeForm.tsx`, `surcharges/[id]/versions/[versionId]` |
+| Bill selection + 3 nhóm | `ServiceSelectionPanel.tsx`, `RatingSurchargeBuckets.tsx`, `BillRatingPanel.tsx` |
 
-## 2. Ánh xạ Data Model (logic BA → AS-IS)
+## AC-16 — JSON API samples
 
-| Logic BA | PostgreSQL / Entity |
-|---|---|
-| `surcharge_versions.activation_policy` | `surcharge_versions.activation_policy` (`SurchargeVersion.ActivationPolicy`) |
-| `activation_config` | `activation_config_json` (jsonb) |
-| `approval_ref` / approved | `approval_ref`, `approved_by_user_id`, `approved_at` |
-| `service_selections` | `service_selections` + `service_selection_audits` |
-| `rating_details` activation snapshot | cột nullable trên `rating_details` (chỉ dòng Applied có tiền) |
-| `migration_audit` | `surcharge_activation_migration_audits` |
-| 3 nhóm preview | `Rating.ContextJson`: `appliedCharges` / `eligibleNotActivatedCharges` / `excludedCharges` |
+Nguồn đầy đủ: `evidence/api_samples.json`. Tóm tắt:
 
-Migration: `20261102170000_SurchargeActivationPolicy` — backfill Published cũ → `UNCLASSIFIED_LEGACY`.
+### 1) GET exact v2 (TC-19)
 
-## 3. Engine 6 bước
+```http
+GET /api/surcharges/{id}/versions/{v2Id}
+X-Tenant-Id: {tenant}
+```
 
-File: `src/LCMS.Application/Surcharges/SurchargeRating.cs` (`Evaluate`) + `SurchargeActivation.cs` (`SurchargeActivationResolver`).
+```json
+{
+  "version": {
+    "versionNo": 2,
+    "publishStatus": "published",
+    "readOnly": true,
+    "activationPolicy": "OPTIONAL_OPT_IN",
+    "rules": [{ "calculationMode": "fixed_rate", "rateAmountPercent": 300000 }]
+  }
+}
+```
 
-1. Lọc published/effective/direction  
-2. Eligibility (conditions + scopes)  
-3. Activation (`MANDATORY` / `AUTO` / `OPTIONAL` / `UNCLASSIFIED`)  
-4. Precedence / dedupe / AMBIGUOUS  
-5. Calculation (tách `fixed_rate` × `per_bill`/`per_unit`/…)  
-6. Snapshot Applied + ContextJson buckets; Seed chỉ Applied
+### 2) PUT service-selections (TC-02 / TC-29)
 
-## 4. API
+```json
+{
+  "contextType": "BILL",
+  "contextId": "{billId}",
+  "serviceCode": "DONGGOI",
+  "isSelected": true,
+  "quantity": 1,
+  "scope": "BILL"
+}
+```
 
-- Create/Update/Publish surcharge: `activationPolicy`, `activationConfig`, `approvalRef`; chặn UNCLASSIFIED publish; Mandatory cần quyền `rate.surcharge.mandatory.approve`
-- `GET /api/surcharges/{id}/versions/{versionId}` — đúng version, readOnly nếu published
-- `/api/service-selections` GET/PUT + `/audits` — revision + stale rating
+Response: `revision: 1`, `confirmedAt` set; audit append-only.
 
-## 5. UI CP6.5
+### 3) POST /api/ratings — chưa chọn (TC-01)
 
-- `SurchargeForm`: khu Eligibility / Activation / Calculation  
-- Bảng version: **Xem chi tiết** published → `/rate-cards/surcharges/[id]/versions/[versionId]`  
-- Draft: **Chỉnh sửa** trên trang master  
-- Badge `UNCLASSIFIED_LEGACY`
+`eligibleNotActivatedCharges`: `[{ "code": "DONGGOI", "reasonCode": "NOT_SELECTED" }]` — không có dòng DONGGOI trong `rating_details`.
 
-## 6. Files chính
+### 4) POST /api/ratings — đã chọn (TC-02)
 
-- Domain: `Surcharge.cs`, `ServiceSelection.cs`, `RatingDetail.cs`, `PermissionCodes.cs`
-- App: `SurchargeRating.cs`, `SurchargeActivation.cs`, `SurchargeCommands.cs`, `SurchargeQueries.cs`, `ServiceSelectionCommands.cs`, `CreateRatingCommand.cs`
-- Infra: configurations + migration
-- Web: `SurchargeForm.tsx`, surcharge detail/version pages
-- Tests: `SurchargeApplicationP0Tests.cs`
+`appliedCharges` chứa DONGGOI `amount: 300000`, `activationPolicySnapshot: "OPTIONAL_OPT_IN"`.
+
+### 5) POST publish MANDATORY (TC-11 / TC-30)
+
+Thiếu `approval_ref` → **400** `MANDATORY_APPROVAL_REQUIRED`.  
+Thiếu quyền → **403**.
+
+## AC-16 — SQL snapshot (Prod `cms-db` 2026-11-02, read-only)
+
+### Inventory (rút gọn)
+
+| Tenant | Code | Dir | Ver | Status | Amount |
+|---|---|---|---|---|---|
+| ops | DONGGOI_HAN_SGN | sell | 1–3 | published | 100000 |
+| ops | DONGGOI_SGN_HAN | sell | 1–3 | published | 400000 |
+| ops | DONGGOI_SGN_HAN_MUA | buy | 1–2 | published | 300000 |
+| ops | DONGGOI_SGN_HAN_MUA | buy | 3 | **draft** | 300000 |
+
+**Counts:** headers=3, versions=9, published=8. Cột `activation_policy` **chưa có trên Prod** (migration chưa deploy).
+
+### TESTLSS002 trước/sau (bất biến)
+
+```text
+bill_no|total_amount|component|amount
+TESTLSS002|1740000|FREIGHT|1440000
+TESTLSS002|1740000|DONGGOI_SGN_HAN_MUA|300000
+```
+
+Sau bật cổng Activation trên **Rating mới**: Bill SGN–HAN chưa chọn đóng gói → DONGGOI không cộng (0₫ phụ phí optional). Snapshot trên không đổi.
+
+## Screenshots
+
+- `screenshots/01_surcharge_v2_published_readonly.png`
+- `screenshots/02_surcharge_v3_draft_activation_policy.png`
+- `screenshots/03_bill_optional_service_not_selected_rating.png`
+- `screenshots/04_bill_optional_service_selected_rating.png`
+- `screenshots/05_sell_rating_unpriced_and_history_testlss002.png`

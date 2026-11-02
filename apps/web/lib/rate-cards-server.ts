@@ -254,6 +254,18 @@ export function getSurchargeVersion(id: string, versionId: string): Promise<ApiR
     `/api/surcharges/${encodeURIComponent(id)}/versions/${encodeURIComponent(versionId)}`);
 }
 
+export type OptionalServiceOption = {
+  serviceCode: string;
+  name: string;
+  selectionScope: string;
+  hasBuyPrice: boolean;
+  hasSellPrice: boolean;
+};
+
+export function listOptionalServiceOptions(): Promise<ApiResult<OptionalServiceOption[]>> {
+  return apiGet<OptionalServiceOption[]>("/api/service-selections/optional-catalog");
+}
+
 export function listAppendices(): Promise<ApiResult<AppendixRow[]>> {
   return apiGet<AppendixRow[]>("/api/rate-appendices");
 }

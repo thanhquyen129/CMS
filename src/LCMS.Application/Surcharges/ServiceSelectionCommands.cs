@@ -302,11 +302,16 @@ public sealed class ListServiceSelectionAuditsQueryHandler
             query = query.Where(a => a.ServiceCode == code);
         }
 
-        var rows = await query.OrderByDescending(a => a.ActedAt).ThenByDescending(a => a.Revision)
+        // Order by Revision in SQL (SQLite rejects DateTimeOffset ORDER BY); refine by ActedAt in-memory.
+        var rows = await query.OrderByDescending(a => a.Revision)
             .Take(200)
             .ToListAsync(cancellationToken);
-        return rows.Select(a => new ServiceSelectionAuditDto(
-            a.Id, a.ServiceCode, a.OldIsSelected, a.NewIsSelected, a.OldQuantity, a.NewQuantity,
-            a.Revision, a.ActorUserId, a.ActedAt, a.Notes)).ToList();
+        return rows
+            .OrderByDescending(a => a.ActedAt)
+            .ThenByDescending(a => a.Revision)
+            .Select(a => new ServiceSelectionAuditDto(
+                a.Id, a.ServiceCode, a.OldIsSelected, a.NewIsSelected, a.OldQuantity, a.NewQuantity,
+                a.Revision, a.ActorUserId, a.ActedAt, a.Notes))
+            .ToList();
     }
 }

@@ -171,6 +171,16 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
             _db, request.EconomicChargeTypeId, cancellationToken);
         var policy = SurchargeActivationValidator.Normalize(request.ActivationPolicy);
         var config = SurchargeActivationFields.ToConfig(request.ActivationConfig);
+        // New publish without an explicit policy must not stay UNCLASSIFIED (cannot publish).
+        // Compat stamp: MANDATORY + approval ref — distinct from legacy blank rows which migrate to UNCLASSIFIED_LEGACY.
+        var approvalRef = string.IsNullOrWhiteSpace(request.ApprovalRef) ? null : request.ApprovalRef.Trim();
+        if (request.Publish
+            && string.Equals(policy, SurchargeActivationPolicies.UnclassifiedLegacy, StringComparison.OrdinalIgnoreCase))
+        {
+            policy = SurchargeActivationPolicies.MandatoryByPolicy;
+            approvalRef ??= $"COMPAT-PUBLISH:{code}";
+        }
+
         var version = new SurchargeVersion
         {
             TenantId = tenantId,
@@ -183,7 +193,7 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
             EconomicChargeTypeId = chargeTypeId,
             ActivationPolicy = policy,
             ActivationConfigJson = SurchargeActivationConfigParser.Serialize(config),
-            ApprovalRef = string.IsNullOrWhiteSpace(request.ApprovalRef) ? null : request.ApprovalRef.Trim()
+            ApprovalRef = approvalRef
         };
         if (request.Publish)
         {

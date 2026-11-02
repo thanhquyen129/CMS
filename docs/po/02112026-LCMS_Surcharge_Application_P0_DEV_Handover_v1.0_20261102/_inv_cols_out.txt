@@ -1,0 +1,19 @@
+﻿column_name|data_type
+id|uuid
+surcharge_id|uuid
+version_no|integer
+publish_status|character varying
+valid_from|timestamp with time zone
+valid_to|timestamp with time zone
+published_at|timestamp with time zone
+row_version|bytea
+created_at|timestamp with time zone
+created_by|uuid
+updated_at|timestamp with time zone
+updated_by|uuid
+deleted_at|timestamp with time zone
+deleted_by|uuid
+tenant_id|uuid
+vat_rate|numeric
+economic_charge_type_id|uuid
+(17 rows)

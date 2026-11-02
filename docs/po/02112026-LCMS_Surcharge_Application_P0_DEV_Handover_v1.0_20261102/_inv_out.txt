@@ -1,0 +1,11 @@
+﻿tenant|surcharge_code|name|direction|version_no|publish_status|valid_from|valid_to|calculation_mode|basis|currency_code|rate_amount_percent|conditions|route_scope|vat_rate
+ops|DONGGOI_HAN_SGN|Phí đóng gói/đồng kiểm HAN-SGN|sell|1|published|2026-10-08 02:54:21.302638+00||fixed_rate|quantity|VND|100000.0000|route:eq:HAN-SGN||
+ops|DONGGOI_HAN_SGN|Phí đóng gói/đồng kiểm HAN-SGN|sell|2|published|2026-10-08 00:00:00+00||fixed_rate|quantity|VND|100000.0000|route:eq:HAN-SGN||
+ops|DONGGOI_HAN_SGN|Phí đóng gói/đồng kiểm HAN-SGN|sell|3|published|2026-10-12 00:00:00+00|2026-10-13 00:00:00+00|fixed_rate|quantity|VND|100000.0000|route:eq:HAN-SGN||8.0000
+ops|DONGGOI_SGN_HAN|Phí đóng gói/đồng kiểm SGN-HAN|sell|1|published|2026-10-08 02:51:50.985206+00||fixed_rate|quantity|VND|400000.0000|route:eq:SGN-HAN||
+ops|DONGGOI_SGN_HAN|Phí đóng gói/đồng kiểm SGN-HAN|sell|2|published|2026-10-08 00:00:00+00||fixed_rate|quantity|VND|400000.0000|route:eq:SGN-HAN||
+ops|DONGGOI_SGN_HAN|Phí đóng gói/đồng kiểm SGN-HAN|sell|3|published|2026-10-12 00:00:00+00||fixed_rate|quantity|VND|400000.0000|route:eq:SGN-HAN||8.0000
+ops|DONGGOI_SGN_HAN_MUA|Phí đóng gói/đồng kiểm SGN-HAN mua|buy|1|published|2026-10-08 03:17:27.212085+00||fixed_rate|quantity|VND|300000.0000|route:eq:SGN-HAN||
+ops|DONGGOI_SGN_HAN_MUA|Phí đóng gói/đồng kiểm SGN-HAN mua|buy|2|published|2026-10-12 00:00:00+00||fixed_rate|quantity|VND|300000.0000|route:eq:SGN-HAN||8.0000
+ops|DONGGOI_SGN_HAN_MUA|Phí đóng gói/đồng kiểm SGN-HAN mua|buy|3|draft|2026-10-12 00:00:00+00||fixed_rate|quantity|VND|300000.0000|route:eq:SGN-HAN||8.0000
+(9 rows)

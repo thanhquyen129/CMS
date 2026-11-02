@@ -368,7 +368,7 @@ public sealed class RateCardRemainingAcceptanceTests : IAsyncLifetime
         Assert.Equal(80m, cost.ExpectedAmount);
         await PostNoContentAsync(tenantId, $"/api/costs/{cost.Id}/confirm", new { confirmedAmount = 80m }, await CostVersionAsync(tenantId, cost.Id));
         await PostNoContentAsync(tenantId, $"/api/costs/{cost.Id}/actualize", new { actualAmount = 80m }, await CostVersionAsync(tenantId, cost.Id));
-        var exposureId = await PostIdAsync(tenantId, "/api/payable-exposures", new { billId, amount = 80m, currencyCode = "USD" });
+        var exposureId = await PostIdAsync(tenantId, "/api/payable-exposures", new { billId, amount = 80m, currencyCode = "USD", counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false), notes = ExposureAnchor.Note });
         var payableId = await PostIdAsync(tenantId, $"/api/payable-exposures/{exposureId}/recognize", new { amount = 80m });
         var before = await GetCostAsync(tenantId, cost.Id);
         var payableBefore = await GetPayableAsync(tenantId, payableId);

@@ -32,8 +32,8 @@ public sealed class CreatePayableExposureCommandValidator : AbstractValidator<Cr
         RuleFor(x => x.Notes).MaximumLength(2048).When(x => x.Notes is not null);
         RuleFor(x => x.SourceType).MaximumLength(64).When(x => x.SourceType is not null);
         RuleFor(x => x)
-            .Must(x => ReceivableExposureCoverage.HasBasis(x.BillId, x.CostId, x.FinancialDocumentId, x.CounterpartyId))
-            .WithMessage("Nghĩa vụ phải trả phải gắn khoản chi phí, chứng từ, hoặc luồng ngoại lệ có đối tác và lý do. Không tạo số tiền treo.");
+            .Must(x => ReceivableExposureCoverage.HasBasis(x.BillId, x.CostId, x.FinancialDocumentId, x.CounterpartyId, x.Notes))
+            .WithMessage("Nghĩa vụ phải trả phải gắn Bill và khoản chi phí, chứng từ, hoặc luồng ngoại lệ có đối tác và lý do.");
     }
 }
 
@@ -65,6 +65,14 @@ public sealed class CreatePayableExposureCommandHandler : IRequestHandler<Create
             {
                 throw new NotFoundAppException("Không tìm thấy Bill.");
             }
+        }
+
+        if (ReceivableExposureCoverage.IsException(request.CounterpartyId, request.Notes)
+            && !ReceivableExposureCoverage.IsInternal(request.BillId, request.CostId, request.FinancialDocumentId))
+        {
+            await ReceivableExposureCoverage.EnsureRoleAsync(
+                _db, request.CounterpartyId!.Value, ["vendor", "payee"],
+                "nhà cung cấp hoặc bên nhận tiền", cancellationToken);
         }
 
         if (request.CostId.HasValue)

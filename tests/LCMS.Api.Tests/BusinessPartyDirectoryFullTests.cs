@@ -195,7 +195,8 @@ public sealed class BusinessPartyDirectoryFullTests : IAsyncLifetime
         {
             amount = 5000m,
             currencyCode = "VND",
-            counterpartyId = arPartyId
+            counterpartyId = arPartyId,
+            notes = "Căn cứ ngoại lệ kiểm thử hạn mức tín dụng"
         });
         var expRes = await _client.SendAsync(exposure);
         expRes.EnsureSuccessStatusCode();

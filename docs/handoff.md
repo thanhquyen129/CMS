@@ -1,3 +1,6 @@
+﻿## 2026-11-02 — Consolidated UAT remaster (100/100 gate)
+- COST-RATING-SOURCE/TRACE: FREIGHT+DONGGOI from rating_details/context_json; Exposure exception notes+roles; IsBidirectional vs AppliesAnyRoute; TC-22/23/24 + RateScopeMigrationPostgres PASS (Skipped:0); Excel+MD audit package under docs/po/02112026-LCMS_Consolidated_UAT_Handover_v1.0_20261102/
+- Files: CostQueries.cs, Create*ExposureCommand.cs, RatingEngine.cs, PricingRule+migration IsBidirectional, ConsolidatedUat20261102*Tests, CreateExposureForm.tsx, handover md/xlsx
 ## 2026-11-02 (Consolidated UAT handover, no historical money rewrite, no production deploy)
 - Changes: Compare rates uses the requested direction and service. Bill cost groups read finalized allocations. Tenant revenue maturity can be two or three layers without fake Confirmed rows. Exposure requires a bill, line, document, or party. Approval queue keeps approved and rejected items. CI runs dotnet test and npm test.
 - Files: `src/LCMS.Application/Ratings/Queries/CompareRatesQuery.cs`, `GetBillFinancialProfileQuery.cs`, `MaturityTransitionCommands.cs`, exposure commands, `apps/web` bill/revenue/approval/exposure screens, `.github/workflows/ci.yml`, `docs/po/02112026-LCMS_Consolidated_UAT_Handover_v1.0_20261102/`.
@@ -4939,3 +4942,4 @@ Kickoff: đặt tên Cost Management System (CMS); update rules từ alogex → 
 - Rules: renamed product to CMS; host `194.233.89.26` → `/opt/cms`; repo `thanhquyen129/CMS`; expert stance → financial control (Bill-centric).
 - BA indexed; implementation plan written; GitHub private repo created.
 - VPS wipe + deploy completed in follow-up turn after PO confirm.
+

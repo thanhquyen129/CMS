@@ -1397,7 +1397,8 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
     private async Task<Guid> CreateReceivableExposureAsync(Guid tenantId, Guid billId, decimal amount)
     {
         using var req = WithTenant(HttpMethod.Post, "/api/receivable-exposures", tenantId);
-        req.Content = JsonContent.Create(new { amount, currencyCode = "VND", billId });
+        var exposurePartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: true);
+        req.Content = JsonContent.Create(new { amount, currencyCode = "VND", billId, counterpartyId = exposurePartyId, notes = ExposureAnchor.Note });
         var res = await _client.SendAsync(req);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();
@@ -1415,7 +1416,8 @@ public sealed class InputOptimizationInheritanceTests : IAsyncLifetime
     private async Task<Guid> CreatePayableExposureAsync(Guid tenantId, Guid billId, decimal amount)
     {
         using var req = WithTenant(HttpMethod.Post, "/api/payable-exposures", tenantId);
-        req.Content = JsonContent.Create(new { amount, currencyCode = "VND", billId });
+        var exposurePartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false);
+        req.Content = JsonContent.Create(new { amount, currencyCode = "VND", billId, counterpartyId = exposurePartyId, notes = ExposureAnchor.Note });
         var res = await _client.SendAsync(req);
         res.EnsureSuccessStatusCode();
         return (await res.Content.ReadFromJsonAsync<JsonElement>(JsonOptions)).GetProperty("id").GetGuid();

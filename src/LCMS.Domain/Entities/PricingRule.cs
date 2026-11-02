@@ -37,6 +37,12 @@ public sealed class PricingRule : TenantEntityBase
     /// <summary>Display code of <see cref="RouteId"/>. Not a free-text route.</summary>
     public string? RouteCode { get; set; }
 
+    /// <summary>
+    /// When true, the stored direction also matches the swapped origin and destination.
+    /// It does not match a different pair. <see cref="AppliesAnyRoute"/> is the only every-route flag.
+    /// </summary>
+    public bool IsBidirectional { get; set; }
+
     /// <summary>Operating carrier. Not the vendor on the rate-card header.</summary>
     public Guid? CarrierPartyId { get; set; }
 

@@ -211,13 +211,78 @@ public static class RatingEngine
     {
         if (!Eq(rule.ServiceTypeCode, serviceType)) return false;
         if (!Eq(rule.PartyTypeCode, partyType)) return false;
-        if (!RouteMatches(rule, routeId, routeCode)) return false;
         if (!CarrierMatches(rule, carrierPartyId, carrierName)) return false;
         if (!ModeMatches(rule.TransportMode, transportMode)) return false;
-        if (!Eq(rule.OriginCode, originCode)) return false;
-        if (!Eq(rule.DestinationCode, destinationCode)) return false;
         if (!Eq(rule.CommodityCode, commodityCode)) return false;
-        return true;
+        return DirectionMatches(rule, routeId, routeCode, originCode, destinationCode);
+    }
+
+    /// <summary>
+    /// AppliesAnyRoute matches every pair. IsBidirectional matches only the stored pair and its swap.
+    /// A normal rule matches one direction.
+    /// </summary>
+    public static bool DirectionMatches(
+        PricingRule rule,
+        Guid? routeId,
+        string? routeCode,
+        string? originCode,
+        string? destinationCode)
+    {
+        if (rule.AppliesAnyRoute == true)
+        {
+            return true;
+        }
+
+        if (ForwardDirection(rule, routeId, routeCode, originCode, destinationCode))
+        {
+            return true;
+        }
+
+        if (rule.IsBidirectional != true)
+        {
+            return false;
+        }
+
+        var hasPair = !string.IsNullOrWhiteSpace(rule.RouteCode)
+            || !string.IsNullOrWhiteSpace(rule.OriginCode)
+            || !string.IsNullOrWhiteSpace(rule.DestinationCode);
+        if (!hasPair)
+        {
+            return false;
+        }
+
+        var routeOk = string.IsNullOrWhiteSpace(rule.RouteCode)
+            || SameDirectedRoute(rule.RouteCode, ReverseRoute(routeCode));
+        return routeOk
+            && Eq(rule.OriginCode, destinationCode)
+            && Eq(rule.DestinationCode, originCode);
+    }
+
+    private static bool ForwardDirection(
+        PricingRule rule,
+        Guid? routeId,
+        string? routeCode,
+        string? originCode,
+        string? destinationCode) =>
+        RouteMatches(rule, routeId, routeCode)
+        && Eq(rule.OriginCode, originCode)
+        && Eq(rule.DestinationCode, destinationCode);
+
+    public static string? ReverseRoute(string? route)
+    {
+        var canon = CanonicalRoute(route);
+        if (canon is null)
+        {
+            return null;
+        }
+
+        var parts = canon.Split('-');
+        if (parts.Length != 2)
+        {
+            return null;
+        }
+
+        return $"{parts[1]}-{parts[0]}";
     }
 
     /// <summary>Explicit ANY matches every route. A stored route is directional. Empty legacy rows still match.</summary>

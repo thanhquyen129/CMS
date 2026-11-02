@@ -98,7 +98,7 @@ public sealed class SuggestBillRatesQueryHandler : IRequestHandler<SuggestBillRa
             .Where(r => versionIds.Contains(r.RateVersionId) && r.IsActive)
             .Select(r => new RateSuggestionRule(
                 r.RateVersionId, r.Code, r.Name, r.ChargeCode, r.ServiceTypeCode, r.PartyTypeCode, r.RouteCode, r.TransportMode, r.OriginCode, r.DestinationCode, r.CommodityCode, r.AppliesAnyRoute == true,
-                r.WeightMin, r.WeightMax, r.WeightBasis))
+                r.WeightMin, r.WeightMax, r.WeightBasis, r.IsBidirectional))
             .ToListAsync(cancellationToken);
         rules = rules.Where(r => explicitVersionIds.Contains(r.RateVersionId)
             || !LCMS.Application.Surcharges.LegacyComponentClassifier.IsAdditionalCharge(r.Code, r.Name, r.ChargeCode)).ToList();

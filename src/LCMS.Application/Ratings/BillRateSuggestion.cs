@@ -51,7 +51,8 @@ public sealed record RateSuggestionRule(
     bool AppliesAnyRoute = false,
     decimal? WeightMin = null,
     decimal? WeightMax = null,
-    string? WeightBasis = null);
+    string? WeightBasis = null,
+    bool IsBidirectional = false);
 
 public sealed record BillRateMatchContext(
     string? RouteCode,
@@ -383,7 +384,9 @@ public static class BillRateSuggestion
             TransportMode = rule.TransportMode,
             OriginCode = rule.OriginCode,
             DestinationCode = rule.DestinationCode,
-            CommodityCode = rule.CommodityCode
+            CommodityCode = rule.CommodityCode,
+            AppliesAnyRoute = rule.AppliesAnyRoute ? true : null,
+            IsBidirectional = rule.IsBidirectional
         };
         return RatingEngine.Matches(
             probe,
@@ -399,11 +402,15 @@ public static class BillRateSuggestion
     private static bool HasHardConflict(RateSuggestionRule rule, string partyType, BillRateMatchContext bill) =>
         Hard(rule.ServiceTypeCode, bill.ServiceTypeCode)
         || Hard(rule.PartyTypeCode, partyType)
-        || DirectedHard(rule.RouteCode, bill.RouteCode)
         || Hard(rule.TransportMode, bill.TransportMode)
-        || Hard(rule.OriginCode, bill.OriginCode)
-        || Hard(rule.DestinationCode, bill.DestinationCode)
-        || Hard(rule.CommodityCode, bill.CommodityCode);
+        || Hard(rule.CommodityCode, bill.CommodityCode)
+        || (!rule.IsBidirectional && DirectedHard(rule.RouteCode, bill.RouteCode))
+        || (!rule.IsBidirectional && Hard(rule.OriginCode, bill.OriginCode))
+        || (!rule.IsBidirectional && Hard(rule.DestinationCode, bill.DestinationCode))
+        || (rule.IsBidirectional && !RatingEngine.SameDirectedRoute(rule.RouteCode, bill.RouteCode)
+            && !RatingEngine.SameDirectedRoute(RatingEngine.ReverseRoute(rule.RouteCode), bill.RouteCode)
+            && !string.IsNullOrWhiteSpace(rule.RouteCode)
+            && !string.IsNullOrWhiteSpace(bill.RouteCode));
 
     private static bool HasMissingBillField(RateSuggestionRule rule, BillRateMatchContext bill) =>
         Missing(rule.ServiceTypeCode, bill.ServiceTypeCode)

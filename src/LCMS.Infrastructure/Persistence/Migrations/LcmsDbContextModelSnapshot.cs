@@ -7082,6 +7082,12 @@ namespace LCMS.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("applies_any_route");
 
+                    b.Property<bool>("IsBidirectional")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_bidirectional");
+
                     b.Property<string>("CalcMethod")
                         .IsRequired()
                         .HasMaxLength(32)

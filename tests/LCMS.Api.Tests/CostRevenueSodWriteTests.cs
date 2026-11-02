@@ -228,7 +228,7 @@ public sealed class CostRevenueSodWriteTests : IAsyncLifetime
         Guid exposureId;
         using (var exposure = new HttpRequestMessage(HttpMethod.Post, "/api/payable-exposures")
         {
-            Content = JsonContent.Create(new { amount = 500m, currencyCode = "VND", billId = billA })
+            Content = JsonContent.Create(new { amount = 500m, currencyCode = "VND", billId = billA, counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false), notes = ExposureAnchor.Note })
         })
         {
             exposure.Headers.Add("X-Tenant-Id", tenantId.ToString());

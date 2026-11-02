@@ -32,7 +32,7 @@ public sealed class CreateReceivableExposureCommandValidator : AbstractValidator
         RuleFor(x => x.Notes).MaximumLength(2048).When(x => x.Notes is not null);
         RuleFor(x => x.SourceType).MaximumLength(64).When(x => x.SourceType is not null);
         RuleFor(x => x)
-            .Must(x => ReceivableExposureCoverage.HasBasis(x.BillId, x.RevenueId, x.FinancialDocumentId, x.CounterpartyId))
+            .Must(x => ReceivableExposureCoverage.HasBasis(x.BillId, x.RevenueId, x.FinancialDocumentId, x.CounterpartyId, x.Notes))
             .WithMessage(ReceivableExposureCoverage.MissingBasis);
     }
 }
@@ -67,6 +67,14 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
             {
                 throw new NotFoundAppException("Không tìm thấy Bill.");
             }
+        }
+
+        if (ReceivableExposureCoverage.IsException(request.CounterpartyId, request.Notes)
+            && !ReceivableExposureCoverage.IsInternal(request.BillId, request.RevenueId, request.FinancialDocumentId))
+        {
+            await ReceivableExposureCoverage.EnsureRoleAsync(
+                _db, request.CounterpartyId!.Value, ["customer", "payer", "bill_to"],
+                "khách hàng, bên trả tiền hoặc bill-to", cancellationToken);
         }
 
         if (request.RevenueId.HasValue)
@@ -153,8 +161,31 @@ public sealed class CreateReceivableExposureCommandHandler : IRequestHandler<Cre
 internal static class ReceivableExposureCoverage
 {
     public const string MissingBasis =
-        "Công nợ dự kiến phải gắn khoản doanh thu, chứng từ, hoặc luồng ngoại lệ có đối tác và lý do. Không tạo số tiền treo.";
+        "Công nợ dự kiến nội bộ phải gắn Bill và khoản nguồn, hoặc chứng từ. Luồng ngoại lệ chỉ có đối tác phải có lý do.";
 
-    public static bool HasBasis(Guid? billId, Guid? lineId, Guid? documentId, Guid? counterpartyId) =>
-        billId.HasValue || lineId.HasValue || documentId.HasValue || counterpartyId.HasValue;
+    public static bool IsInternal(Guid? billId, Guid? lineId, Guid? documentId) =>
+        (billId.HasValue && lineId.HasValue) || documentId.HasValue;
+
+    public static bool IsException(Guid? counterpartyId, string? notes) =>
+        counterpartyId.HasValue && !string.IsNullOrWhiteSpace(notes);
+
+    public static bool HasBasis(Guid? billId, Guid? lineId, Guid? documentId, Guid? counterpartyId, string? notes) =>
+        IsInternal(billId, lineId, documentId) || IsException(counterpartyId, notes);
+
+    public static async Task EnsureRoleAsync(
+        ILcmsDbContext db,
+        Guid partyId,
+        IReadOnlyList<string> allowed,
+        string label,
+        CancellationToken cancellationToken)
+    {
+        var roles = await db.PartyRoles.AsNoTracking()
+            .Where(r => r.PartyId == partyId && r.IsActive)
+            .Select(r => r.RoleCode)
+            .ToListAsync(cancellationToken);
+        if (!roles.Any(role => allowed.Contains(role, StringComparer.OrdinalIgnoreCase)))
+        {
+            throw new ValidationAppException($"Đối tác ngoại lệ phải có vai trò {label}.");
+        }
+    }
 }

@@ -117,7 +117,9 @@ public sealed class ClosePackageTests : IAsyncLifetime
         {
             amount = 1000m,
             currencyCode = "VND",
-            billId
+            billId,
+            counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false),
+            notes = ExposureAnchor.Note
         });
         var apId = await PostId(tenantId, $"/api/payable-exposures/{exposureId}/recognize", new { amount = 1000m });
         var paymentId = await PostId(tenantId, "/api/payments", new

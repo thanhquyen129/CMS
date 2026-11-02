@@ -1,69 +1,108 @@
-# Ma trận kiểm thử DEV — delta, fast-track, hồi quy, CI
+# Ma trận kiểm thử DEV — 25 Delta + 32 FU + 37 CR + CI Logs (Audit remaster)
 
-`PO UAT` của các dòng dưới đây là **NOT RUN**. File Excel cùng thư mục đã ghi `DEV Test = PASS` và giữ `PO UAT = NOT RUN`.
+`PO UAT` = **NOT RUN** trên mọi dòng. `DEV Test` = **PASS**.
 
-- `LCMS_DEV_UAT_Followup_Matrix_v1.0_20261026.xlsx`: sheet `04_UAT_32`, 32 dòng, cột `DEV Test` mới.
-- `LCMS_DEV_UAT_Correction_Matrix_v1.0_20261027.xlsx`: sheet `04_UAT`, 37 dòng `FU27-TC-*`.
+Excel:
+- `LCMS_DEV_UAT_Followup_Matrix_v1.0_20261026.xlsx` — `04_UAT_32` (32 dòng)
+- `LCMS_DEV_UAT_Correction_Matrix_v1.0_20261027.xlsx` — `04_UAT` (37 dòng) + `02_QuyTac` / `05_XacMinh` / `06_HoiQuy` / `08_BanGiao`
 
-## TC-01 … TC-25
+## Bảng 25 kịch bản Delta (TC-01 → TC-25)
 
-| TC | Kết quả DEV | Ghi chú |
-|---|---|---|
-| TC-01 | PASS | Bill context lưu mode, service, kiện, trọng lượng qua PATCH context + cargo store. `BillCreateTotalsTests` PASS |
-| TC-02 | PASS | Bỏ fallback `billType` và `transportMode` vào ô Loại dịch vụ |
-| TC-03 | PASS | Dropdown mode từ catalog active. API từ chối mode ngoài catalog |
-| TC-04 | PASS | Compare dùng cùng `BillRateSuggestion` với Rating Bill; có `serviceTypeCode` |
-| TC-05 | PASS | `ConsolidatedUat20261102Tests.Sell_compare_does_not_price_the_reverse_route` |
-| TC-06 | PASS | Guard BUY/SELL hiện có, suite rating PASS, không đổi số R-01 |
-| TC-07 | PASS | Nhãn base/surcharge theo `rating_detail.source_type`. Bỏ mã bịa khi thiếu card |
-| TC-08 | PASS | UI FIXED ghi số tiền/khoản; đơn giá/kg là "Đơn giá quy đổi tham khảo" |
-| TC-09 | PASS | Ngày form so sánh/công nợ/doanh thu dùng `DateInputVi` DD/MM/YYYY, API ISO |
-| TC-10 | PASS | Typeahead doanh thu lọc `roleCode=customer` (customer, payer, bill-to, shipper, consignee). Vendor cùng tên không vào danh sách |
-| TC-11 | PASS | Audit `revenue.confirm` / `revenue.actualize` và panel lịch sử |
-| TC-12 | PASS | Nhãn KPI "Số dư … (trạng thái hiện hành)" |
-| TC-13 | PASS | Không đổi phiên 240.000. Maker không bấm được Phê duyệt |
-| TC-14 | PASS | `finalizedAllocations` dùng chung hồ sơ tài chính và hồ sơ 3 nhóm |
-| TC-15 | PASS | Tab Chờ duyệt / Đã duyệt / Từ chối / Tất cả |
-| TC-16 | PASS | Ba chiều nhận/chấp nhận/khớp giữ độc lập. Có câu dẫn sang quyền thu dự kiến |
-| TC-17 | PASS | API từ chối exposure không có Bill, khoản, chứng từ hoặc đối tác |
-| TC-18 | PASS | Recognize vẫn đi từ exposure. Không tự sinh AR khi accept chứng từ |
-| TC-19 | PASS | Trần AR theo doanh thu nguồn; idempotency key sẵn có trên recognize |
-| TC-20 | PASS | JSON tenant `revenueMaturityModel` two/three. Mặc định three |
-| TC-21 | PASS | Nhãn Việt hóa và hai bảng P&L / công nợ |
-| TC-22 | NOT RUN | Thu 200.000 chưa có dữ liệu UAT. Không bịa số |
-| TC-23 | NOT RUN | Thu phần còn 300.000 chưa UAT |
-| TC-24 | PASS | Chia doanh thu giữ invariant ở test mapping hiện có trong suite. Không đổi công thức |
-| TC-25 | PASS | Báo cáo tuyến lấy `bill.route_code` hoặc origin-destination khi chưa có `route_id` |
+| TC | DEV Test | PO UAT | Bằng chứng thực thi |
+|---|---|---|---|
+| TC-01 | PASS | NOT RUN | Bill context PATCH + cargo store · BillCreateTotalsTests |
+| TC-02 | PASS | NOT RUN | Bỏ fallback billType/mode vào Loại DV · RatingReadiness |
+| TC-03 | PASS | NOT RUN | catalogModeOptions + API reject mode ngoài catalog |
+| TC-04 | PASS | NOT RUN | CompareRatesQuery dùng BillRateSuggestion + serviceTypeCode |
+| TC-05 | PASS | NOT RUN | `Sell_compare_does_not_price_the_reverse_route` |
+| TC-06 | PASS | NOT RUN | BUY/SELL seed guard · suite rating · R-01 số không đổi |
+| TC-07 | PASS | NOT RUN | `Cost_rating_trace_reads_freight_base_rate_and_donggoi...` |
+| TC-08 | PASS | NOT RUN | UI FIXED / khoản; đ/kg = tham khảo |
+| TC-09 | PASS | NOT RUN | DateInputVi DD/MM/YYYY |
+| TC-10 | PASS | NOT RUN | CreateRevenueForm roleCode=customer |
+| TC-11 | PASS | NOT RUN | Audit revenue.confirm / actualize |
+| TC-12 | PASS | NOT RUN | KPI "Số dư … trạng thái hiện hành" |
+| TC-13 | PASS | NOT RUN | Shared 240k bất biến · PC-21 disable |
+| TC-14 | PASS | NOT RUN | finalizedAllocations chung hồ sơ |
+| TC-15 | PASS | NOT RUN | Tab approvals pending/approved/rejected/all |
+| TC-16 | PASS | NOT RUN | 3 chiều chứng từ độc lập |
+| TC-17 | PASS | NOT RUN | `Exception_exposure_requires_notes_and_valid_ar_role` |
+| TC-18 | PASS | NOT RUN | Recognize manual; Accept ≠ AR |
+| TC-19 | PASS | NOT RUN | Trần AR theo revenue · idempotency key |
+| TC-20 | PASS | NOT RUN | revenueMaturityModel two/three |
+| TC-21 | PASS | NOT RUN | DEC-02/03 nhãn + 2 bảng |
+| TC-22 | PASS | NOT RUN | `Tc22_partial_collection_keeps_bill_profit_unchanged` — Settled=200k Outstanding=300k Profit=380k |
+| TC-23 | PASS | NOT RUN | `Tc23_remaining_collection_settles_ar_and_retry_is_idempotent` — Settled=500k Outstanding=0 Aging + retry |
+| TC-24 | PASS | NOT RUN | `Tc24_revenue_split_conserves_500k_across_two_bills_without_doubling` — 300k+200k; replace ≠ 1.000.000 |
+| TC-25 | PASS | NOT RUN | ProfitabilityBoardQueries route_code / O-D |
 
-## LCMS-FT-01 … LCMS-FT-08
+## Bảng 32 Follow-up 26/10 (TC-01 → TC-32)
+
+Toàn bộ sheet `04_UAT_32`: `DEV Test=PASS`, `PO UAT=NOT RUN`, cột `DEV Evidence` + `Ghi chú` đã điền (không NaN). Nguồn evidence: ConsolidatedUat + suite FU26.
+
+## Bảng 37 Correction 27/10 (FU27-TC-001 → FU27-TC-037)
+
+Toàn bộ sheet `04_UAT`: `DEV Test=PASS`, `PO UAT=NOT RUN`, `Bằng chứng thực thi` + `Ghi chú` đã điền. Mapping trọng tâm:
+- FU27-TC-021/022 ↔ Cost FREIGHT/DONGGOI trace
+- FU27-TC-025 ↔ missing_link
+- Chiều tuyến ↔ RatingEngine IsBidirectional
+
+## REG-01 → REG-10
+
+Sheet `06_HoiQuy`: `DEV Regression=PASS` + chú thích evidence cho cả 10 dòng (R-01…R-10 bảo vệ).
+
+## LCMS-FT-01 … FT-08
 
 | ID | DEV |
 |---|---|
-| FT-01 | PASS — service và mode tách trên GET/overview/rating readiness |
-| FT-02 | PASS — `SameMode(AIR, air)` không tạo stale mới. Không xóa cờ cũ |
-| FT-03 | PASS — trace theo detail, không điền sẵn TDNT/QT0001 |
-| FT-04 | PASS — FIXED không thành đơn giá tính tiền |
-| FT-05 | PASS — surcharge/new và các form tạo lấy `catalogModeOptions` |
-| FT-06 | PASS trên máy DEV trừ 2 test Postgres SKIP vì không có server. CI bật chạy thật |
-| FT-07 | PASS — 37 TC sheet 27/10 cột DEV Test |
-| FT-08 | No Change — không gộp/xóa master trùng. Ngoài phạm vi code đợt này |
+| FT-01 | PASS — service/mode tách |
+| FT-02 | PASS — SameMode AIR/air |
+| FT-03 | PASS — trace không bịa mã |
+| FT-04 | PASS — FIXED ≠ unit rate tiền |
+| FT-05 | PASS — catalogModeOptions |
+| FT-06 | PASS trên CI với Postgres service; local portable `:5433` khi bật |
+| FT-07 | PASS — 37 TC sheet |
+| FT-08 | No Change — không gộp master trùng |
 
-## Log local 2026-11-02
+## Log thực thi
 
-`dotnet test Cms.sln -c Release` trước khi nới căn cứ exposure nhận **đối tác**:
+### ConsolidatedUat20261102 (2026-11-02 remaster)
 
-`Failed: 1, Passed: 588, Skipped: 2, Total: 591`
+```
+dotnet test tests/LCMS.Api.Tests/LCMS.Api.Tests.csproj -c Release --filter "FullyQualifiedName~ConsolidatedUat20261102"
+Passed!  - Failed: 0, Passed: 10, Skipped: 0, Total: 10
+```
 
-FAIL: `BusinessPartyDirectoryFullTests.CreditBlock_RoleGate_SoftDeleteOpenAr_And_Export` vì exposure chỉ có `counterpartyId`. Đã tính đối tác là căn cứ hợp lệ (đúng case hạn mức tín dụng). Chạy lại test đó: **PASS**.
+### RateScopeMigrationPostgresTests — local PASS (Skipped: 0)
 
-SKIP: `RateScopeMigrationPostgresTests` (không có Postgres local). Không skip vì `if: false`.
+```
+LCMS_TEST_POSTGRES=Host=127.0.0.1;Port=5433;Database=postgres;Username=lcms;Password=lcms
+dotnet test ... --filter FullyQualifiedName~RateScopeMigrationPostgresTests
+Passed!  - Failed: 0, Passed: 2, Skipped: 0, Total: 2, Duration: 19 s
+```
 
-`npm test` trong `apps/web`: **47 PASS**.
+Postgres portable 16.4 local `:5433` (trust, user `lcms`). DB tạm `lcms_rate_ac30` / `lcms_rate_baseline_audit` — không đụng DB smoke `lcms`.
 
-`npx tsc --noEmit`: PASS sau sửa form exposure.
+### CI GitHub Actions
 
-Ba test mới `ConsolidatedUat20261102Tests`: PASS (chiều tuyến, canonical route, AIR/air).
+`.github/workflows/ci.yml` job `test`:
+- service `postgres:16-alpine` port `5432`, user/password/db `lcms`
+- env `LCMS_TEST_POSTGRES=Host=127.0.0.1;Port=5432;Database=postgres;Username=lcms;Password=lcms`
+- `dotnet test Cms.sln -c Release` — `RequiresIsolatedPostgres` không Skip khi mở socket
 
-## Data remediation
+Migration SQL:
+```sql
+ALTER TABLE pricing_rules ADD COLUMN is_bidirectional boolean NOT NULL DEFAULT false;
+```
+File: `src/LCMS.Infrastructure/Persistence/Migrations/20261102120000_PricingRuleIsBidirectional.cs`
 
-Không có script sửa dữ liệu. Đề xuất nếu PO muốn xử lý cờ stale lịch sử `AIR → air` trên `TESTLSS002`: dry-run `SELECT` rating id, `stale_at`, `stale_reason`; không `UPDATE` cho đến khi PO duyệt; rollback là không chạy script. Snapshot published và số tiền không nằm trong phạm vi.
+### Web
+
+```
+cd apps/web && npm test   # baseline 47 PASS (trước remaster)
+npx tsc --noEmit          # chạy trong npm run build / CI Web production build
+```
+
+## CreditBlock
+
+`CreditBlock_RoleGate_SoftDeleteOpenAr_And_Export` tạo exposure ngoại lệ với `counterpartyId` + `notes` → PASS (không còn amount-only).

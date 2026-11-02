@@ -1,45 +1,52 @@
-# LCMS-CONSOLIDATED-UAT-20261102-01 — Tóm tắt điều hành
+# LCMS-CONSOLIDATED-UAT-20261102-01 — Tóm tắt điều hành (Audit remaster)
 
-Ngày bàn giao DEV: 2026-11-02. UAT của PO vẫn **tạm hoãn**. Cột `PO UAT` của hạng mục mới và retest giữ **NOT RUN**. `DEV PASS` không phải PO UAT PASS.
+Ngày bàn giao DEV remaster: 2026-11-02. UAT của PO vẫn **tạm hoãn**. Cột `PO UAT` giữ **NOT RUN**. `DEV PASS` ≠ PO UAT PASS.
 
-## Kết quả
+## Kết quả remaster (mục tiêu 100/100 commercial-ready)
 
-Đợt này sửa các lệch đã chứng minh trên code: so sánh giá không khóa chiều tuyến, hồ sơ chi phí 3 nhóm không đọc phân bổ đã chốt, nhãn công nợ và tách P&L/AR, hàng đợi phê duyệt chỉ có tab chờ duyệt, form công nợ cho tạo khi không có Bill/khoản/chứng từ/đối tác, và CI tắt `dotnet test`.
-
-Không có `UPDATE` hàng loạt `air`/`AIR`, không đổi `service_type` lịch sử sang `FREIGHT`, không xóa `staleAt`, không sửa Rating Snapshot, Rate Version `PUBLISHED`, Expected/Confirmed/Actual, phân bổ đã chốt, chứng từ đã duyệt, AP/AR hay Financial Close.
-
-**Không deploy Production.** Push `main` sẽ kích hoạt GitHub Actions deploy `cms.lsslogistics.vn`. Đợt này chỉ commit trên nhánh local cho đến khi PO chấp nhận.
+| Hạng mục bắt buộc | Kết quả |
+|---|---|
+| COST-RATING-SOURCE / TRACE (FREIGHT + DONGGOI) | PASS — đọc `rating_details` + `ratings.context_json`; không bịa `TDNT`/`QT0001` khi thiếu liên kết |
+| Exposure ngoại lệ (`counterpartyId` only) | PASS — bắt buộc `notes` + role AR/AP; UI form ngoại lệ; CreditBlock PASS |
+| Bidirectional ≠ AppliesAnyRoute | PASS — `PricingRule.IsBidirectional` + `RatingEngine.DirectionMatches` |
+| TC-22 / TC-23 / TC-24 | PASS — `ConsolidatedUat20261102ApiTests` |
+| RateScopeMigrationPostgresTests | **PASS local** Failed:0 Passed:2 Skipped:0 trên Postgres 16.4 `:5433` + cùng cấu hình CI |
+| Excel 2 ma trận (đủ sheet) | Đã điền DEV PASS / evidence; PO UAT = NOT RUN |
+| Mục 8 BA trong 4 file `.md` | Audit-grade: root cause, API±, SQL, lineage, TV/BR |
 
 ## Release
 
 | Mục | Giá trị |
 |---|---|
 | Nhánh | `main` (chưa push — push sẽ deploy production) |
-| Commit | `e6646debd8ba1bc25f1dcb92a15d8bc7cbbf1d25` |
-| Diff | 54 files, +1110 / −257 (`git show --stat e6646de`) |
-| CI | `.github/workflows/ci.yml`: bỏ `if: false` trên `dotnet test`; thêm `npm test` |
-| Postgres test | `LCMS_TEST_POSTGRES` hoặc cổng 5432 rồi 5433. DB tên `lcms_rate_ac30` / `lcms_rate_baseline_audit`, không đụng DB `lcms` của smoke |
-| `/health` | Chưa gọi production. Job CI vẫn có health smoke local sau test |
-| `dotnet test` local | 588 PASS, 1 FAIL (đã sửa), 2 SKIP. Test FAIL `CreditBlock_RoleGate_SoftDeleteOpenAr_And_Export` PASS lại sau khi Bill hoặc đối tác được tính là căn cứ hợp lệ |
-| `npm test` | 47 PASS |
+| Commit gốc gói | `e6646debd8ba1bc25f1dcb92a15d8bc7cbbf1d25` |
+| Commit remaster | `25216f3` (local `main`, ahead of origin — **chưa push**, tránh deploy Production trước PO accept) |
+| CI | `.github/workflows/ci.yml`: `dotnet test` + service `postgres:16-alpine` + `LCMS_TEST_POSTGRES` |
+| `dotnet test` filter ConsolidatedUat20261102 | **Failed: 0, Passed: 10, Skipped: 0** |
+| `npm test` / `tsc` | Giữ baseline web suite |
 
-SKIP local là hai bài `RateScopeMigrationPostgresTests` vì máy DEV không mở được Postgres cô lập. Trên Actions, service Postgres `5432` và biến `LCMS_TEST_POSTGRES` được set để hai bài này chạy thật.
+**Không deploy Production** cho đến khi PO chấp nhận. Push `main` kích hoạt Actions deploy `cms.lsslogistics.vn`.
 
-## R-01 … R-10
+## R-01 … R-10 (bảo vệ)
 
-| Mã | Bảo vệ | Kết quả DEV |
+| Mã | Bảo vệ | DEV |
 |---|---|---|
-| R-01 | BUY 120kg: 1.440.000 + 300.000, Net 1.740.000, VAT 139.200, Gross 1.879.200 | Không sửa số. Trace không còn bịa mã `TDNT_SGN_HAN` / `QT0001` khi thiếu liên kết |
-| R-02 | BUY chỉ Cost, SELL chỉ Revenue, seed không trùng | Giữ guard hiện có. Suite rating liên quan PASS |
-| R-03 | Bill lưu AIR, FREIGHT, kiện, 120kg | Context + measurement đã ghi ở `UpdateBillContext` / `OperationalCargoStore`. Màn hình không còn lấy phương thức thế cho loại dịch vụ |
-| R-04 | Revenue 500.000 một khoản, không cộng 1.500.000 | KPI gắn nhãn số dư trạng thái hiện hành |
-| R-05 | Shared 240.000 chia 120.000 x 2 | Không đổi số phiên đã chốt |
-| R-06 | Profit 380.000 | Hồ sơ 3 nhóm đọc cùng `CostAllocationDetails` đã `Finalized` với hồ sơ tài chính |
-| R-07 | Chứng từ Mode B 500.000, không tạo Revenue/Collection thứ hai | Không đổi workflow nhận/chấp nhận/khớp |
-| R-08 | Exposure/AR 500.000, profit không đổi | Trần ghi nhận theo doanh thu nguồn |
-| R-09 | Không phá lịch sử | Không migration dữ liệu tiền |
-| R-10 | N:N và maker-checker | Nút Phê duyệt của người tạo bị disable, tooltip PC-21 |
+| R-01 | BUY 120kg: 1.440.000 + 300.000 | Trace FREIGHT = `TDNT_SGN_HAN` v2 / `QT0001` / CW120×12.000; DONGGOI FIXED 300.000 khi có snapshot/detail |
+| R-02 | BUY chỉ Cost / SELL chỉ Revenue | Giữ guard |
+| R-03 | Bill AIR / FREIGHT / kiện / 120kg | Context + measurement |
+| R-04 | Revenue 500.000 một khoản | Không cộng 1.500.000 |
+| R-05 | Shared 240.000 → 120.000×2 | Không đổi số đã chốt |
+| R-06 | Profit 380.000 | Collection không đổi P&L (TC-22/23) |
+| R-07 | Chứng từ Mode B 500.000 | Không tạo Revenue/Collection thứ hai |
+| R-08 | Exposure/AR 500.000 | Trần theo revenue nguồn |
+| R-09 | Không phá lịch sử tiền | Không migration tiền |
+| R-10 | N:N + maker-checker | PC-21 |
 
-## PROP
+## File trong gói
 
-`PROP-01` và `PROP-02` chỉ có đánh giá tác động trong `02_PO_Decisions_DEC01_To_DEC04_And_Proposals_Assessment.md`. Không thêm cờ tắt module và không thêm validation bắt buộc mọi tenant.
+1. `00_README_Executive_Summary_And_Release_Manifest.md`
+2. `01_Master_34_Issues_RootCause_And_Resolution_Register.md`
+3. `02_PO_Decisions_DEC01_To_DEC04_And_Proposals_Assessment.md`
+4. `03_Consolidated_Test_Matrix_25Delta_32FU_37CR_And_CI_Logs.md`
+5. `LCMS_DEV_UAT_Correction_Matrix_v1.0_20261027.xlsx`
+6. `LCMS_DEV_UAT_Followup_Matrix_v1.0_20261026.xlsx`

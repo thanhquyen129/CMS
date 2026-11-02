@@ -1042,6 +1042,7 @@ internal sealed class PricingRuleConfiguration : IEntityTypeConfiguration<Pricin
         builder.Property(e => e.PartyTypeCode).HasMaxLength(32);
         builder.Property(e => e.RouteId).HasColumnType("uuid");
         builder.Property(e => e.RouteCode).HasMaxLength(64);
+        builder.Property(e => e.IsBidirectional).IsRequired().HasDefaultValue(false);
         builder.Property(e => e.CarrierName).HasMaxLength(256);
         builder.Property(e => e.WeightBasis).HasMaxLength(32);
         builder.Property(e => e.WeightMin).HasPrecision(18, 4);

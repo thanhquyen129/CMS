@@ -229,7 +229,10 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                     {cost.ratingTrace.surchargeVersionId ? (
                       <div>
                         <dt>Phiên bản phụ phí</dt>
-                        <dd><code>#{cost.ratingTrace.surchargeVersionId.slice(0, 8)}</code> (Snapshot độc lập)</dd>
+                        <dd>
+                          {cost.ratingTrace.rateVersionNo != null ? `v${cost.ratingTrace.rateVersionNo} · ` : ""}
+                          <code>#{cost.ratingTrace.surchargeVersionId.slice(0, 8)}</code>
+                        </dd>
                       </div>
                     ) : null}
                     <div>
@@ -267,17 +270,21 @@ export default async function CostDetailPage({ params }: { params: Params }) {
                       <dd>
                         {cost.ratingTrace.rateCardId ? (
                           <Link className="row-link" href={`/rate-cards/${cost.ratingTrace.rateCardId}`}>
-                            {cost.ratingTrace.rateCardCode} — {cost.ratingTrace.rateCardName} (v{cost.ratingTrace.rateVersionNo ?? 2})
+                            {cost.ratingTrace.rateCardCode} — {cost.ratingTrace.rateCardName}
+                            {cost.ratingTrace.rateVersionNo != null ? ` (v${cost.ratingTrace.rateVersionNo})` : ""}
                           </Link>
                         ) : (
-                          <span>{cost.ratingTrace.rateCardCode ?? "Bảng giá"} (v{cost.ratingTrace.rateVersionNo ?? 2})</span>
+                          <span>
+                            {cost.ratingTrace.rateCardCode ?? "Chưa có mã bảng giá"}
+                            {cost.ratingTrace.rateVersionNo != null ? ` (v${cost.ratingTrace.rateVersionNo})` : ""}
+                          </span>
                         )}
                       </dd>
                     </div>
                     <div>
                       <dt>Quy tắc tính giá</dt>
                       <dd>
-                        <code>{cost.ratingTrace.ruleCode ?? "QT0001"}</code>
+                        <code>{cost.ratingTrace.ruleCode ?? "Chưa có mã quy tắc"}</code>
                         {cost.ratingTrace.pricingRuleId ? (
                           <span className="muted small" style={{ marginLeft: "8px" }}>
                             (ID: #{cost.ratingTrace.pricingRuleId.slice(0, 8)})

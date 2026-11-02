@@ -227,7 +227,7 @@ public sealed class ApArBalanceReconciliationTests : IAsyncLifetime
     private async Task<Guid> RecognizeArAsync(Guid tenantId, Guid billId, decimal amount, string currency)
     {
         var exposureId = await PostIdAsync(tenantId, "/api/receivable-exposures",
-            new { amount, currencyCode = currency, billId });
+            new { amount, currencyCode = currency, billId, counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: true), notes = ExposureAnchor.Note });
         return await PostIdAsync(tenantId, $"/api/receivable-exposures/{exposureId}/recognize", new { amount });
     }
 

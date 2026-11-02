@@ -80,7 +80,7 @@ public sealed class ControlPackageTests : IAsyncLifetime
         var tenantId = await CreateTenantAsync();
         var billId = await CreateBillAsync(tenantId, "BL-F-FX");
         var costId = await CreateCostAsync(tenantId, billId, 25000m);
-        var exposureId = await PostId(tenantId, "/api/payable-exposures", new { amount = 25000m, currencyCode = "VND", billId });
+        var exposureId = await PostId(tenantId, "/api/payable-exposures", new { amount = 25000m, currencyCode = "VND", billId, counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false), notes = ExposureAnchor.Note });
         var apId = await PostId(tenantId, $"/api/payable-exposures/{exposureId}/recognize", new { amount = 25000m });
         var paymentId = await PostId(tenantId, "/api/payments", new { amount = 1m, currencyCode = "USD", billId });
 
@@ -230,7 +230,9 @@ public sealed class ControlPackageTests : IAsyncLifetime
         {
             amount = 280m,
             currencyCode = "USD",
-            billId = "HAWB-UAT-002"
+            billId = "HAWB-UAT-002",
+            counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false),
+            notes = ExposureAnchor.Note
         });
         var payable = await GetAsync<ExposureBillBody>(tenantId, $"/api/payable-exposures/{payableExposureId}");
         Assert.Equal(billId, payable.BillId);
@@ -240,7 +242,9 @@ public sealed class ControlPackageTests : IAsyncLifetime
         {
             amount = 280m,
             currencyCode = "USD",
-            billId = "HAWB-UAT-002"
+            billId = "HAWB-UAT-002",
+            counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: true),
+            notes = ExposureAnchor.Note
         });
         var receivable = await GetAsync<ExposureBillBody>(tenantId, $"/api/receivable-exposures/{receivableExposureId}");
         Assert.Equal(billId, receivable.BillId);
@@ -333,7 +337,7 @@ public sealed class ControlPackageTests : IAsyncLifetime
         var tenantId = await CreateTenantAsync();
         var billId = await CreateBillAsync(tenantId, "BL-F-CANCEL");
         await CreateCostAsync(tenantId, billId, 100m);
-        var exposureId = await PostId(tenantId, "/api/payable-exposures", new { amount = 100m, currencyCode = "VND", billId });
+        var exposureId = await PostId(tenantId, "/api/payable-exposures", new { amount = 100m, currencyCode = "VND", billId, counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false), notes = ExposureAnchor.Note });
         var apId = await PostId(tenantId, $"/api/payable-exposures/{exposureId}/recognize", new { amount = 100m });
 
         var draftPaymentId = await PostId(tenantId, "/api/payments", new { amount = 100m, currencyCode = "VND", billId });

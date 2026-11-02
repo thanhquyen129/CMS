@@ -132,7 +132,8 @@ public sealed class CompareRatesQueryHandler : IRequestHandler<CompareRatesQuery
             r.AppliesAnyRoute == true,
             r.WeightMin,
             r.WeightMax,
-            r.WeightBasis)).ToList();
+            r.WeightBasis,
+            r.IsBidirectional)).ToList();
         var classified = BillRateSuggestion.Classify(
             suggestionCards, suggestionVersions, suggestionRules, matchContext, rateDate);
 

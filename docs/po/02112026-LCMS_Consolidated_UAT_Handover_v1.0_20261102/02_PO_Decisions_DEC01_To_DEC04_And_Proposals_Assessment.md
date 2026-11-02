@@ -1,22 +1,44 @@
-# DEC-01 … DEC-04 và đánh giá PROP-01 / PROP-02
+# DEC-01 … DEC-04 và đánh giá PROP-01 / PROP-02 (Audit remaster)
 
 ## DEC-01 — Revenue maturity 2 hoặc 3 lớp theo tenant
 
-Kiến trúc dữ liệu giữ một dòng `revenues` với `ExpectedAmount`, `ConfirmedAmount`, `ActualAmount`. Không thêm bảng Confirmed giả.
+Kiến trúc: một dòng `revenues` với `ExpectedAmount` / `ConfirmedAmount` / `ActualAmount`. Không thêm bảng Confirmed giả.
 
-Cấu hình nằm trong `tenant_settings.financial_json` (không migration):
+### JSON schema (`tenant_settings.financial_json`)
 
-- `revenueMaturityModel`: `three` (mặc định, kể cả khi trống) hoặc `two`
-- `revenueMaturityPolicyVersion`
-- `revenueMaturityEffectiveFrom`
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "revenueMaturityModel": { "enum": ["two", "three"], "default": "three" },
+    "revenueMaturityPolicyVersion": { "type": "string" },
+    "revenueMaturityEffectiveFrom": { "type": "string", "format": "date" }
+  },
+  "additionalProperties": true
+}
+```
 
-Mặc định **không** chuyển sang 2 lớp. Đề xuất 2 lớp vẫn chờ PO chọn từng tenant trên màn Cài đặt tài chính.
+### Payload API ví dụ
 
-Khi `two`: API `confirm` trả lỗi và không ghi `ConfirmedAmount`. API `actualize` cho phép `Expected → Actual` và vẫn cho bản ghi lịch sử đang `Confirmed` đi tiếp tới `Actual` mà không xóa số Confirmed đã lưu. Audit `revenue.confirm` / `revenue.actualize` ghi actor, maturity cũ/mới, nguồn.
+**Cài đặt (PATCH tenant financial):**
+```json
+{
+  "revenueMaturityModel": "two",
+  "revenueMaturityPolicyVersion": "2026-11-02",
+  "revenueMaturityEffectiveFrom": "2026-11-02"
+}
+```
+
+**Case âm — confirm khi `two`:** `POST /api/revenues/{id}/confirm` → `409 Conflict` (không ghi ConfirmedAmount).
+
+**Case dương — actualize `Expected → Actual` khi `two`:** `POST /api/revenues/{id}/actualize` `{ "actualAmount": 500000 }` → `204`.
+
+Mặc định **không** chuyển mọi tenant sang 2 lớp.
 
 ## DEC-02 — Việt hóa Exposure / AP / AR
 
-Từ điển `VietnameseUiTerms` và nhãn cứng trên menu, tab, dashboard, form:
+Từ điển `VietnameseUiTerms` + nhãn cứng.
 
 | Mã | Nhãn |
 |---|---|
@@ -28,38 +50,78 @@ Từ điển `VietnameseUiTerms` và nhãn cứng trên menu, tab, dashboard, fo
 | AP | Công nợ phải trả đã ghi nhận |
 | AR | Công nợ phải thu đã ghi nhận |
 
-Exposure không bị gọi là deadline công nợ. API domain `ReceivableExposure` / `AccountsReceivable` giữ nguyên.
+### File UI đã Việt hóa (đầy đủ bề mặt DEC-02)
 
-## DEC-03 — Tách P&L và AR trên hồ sơ tài chính Bill
+- `apps/web/lib/terminology.ts` / `VietnameseUiTerms`
+- `apps/web/components/AppShell.tsx` (menu)
+- `apps/web/components/CreateExposureForm.tsx`
+- `apps/web/app/settlements/page.tsx` + `SettlementListWorkspace.tsx`
+- `apps/web/app/bills/[id]/page.tsx` (khối công nợ)
+- `apps/web/app/exposures/**` (nếu có)
+- Dashboard / aging widgets dùng `term()`
 
-Màn Bill, khối tiền tệ báo cáo, tách hai bảng:
+API domain `ReceivableExposure` / `AccountsReceivable` giữ nguyên tiếng Anh.
 
-1. Doanh thu & chi phí — tham gia lợi nhuận
-2. Công nợ phải thu / phải trả đã ghi nhận — không cộng vào lợi nhuận
+## DEC-03 — Tách P&L và Công nợ trên Hồ sơ tài chính Bill
 
-Tiêu đề đổi thành **Chi tiết quy đổi tiền tệ**. Nguồn tỷ giá `identity` hiển thị **Không quy đổi (cùng tiền tệ)**. Giá trị lưu trong DB vẫn là `identity`.
+### Cấu trúc 2 bảng
 
-Hồ sơ 3 nhóm lấy `finalizedAllocations` từ cùng query với hồ sơ tài chính (`CostAllocationDetails` của phiên `Finalized`). Bill UAT 500.000 doanh thu và 120.000 phân bổ đã chốt ra lợi nhuận 380.000 ở cả hai chỗ. Số gốc 240.000 không bị sửa.
+1. **Doanh thu & chi phí (P&L)** — Expected/Confirmed/Actual; `finalizedAllocations` từ `cost_allocation_details` Finalized; lợi nhuận = DT − CP.
+2. **Công nợ đã ghi nhận (AP/AR)** — Exposure → Recognize; không cộng vào lợi nhuận.
+
+Tiêu đề khối FX: **Chi tiết quy đổi tiền tệ**. Nguồn `identity` → **Không quy đổi (cùng tiền tệ)**.
+
+Bill UAT: DT 500.000 + phân bổ CP 120.000 → profit **380.000** ở cả hồ sơ tài chính và 3 nhóm. Shared gốc 240.000 không bị sửa.
 
 ## DEC-04 — Lịch sử phê duyệt
 
-`GET /api/queues/approvals?status=` nhận `pending` (mặc định), `approved`, `rejected`, `all`.
+### Payload `GET /api/queues/approvals?status=all`
 
-UI `/queues/approvals` có tab Chờ duyệt / Đã duyệt / Từ chối / Tất cả, cột quyết định lúc và lý do, link đối tượng. Nếu `requestedBy` là user hiện tại, nút Phê duyệt disable kèm tooltip *Người tạo đề xuất không được tự phê duyệt (PC-21)*. Backend chặn tự duyệt giữ nguyên.
+```http
+GET /api/queues/approvals?status=all HTTP/1.1
+X-Tenant-Id: <tenant>
+```
 
-## PROP-01 — Phạm vi module công nợ theo tenant (không code)
+```json
+{
+  "items": [
+    {
+      "id": "<uuid>",
+      "objectType": "cost_allocation",
+      "objectId": "<uuid>",
+      "status": "approved",
+      "requestedBy": "<user-uuid>",
+      "decidedAt": "2026-10-28T10:00:00Z",
+      "decisionReason": "Đủ chứng từ",
+      "link": "/costs/allocations/<uuid>"
+    }
+  ]
+}
+```
 
-Hiện mọi tenant dùng chung Cost, Revenue, Exposure, AP/AR, Payment. Tắt cả khối công nợ đụng:
+`status` ∈ `pending` (default) | `approved` | `rejected` | `all`.
 
-- API `/api/receivable-exposures`, `/api/payable-exposures`, recognize, payment, collection
-- Hồ sơ Bill (dòng AR/AP), báo cáo tuổi nợ, close eligibility
-- Quyền `revenue.read` / `cost.read` đang tách khỏi quyền ghi nhận
-- Hợp đồng mobile và BFF
+UI tabs: Chờ duyệt / Đã duyệt / Từ chối / Tất cả. Maker (`requestedBy` = current user) → nút Phê duyệt disable + tooltip PC-21; backend vẫn chặn tự duyệt.
 
-Phương án khi PO chốt: một khóa trong `financial_json`, ví dụ `debtModule=off|on`, chỉ ẩn navigation và trả 403 trên API ghi công nợ. Đọc lịch sử AP/AR của tenant đã có số phải vẫn được phép. Không xóa dữ liệu. Chưa triển khai.
+## PROP-01 — Module công nợ theo tenant (chỉ đánh giá)
 
-## PROP-02 — Bắt buộc loại hàng / loại doanh thu (không ép validation)
+| Module / API | Ảnh hưởng nếu `debtModule=off` | Permission | Báo cáo |
+|---|---|---|---|
+| `/api/receivable-exposures*` | 403 ghi; GET lịch sử vẫn đọc | `ar.write` off | Aging AR ẩn nav |
+| `/api/payable-exposures*` | 403 ghi | `ap.write` off | Aging AP ẩn |
+| `/api/payments*` `/api/collections*` | 403 | settlement write | Cash report thu hẹp |
+| Bill financial profile | Ẩn bảng công nợ; giữ P&L | — | — |
+| Close eligibility | Bỏ gate AR/AP mở nếu module off | close.* | — |
+| Mobile / BFF | Đồng bộ flag | — | — |
 
-`commodity_types` theo tenant. Form Bill/sửa tham chiếu báo rõ khi danh mục trống và không chặn lưu.
+Chưa triển khai. Không xóa dữ liệu lịch sử.
 
-Loại doanh thu trên form tạo doanh thu là dropdown `revenue_type` active, có lựa chọn **Chưa phân loại** (để trống mã). Đổi mã sau này là sửa phân loại, không tạo dòng doanh thu mới. Không thêm rule bắt buộc cho mọi tenant.
+## PROP-02 — Bắt buộc commodity / revenue type (chỉ đánh giá)
+
+| Bề mặt | Hiện trạng | Nếu bắt buộc toàn tenant |
+|---|---|---|
+| Bill commodity | Cảnh báo khi master trống; không chặn lưu | Cần seed master + migration dữ liệu thiếu |
+| CreateRevenue type | Dropdown + "Chưa phân loại" | Chặn empty code → ảnh hưởng báo cáo taxonomy |
+| Rating context | Không suy từ tên khoản | — |
+
+Không ép validation mọi tenant trong đợt này.

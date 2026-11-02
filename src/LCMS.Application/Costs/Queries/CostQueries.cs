@@ -304,14 +304,22 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                     }
 
                     LCMS.Domain.Entities.SurchargeRule? surchargeRule = null;
+                    int? surchargeVersionNo = null;
                     if (detail.SourceVersionId is Guid svId)
                     {
                         surchargeRule = await _db.SurchargeRules.AsNoTracking()
                             .FirstOrDefaultAsync(sr => sr.SurchargeVersionId == svId, cancellationToken);
+                        surchargeVersionNo = await _db.SurchargeVersions.AsNoTracking()
+                            .Where(v => v.Id == svId)
+                            .Select(v => (int?)v.VersionNo)
+                            .FirstOrDefaultAsync(cancellationToken);
                     }
 
                     // BR27-18, BR27-19, BR27-20: Calculation Mode & Formula Trace
+                    var snap = RatingTraceSnapshot.Read(rating?.ContextJson, detail.RuleCode);
+                    surchargeVersionNo ??= snap.SurchargeVersionNo;
                     bool isFixed = string.Equals(surchargeRule?.CalculationMode, "fixed", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(surchargeRule?.CalculationMode, "fixed_rate", StringComparison.OrdinalIgnoreCase)
                         || (detail.FormulaText != null && (detail.FormulaText.Contains("fixed", StringComparison.OrdinalIgnoreCase) || detail.FormulaText.Contains("cố định", StringComparison.OrdinalIgnoreCase)));
 
                     string calculationMode = isFixed ? "fixed" : "unit_rate";
@@ -329,7 +337,7 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                         RateCardCode: null,
                         RateCardName: null,
                         RateVersionId: null,
-                        RateVersionNo: null,
+                        RateVersionNo: surchargeVersionNo,
                         PricingRuleId: null,
                         RuleCode: detail.RuleCode,
                         ChargeCode: detail.ComponentCode,
@@ -348,8 +356,8 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                         VendorName: vendor?.Name,
                         IsSurcharge: true,
                         SurchargeId: surcharge?.Id ?? detail.SourceId,
-                        SurchargeCode: surcharge?.Code ?? detail.RuleCode,
-                        SurchargeName: surcharge?.Name ?? "Phụ phí độc lập",
+                        SurchargeCode: surcharge?.Code ?? detail.RuleCode ?? snap.SurchargeCode,
+                        SurchargeName: surcharge?.Name ?? detail.ComponentName,
                         SurchargeVersionId: detail.SourceVersionId,
                         SourceOrigin: "surcharge",
                         CalculationMode: calculationMode,
@@ -368,36 +376,34 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                     var ruleId = cost.PricingRuleId ?? detail.PricingRuleId;
                     var rule = ruleId is Guid rid ? await _db.PricingRules.AsNoTracking().FirstOrDefaultAsync(pr => pr.Id == rid, cancellationToken) : null;
 
-                    decimal? declaredUnitRate = rule?.UnitAmount;
-                    decimal? referenceUnitRate = null;
-                    decimal? unitRate = declaredUnitRate;
-                    if (unitRate is null && rating?.ChargeableWeightKg is decimal cw && cw > 0 && detail.Amount > 0)
-                    {
-                        unitRate = decimal.Round(detail.Amount / cw, 2, MidpointRounding.AwayFromZero);
-                    }
-
                     var baseMode = rule?.CalcMethod?.Trim().ToLowerInvariant();
                     var baseIsFixed = baseMode is "fixed" or "fixed_amount";
-                    string formulaText = detail.FormulaText
-                        ?? (baseIsFixed
+                    var snap = RatingTraceSnapshot.Read(rating?.ContextJson, detail.RuleCode);
+                    var chargeable = rating?.ChargeableWeightKg ?? snap.ChargeableKg;
+                    var unit = rule?.UnitAmount > 0 ? rule.UnitAmount : snap.UnitRate;
+                    string? formulaText = detail.FormulaText;
+                    if (string.IsNullOrWhiteSpace(formulaText))
+                    {
+                        formulaText = baseIsFixed
                             ? $"Cố định {detail.Amount:N0} ₫ / khoản"
-                            : rule != null && rating?.ChargeableWeightKg > 0
-                                ? $"{rating.ChargeableWeightKg} kg × {rule.UnitAmount:N0} ₫/kg"
-                                : "Theo bảng giá");
+                            : unit is > 0 && chargeable is > 0
+                                ? $"{chargeable:0.##} kg × {unit:N0} ₫/kg"
+                                : null;
+                    }
 
                     trace = new CostRatingTraceDto(
                         RatingId: detail.RatingId,
                         RatingDetailId: detail.Id,
                         RateCardId: card?.Id ?? cardId,
-                        RateCardCode: card?.Code,
-                        RateCardName: card?.Name,
+                        RateCardCode: card?.Code ?? snap.RateCardCode,
+                        RateCardName: card?.Name ?? snap.RateCardName,
                         RateVersionId: version?.Id ?? versionId,
-                        RateVersionNo: version?.VersionNo,
+                        RateVersionNo: version?.VersionNo ?? snap.VersionNo,
                         PricingRuleId: rule?.Id ?? ruleId,
-                        RuleCode: !string.IsNullOrWhiteSpace(detail.RuleCode) ? detail.RuleCode : rule?.Code,
+                        RuleCode: !string.IsNullOrWhiteSpace(detail.RuleCode) ? detail.RuleCode : rule?.Code ?? snap.RuleCode,
                         ChargeCode: detail.ComponentCode,
-                        ChargeableWeightKg: rating?.ChargeableWeightKg,
-                        UnitRate: baseIsFixed ? null : unitRate,
+                        ChargeableWeightKg: chargeable,
+                        UnitRate: baseIsFixed ? null : unit ?? (chargeable is > 0 && detail.Amount > 0 ? decimal.Round(detail.Amount / chargeable.Value, 2, MidpointRounding.AwayFromZero) : null),
                         FormulaText: formulaText,
                         RateDate: rating?.RateDate,
                         RateDateFormatted: rateDateFormatted,
@@ -414,11 +420,13 @@ public sealed class GetCostByIdQueryHandler : IRequestHandler<GetCostByIdQuery, 
                         SurchargeCode: null,
                         SurchargeName: null,
                         SurchargeVersionId: null,
-                        SourceOrigin: card is null && rule is null ? "missing_link" : "rating",
+                        SourceOrigin: card is null && rule is null && string.IsNullOrWhiteSpace(snap.RateCardCode) && string.IsNullOrWhiteSpace(detail.RuleCode)
+                            ? "missing_link"
+                            : "rating",
                         CalculationMode: baseIsFixed ? "fixed" : "unit_rate",
                         CalculationModeLabel: baseIsFixed ? "Cố định (FIXED)" : "Đơn giá nấc trọng lượng",
-                        DeclaredUnitRate: baseIsFixed ? null : declaredUnitRate,
-                        ReferenceUnitRate: referenceUnitRate
+                        DeclaredUnitRate: baseIsFixed ? null : unit,
+                        ReferenceUnitRate: null
                     );
                 }
             }
@@ -689,5 +697,131 @@ public sealed class ListCostsQueryHandler : IRequestHandler<ListCostsQuery, Page
             applyPaging ? page : 1,
             applyPaging ? pageSize : totalCount,
             totalCount);
+    }
+}
+
+/// <summary>Reads frozen rating context. Does not invent a card or rule when the snapshot has neither.</summary>
+public static class RatingTraceSnapshot
+{
+    public static Bits Read(string? json, string? ruleCode = null)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return Bits.Empty;
+        }
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            string? card = Text(root, "rateCardCode");
+            string? name = Text(root, "rateCardName");
+            int? version = Int(root, "versionNo");
+            decimal? chargeable = Dec(root, "chargeable") ?? Dec(root, "applied_weight");
+            string? rule = null;
+            decimal? unit = null;
+            if (root.TryGetProperty("rules", out var rules) && rules.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var item in rules.EnumerateArray())
+                {
+                    var code = Text(item, "Code") ?? Text(item, "code");
+                    if (string.IsNullOrWhiteSpace(rule))
+                    {
+                        rule = code;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(ruleCode) || string.Equals(code, ruleCode, StringComparison.OrdinalIgnoreCase))
+                    {
+                        rule = code ?? rule;
+                        unit = Dec(item, "UnitAmount") ?? Dec(item, "unitAmount");
+                        chargeable ??= Dec(item, "applied_weight");
+                        if (!string.IsNullOrWhiteSpace(ruleCode))
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            string? surchargeCode = null;
+            int? surchargeVersion = null;
+            if (root.TryGetProperty("surcharges", out var surcharges) && surcharges.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var item in surcharges.EnumerateArray())
+                {
+                    if (item.ValueKind != System.Text.Json.JsonValueKind.String)
+                    {
+                        continue;
+                    }
+
+                    var text = item.GetString();
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        continue;
+                    }
+
+                    var parts = text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var code = parts[0];
+                    int? ver = null;
+                    if (parts.Length > 1 && parts[1].StartsWith('v') && int.TryParse(parts[1][1..], out var parsed))
+                    {
+                        ver = parsed;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(ruleCode)
+                        && !string.Equals(code, ruleCode, StringComparison.OrdinalIgnoreCase)
+                        && !text.Contains(ruleCode, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    surchargeCode = code;
+                    surchargeVersion = ver;
+                    break;
+                }
+            }
+
+            return new Bits(card, name, version, rule, chargeable, unit, surchargeCode, surchargeVersion);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return Bits.Empty;
+        }
+    }
+
+    private static string? Text(System.Text.Json.JsonElement node, string name) =>
+        node.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static int? Int(System.Text.Json.JsonElement node, string name) =>
+        node.TryGetProperty(name, out var value) && value.TryGetInt32(out var number) ? number : null;
+
+    private static decimal? Dec(System.Text.Json.JsonElement node, string name)
+    {
+        if (!node.TryGetProperty(name, out var value))
+        {
+            return null;
+        }
+
+        if (value.ValueKind == System.Text.Json.JsonValueKind.Number && value.TryGetDecimal(out var number))
+        {
+            return number;
+        }
+
+        return null;
+    }
+
+    public readonly record struct Bits(
+        string? RateCardCode,
+        string? RateCardName,
+        int? VersionNo,
+        string? RuleCode,
+        decimal? ChargeableKg,
+        decimal? UnitRate,
+        string? SurchargeCode,
+        int? SurchargeVersionNo)
+    {
+        public static Bits Empty => new(null, null, null, null, null, null, null, null);
     }
 }

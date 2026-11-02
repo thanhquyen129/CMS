@@ -36,7 +36,7 @@ public sealed class ArLedgerRegressionTests : IAsyncLifetime
         var tenantId = await CreateTenantAsync("TN-ARLEDGER-1", "AR Ledger Regression");
         var billId = await CreateBillAsync(tenantId, "HAWB-UAT-LEDGER-1");
         var exposureId = await PostIdAsync(tenantId, "/api/receivable-exposures",
-            new { amount = 280m, currencyCode = "USD", billId });
+            new { amount = 280m, currencyCode = "USD", billId, counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: true), notes = ExposureAnchor.Note });
         var arId = await PostIdAsync(tenantId, $"/api/receivable-exposures/{exposureId}/recognize",
             new { amount = 280m });
         var revenueCountBefore = await CountAsync(tenantId, "/api/revenues");
@@ -124,7 +124,7 @@ public sealed class ArLedgerRegressionTests : IAsyncLifetime
         var tenantId = await CreateTenantAsync("TN-ARLEDGER-2", "AR Ledger Guard");
         var billId = await CreateBillAsync(tenantId, "HAWB-UAT-LEDGER-2");
         var exposureId = await PostIdAsync(tenantId, "/api/receivable-exposures",
-            new { amount = 100m, currencyCode = "VND", billId });
+            new { amount = 100m, currencyCode = "VND", billId, counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: true), notes = ExposureAnchor.Note });
         var arId = await PostIdAsync(tenantId, $"/api/receivable-exposures/{exposureId}/recognize",
             new { amount = 100m });
         var adjId = await PostIdAsync(tenantId, $"/api/accounts-receivable/{arId}/adjust",

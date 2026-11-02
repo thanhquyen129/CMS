@@ -70,7 +70,7 @@ public sealed class SprintP14P20SliceTests : IAsyncLifetime
         Guid expId;
         using (var exp = new HttpRequestMessage(HttpMethod.Post, "/api/payable-exposures")
         {
-            Content = JsonContent.Create(new { amount = 100m, currencyCode = "VND", billId })
+            Content = JsonContent.Create(new { amount = 100m, currencyCode = "VND", billId, counterpartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false), notes = ExposureAnchor.Note })
         })
         {
             exp.Headers.Add("X-Tenant-Id", tenantId.ToString());

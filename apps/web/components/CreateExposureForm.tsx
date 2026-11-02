@@ -121,13 +121,13 @@ export function CreateExposureForm({
     const linkRawEarly = String(fd.get("linkedId") ?? "").trim();
     const notesEarly = String(fd.get("notes") ?? "").trim();
     const partyEarly = String(fd.get("counterpartyId") ?? "").trim();
-    if (!exception && !linkRawEarly && !billIdRaw) {
-      setError(`Chọn Bill hoặc khoản ${linkLabel.toLowerCase()}, hoặc bật luồng ngoại lệ có đối tác và lý do.`);
+    if (!exception && (!billIdRaw || !linkRawEarly)) {
+      setError(`Chọn Bill và khoản ${linkLabel.toLowerCase()}, hoặc bật luồng ngoại lệ rồi chọn đối tác và nhập lý do.`);
       setSubmitting(false);
       return;
     }
-    if (exception && (!partyEarly || !notesEarly)) {
-      setError("Luồng ngoại lệ cần đối tác và lý do. Không tạo số tiền treo.");
+    if (exception && (!partyEarly || notesEarly.length < 3)) {
+      setError("Luồng ngoại lệ cần đối tác đúng vai trò và căn cứ/lý do.");
       setSubmitting(false);
       return;
     }
@@ -299,12 +299,14 @@ export function CreateExposureForm({
               <PartyTypeahead
                 name="counterpartyId"
                 label="Đối tác ngoại lệ"
+                roleCode={isPayable ? "vendor" : "customer"}
                 disabled={busy}
                 required
+                hint={isPayable ? "Chỉ nhà cung cấp hoặc bên nhận tiền." : "Chỉ khách hàng, bên trả tiền hoặc bill-to."}
               />
             ) : null}
             <div className="field field-span">
-              <label htmlFor="notes">Ghi chú</label>
+              <label htmlFor="notes">Căn cứ / lý do ngoại lệ</label>
               <input id="notes" name="notes" maxLength={2048} disabled={busy} />
             </div>
           </div>

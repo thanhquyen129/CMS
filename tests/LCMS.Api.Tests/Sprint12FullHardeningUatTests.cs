@@ -468,9 +468,10 @@ public sealed class Sprint12FullHardeningUatTests : IAsyncLifetime
 
     private async Task<Guid> CreatePayableExposureAsync(Guid tenantId, Guid billId, decimal amount)
     {
+        var exposurePartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: false);
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/payable-exposures")
         {
-            Content = JsonContent.Create(new { amount, currencyCode = "VND", billId })
+            Content = JsonContent.Create(new { amount, currencyCode = "VND", billId, counterpartyId = exposurePartyId, notes = ExposureAnchor.Note })
         };
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var response = await _client.SendAsync(req);
@@ -480,9 +481,10 @@ public sealed class Sprint12FullHardeningUatTests : IAsyncLifetime
 
     private async Task<Guid> CreateReceivableExposureAsync(Guid tenantId, Guid billId, decimal amount)
     {
+        var exposurePartyId = await ExposureAnchor.PartyAsync(_client, tenantId, receivable: true);
         using var req = new HttpRequestMessage(HttpMethod.Post, "/api/receivable-exposures")
         {
-            Content = JsonContent.Create(new { amount, currencyCode = "VND", billId })
+            Content = JsonContent.Create(new { amount, currencyCode = "VND", billId, counterpartyId = exposurePartyId, notes = ExposureAnchor.Note })
         };
         req.Headers.Add("X-Tenant-Id", tenantId.ToString());
         var response = await _client.SendAsync(req);

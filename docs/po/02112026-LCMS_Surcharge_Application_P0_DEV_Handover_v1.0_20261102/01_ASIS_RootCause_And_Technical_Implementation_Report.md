@@ -1,6 +1,6 @@
-# AS-IS Root Cause & Technical Implementation
+﻿# AS-IS Root Cause & Technical Implementation
 
-**Commit:** `__GIT_SHA__`
+**Commit:** `869e1e7af45c028c4b9b232c1aff1f8902cf6739`
 
 ## Root cause
 
@@ -106,3 +106,4 @@ Sau bật cổng Activation trên **Rating mới**: Bill SGN–HAN chưa chọn 
 - `screenshots/03_bill_optional_service_not_selected_rating.png`
 - `screenshots/04_bill_optional_service_selected_rating.png`
 - `screenshots/05_sell_rating_unpriced_and_history_testlss002.png`
+

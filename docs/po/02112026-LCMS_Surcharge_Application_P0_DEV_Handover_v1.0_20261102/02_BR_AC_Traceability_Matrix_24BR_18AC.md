@@ -1,6 +1,6 @@
-# Traceability — 24 BR / 18 AC
+﻿# Traceability — 24 BR / 18 AC
 
-**Commit:** `__GIT_SHA__`  
+**Commit:** `869e1e7af45c028c4b9b232c1aff1f8902cf6739`  
 **Excel:** `LCMS_Surcharge_BR_AC_Traceability_v1.0_20261102.xlsx`  
 **PO UAT / PO nghiệm thu:** **NOT RUN** trên mọi dòng.
 
@@ -60,21 +60,22 @@
 
 | AC | BR liên quan | TC | Hàm test | SHA |
 |---|---|---|---|---|
-| AC-01 | 001,004,018,023 | TC-11,21,30 | `TC11_…`, `TC21_…`, `TC30_…` | `__GIT_SHA__` |
-| AC-02 | 002,003,006,016 | TC-01 | `TC01_Optional_NotSelected_GoesToEligibleBucket` | `__GIT_SHA__` |
-| AC-03 | 003,009 | TC-02,15 | `TC02_…`, `TC15_…` | `__GIT_SHA__` |
-| AC-04 | 010 | TC-03,16 | `TC03_…`, `TC16_…` | `__GIT_SHA__` |
-| AC-05 | 006 | TC-04 | `TC04_Optional_UnpersistedUiPreview_DoesNotActivateOrSeed` | `__GIT_SHA__` |
-| AC-06 | 005,016 | TC-07–10 | `TC07_…`…`TC10_…` | `__GIT_SHA__` |
-| AC-07 | 007 | TC-12,13 | `TC12_…`, `TC13_…` | `__GIT_SHA__` |
-| AC-08 | 008 | TC-14 | `TC14_…` | `__GIT_SHA__` |
-| AC-09 | 009 | TC-15 | `TC15_…` | `__GIT_SHA__` |
-| AC-10 | 011,012 | TC-17,18 | `TC17_…`, `TC18_…` | `__GIT_SHA__` |
-| AC-11 | 013 | TC-19 | `TC19_GetExactPublishedVersionV2_ReturnsReadOnlySnapshot` | `__GIT_SHA__` |
-| AC-12 | 014 | TC-20 | `TC20_UpdateDraftV3_KeepsPublishedV2Immutable` | `__GIT_SHA__` |
-| AC-13 | 010,024 | TC-22 | `TC22_History_TestLss002_…` | `__GIT_SHA__` |
-| AC-14 | 002 | TC-23,24 | `TC23_…`, `TC24_…` | `__GIT_SHA__` |
-| AC-15 | 019–022 | TC-25–28 | `TC25_…`…`TC28_…` | `__GIT_SHA__` |
-| AC-16 | all | TC-01–32 | Full class + evidence pack | `__GIT_SHA__` |
-| AC-17 | 004,017 | TC-30 | `TC30_Rbac_…` | `__GIT_SHA__` |
-| AC-18 | 018 | TC-31 | `TC31_TenantIsolation_…` | `__GIT_SHA__` |
+| AC-01 | 001,004,018,023 | TC-11,21,30 | `TC11_…`, `TC21_…`, `TC30_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-02 | 002,003,006,016 | TC-01 | `TC01_Optional_NotSelected_GoesToEligibleBucket` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-03 | 003,009 | TC-02,15 | `TC02_…`, `TC15_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-04 | 010 | TC-03,16 | `TC03_…`, `TC16_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-05 | 006 | TC-04 | `TC04_Optional_UnpersistedUiPreview_DoesNotActivateOrSeed` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-06 | 005,016 | TC-07–10 | `TC07_…`…`TC10_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-07 | 007 | TC-12,13 | `TC12_…`, `TC13_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-08 | 008 | TC-14 | `TC14_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-09 | 009 | TC-15 | `TC15_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-10 | 011,012 | TC-17,18 | `TC17_…`, `TC18_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-11 | 013 | TC-19 | `TC19_GetExactPublishedVersionV2_ReturnsReadOnlySnapshot` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-12 | 014 | TC-20 | `TC20_UpdateDraftV3_KeepsPublishedV2Immutable` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-13 | 010,024 | TC-22 | `TC22_History_TestLss002_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-14 | 002 | TC-23,24 | `TC23_…`, `TC24_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-15 | 019–022 | TC-25–28 | `TC25_…`…`TC28_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-16 | all | TC-01–32 | Full class + evidence pack | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-17 | 004,017 | TC-30 | `TC30_Rbac_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+| AC-18 | 018 | TC-31 | `TC31_TenantIsolation_…` | `869e1e7af45c028c4b9b232c1aff1f8902cf6739` |
+

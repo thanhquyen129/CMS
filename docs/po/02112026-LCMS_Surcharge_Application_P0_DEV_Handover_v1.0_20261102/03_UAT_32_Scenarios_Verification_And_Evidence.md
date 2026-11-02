@@ -1,6 +1,6 @@
-# UAT 32 scenarios — DEV QA PASS / PO UAT NOT RUN
+﻿# UAT 32 scenarios — DEV QA PASS / PO UAT NOT RUN
 
-**Commit:** `__GIT_SHA__`  
+**Commit:** `869e1e7af45c028c4b9b232c1aff1f8902cf6739`  
 **Excel:** `LCMS_Surcharge_UAT_Matrix_v1.0_20261102.xlsx`  
 **Filter:** `dotnet test --filter FullyQualifiedName~SurchargeApplicationP0Tests` → **PASS**
 
@@ -54,3 +54,4 @@ npx tsc --noEmit → exit 0
 ```
 
 API helper thêm: `TC01_TC02_Api_OptionalSelection_AndBucketsInContextJson` (bằng chứng ContextJson end-to-end).
+

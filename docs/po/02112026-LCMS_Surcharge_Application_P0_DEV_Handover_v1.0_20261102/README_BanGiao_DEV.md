@@ -1,4 +1,4 @@
-# LCMS – GÓI BA SỬA CƠ CHẾ ÁP DỤNG PHỤ PHÍ TOÀN HỆ THỐNG (P0)
+﻿# LCMS – GÓI BA SỬA CƠ CHẾ ÁP DỤNG PHỤ PHÍ TOÀN HỆ THỐNG (P0)
 Phiên bản: v1.0 | Ngày: 02/11/2026 | Mã: LCMS-CR-SURCHARGE-APPLICATION-01
 
 ## Nội dung
@@ -23,3 +23,4 @@ Phiên bản: v1.0 | Ngày: 02/11/2026 | Mã: LCMS-CR-SURCHARGE-APPLICATION-01
 ## Về trạng thái dữ liệu
 - Một số ví dụ dùng DONGGOI và TESTLSS002 là dữ kiện UAT lịch sử hoặc trường hợp mô phỏng; không phải dữ liệu DEV đã xác nhận tại Staging mới.
 - Cột trạng thái trong ma trận chưa được DEV/PO thực thi, giá trị NOT RUN/CHƯA LÀM đúng ở thời điểm lập hồ sơ.
+

@@ -1,6 +1,6 @@
-# Inventory / Migration / Impact Report
+﻿# Inventory / Migration / Impact Report
 
-**Commit:** `__GIT_SHA__`  
+**Commit:** `869e1e7af45c028c4b9b232c1aff1f8902cf6739`  
 **Nguồn DB:** Prod Priority-1 `cms-db` (read-only) · 2026-11-02  
 **Excel:** `LCMS_Surcharge_Migration_Impact_v1.0_20261102.xlsx`
 
@@ -81,3 +81,4 @@ Sau migrate: **8 published** nhận `UNCLASSIFIED_LEGACY` (không tự cộng Ra
 | R-06 thiếu quyền | RBAC | TC-30 |
 | R-07 rollback | Down migration | Mục 3 |
 | R-08 Staging vs Prod | MG-17/18 | Chờ PO |
+

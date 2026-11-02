@@ -1,5 +1,5 @@
-{
-  "commitSha": "__GIT_SHA__",
+﻿{
+  "commitSha": "869e1e7af45c028c4b9b232c1aff1f8902cf6739",
   "capturedAt": "2026-11-02T10:50:00Z",
   "samples": [
     {
@@ -94,3 +94,4 @@
     }
   ]
 }
+

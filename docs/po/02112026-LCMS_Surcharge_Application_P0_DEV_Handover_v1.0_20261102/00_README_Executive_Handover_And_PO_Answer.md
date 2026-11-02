@@ -1,7 +1,7 @@
-# LCMS-CR-SURCHARGE-APPLICATION-01 — Executive Handover (DEV → PO)
+﻿# LCMS-CR-SURCHARGE-APPLICATION-01 — Executive Handover (DEV → PO)
 
 **Gói:** `Docs/po/02112026-LCMS_Surcharge_Application_P0_DEV_Handover_v1.0_20261102/`  
-**Commit SHA:** `__GIT_SHA__`  
+**Commit SHA:** `869e1e7af45c028c4b9b232c1aff1f8902cf6739`  
 **Ngày DEV:** 2026-11-02  
 **PO UAT:** **NOT RUN** (cột PO giữ nguyên 100%)
 
@@ -48,3 +48,4 @@
 5. Sửa v3 Draft — 3 tầng (screenshot 02).  
 6. Kiểm lịch sử TESTLSS002 = 1.740.000 (screenshot 05).  
 7. Đánh dấu cột **PO UAT** trên Excel khi xong — hiện **NOT RUN**.
+

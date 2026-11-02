@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """Fill 3 PO Excel workbooks with distinct per-row DEV evidence. SHA placeholder replaced post-commit."""
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 import openpyxl
 
 BASE = Path(__file__).resolve().parent
-SHA = "__GIT_SHA__"
+SHA = "869e1e7af45c028c4b9b232c1aff1f8902cf6739"
 SHA_SHORT = SHA[:12] if SHA != "__GIT_SHA__" else "__GIT_SHA__"
 
 INV_ROWS = [
@@ -277,3 +277,4 @@ if __name__ == "__main__":
     fill_uat()
     fill_migration()
     print("done")
+

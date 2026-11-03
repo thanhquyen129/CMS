@@ -305,14 +305,15 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
     return watchReadiness(bodyFor("sell", sellVersion), setSellReadiness, setSellReadinessError, setSellChecking);
   }, [bodyFor, sellVersion]);
 
-  async function rateSide(side: "buy" | "sell", versionId: string, seed: "cost" | "revenue") {
+  async function rateSide(side: "buy" | "sell", versionId: string) {
+    // BR-DF-001/002: Tính thử không seed Cost/Revenue — chỉ tạo RatingRun so sánh.
     const res = await fetch("/bff/ratings", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         ...bodyFor(side, versionId),
-        seedExpectedCosts: seed === "cost",
-        seedExpectedRevenues: seed === "revenue",
+        seedExpectedCosts: false,
+        seedExpectedRevenues: false,
       }),
     });
     if (res.status === 401) {
@@ -354,14 +355,14 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       }
     }
 
-    const jobs: { side: "buy" | "sell"; versionId: string; seed: "cost" | "revenue"; label: string }[] = [];
+    const jobs: { side: "buy" | "sell"; versionId: string; label: string }[] = [];
     const notes: string[] = [];
     if (which === "buy" || which === "both") {
-      if (buyVersion) jobs.push({ side: "buy", versionId: buyVersion, seed: "cost", label: "Giá mua" });
+      if (buyVersion) jobs.push({ side: "buy", versionId: buyVersion, label: "Giá mua" });
       else notes.push(suggestion?.buy.notice || "Chưa chọn giá mua.");
     }
     if (which === "sell" || which === "both") {
-      if (sellVersion) jobs.push({ side: "sell", versionId: sellVersion, seed: "revenue", label: "Giá bán" });
+      if (sellVersion) jobs.push({ side: "sell", versionId: sellVersion, label: "Giá bán" });
       else notes.push(suggestion?.sell.notice || "Chưa chọn giá bán.");
     }
     if (jobs.length === 0) {
@@ -380,16 +381,14 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       const failures: string[] = [];
       const done: string[] = [];
       for (const job of jobs) {
-        const message = await rateSide(job.side, job.versionId, job.seed);
+        const message = await rateSide(job.side, job.versionId);
         if (message) failures.push(`${job.label}: ${message}`);
         else done.push(job.label);
       }
       if (failures.length > 0) setError(failures.join(" "));
-      const sharedLeg = buyContext === "leg" && (suggestion?.legs?.find((l) => l.id === legId)?.linkedBillCount ?? 0) >= 2;
       const parts = [
-        done.length > 0 ? `Đã tính ${done.join(" và ")} (${expected.toLowerCase()}).` : "",
-        done.includes("Giá mua") && sharedLeg
-          ? "Chi phí nguồn dùng chung nhiều Bill. Mỗi Bill chỉ nhận phần sau khi phân bổ."
+        done.length > 0
+          ? `Đã tính thử ${done.join(" và ")} — trạng thái: Tính thử (Chưa áp dụng). Dùng «Áp dụng vào hồ sơ tài chính» để tạo ${expected.toLowerCase()}.`
           : "",
         notes.length > 0 ? notes.join(" ") : "",
       ].filter(Boolean);
@@ -421,10 +420,10 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
   return (
     <form className="receive-form" onSubmit={(e) => onSubmit(e, "both")} noValidate>
       <p className="note">
-        Giá mua tạo {costLabel.toLowerCase()} {expected.toLowerCase()}. Giá bán tạo {revenueLabel.toLowerCase()}{" "}
-        {expected.toLowerCase()}. Không tạo Thực tế, chứng từ hay công nợ. Mỗi chiều có khối lượng riêng.
-        Nút từng chiều không bị khóa khi chiều kia chưa có bảng giá. Tính cả hai chỉ chạy khi cả hai đã chọn.
-        Nhiều bảng giá cùng phù hợp thì phải chọn, hệ thống không tự chọn. Giá mua có thể tính theo Bill hoặc theo chặng liên kết. Giá bán giữ theo Bill.
+        «Tính thử» chỉ tạo bản tính giá để so sánh — không tự tạo {costLabel.toLowerCase()}/
+        {revenueLabel.toLowerCase()} {expected.toLowerCase()}. Sau khi xem trước, bấm «Áp dụng vào hồ sơ tài chính»
+        (có xác nhận) mới ghi Expected theo nghĩa vụ kinh tế. Không tạo Thực tế, chứng từ hay công nợ.
+        Giá mua có thể theo Bill hoặc Chặng; giá bán giữ theo Bill.
       </p>
       {error ? (
         <div className="alert alert-error" role="alert">
@@ -535,10 +534,10 @@ export function RateBillForm({ terms, billId, editAnchor = "bill-edit" }: Props)
       </div>
       <div className="cta-row">
         <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !buyVersion || buyBlocked || buyContextBlocked} onClick={(e) => onSubmit(e, "buy")}>
-          {busy ? "Đang tính…" : "Tính giá mua"}
+          {busy ? "Đang tính…" : "Tính thử giá mua"}
         </button>
         <button className={buyVersion && sellVersion ? "btn btn-ghost" : "btn"} type="button" disabled={busy || !sellVersion || sellBlocked} onClick={(e) => onSubmit(e, "sell")}>
-          {busy ? "Đang tính…" : "Tính giá bán"}
+          {busy ? "Đang tính…" : "Tính thử giá bán"}
         </button>
         <button className="btn" type="submit" disabled={busy || !buyVersion || !sellVersion || buyBlocked || sellBlocked || buyContextBlocked}>
           {busy ? "Đang tính…" : "Tính giá cả hai"}

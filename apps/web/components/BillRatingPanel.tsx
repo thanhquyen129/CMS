@@ -4,8 +4,7 @@ import { RerateRatingButton } from "@/components/RerateRatingButton";
 import { RatingSurchargeBuckets } from "@/components/RatingSurchargeBuckets";
 import { ServiceSelectionPanel, type ServiceOption } from "@/components/ServiceSelectionPanel";
 import { basisLabel, formatChargeable, ratingStatusView } from "@/lib/opref-edit";
-import { SeedExpectedCostsButton } from "@/components/SeedExpectedCostsButton";
-import { SeedExpectedRevenuesButton } from "@/components/SeedExpectedRevenuesButton";
+import { ApplyRatingFinancialsButton } from "@/components/ApplyRatingFinancialsButton";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { partyTypeLabel, type Rating } from "@/lib/rate-cards";
 import {
@@ -56,7 +55,7 @@ export async function BillRatingPanel({ terms, billId }: Props) {
 
   return (
     <div className="stack" style={{ marginTop: "1.5rem" }} id="bill-rating">
-      <h2 className="section-title">Tính giá / Rating</h2>
+      <h2 className="section-title">Tính giá &amp; Tài chính</h2>
       {staleCount > 0 ? (
         <div className="alert alert-warning" role="status">
           <strong>Cần tính giá lại</strong> — {staleCount} lần tính giá dùng dữ liệu Bill đã thay đổi. Kết quả cũ
@@ -64,8 +63,8 @@ export async function BillRatingPanel({ terms, billId }: Props) {
         </div>
       ) : null}
       <p className="note">
-        Áp bảng giá đã phát hành lên {billLabel} này.         Seed tạo chi phí / doanh thu lớp {expected} từ thành phần bảng giá
-        (không ghi đè dòng đã seed).{" "}
+        Workspace hợp nhất: tính thử → xem trước → áp dụng vào hồ sơ tài chính (lớp {expected}). Tính thử không
+        tự tạo chi phí/doanh thu. Áp dụng khử trùng theo nghĩa vụ kinh tế, không ghi đè Thực tế/Đã xác nhận.{" "}
         <Link className="row-link" href="/rate-cards">
           Quản lý bảng giá
         </Link>
@@ -164,14 +163,14 @@ export async function BillRatingPanel({ terms, billId }: Props) {
                         vendorPartyId={r.vendorPartyId}
                       />
                     ) : (
-                      <div className="row-actions">
-                        {(!r.partyTypeCode || r.partyTypeCode.toLowerCase() === "vendor" || r.partyTypeCode.toLowerCase() === "buy") ? (
-                          <SeedExpectedCostsButton terms={terms} ratingId={r.id} billId={billId} />
-                        ) : null}
-                        {(r.partyTypeCode?.toLowerCase() === "customer" || r.partyTypeCode?.toLowerCase() === "sell") ? (
-                          <SeedExpectedRevenuesButton terms={terms} ratingId={r.id} billId={billId} />
-                        ) : null}
-                      </div>
+                      <ApplyRatingFinancialsButton
+                        ratingId={r.id}
+                        directionLabel={
+                          r.partyTypeCode?.toLowerCase() === "customer" || r.partyTypeCode?.toLowerCase() === "sell"
+                            ? "BÁN (SELL)"
+                            : "MUA (BUY)"
+                        }
+                      />
                     )}
                   </td>
                 </tr>

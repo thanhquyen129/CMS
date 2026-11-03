@@ -1,9 +1,11 @@
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Financials;
 using LCMS.Application.Fx;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
+using LCMS.Domain.Pricing;
 using LCMS.Domain.Terminology;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -269,25 +271,66 @@ public sealed class GetBillFinancialProfileQueryHandler
                 .Where(a => string.Equals(a.CurrencyCode, code, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var revProjected = revLines
-                .Select(r => ProjectMaturity(r.ExpectedAmount, r.ConfirmedAmount, r.ConfirmedAt, r.ActualAmount, r.ActualizedAt, asOf))
-                .ToList();
-            var costProjected = costLines
-                .Select(c => ProjectMaturity(c.ExpectedAmount, c.ConfirmedAmount, c.ConfirmedAt, c.ActualAmount, c.ActualizedAt, asOf))
-                .ToList();
+            var revEffective = EffectiveFactSelector.Select(revLines.Select(r =>
+            {
+                var projected = ProjectMaturity(
+                    r.ExpectedAmount, r.ConfirmedAmount, r.ConfirmedAt, r.ActualAmount, r.ActualizedAt, asOf);
+                return new EconomicFactCandidate(
+                    r.Id,
+                    "revenue",
+                    string.IsNullOrWhiteSpace(r.EconomicIdentityKey)
+                        ? EconomicIdentity.Build(
+                            r.TenantId, r.BillId, EconomicIdentity.DirectionSell,
+                            r.RevenueTypeCode ?? "REV", null, null, r.CustomerPartyId, r.ServiceOccurrenceKey)
+                        : r.EconomicIdentityKey!,
+                    r.FinancialMaturity,
+                    projected.Expected,
+                    projected.Confirmed,
+                    projected.Actual,
+                    r.RecordStatus,
+                    r.SourceType,
+                    r.SourceId,
+                    r.AppliedFromRatingId,
+                    r.CreatedAt);
+            }));
+            var costEffective = EffectiveFactSelector.Select(costLines.Select(c =>
+            {
+                var projected = ProjectMaturity(
+                    c.ExpectedAmount, c.ConfirmedAmount, c.ConfirmedAt, c.ActualAmount, c.ActualizedAt, asOf);
+                return new EconomicFactCandidate(
+                    c.Id,
+                    "cost",
+                    string.IsNullOrWhiteSpace(c.EconomicIdentityKey)
+                        ? EconomicIdentity.Build(
+                            c.TenantId, c.BillId, EconomicIdentity.DirectionBuy,
+                            c.CostTypeCode ?? "COST", c.TransportLegId, c.ShipmentId, c.VendorPartyId,
+                            c.ServiceOccurrenceKey)
+                        : c.EconomicIdentityKey!,
+                    c.FinancialMaturity,
+                    projected.Expected,
+                    projected.Confirmed,
+                    projected.Actual,
+                    c.RecordStatus,
+                    c.SourceType,
+                    c.SourceId,
+                    c.AppliedFromRatingId,
+                    c.CreatedAt);
+            }));
 
-            var revenueTotal = revProjected.Sum(p => p.BestAvailable);
-            var directTotal = costProjected.Sum(p => p.BestAvailable);
+            var revenueTotal = EffectiveFactSelector.SumBestAvailable(revEffective);
+            var directTotal = EffectiveFactSelector.SumBestAvailable(costEffective);
             var allocatedTotal = allocLines.Sum(a => a.AllocatedAmount);
             var costTotal = decimal.Round(directTotal + allocatedTotal, 4, MidpointRounding.AwayFromZero);
             var profit = decimal.Round(revenueTotal - costTotal, 4, MidpointRounding.AwayFromZero);
 
-            var revExpected = revProjected.Sum(p => p.Expected);
-            var revConfirmed = revProjected.Sum(p => p.Confirmed ?? 0m);
-            var revActual = revProjected.Sum(p => p.Actual ?? 0m);
-            var costExpected = costProjected.Sum(p => p.Expected);
-            var costConfirmed = costProjected.Sum(p => p.Confirmed ?? 0m);
-            var costActual = costProjected.Sum(p => p.Actual ?? 0m);
+            var revExpected = EffectiveFactSelector.SumExpectedLayer(revEffective);
+            var revConfirmed = decimal.Round(
+                revEffective.Where(l => l.EffectiveIncluded).Sum(l => l.ConfirmedAmount ?? 0m), 4, MidpointRounding.AwayFromZero);
+            var revActual = EffectiveFactSelector.SumActualOnly(revEffective);
+            var costExpected = EffectiveFactSelector.SumExpectedLayer(costEffective);
+            var costConfirmed = decimal.Round(
+                costEffective.Where(l => l.EffectiveIncluded).Sum(l => l.ConfirmedAmount ?? 0m), 4, MidpointRounding.AwayFromZero);
+            var costActual = EffectiveFactSelector.SumActualOnly(costEffective);
             // Allocated is frozen actual share — included in both expected/actual cost views for variance fairness.
             var profitExpected = revExpected - (costExpected + allocatedTotal);
             var profitActual = revActual - (costActual + allocatedTotal);
@@ -450,25 +493,51 @@ public sealed class GetBillFinancialProfileQueryHandler
         var lines = new List<ReportingLineDto>();
 
         ReportingSum revBest = new(), revExp = new(), revConf = new(), revAct = new();
-        foreach (var r in revenues)
+        var revEff = EffectiveFactSelector.Select(revenues.Select(r =>
         {
             var p = ProjectMaturity(r.ExpectedAmount, r.ConfirmedAmount, r.ConfirmedAt, r.ActualAmount, r.ActualizedAt, asOf);
-            revBest.Add(ReportingValue.Of(r, p.BestAvailable, reporting));
-            revExp.Add(ReportingValue.Of(r, p.Expected, reporting));
-            revConf.Add(ReportingValue.Of(r, p.Confirmed ?? 0m, reporting));
-            revAct.Add(ReportingValue.Of(r, p.Actual ?? 0m, reporting));
-            lines.Add(ReportingValue.Line("revenue", r.Id, r.RevenueTypeCode, r, p.BestAvailable, reporting));
+            return new EconomicFactCandidate(
+                r.Id, "revenue",
+                string.IsNullOrWhiteSpace(r.EconomicIdentityKey)
+                    ? EconomicIdentity.Build(r.TenantId, r.BillId, EconomicIdentity.DirectionSell,
+                        r.RevenueTypeCode ?? "REV", null, null, r.CustomerPartyId, r.ServiceOccurrenceKey)
+                    : r.EconomicIdentityKey!,
+                r.FinancialMaturity, p.Expected, p.Confirmed, p.Actual, r.RecordStatus,
+                r.SourceType, r.SourceId, r.AppliedFromRatingId, r.CreatedAt);
+        }));
+        var revById = revenues.ToDictionary(r => r.Id);
+        foreach (var line in revEff.Where(l => l.EffectiveIncluded))
+        {
+            var r = revById[line.Id];
+            revBest.Add(ReportingValue.Of(r, line.BestAvailableAmount, reporting));
+            revExp.Add(ReportingValue.Of(r, line.ExpectedAmount, reporting));
+            revConf.Add(ReportingValue.Of(r, line.ConfirmedAmount ?? 0m, reporting));
+            revAct.Add(ReportingValue.Of(r, line.ActualAmount ?? 0m, reporting));
+            lines.Add(ReportingValue.Line("revenue", r.Id, r.RevenueTypeCode, r, line.BestAvailableAmount, reporting));
         }
 
         ReportingSum costBest = new(), costExp = new(), costConf = new(), costAct = new();
-        foreach (var c in directCosts)
+        var costEff = EffectiveFactSelector.Select(directCosts.Select(c =>
         {
             var p = ProjectMaturity(c.ExpectedAmount, c.ConfirmedAmount, c.ConfirmedAt, c.ActualAmount, c.ActualizedAt, asOf);
-            costBest.Add(ReportingValue.Of(c, p.BestAvailable, reporting));
-            costExp.Add(ReportingValue.Of(c, p.Expected, reporting));
-            costConf.Add(ReportingValue.Of(c, p.Confirmed ?? 0m, reporting));
-            costAct.Add(ReportingValue.Of(c, p.Actual ?? 0m, reporting));
-            lines.Add(ReportingValue.Line("cost", c.Id, c.CostTypeCode, c, p.BestAvailable, reporting));
+            return new EconomicFactCandidate(
+                c.Id, "cost",
+                string.IsNullOrWhiteSpace(c.EconomicIdentityKey)
+                    ? EconomicIdentity.Build(c.TenantId, c.BillId, EconomicIdentity.DirectionBuy,
+                        c.CostTypeCode ?? "COST", c.TransportLegId, c.ShipmentId, c.VendorPartyId, c.ServiceOccurrenceKey)
+                    : c.EconomicIdentityKey!,
+                c.FinancialMaturity, p.Expected, p.Confirmed, p.Actual, c.RecordStatus,
+                c.SourceType, c.SourceId, c.AppliedFromRatingId, c.CreatedAt);
+        }));
+        var costById = directCosts.ToDictionary(c => c.Id);
+        foreach (var line in costEff.Where(l => l.EffectiveIncluded))
+        {
+            var c = costById[line.Id];
+            costBest.Add(ReportingValue.Of(c, line.BestAvailableAmount, reporting));
+            costExp.Add(ReportingValue.Of(c, line.ExpectedAmount, reporting));
+            costConf.Add(ReportingValue.Of(c, line.ConfirmedAmount ?? 0m, reporting));
+            costAct.Add(ReportingValue.Of(c, line.ActualAmount ?? 0m, reporting));
+            lines.Add(ReportingValue.Line("cost", c.Id, c.CostTypeCode, c, line.BestAvailableAmount, reporting));
         }
 
         var allocationIds = allocated.Select(a => a.AllocationId).Distinct().ToList();

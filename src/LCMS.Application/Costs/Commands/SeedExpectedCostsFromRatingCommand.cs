@@ -2,7 +2,9 @@ using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
+using LCMS.Application.Ratings;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +23,8 @@ public sealed class SeedExpectedCostsFromRatingCommandValidator : AbstractValida
 }
 
 /// <summary>
-/// Idempotent seed: rating_details (financial_nature=cost) → Cost Expected with source_type/source_id.
+/// Apply BUY rating details → Expected Cost with EconomicIdentity supersede (ADR-0043).
+/// Idempotent by source_id; re-apply same identity supersedes prior Expected-only rows.
 /// </summary>
 public sealed class SeedExpectedCostsFromRatingCommandHandler
     : IRequestHandler<SeedExpectedCostsFromRatingCommand, SeedExpectedCostsResult>
@@ -58,30 +61,31 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             .FirstOrDefaultAsync(r => r.Id == request.RatingId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy lần tính giá.");
 
-        // Guard BR-01, BR-02: BUY -> Cost, SELL cannot seed Cost
         if (string.Equals(rating.PartyTypeCode, "customer", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ValidationAppException("Không thể tạo chi phí dự kiến từ lần tính giá bán (SELL). Chỉ lần tính giá mua (BUY) mới được tạo chi phí dự kiến.");
+            throw new ValidationAppException(
+                "Không thể tạo chi phí dự kiến từ lần tính giá bán (SELL). Chỉ lần tính giá mua (BUY) mới được tạo chi phí dự kiến.");
         }
 
-        var details = await _db.RatingDetails.AsNoTracking()
-            .Where(d => d.RatingId == rating.Id
-                        && d.FinancialNature == "cost")
+        var allDetails = await _db.RatingDetails.AsNoTracking()
+            .Where(d => d.RatingId == rating.Id && d.FinancialNature == "cost")
             .OrderBy(d => d.ComponentCode)
             .ToListAsync(cancellationToken);
 
+        var details = RatingFinancialApply.FilterSeedableDetails(allDetails, "cost");
         if (details.Count == 0)
         {
-            throw new ConflictAppException("Lần tính giá không có dòng chi phí để tạo chi phí dự kiến.");
+            throw new ConflictAppException(
+                "Lần tính giá không có dòng chi phí đủ điều kiện áp dụng (chỉ dòng đã áp dụng / appliedCharges).");
         }
 
         var detailIds = details.Select(d => d.Id).ToList();
-        var existing = await _db.Costs
+        var existingBySource = await _db.Costs
             .Where(c => c.SourceType == CostSourceTypes.RatingDetail && detailIds.Contains(c.SourceId!.Value))
-            .ToListAsync(cancellationToken);
-        var existingBySource = existing.ToDictionary(c => c.SourceId!.Value);
+            .ToDictionaryAsync(c => c.SourceId!.Value, cancellationToken);
 
         var created = 0;
+        var reused = 0;
         var costIds = new List<Guid>();
         var effective = DateOnly.FromDateTime(rating.RatedAt.UtcDateTime);
         var linkedBills = rating.TransportLegId is Guid legId
@@ -99,7 +103,10 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                     costScope = csProp.GetString();
                 }
             }
-            catch { }
+            catch
+            {
+                // ignore malformed snapshot
+            }
         }
 
         var isLeg = RatingContextTypes.IsLeg(rating.ContextType);
@@ -116,6 +123,7 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
         {
             shared = isLeg && linkedBills >= 2;
         }
+
         var organizationId = await _db.Bills.AsNoTracking()
             .Where(b => b.Id == rating.BillId)
             .Select(b => b.OrganizationId)
@@ -125,8 +133,80 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
         {
             if (existingBySource.TryGetValue(detail.Id, out var already))
             {
+                if (string.IsNullOrWhiteSpace(already.EconomicIdentityKey))
+                {
+                    already.EconomicIdentityKey = RatingFinancialApply.CostIdentityKey(rating, detail, tenantId);
+                    already.ServiceOccurrenceKey = RatingFinancialApply.CostOccurrenceKey(rating);
+                    already.AppliedFromRatingId = rating.Id;
+                }
+
                 costIds.Add(already.Id);
+                reused++;
                 continue;
+            }
+
+            var identityKey = RatingFinancialApply.CostIdentityKey(rating, detail, tenantId);
+            var occurrenceKey = RatingFinancialApply.CostOccurrenceKey(rating);
+            var amount = decimal.Round(detail.Amount, 4, MidpointRounding.AwayFromZero);
+
+            var sameIdentity = (await _db.Costs
+                .Where(c => c.EconomicIdentityKey == identityKey
+                            && c.RecordStatus == EconomicRecordStatuses.Active
+                            && c.DeletedAt == null)
+                .ToListAsync(cancellationToken))
+                .OrderByDescending(c => c.CreatedAt)
+                .ToList();
+
+            // Legacy rows without key: match bill/leg/vendor/charge among active rating-sourced costs.
+            if (sameIdentity.Count == 0)
+            {
+                sameIdentity = (await _db.Costs
+                    .Where(c => c.RecordStatus == EconomicRecordStatuses.Active
+                                && c.DeletedAt == null
+                                && c.CostTypeCode == detail.ComponentCode
+                                && c.BillId == (shared ? null : rating.BillId)
+                                && c.TransportLegId == rating.TransportLegId
+                                && c.VendorPartyId == (rating.VendorPartyId ?? detail.PartnerSuggestedId)
+                                && c.SourceType == CostSourceTypes.RatingDetail)
+                    .ToListAsync(cancellationToken))
+                    .OrderByDescending(c => c.CreatedAt)
+                    .ToList();
+            }
+
+            if (sameIdentity.Count > 1
+                && rating.TransportLegId is null
+                && rating.VendorPartyId is null
+                && detail.PartnerSuggestedId is null)
+            {
+                throw new ConflictAppException(
+                    "AMBIGUOUS_ECONOMIC_IDENTITY: Không xác định được nghĩa vụ kinh tế duy nhất cho khoản phí. Cần resolve trước khi áp dụng.");
+            }
+
+            var protectedRow = sameIdentity.FirstOrDefault(RatingFinancialApply.HasProtectedMaturity);
+            if (protectedRow is not null)
+            {
+                // BR-DF-013: update Expected only for variance; never overwrite Actual/Confirmed.
+                protectedRow.ExpectedAmount = amount;
+                protectedRow.EconomicIdentityKey = identityKey;
+                protectedRow.ServiceOccurrenceKey = occurrenceKey;
+                protectedRow.AppliedFromRatingId = rating.Id;
+                foreach (var dup in sameIdentity.Where(c =>
+                             c.Id != protectedRow.Id && !RatingFinancialApply.HasProtectedMaturity(c)))
+                {
+                    dup.RecordStatus = EconomicRecordStatuses.Superseded;
+                }
+
+                costIds.Add(protectedRow.Id);
+                reused++;
+                continue;
+            }
+
+            var expectedOnly = sameIdentity
+                .Where(c => !RatingFinancialApply.HasProtectedMaturity(c))
+                .ToList();
+            foreach (var old in expectedOnly)
+            {
+                old.RecordStatus = EconomicRecordStatuses.Superseded;
             }
 
             if (shared && rating.TransportLegId is Guid sharedLegId)
@@ -136,28 +216,35 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                                 && c.AttributionType == CostAttributionTypes.Shared
                                 && c.OriginLevel == CostOriginLevels.Leg
                                 && c.PricingRuleId == detail.PricingRuleId
-                                && c.DeletedAt == null)
+                                && c.DeletedAt == null
+                                && c.RecordStatus == EconomicRecordStatuses.Active)
                     .FirstOrDefaultAsync(cancellationToken);
 
                 if (existingLegCost is not null)
                 {
+                    existingLegCost.ExpectedAmount = amount;
+                    existingLegCost.Amount = amount;
+                    existingLegCost.EconomicIdentityKey = identityKey;
+                    existingLegCost.ServiceOccurrenceKey = occurrenceKey;
+                    existingLegCost.AppliedFromRatingId = rating.Id;
+                    await _fx.ApplyToCostAsync(existingLegCost, amount, cancellationToken);
                     costIds.Add(existingLegCost.Id);
+                    reused++;
                     continue;
                 }
             }
 
-            // UT-26 / DO-10 / GAP-04: Kiểm tra mapping khoản mục kinh tế trên master trước khi seed
             if (detail.EconomicChargeTypeId is Guid ectId)
             {
                 var active = await _db.EconomicChargeTypes.AsNoTracking()
                     .AnyAsync(e => e.TenantId == tenantId && e.Id == ectId && e.IsActive, cancellationToken);
                 if (!active)
                 {
-                    throw new ValidationAppException($"Khoản mục kinh tế '{ectId}' cho dòng '{detail.ComponentCode}' không tồn tại hoặc đã bị vô hiệu hóa trên master. Không thể seed chi phí.");
+                    throw new ValidationAppException(
+                        $"Khoản mục kinh tế '{ectId}' cho dòng '{detail.ComponentCode}' không tồn tại hoặc đã bị vô hiệu hóa trên master. Không thể seed chi phí.");
                 }
             }
 
-            var amount = decimal.Round(detail.Amount, 4, MidpointRounding.AwayFromZero);
             var cost = new Cost
             {
                 TenantId = tenantId,
@@ -184,7 +271,10 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                 GrossAmount = detail.GrossAmount,
                 SourceType = CostSourceTypes.RatingDetail,
                 SourceId = detail.Id,
-                RecordStatus = "active",
+                EconomicIdentityKey = identityKey,
+                ServiceOccurrenceKey = occurrenceKey,
+                AppliedFromRatingId = rating.Id,
+                RecordStatus = EconomicRecordStatuses.Active,
                 ApprovalStatus = "not_required",
                 EffectiveDate = effective
             };
@@ -195,7 +285,7 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             created++;
         }
 
-        if (created > 0)
+        if (created > 0 || reused > 0)
         {
             try
             {
@@ -203,16 +293,11 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             }
             catch (DbUpdateException)
             {
-                // Concurrent seed — reload existing for all details
                 var reloaded = await _db.Costs.AsNoTracking()
                     .Where(c => c.SourceType == CostSourceTypes.RatingDetail && detailIds.Contains(c.SourceId!.Value))
                     .Select(c => c.Id)
                     .ToListAsync(cancellationToken);
-                return new SeedExpectedCostsResult(
-                    rating.Id,
-                    0,
-                    reloaded.Count,
-                    reloaded);
+                return new SeedExpectedCostsResult(rating.Id, 0, reloaded.Count, reloaded);
             }
         }
 

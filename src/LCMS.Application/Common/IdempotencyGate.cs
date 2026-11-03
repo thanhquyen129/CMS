@@ -72,6 +72,8 @@ public static class IdempotencyScopes
     public const string RevenueActualize = "revenue_actualize";
     public const string ApAdjustment = "ap_adjustment";
     public const string ArAdjustment = "ar_adjustment";
+    public const string RatingApplyCost = "rating_apply_cost";
+    public const string RatingApplyRevenue = "rating_apply_revenue";
 }
 
 public static class IdempotencyReplay

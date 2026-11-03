@@ -57,6 +57,15 @@ public sealed class Cost : TenantEntityBase, IReportingFx
     public string? SourceType { get; set; }
     public Guid? SourceId { get; set; }
 
+    /// <summary>Stable obligation key (ADR-0043). Null on rows written before dedup migration.</summary>
+    public string? EconomicIdentityKey { get; set; }
+
+    /// <summary>Distinguishes repeated same charge on one Bill (leg / occurrence).</summary>
+    public string? ServiceOccurrenceKey { get; set; }
+
+    /// <summary>Last rating run that applied Expected for this obligation.</summary>
+    public Guid? AppliedFromRatingId { get; set; }
+
     public string RecordStatus { get; set; } = "active";
 
     /// <summary>Approval stub (full workflow deferred).</summary>

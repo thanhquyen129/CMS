@@ -346,6 +346,9 @@ internal sealed class CostConfiguration : IEntityTypeConfiguration<Cost>
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.SourceType).HasMaxLength(64);
+        builder.Property(e => e.EconomicIdentityKey).HasMaxLength(256);
+        builder.Property(e => e.ServiceOccurrenceKey).HasMaxLength(128);
+        builder.Property(e => e.AppliedFromRatingId).HasColumnType("uuid");
         builder.Property(e => e.RecordStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.ApprovalStatus).HasMaxLength(32).IsRequired();
         builder.Property(e => e.EffectiveDate).IsRequired();
@@ -360,6 +363,7 @@ internal sealed class CostConfiguration : IEntityTypeConfiguration<Cost>
         builder.HasIndex(e => new { e.TenantId, e.OrganizationId });
         builder.HasIndex(e => new { e.TenantId, e.TransportLegId });
         builder.HasIndex(e => new { e.TenantId, e.EconomicChargeTypeId });
+        builder.HasIndex(e => new { e.TenantId, e.EconomicIdentityKey, e.RecordStatus });
 
         // IDX-003
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity, e.EffectiveDate });
@@ -476,6 +480,9 @@ internal sealed class RevenueConfiguration : IEntityTypeConfiguration<Revenue>
         builder.Property(e => e.BaseAmount).HasPrecision(18, 4);
         EntityBaseConfiguration.ConfigureReportingFx(builder);
         builder.Property(e => e.SourceType).HasMaxLength(64);
+        builder.Property(e => e.EconomicIdentityKey).HasMaxLength(256);
+        builder.Property(e => e.ServiceOccurrenceKey).HasMaxLength(128);
+        builder.Property(e => e.AppliedFromRatingId).HasColumnType("uuid");
         builder.Property(e => e.RecognitionPolicyVersion).HasMaxLength(64);
         builder.Property(e => e.EconomicChargeTypeId).HasColumnType("uuid");
         builder.Property(e => e.PartnerSuggestedId).HasColumnType("uuid");
@@ -489,6 +496,7 @@ internal sealed class RevenueConfiguration : IEntityTypeConfiguration<Revenue>
 
         // IDX-005
         builder.HasIndex(e => new { e.TenantId, e.BillId, e.FinancialMaturity, e.EffectiveDate });
+        builder.HasIndex(e => new { e.TenantId, e.EconomicIdentityKey, e.RecordStatus });
         // Idempotent create by source (C-004 — no duplicate economic revenue from same source)
         builder.HasIndex(e => new { e.TenantId, e.SourceType, e.SourceId }).IsUnique();
 

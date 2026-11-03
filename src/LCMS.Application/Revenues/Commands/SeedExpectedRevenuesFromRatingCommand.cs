@@ -1,8 +1,10 @@
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Common.Exceptions;
+using LCMS.Application.Ratings;
 using LCMS.Application.Revenues;
 using LCMS.Domain.Entities;
+using LCMS.Domain.Pricing;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,8 +29,7 @@ public sealed class SeedExpectedRevenuesFromRatingCommandValidator
 }
 
 /// <summary>
-/// Idempotent seed: rating_details (financial_nature=revenue) → Revenue Expected.
-/// Does not invent a second economic fact (source_type + source_id unique).
+/// Apply SELL rating details → Expected Revenue with EconomicIdentity supersede (ADR-0043).
 /// </summary>
 public sealed class SeedExpectedRevenuesFromRatingCommandHandler
     : IRequestHandler<SeedExpectedRevenuesFromRatingCommand, SeedExpectedRevenuesResult>
@@ -65,30 +66,31 @@ public sealed class SeedExpectedRevenuesFromRatingCommandHandler
             .FirstOrDefaultAsync(r => r.Id == request.RatingId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy lần tính giá.");
 
-        // Guard BR-01, BR-02: SELL -> Revenue, BUY cannot seed Revenue
         if (string.Equals(rating.PartyTypeCode, "vendor", StringComparison.OrdinalIgnoreCase))
         {
-            throw new ValidationAppException("Không thể tạo doanh thu dự kiến từ lần tính giá mua (BUY). Chỉ lần tính giá bán (SELL) mới được tạo doanh thu dự kiến.");
+            throw new ValidationAppException(
+                "Không thể tạo doanh thu dự kiến từ lần tính giá mua (BUY). Chỉ lần tính giá bán (SELL) mới được tạo doanh thu dự kiến.");
         }
 
-        var details = await _db.RatingDetails.AsNoTracking()
+        var allDetails = await _db.RatingDetails.AsNoTracking()
             .Where(d => d.RatingId == rating.Id && d.FinancialNature == "revenue")
             .OrderBy(d => d.ComponentCode)
             .ToListAsync(cancellationToken);
 
+        var details = RatingFinancialApply.FilterSeedableDetails(allDetails, "revenue");
         if (details.Count == 0)
         {
             throw new ConflictAppException(
-                "Lần tính giá không có dòng doanh thu để tạo doanh thu dự kiến. Thêm thành phần tính chất Doanh thu trên quy tắc bảng giá.");
+                "Lần tính giá không có dòng doanh thu đủ điều kiện áp dụng (chỉ dòng đã áp dụng / appliedCharges).");
         }
 
         var detailIds = details.Select(d => d.Id).ToList();
-        var existing = await _db.Revenues
+        var existingBySource = await _db.Revenues
             .Where(r => r.SourceType == RevenueSourceTypes.RatingDetail && detailIds.Contains(r.SourceId!.Value))
-            .ToListAsync(cancellationToken);
-        var existingBySource = existing.ToDictionary(r => r.SourceId!.Value);
+            .ToDictionaryAsync(r => r.SourceId!.Value, cancellationToken);
 
         var created = 0;
+        var reused = 0;
         var revenueIds = new List<Guid>();
         var effective = DateOnly.FromDateTime(rating.RatedAt.UtcDateTime);
 
@@ -96,11 +98,69 @@ public sealed class SeedExpectedRevenuesFromRatingCommandHandler
         {
             if (existingBySource.TryGetValue(detail.Id, out var already))
             {
+                if (string.IsNullOrWhiteSpace(already.EconomicIdentityKey))
+                {
+                    already.EconomicIdentityKey = RatingFinancialApply.RevenueIdentityKey(rating, detail, tenantId);
+                    already.ServiceOccurrenceKey = RatingFinancialApply.RevenueOccurrenceKey(rating, detail);
+                    already.AppliedFromRatingId = rating.Id;
+                }
+
                 revenueIds.Add(already.Id);
+                reused++;
                 continue;
             }
 
+            var identityKey = RatingFinancialApply.RevenueIdentityKey(rating, detail, tenantId);
+            var occurrenceKey = RatingFinancialApply.RevenueOccurrenceKey(rating, detail);
             var amount = decimal.Round(detail.Amount, 4, MidpointRounding.AwayFromZero);
+
+            var sameIdentity = (await _db.Revenues
+                .Where(r => r.EconomicIdentityKey == identityKey
+                            && r.RecordStatus == EconomicRecordStatuses.Active
+                            && r.DeletedAt == null)
+                .ToListAsync(cancellationToken))
+                .OrderByDescending(r => r.CreatedAt)
+                .ToList();
+
+            if (sameIdentity.Count == 0)
+            {
+                sameIdentity = (await _db.Revenues
+                    .Where(r => r.RecordStatus == EconomicRecordStatuses.Active
+                                && r.DeletedAt == null
+                                && r.BillId == rating.BillId
+                                && r.RevenueTypeCode == detail.ComponentCode
+                                && r.SourceType == RevenueSourceTypes.RatingDetail
+                                && (detail.PartnerSuggestedId == null
+                                    || r.CustomerPartyId == detail.PartnerSuggestedId
+                                    || r.PartnerSuggestedId == detail.PartnerSuggestedId))
+                    .ToListAsync(cancellationToken))
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ToList();
+            }
+
+            var protectedRow = sameIdentity.FirstOrDefault(RatingFinancialApply.HasProtectedMaturity);
+            if (protectedRow is not null)
+            {
+                protectedRow.ExpectedAmount = amount;
+                protectedRow.EconomicIdentityKey = identityKey;
+                protectedRow.ServiceOccurrenceKey = occurrenceKey;
+                protectedRow.AppliedFromRatingId = rating.Id;
+                foreach (var dup in sameIdentity.Where(r =>
+                             r.Id != protectedRow.Id && !RatingFinancialApply.HasProtectedMaturity(r)))
+                {
+                    dup.RecordStatus = EconomicRecordStatuses.Superseded;
+                }
+
+                revenueIds.Add(protectedRow.Id);
+                reused++;
+                continue;
+            }
+
+            foreach (var old in sameIdentity.Where(r => !RatingFinancialApply.HasProtectedMaturity(r)))
+            {
+                old.RecordStatus = EconomicRecordStatuses.Superseded;
+            }
+
             var revenue = new Revenue
             {
                 TenantId = tenantId,
@@ -119,7 +179,10 @@ public sealed class SeedExpectedRevenuesFromRatingCommandHandler
                 GrossAmount = detail.GrossAmount,
                 SourceType = RevenueSourceTypes.RatingDetail,
                 SourceId = detail.Id,
-                RecordStatus = "active",
+                EconomicIdentityKey = identityKey,
+                ServiceOccurrenceKey = occurrenceKey,
+                AppliedFromRatingId = rating.Id,
+                RecordStatus = EconomicRecordStatuses.Active,
                 ApprovalStatus = "not_required",
                 EffectiveDate = effective
             };
@@ -130,7 +193,7 @@ public sealed class SeedExpectedRevenuesFromRatingCommandHandler
             created++;
         }
 
-        if (created > 0)
+        if (created > 0 || reused > 0)
         {
             try
             {

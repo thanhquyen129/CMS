@@ -211,10 +211,48 @@ public static class CostEndpoints
             var result = await sender.Send(new SeedExpectedRevenuesFromRatingCommand(id), ct);
             return Results.Ok(result);
         });
+        ratings.MapPost("/{id:guid}/preview-apply", async (
+            Guid id,
+            PreviewApplyRatingRequest? body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(
+                new LCMS.Application.Ratings.Commands.PreviewApplyRatingQuery(id, body?.SelectedDetailIds),
+                ct);
+            return Results.Ok(result);
+        });
+        ratings.MapPost("/{id:guid}/apply-financials", async (
+            Guid id,
+            ApplyRatingFinancialsRequest body,
+            HttpRequest http,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            http.Headers.TryGetValue("Idempotency-Key", out var headerKey);
+            var key = string.IsNullOrWhiteSpace(body.IdempotencyKey)
+                ? headerKey.ToString()
+                : body.IdempotencyKey;
+            var result = await sender.Send(
+                new LCMS.Application.Ratings.Commands.ApplyRatingToFinancialsCommand(
+                    id,
+                    key ?? string.Empty,
+                    body.SelectedDetailIds,
+                    body.ExpectedRevision),
+                ct);
+            return Results.Ok(result);
+        });
 
         return app;
     }
 }
+
+public sealed record PreviewApplyRatingRequest(IReadOnlyList<Guid>? SelectedDetailIds = null);
+
+public sealed record ApplyRatingFinancialsRequest(
+    string? IdempotencyKey,
+    IReadOnlyList<Guid>? SelectedDetailIds = null,
+    byte[]? ExpectedRevision = null);
 
 public sealed record CreateCostRequest(
     Guid? BillId,

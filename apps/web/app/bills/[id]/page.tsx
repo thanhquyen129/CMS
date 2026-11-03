@@ -474,8 +474,9 @@ export default async function BillDetailPage({
             href={tabHref("rating")}
             role="tab"
             aria-selected={tab === "rating"}
+            title="Tính giá & Tài chính"
           >
-            Tính giá
+            Tính giá &amp; Tài chính
           </Link>
           <Link
             className={tab === "history" ? "active" : undefined}

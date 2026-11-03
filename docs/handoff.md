@@ -1,4 +1,8 @@
-﻿## 2026-11-02 — Surcharge Application P0 remediation (audit-grade handover)
+﻿## 2026-11-03 — Rating/Financial Dedup P0+P1 (LCMS-CR-RATING-FINANCIAL-DEDUP-01)
+- Calculate ≠ Apply; EconomicIdentity + Expected supersede; EffectiveFactSelector on Bill profile; Apply/Preview APIs; UI tính thử + áp dụng. PO UAT NOT RUN; no Production.
+- Files: `EconomicIdentity.cs`, `EffectiveFactSelector.cs`, `ApplyRatingToFinancialsCommands.cs`, Seed Cost/Revenue, migration `20261103120000`, `BillRatingPanel`/`RateBillForm`/`ApplyRatingFinancialsButton`, `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`, ADR-0043
+
+## 2026-11-02 — Surcharge Application P0 remediation (audit-grade handover)
 - Bill `ServiceSelectionPanel` + Rating 3-bucket UI; 32 TC methods PASS; Prod inventory 9 versions; Excel/MD/screenshots AC-16; commit no Production push.
 - Files: `ServiceSelectionPanel.tsx`, `RatingSurchargeBuckets.tsx`, `BillRatingPanel.tsx`, `SurchargeApplicationP0Tests.cs`, `docs/po/02112026-LCMS_Surcharge_Application_P0_DEV_Handover_v1.0_20261102/`
 

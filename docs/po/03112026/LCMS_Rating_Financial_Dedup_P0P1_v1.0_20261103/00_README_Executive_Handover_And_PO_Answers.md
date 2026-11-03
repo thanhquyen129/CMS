@@ -1,6 +1,6 @@
 # Executive Handover — LCMS-CR-RATING-FINANCIAL-DEDUP-01 (Audit Remaster)
 
-**Handover SHA:** `f5cf209be7088f7acd19bc1b63b1be7bdd21cbfd` · **PO UAT:** NOT RUN · **G4:** NOT RUN
+**Handover SHA:** `ebc2b27ca08314ecaa69a2bb9bf9d35762222a01` · **PO UAT:** NOT RUN · **G4:** NOT RUN
 **Ngày:** 03/11/2026  
 **Gói:** `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`  
 **DEV QA:** PASS (66/66 RatingFinancialDedup* + EconomicIdentity*; 55 TC named)  

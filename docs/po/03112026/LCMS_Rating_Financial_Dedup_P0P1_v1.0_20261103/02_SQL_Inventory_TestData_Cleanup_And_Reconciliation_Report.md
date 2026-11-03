@@ -1,6 +1,6 @@
 # SQL Inventory, Cleanup & Reconciliation (MG-01 → MG-16)
 
-SHA `f5cf209be7088f7acd19bc1b63b1be7bdd21cbfd` · Production cleanup: **không chạy** · MG-13/MG-15 = **NOT RUN** (PO UAT)
+SHA `ebc2b27ca08314ecaa69a2bb9bf9d35762222a01` · Production cleanup: **không chạy** · MG-13/MG-15 = **NOT RUN** (PO UAT)
 
 ## Kết quả chạy thật
 

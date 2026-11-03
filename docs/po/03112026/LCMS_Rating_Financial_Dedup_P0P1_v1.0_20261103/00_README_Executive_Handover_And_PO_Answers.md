@@ -1,22 +1,30 @@
-# Executive Handover — LCMS-CR-RATING-FINANCIAL-DEDUP-01 (v1.0)
+# Executive Handover — LCMS-CR-RATING-FINANCIAL-DEDUP-01 (Audit Remaster)
 
 **Ngày:** 03/11/2026  
-**Nhánh:** `main` (af5b81a471e23fa103be3ba734af282db29392a2)  
-**DEV QA:** PASS (logic + automated suite dedup) · **PO UAT:** NOT RUN · **G4 Production:** NOT RUN
+**Gói:** `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`  
+**DEV QA:** PASS (66/66 RatingFinancialDedup* + EconomicIdentity*; 55 TC named)  
+**PO UAT:** NOT RUN · **G4 Production:** NOT RUN
 
 ## Tóm tắt điều hành
 
-P0 sửa gốc: tách **Tính thử** khỏi **Áp dụng**; `EconomicIdentity` + supersede Expected; `EffectiveFactSelector` (Actual > Confirmed > Expected) thay SUM thô trên Bill Financial Profile. P1: tab Bill **Tính giá & Tài chính** với tính thử / xem trước / áp dụng (CP6.5). Tương thích surcharge 3 tầng: chỉ seed bucket `applied` (null legacy). Không deploy Production.
+Remaster khắc phục 6 lỗi kiểm định: Ambiguity Guard + Resolve API; Manual/Import SoT; surcharge chỉ seed `APPLIED`; RBAC/as_of/FX/close; Workspace A–F; SQL inventory/seed thật trên `lcms_dev.db` với rowcount; 55 TC unique evidence; 6 screenshot Playwright mới; Excel/MD không copy-paste cùng một câu.
 
-## Trả lời 7 mục bàn giao PO (Mục 11 BA)
+## Trả lời 7 mục bàn giao PO
 
-1. **Root Cause & Scope** — Seed/idempotency theo `rating_detail_id` tạo Cost mới mỗi lần tính; profile `SUM` mọi dòng `active` → FREIGHT Actual + FREIGHT Expected (+ DONGGOI ×2) = 3.480.000đ. Scope: Rating apply/seed, Cost/Revenue identity, Bill financial totals, UI apply. Không đổi policy activation surcharge UAT OPEN.
-2. **Changelog & SHA** — ADR-0043; migration `20261103120000_EconomicIdentityRatingDedup`; Apply/Preview API; Seed supersede; EffectiveFactSelector; RateBillForm tính thử không seed. SHA: af5b81a471e23fa103be3ba734af282db29392a2.
-3. **SQL inventory & cleanup** — Script `sql/reconcile_rating_financial_dedup.sql` (MG-02/03/05/09). Cleanup chỉ tenant test; backup bắt buộc trước chạy UPDATE. Chi tiết: `02_SQL_Inventory_...`.
-4. **33 BR / 20 AC / 55 TC** — DEV = COMPLETED/PASS trên Excel cập nhật trong thư mục này; **PO UAT = NOT RUN** trên mọi dòng. Blocker logic TC-02/03/23/25/26/30 covered by `RatingFinancialDedupP0Tests` + selector tests.
-5. **Staging & PO UAT** — Local/Staging only. Bước: mở Bill → tab Tính giá & Tài chính → Tính thử BUY/SELL → Xem trước → Áp dụng (idempotency) → đối soát Chi phí/Doanh thu/Profit Best Available. Không Production.
-6. **Rủi ro & Rollback** — Rủi ro: identity legacy thiếu vendor/leg → AMBIGUOUS. Rollback: revert commit + migration Down; khôi phục DB snapshot MG-01.
-7. **Ngoại lệ cần PO** — (a) Bill mẫu số 1.740.000 / 2.440.000 / 700.000 chỉ đúng khi xác minh cùng nghĩa vụ BUY lặp và SELL độc lập đã activation. (b) Nghi vấn surcharge sau gói 869e1e7 giữ UAT OPEN — không đóng trong batch này.
+1. **Root Cause & Scope** — Seed theo `rating_detail_id` + SUM thô → 3.480.000đ. Fix: EconomicIdentity + supersede + EffectiveFactSelector + Apply tách Calculate.
+2. **Changelog & SHA** — ADR-0043; migration `20261103120000`; ResolveAmbiguousObligation; FilterSeedableDetails; Workspace A–F; stamp SHA trên Excel sau commit bàn giao.
+3. **SQL inventory & cleanup** — Đã chạy `sql/run_mg_inventory.py` + `seed_lsstest_bill.py` + `verify_lsstest_effective.py`. MG-01 SHA-256 trong `sql/MG01_backup_manifest.json`. Chi tiết `02_…`.
+4. **33 BR / 20 AC / 55 TC** — DEV COMPLETED/PASS; **PO UAT = NOT RUN** 100%. Evidence riêng từng dòng trong Excel + `03`/`04`.
+5. **Staging & PO UAT** — Local/Staging only. Bill `LSSTEST02112026002`: Effective Cost **1.740.000** / Revenue **2.440.000** / Profit **700.000**.
+6. **Rủi ro & Rollback** — Ambiguity khi thiếu occurrence → Resolve bắt buộc. Rollback: restore MG-01 backup + revert commit.
+7. **Ngoại lệ cần PO** — Activation surcharge UAT OPEN giữ nguyên; G4 không chạy Production trong batch này.
+
+## Test log (verbatim excerpt)
+
+```
+Passed!  - Failed:     0, Passed:    66, Skipped:     0, Total:    66
+Filter: FullyQualifiedName~RatingFinancialDedup|FullyQualifiedName~EconomicIdentity
+```
 
 ## Release Gates
 

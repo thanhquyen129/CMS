@@ -7,6 +7,7 @@ public static class EconomicIdentity
 {
     public const string DirectionBuy = "BUY";
     public const string DirectionSell = "SELL";
+    public const string AmbiguousRuleCode = "AMBIGUOUS_ECONOMIC_IDENTITY";
 
     public static string Build(
         Guid tenantId,
@@ -54,21 +55,18 @@ public static class EconomicIdentity
         return DirectionBuy;
     }
 
-    public static bool IsAmbiguous(
-        string chargeCode,
+    /// <summary>
+    /// True when charge repeats on a Bill without enough keys to assert one vs two obligations.
+    /// </summary>
+    public static bool LacksDistinguishingKeys(
         Guid? transportLegId,
         Guid? shipmentId,
         Guid? counterpartyId,
-        string? serviceOccurrenceKey)
-    {
-        // Same charge without leg/shipment/occurrence/counterparty cannot assert uniqueness
-        // when multiple candidates may exist — callers raise AMBIGUOUS_ECONOMIC_IDENTITY.
-        return string.IsNullOrWhiteSpace(chargeCode)
-               && transportLegId is null
-               && shipmentId is null
-               && counterpartyId is null
-               && string.IsNullOrWhiteSpace(serviceOccurrenceKey);
-    }
+        string? serviceOccurrenceKey) =>
+        transportLegId is null
+        && shipmentId is null
+        && counterpartyId is null
+        && string.IsNullOrWhiteSpace(serviceOccurrenceKey);
 
     private static string NormalizeToken(string? value, string fallback)
     {
@@ -102,6 +100,7 @@ public static class EffectiveExclusionReasons
     public const string ComparisonOnlyUnapplied = "COMPARISON_ONLY_UNAPPLIED";
     public const string AmbiguousPendingResolution = "AMBIGUOUS_PENDING_RESOLUTION";
     public const string InactiveRecord = "INACTIVE_RECORD";
+    public const string ManualIndependentProtected = "MANUAL_INDEPENDENT_PROTECTED";
 }
 
 public static class RatingApplicationBuckets
@@ -110,8 +109,25 @@ public static class RatingApplicationBuckets
     public const string EligibleNotActivated = "eligible_not_activated";
     public const string Excluded = "excluded";
 
-    /// <summary>Legacy base lines (null bucket) and explicit applied may seed. Others must not.</summary>
-    public static bool MaySeedToFinancials(string? bucket) =>
-        string.IsNullOrWhiteSpace(bucket)
-        || string.Equals(bucket, Applied, StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Base rate: null (legacy) or applied. Surcharge: applied only — never null (BR-DF-011).
+    /// </summary>
+    public static bool MaySeedToFinancials(string? bucket, string? sourceType)
+    {
+        var isSurcharge = string.Equals(sourceType, "surcharge", StringComparison.OrdinalIgnoreCase);
+        if (isSurcharge)
+        {
+            return string.Equals(bucket, Applied, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.IsNullOrWhiteSpace(bucket)
+               || string.Equals(bucket, Applied, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+public static class AmbiguityResolutionActions
+{
+    public const string MergeSameObligation = "MERGE_SAME_OBLIGATION";
+    public const string SplitDistinctOccurrence = "SPLIT_DISTINCT_OCCURRENCE";
+    public const string Supersede = "SUPERSEDE";
 }

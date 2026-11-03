@@ -304,7 +304,7 @@ public sealed class ApplyRatingToFinancialsCommandHandler
                 .Where(d => d.RatingId == rating.Id && d.FinancialNature == nature)
                 .ToListAsync(cancellationToken);
             foreach (var d in details.Where(d =>
-                         RatingApplicationBuckets.MaySeedToFinancials(d.ApplicationBucket)
+                         RatingApplicationBuckets.MaySeedToFinancials(d.ApplicationBucket, d.SourceType)
                          && !selected.Contains(d.Id)))
             {
                 // Keep snapshot immutable for audit: do not rewrite ApplicationBucket on historical details.

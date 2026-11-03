@@ -1,39 +1,102 @@
-# Root Cause, Architecture & EconomicIdentity
+# Root Cause, Architecture & EconomicIdentity (Remaster)
 
-## Root Cause (Bill LSSTEST02112026002 pattern)
+## Root Cause (Bill LSSTEST02112026002)
 
-1. **Seed theo `SourceId = RatingDetail.Id`** (`SeedExpectedCostsFromRatingCommand`) — mỗi lần CreateRating sinh detail mới → Cost mới dù cùng FREIGHT/vendor/leg.
-2. **Leg re-rate** có `RetireLegExpectedCostsAsync` (inactive) nhưng Bill-level / seed nút riêng không supersede theo nghĩa vụ.
-3. **Tổng Bill** (`GetBillFinancialProfileQuery`) cộng Best Available **từng dòng active** → Actual FREIGHT 1.440.000 + Expected FREIGHT 1.440.000 + 2× DONGGOI 300.000 = **3.480.000**.
+1. Seed `SourceId = RatingDetail.Id` → mỗi lần tính = Cost mới cùng FREIGHT.
+2. Bill totals SUM mọi dòng `active` → Actual + Expected trùng nghĩa vụ + DONGGOI ×2 = 3.480.000đ.
+3. Remaster thêm: không fallback mù về `bill`-only khi thiếu leg/occurrence → `AMBIGUOUS_ECONOMIC_IDENTITY`.
 
-## Thiết kế đã ship
+## Thiết kế
 
-### EconomicIdentity (9 chiều → key ổn định)
+### EconomicIdentity
 
-`tenant|bill|BUY|SELL|charge|occurrence(leg/shipment/bill)|counterparty` — `LCMS.Domain.Pricing.EconomicIdentity`. Không GROUP BY amount.
+`tenant|bill|direction|charge|occurrence|counterparty` — `LCMS.Domain.Pricing.EconomicIdentity`.
 
-### ApplyRatingToFinancials
+### Ambiguity Guard & Resolve (`BR-DF-006`, TC-11/12)
 
-- `POST /api/ratings/{id}/preview-apply` · `POST /api/ratings/{id}/apply-financials` (+ Idempotency-Key)
-- BUY → CostCreate · SELL → RevenueCreate · chặn FinancialClose locked
-- Atomic qua seed + idempotency remember; chỉ `applied` / null-bucket details
+Khi cùng charge/amount/direction thiếu định danh phân biệt → exception `AMBIGUOUS_ECONOMIC_IDENTITY`.  
+`POST /api/ratings/obligations/resolve-exception` (`ResolveAmbiguousObligationCommand`):
 
-### EffectiveFactSelector
+- `resolutionAction`: `MERGE_SAME_OBLIGATION` | `SPLIT_DISTINCT_OCCURRENCE` | `SUPERSEDE`
+- Bắt buộc `reason`, RBAC, audit actor/timestamp; sau đó EffectiveFactSelector tính lại.
 
-Một đại diện / identity: Actual > Confirmed > Expected; Partial Actual = Actual + remaining Expected (không 10M+6M); superseded/shadowed có `exclusion_reason`.
+### Apply / Preview / Manual SoT
+
+- `POST /api/ratings/{id}/preview-apply`
+- `POST /api/ratings/{id}/apply-financials` + `Idempotency-Key`
+- Manual: `service_occurrence_key = manual:{id}` — Apply không đè (TC-33)
+- Import/API: cùng `external_id` / source ref → cùng EconomicIdentity (TC-09/34)
+- Surcharge: `MaySeedToFinancials` chỉ khi `ApplicationBucket == APPLIED` (TC-18..22)
+
+### JSON mẫu
+
+**CreateRating (tính thử, không seed)**
+
+```json
+POST /api/ratings
+{ "billId": "...", "partyTypeCode": "vendor", "seedExpectedCosts": false, "seedExpectedRevenues": false }
+→ { "id": "...", "status": "draft", "totalAmount": 1740000, "currencyCode": "VND" }
+```
+
+**PreviewApplyRating**
+
+```json
+POST /api/ratings/{id}/preview-apply
+→ {
+  "deltaCost": 0, "deltaRevenue": 0, "deltaProfit": 0,
+  "warningsVi": ["Nghĩa vụ FREIGHT đã có Thực tế — không ghi đè Actual."],
+  "lines": [{ "componentCode": "FREIGHT", "action": "KEEP_ACTUAL_UPDATE_EXPECTED" }]
+}
+```
+
+**ApplyRatingToFinancials**
+
+```json
+POST /api/ratings/{id}/apply-financials
+Headers: Idempotency-Key: <uuid>
+→ { "applied": true, "supersededExpectedCount": 1, "createdExpectedCount": 0 }
+```
+
+**EffectiveFinancialLines / Workspace**
+
+```json
+GET /api/bills/{id}/effective-financial-workspace
+→ {
+  "effectiveCost": 1740000, "effectiveRevenue": 2440000, "bestAvailableProfit": 700000,
+  "profitKpis": [
+    { "code": "expected", "labelVi": "Lợi nhuận Dự kiến", "amount": 700000 },
+    { "code": "best_available", "labelVi": "Lợi nhuận Ước tính tốt nhất", "maturityMix": true },
+    { "code": "actual_only", "labelVi": "Lợi nhuận Thực tế", "incomplete": true }
+  ]
+}
+```
+
+**ResolveDuplicateOrAmbiguousObligation**
+
+```json
+POST /api/ratings/obligations/resolve-exception
+{
+  "exceptionId": "...",
+  "resolutionAction": "MERGE_SAME_OBLIGATION",
+  "reason": "Cùng chặng/vendor — xác nhận một nghĩa vụ",
+  "occurrenceOverride": null
+}
+→ { "resolved": true, "action": "MERGE_SAME_OBLIGATION", "auditEventId": "..." }
+```
 
 ### Files (I-01…I-14)
 
 | I | Thay đổi |
 |---|----------|
-| I-01 | CreateRating mặc định không seed; UI tính thử `seed=false` |
-| I-02 | `ApplyRatingToFinancialsCommands.cs` |
-| I-03 | `EconomicIdentity.cs`, cột `economic_identity_key` |
-| I-04 | Seed Cost/Revenue supersede Expected |
-| I-05/06 | `EffectiveFactSelector` + Bill Financial Profile |
-| I-07 | Filter `ApplicationBucket` may-seed |
-| I-08 | Migration `20261103120000_EconomicIdentityRatingDedup` |
-| I-09/10 | Best Available / reporting sync |
-| I-11…14 | Tab workspace, Apply button, BFF preview/apply, labels CP6.5 |
+| I-01 | CreateRating mặc định không seed |
+| I-02 | ApplyRatingToFinancialsCommands |
+| I-03 | EconomicIdentity + DB columns |
+| I-04 | Seed supersede Expected |
+| I-05/06 | EffectiveFactSelector + Profile |
+| I-07 | FilterSeedableDetails APPLIED-only surcharge |
+| I-08 | Migration 20261103120000 |
+| I-09/10 | Workspace API + KPIs |
+| I-11…13 | BillRatingPanel A/B, Apply C, Workspace D/E/F |
+| I-14 | ResolveAmbiguousObligationCommand |
 
 ADR: `docs/adr/ADR-0043-economic-identity-rating-apply.md`

@@ -67,9 +67,11 @@ public sealed class EconomicIdentityEffectiveFactSelectorTests
     [Fact]
     public void RatingApplicationBuckets_OnlyAppliedMaySeed()
     {
-        Assert.True(RatingApplicationBuckets.MaySeedToFinancials(null));
-        Assert.True(RatingApplicationBuckets.MaySeedToFinancials("applied"));
-        Assert.False(RatingApplicationBuckets.MaySeedToFinancials("eligible_not_activated"));
-        Assert.False(RatingApplicationBuckets.MaySeedToFinancials("excluded"));
+        Assert.True(RatingApplicationBuckets.MaySeedToFinancials(null, "base_rate"));
+        Assert.True(RatingApplicationBuckets.MaySeedToFinancials("applied", "base_rate"));
+        Assert.False(RatingApplicationBuckets.MaySeedToFinancials(null, "surcharge"));
+        Assert.True(RatingApplicationBuckets.MaySeedToFinancials("applied", "surcharge"));
+        Assert.False(RatingApplicationBuckets.MaySeedToFinancials("eligible_not_activated", "surcharge"));
+        Assert.False(RatingApplicationBuckets.MaySeedToFinancials("excluded", "base_rate"));
     }
 }

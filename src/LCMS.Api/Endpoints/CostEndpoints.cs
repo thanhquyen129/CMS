@@ -242,10 +242,34 @@ public static class CostEndpoints
                 ct);
             return Results.Ok(result);
         });
+        ratings.MapPost("/obligations/resolve-exception", async (
+            ResolveAmbiguousObligationRequest body,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var result = await sender.Send(
+                new LCMS.Application.Ratings.Commands.ResolveAmbiguousObligationCommand(
+                    body.ExceptionId,
+                    body.ResolutionAction,
+                    body.Reason,
+                    body.KeepFactId,
+                    body.SplitOccurrenceAnchorId,
+                    body.NewServiceOccurrenceKey),
+                ct);
+            return Results.Ok(result);
+        });
 
         return app;
     }
 }
+
+public sealed record ResolveAmbiguousObligationRequest(
+    Guid ExceptionId,
+    string ResolutionAction,
+    string Reason,
+    Guid? KeepFactId = null,
+    Guid? SplitOccurrenceAnchorId = null,
+    string? NewServiceOccurrenceKey = null);
 
 public sealed record PreviewApplyRatingRequest(IReadOnlyList<Guid>? SelectedDetailIds = null);
 

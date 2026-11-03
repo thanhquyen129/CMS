@@ -1,38 +1,44 @@
-# SQL Inventory, Cleanup & Reconciliation (MG-01 → MG-16)
+# SQL Inventory, Cleanup & Reconciliation (MG-01 → MG-16) — Remaster
 
-**Environment:** Local / Staging test tenant only · **Production:** không chạy cleanup  
-**Script:** `sql/reconcile_rating_financial_dedup.sql`
+**Environment:** Local SQLite `src/LCMS.Api/lcms_dev.db` (test tenant) · **Production:** không chạy cleanup  
+**Scripts:** `sql/run_mg_inventory.py`, `sql/seed_lsstest_bill.py`, `sql/verify_lsstest_effective.py`
 
-## MG checklist
+## Kết quả chạy thật (rowcounts)
 
-| Mã | Việc | DEV |
-|----|------|-----|
-| MG-01 | Snapshot DB trước dọn — bắt buộc ops trước UPDATE | READY (runbook) |
-| MG-02 | Inventory Rating BUY/SELL | Script sẵn |
-| MG-03 | Inventory Cost/Revenue theo identity/maturity/source | Script sẵn |
-| MG-04 | Document/AP/AR — không xóa trong batch | Giữ nguyên |
-| MG-05/06 | Dry-run trùng identity | Script HAVING COUNT>1 |
-| MG-07 | Confirm test tenant | Ops |
-| MG-08 | Schema identity columns + index | Migration COMPLETED |
-| MG-09 | Supersede Expected trùng (commented UPDATE) | READY |
-| MG-10/11 | Dataset UAT (LSSTEST… / multi-leg / partial) | Logic + selector fixture |
-| MG-12 | Rowcount before/after | Ghi khi chạy Staging |
-| MG-13…16 | Post-check / rollback plan | Snapshot restore |
+Nguồn: `sql/MG_inventory_result.json` + `sql/MG01_backup_manifest.json` + `sql/LSSTEST_effective_verify.json`
 
-## Đối soát công thức Bill mẫu (điều kiện)
+| Mã | Việc | Số dòng / bằng chứng |
+|----|------|----------------------|
+| MG-01 | Backup + SHA-256 | `sha256=140fc9fd0b65dc97…`; bytes≈5.394.432; file `sql/lcms_dev_backup_*.db` |
+| MG-02 | Inventory Rating | ratings=16; rating_details=17 |
+| MG-03 | Inventory Cost/Revenue | costs_active=130; revenues_active=127; costs_superseded≥1 |
+| MG-04 | Document/AP/AR | docs=248; AP=124; AR=123 (không xóa) |
+| MG-05 | Dup Expected-only | dup_expected_groups=0 sau seed/cleanup; maturity_mix Actual+Expected giữ cho TC-30 |
+| MG-06 | Dry-run mapping | backfill `economic_identity_key` khi null |
+| MG-07 | Confirm test tenant | local `lcms_dev.db` |
+| MG-08 | Schema | `economic_identity_key` / `service_occurrence_key` / `applied_from_rating_id` = true |
+| MG-09 | Supersede Expected trùng | affected_rows=0 trên pass cuối (đã sạch Expected-only); DONGGOI seed tự supersede 1 dòng |
+| MG-10 | Seed LSSTEST02112026002 | 4 cost + 2 revenue; verify Effective Cost=1740000 Revenue=2440000 Profit=700000 |
+| MG-11 | TESTLSS002 | có trong `sample_bills` |
+| MG-12 | After | costs_active=130; dup_expected=0 |
+| MG-13 | Post-check | `LSSTEST_effective_verify.json` assert_* = true |
+| MG-14 | Rollback | restore MG-01 backup file |
+| MG-15 | Idempotent re-run | affected=0 |
+| MG-16 | Handover package | Excel/MD/screenshots cập nhật |
 
-Khi 2 FREIGHT BUY cùng identity (1 Actual + 1 Expected lặp) và 1 DONGGOI BUY hiệu lực; SELL FREIGHT Actual 2.040.000 + DONGGOI Expected 400.000 đã activation:
+## SELECT đối soát LSSTEST02112026002
 
-| Chỉ tiêu | Giá trị |
-|----------|---------|
-| Effective Cost | 1.740.000 VND |
-| Effective Revenue | 2.440.000 VND |
-| Best Available Profit | 700.000 VND |
+```sql
+SELECT cost_type_code, financial_maturity, record_status, expected_amount, actual_amount, economic_identity_key
+FROM costs c JOIN bills b ON b.id=c.bill_id
+WHERE b.bill_no='LSSTEST02112026002' ORDER BY cost_type_code, created_at;
+```
 
-Chứng minh selector: `RatingFinancialDedupP0Tests.TC30_BillSample_EffectiveCost_1740000_WhenTwoObligations`.
+Kết quả thực tế (rút gọn): FREIGHT actual 1.440.000 + FREIGHT expected 1.440.000 (cùng key, Actual thắng) + DONGGOI expected 300.000 active + 1 superseded → **Effective Cost 1.740.000**.  
+Revenue: FREIGHT actual 2.040.000 + DONGGOI expected 400.000 → **Effective Revenue 2.440.000** · **Profit 700.000**.
 
 ## Rollback
 
-1. Restore snapshot MG-01  
-2. `dotnet ef database update <previous>` hoặc migration `Down`  
-3. Revert git commit bàn giao
+1. Restore `sql/lcms_dev_backup_*.db` (MG-01)  
+2. Revert git commit remaster  
+3. Không chạy cleanup trên Production

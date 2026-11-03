@@ -84,6 +84,26 @@ public sealed class SeedExpectedRevenuesFromRatingCommandHandler
                 "Lần tính giá không có dòng doanh thu đủ điều kiện áp dụng (chỉ dòng đã áp dụng / appliedCharges).");
         }
 
+        if (RatingFinancialApply.IsAmbiguousBatch(details, null, null, null))
+        {
+            _db.Exceptions.Add(new FinancialException
+            {
+                TenantId = tenantId,
+                RuleCode = EconomicIdentity.AmbiguousRuleCode,
+                Severity = ExceptionSeverities.High,
+                Title = "Nghĩa vụ kinh tế mơ hồ khi áp dụng tính giá bán",
+                Description =
+                    "Cùng charge_code và số tiền nhưng thiếu định danh phân biệt. Không tự gộp — cần ResolveDuplicateOrAmbiguousObligation.",
+                BillId = rating.BillId,
+                ObjectType = "rating",
+                ObjectId = rating.Id,
+                Status = ExceptionStatuses.Open
+            });
+            await _db.SaveChangesAsync(cancellationToken);
+            throw new ConflictAppException(
+                "AMBIGUOUS_ECONOMIC_IDENTITY: Không xác định được nghĩa vụ kinh tế duy nhất. Đã mở ngoại lệ đối soát — hãy resolve trước khi áp dụng.");
+        }
+
         var detailIds = details.Select(d => d.Id).ToList();
         var existingBySource = await _db.Revenues
             .Where(r => r.SourceType == RevenueSourceTypes.RatingDetail && detailIds.Contains(r.SourceId!.Value))
@@ -117,7 +137,8 @@ public sealed class SeedExpectedRevenuesFromRatingCommandHandler
             var sameIdentity = (await _db.Revenues
                 .Where(r => r.EconomicIdentityKey == identityKey
                             && r.RecordStatus == EconomicRecordStatuses.Active
-                            && r.DeletedAt == null)
+                            && r.DeletedAt == null
+                            && r.SourceType == RevenueSourceTypes.RatingDetail)
                 .ToListAsync(cancellationToken))
                 .OrderByDescending(r => r.CreatedAt)
                 .ToList();

@@ -79,6 +79,30 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
                 "Lần tính giá không có dòng chi phí đủ điều kiện áp dụng (chỉ dòng đã áp dụng / appliedCharges).");
         }
 
+        if (RatingFinancialApply.IsAmbiguousBatch(
+                details,
+                rating.TransportLegId,
+                rating.ShipmentId,
+                rating.VendorPartyId))
+        {
+            _db.Exceptions.Add(new FinancialException
+            {
+                TenantId = tenantId,
+                RuleCode = EconomicIdentity.AmbiguousRuleCode,
+                Severity = ExceptionSeverities.High,
+                Title = "Nghĩa vụ kinh tế mơ hồ khi áp dụng tính giá mua",
+                Description =
+                    "Cùng charge_code và số tiền nhưng thiếu leg/service_occurrence/counterparty. Không tự gộp — cần ResolveDuplicateOrAmbiguousObligation.",
+                BillId = rating.BillId,
+                ObjectType = "rating",
+                ObjectId = rating.Id,
+                Status = ExceptionStatuses.Open
+            });
+            await _db.SaveChangesAsync(cancellationToken);
+            throw new ConflictAppException(
+                "AMBIGUOUS_ECONOMIC_IDENTITY: Không xác định được nghĩa vụ kinh tế duy nhất. Đã mở ngoại lệ đối soát — hãy resolve trước khi áp dụng.");
+        }
+
         var detailIds = details.Select(d => d.Id).ToList();
         var existingBySource = await _db.Costs
             .Where(c => c.SourceType == CostSourceTypes.RatingDetail && detailIds.Contains(c.SourceId!.Value))
@@ -149,15 +173,16 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             var occurrenceKey = RatingFinancialApply.CostOccurrenceKey(rating);
             var amount = decimal.Round(detail.Amount, 4, MidpointRounding.AwayFromZero);
 
+            // BR-DF-018: never match Manual/Import/API independent rows by key alone.
             var sameIdentity = (await _db.Costs
                 .Where(c => c.EconomicIdentityKey == identityKey
                             && c.RecordStatus == EconomicRecordStatuses.Active
-                            && c.DeletedAt == null)
+                            && c.DeletedAt == null
+                            && c.SourceType == CostSourceTypes.RatingDetail)
                 .ToListAsync(cancellationToken))
                 .OrderByDescending(c => c.CreatedAt)
                 .ToList();
 
-            // Legacy rows without key: match bill/leg/vendor/charge among active rating-sourced costs.
             if (sameIdentity.Count == 0)
             {
                 sameIdentity = (await _db.Costs
@@ -174,10 +199,25 @@ public sealed class SeedExpectedCostsFromRatingCommandHandler
             }
 
             if (sameIdentity.Count > 1
-                && rating.TransportLegId is null
-                && rating.VendorPartyId is null
-                && detail.PartnerSuggestedId is null)
+                && EconomicIdentity.LacksDistinguishingKeys(
+                    rating.TransportLegId,
+                    rating.ShipmentId,
+                    rating.VendorPartyId ?? detail.PartnerSuggestedId,
+                    null))
             {
+                _db.Exceptions.Add(new FinancialException
+                {
+                    TenantId = tenantId,
+                    RuleCode = EconomicIdentity.AmbiguousRuleCode,
+                    Severity = ExceptionSeverities.High,
+                    Title = "Trùng Cost mơ hồ trên Bill",
+                    Description = $"charge={detail.ComponentCode}; candidates={sameIdentity.Count}",
+                    BillId = rating.BillId,
+                    ObjectType = "cost",
+                    ObjectId = sameIdentity[0].Id,
+                    Status = ExceptionStatuses.Open
+                });
+                await _db.SaveChangesAsync(cancellationToken);
                 throw new ConflictAppException(
                     "AMBIGUOUS_ECONOMIC_IDENTITY: Không xác định được nghĩa vụ kinh tế duy nhất cho khoản phí. Cần resolve trước khi áp dụng.");
             }

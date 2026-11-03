@@ -220,6 +220,15 @@ public sealed class CreateRevenueCommandHandler : IRequestHandler<CreateRevenueC
         await _fx.ApplyToRevenueAsync(revenue, amount, new Fx.FxManualInput(request.FxRate, request.FxOverrideReason), cancellationToken);
         _approvalGate.RefreshPendingFlag(revenue);
 
+        var source = string.IsNullOrWhiteSpace(request.SourceType) ? RevenueSourceTypes.Manual : request.SourceType.Trim();
+        revenue.SourceType ??= source;
+        if (LCMS.Application.Ratings.RatingFinancialApply.IsIndependentManualOrImport(revenue.SourceType))
+        {
+            revenue.ServiceOccurrenceKey = $"manual:{revenue.Id:N}";
+            revenue.EconomicIdentityKey = LCMS.Application.Ratings.RatingFinancialApply.ManualRevenueIdentityKey(
+                tenantId, revenue.BillId, revenue.RevenueTypeCode, revenue.CustomerPartyId, revenue.Id);
+        }
+
         _db.Revenues.Add(revenue);
         _idempotency.Remember(
             IdempotencyScopes.Revenue,

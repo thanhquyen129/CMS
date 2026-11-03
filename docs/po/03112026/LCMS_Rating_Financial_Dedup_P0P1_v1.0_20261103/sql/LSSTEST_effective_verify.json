@@ -1,0 +1,68 @@
+{
+  "bill_no": "LSSTEST02112026002",
+  "bill_id": "7480847E-2F80-4435-A097-318812EC8FE0",
+  "cost_rows": [
+    {
+      "code": "FREIGHT",
+      "maturity": "actual",
+      "status": "active",
+      "expected": "1440000",
+      "confirmed": null,
+      "actual": "1440000",
+      "eik": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|FREIGHT|bill:7480847e2f804435a097318812ec8fe0|cp:none"
+    },
+    {
+      "code": "FREIGHT",
+      "maturity": "expected",
+      "status": "active",
+      "expected": "1440000",
+      "confirmed": null,
+      "actual": null,
+      "eik": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|FREIGHT|bill:7480847e2f804435a097318812ec8fe0|cp:none"
+    },
+    {
+      "code": "DONGGOI_SGN_HAN_MUA",
+      "maturity": "expected",
+      "status": "active",
+      "expected": "300000",
+      "confirmed": null,
+      "actual": null,
+      "eik": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|DONGGOI_SGN_HAN_MUA|bill:7480847e2f804435a097318812ec8fe0:donggoi|cp:none"
+    },
+    {
+      "code": "DONGGOI_SGN_HAN_MUA",
+      "maturity": "expected",
+      "status": "superseded",
+      "expected": "300000",
+      "confirmed": null,
+      "actual": null,
+      "eik": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|DONGGOI_SGN_HAN_MUA|bill:7480847e2f804435a097318812ec8fe0:donggoi|cp:none"
+    }
+  ],
+  "revenue_rows": [
+    {
+      "code": "FREIGHT",
+      "maturity": "actual",
+      "status": "active",
+      "expected": "2040000",
+      "confirmed": null,
+      "actual": "2040000",
+      "eik": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|SELL|FREIGHT|bill:7480847e2f804435a097318812ec8fe0:FREIGHT|cp:none"
+    },
+    {
+      "code": "DONGGOI_SGN_HAN",
+      "maturity": "expected",
+      "status": "active",
+      "expected": "400000",
+      "confirmed": null,
+      "actual": null,
+      "eik": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|SELL|DONGGOI_SGN_HAN|bill:7480847e2f804435a097318812ec8fe0:DONGGOI|cp:none"
+    }
+  ],
+  "effective_cost": 1740000.0,
+  "effective_revenue": 2440000.0,
+  "best_available_profit": 700000.0,
+  "assert_cost_1740000": true,
+  "assert_rev_2440000": true,
+  "assert_profit_700000": true
+}

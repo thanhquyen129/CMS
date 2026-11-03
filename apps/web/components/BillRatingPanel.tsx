@@ -5,6 +5,7 @@ import { RatingSurchargeBuckets } from "@/components/RatingSurchargeBuckets";
 import { ServiceSelectionPanel, type ServiceOption } from "@/components/ServiceSelectionPanel";
 import { basisLabel, formatChargeable, ratingStatusView } from "@/lib/opref-edit";
 import { ApplyRatingFinancialsButton } from "@/components/ApplyRatingFinancialsButton";
+import { BillRatingFinancialWorkspace } from "@/components/BillRatingFinancialWorkspace";
 import { formatDateTimeVi, formatMoney } from "@/lib/money";
 import { partyTypeLabel, type Rating } from "@/lib/rate-cards";
 import {
@@ -90,11 +91,111 @@ export async function BillRatingPanel({ terms, billId }: Props) {
         </p>
       )}
 
+      <h3 className="section-title sm">A. Ngữ cảnh tính giá</h3>
+      <div
+        className="panel"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))",
+          gap: "0.75rem",
+          padding: "12px 14px",
+          border: "1px solid #e2e8f0",
+          borderRadius: 8,
+          background: "#f8fafc",
+          marginBottom: "1rem",
+        }}
+      >
+        <div>
+          <span className="muted small block">Bill / Shipment</span>
+          <strong>{billLabel}</strong>
+          <span className="muted small block">{billId.slice(0, 8)}…</span>
+        </div>
+        <div>
+          <span className="muted small block">Chiều</span>
+          <strong>
+            {latestBuy ? "MUA (BUY)" : "—"}
+            {latestBuy && latestSell ? " · " : ""}
+            {latestSell ? "BÁN (SELL)" : ""}
+          </strong>
+        </div>
+        <div>
+          <span className="muted small block">as-of / CW</span>
+          <strong>
+            {latestBuy?.ratedAt || latestSell?.ratedAt
+              ? formatDateTimeVi(latestBuy?.ratedAt || latestSell?.ratedAt || "")
+              : "—"}
+          </strong>
+          <span className="muted small block">
+            {formatChargeable(
+              latestBuy?.chargeableWeightKg ?? latestSell?.chargeableWeightKg ?? null
+            )}
+          </span>
+        </div>
+        <div>
+          <span className="muted small block">Dịch vụ / Mode</span>
+          <strong>
+            {breakdowns[0]?.serviceTypeCode || breakdowns[1]?.serviceTypeCode || "—"}
+          </strong>
+        </div>
+      </div>
+
+      <h3 className="section-title sm">B. Phương án &amp; So sánh</h3>
+      <p className="note">
+        Nhãn trạng thái Rating: <em>Tính thử (Chưa áp dụng)</em>, <em>Có thể áp dụng</em>, <em>Đang áp dụng</em>,{" "}
+        <em>Chỉ so sánh</em>, <em>Đã thay thế (Lịch sử)</em> — không dùng «Đã xác nhận» cho Rating.
+      </p>
+      <div className="table-wrap" style={{ marginBottom: "1rem" }}>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Chiều</th>
+              <th>Phương án đang áp dụng (Current Applied)</th>
+              <th>Phương án tính thử (Candidate)</th>
+              <th>Trạng thái Rating</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { label: "MUA (BUY)", current: latestBuy, candidate: latestBuy },
+              { label: "BÁN (SELL)", current: latestSell, candidate: latestSell },
+            ].map((row) => {
+              const status = row.candidate
+                ? ratingStatusView(row.candidate.status, row.candidate.staleAt)
+                : { label: "Chưa có phương án", className: "muted" };
+              return (
+                <tr key={row.label}>
+                  <td>{row.label}</td>
+                  <td>
+                    {row.current
+                      ? formatMoney(row.current.totalAmount, row.current.currencyCode)
+                      : "—"}
+                  </td>
+                  <td>
+                    {row.candidate
+                      ? formatMoney(row.candidate.totalAmount, row.candidate.currencyCode)
+                      : "—"}
+                  </td>
+                  <td>
+                    <span className={status.className}>{status.label}</span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {breakdowns.map((rating) => (
         <RatingBreakdown key={rating.id} rating={rating} />
       ))}
 
-      <h3 className="section-title sm">Lịch sử tính giá</h3>
+      <BillRatingFinancialWorkspace
+        billId={billId}
+        buyRatingId={latestBuy?.id}
+        sellRatingId={latestSell?.id}
+      />
+
+      <h3 className="section-title sm">Lịch sử tính giá (chi tiết)</h3>
       {!ratingsRes.ok ? (
         <div className="alert alert-error" role="alert">
           {ratingsRes.message}

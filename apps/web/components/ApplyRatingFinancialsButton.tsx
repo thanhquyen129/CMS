@@ -14,6 +14,7 @@ export function ApplyRatingFinancialsButton({ ratingId, directionLabel }: Props)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   async function previewApply() {
     setError(null);
@@ -39,10 +40,10 @@ export function ApplyRatingFinancialsButton({ ratingId, directionLabel }: Props)
       const lineSummary = (data.lines ?? [])
         .map((l) => `${l.componentCode}: ${l.action}`)
         .join("; ");
+      setWarnings(data.warningsVi ?? []);
       setPreview(
         `Δ Chi phí ${data.deltaCost.toLocaleString("vi-VN")} · Δ Doanh thu ${data.deltaRevenue.toLocaleString("vi-VN")} · Δ Lợi nhuận ${data.deltaProfit.toLocaleString("vi-VN")}` +
-          (lineSummary ? ` — ${lineSummary}` : "") +
-          (data.warningsVi?.length ? ` — ${data.warningsVi.join(" ")}` : "")
+          (lineSummary ? ` — ${lineSummary}` : "")
       );
     } catch {
       setError("Không kết nối được máy chủ.");
@@ -98,9 +99,17 @@ export function ApplyRatingFinancialsButton({ ratingId, directionLabel }: Props)
         </button>
       </div>
       {preview ? (
-        <p className="note" role="status">
-          {preview}
-        </p>
+        <div className="panel" role="status" style={{ padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: 8 }}>
+          <strong>C. Preview Apply · Delta</strong>
+          <p className="note" style={{ margin: "6px 0 0" }}>
+            {preview}
+          </p>
+        </div>
+      ) : null}
+      {warnings.length > 0 ? (
+        <div className="alert alert-warning" role="alert">
+          <strong>Cảnh báo Actual / Confirmed:</strong> {warnings.join(" ")}
+        </div>
       ) : null}
       {error ? (
         <div className="alert alert-error" role="alert">

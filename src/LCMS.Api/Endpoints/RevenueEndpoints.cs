@@ -123,6 +123,17 @@ public static class RevenueEndpoints
         });
 
         var bills = app.MapGroup("/api/bills").WithTags("Bills");
+        bills.MapGet("/{id:guid}/effective-financial-workspace", async (
+            Guid id,
+            DateOnly? asOf,
+            ISender sender,
+            CancellationToken ct) =>
+        {
+            var workspace = await sender.Send(
+                new LCMS.Application.Bills.Queries.GetBillEffectiveFinancialWorkspaceQuery(id, asOf),
+                ct);
+            return Results.Ok(workspace);
+        });
         bills.MapGet("/{id:guid}/financial-profile", async (
             Guid id,
             DateOnly? asOf,

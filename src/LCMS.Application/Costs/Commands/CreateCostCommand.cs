@@ -6,6 +6,7 @@ using LCMS.Application.Common;
 using LCMS.Application.Common.Exceptions;
 using LCMS.Application.Costs;
 using LCMS.Application.Pricing;
+using LCMS.Application.Ratings;
 using LCMS.Domain.Entities;
 using LCMS.Domain.Identity;
 using LCMS.Domain.Pricing;
@@ -232,6 +233,17 @@ public sealed class CreateCostCommandHandler : IRequestHandler<CreateCostCommand
 
         await _fx.ApplyToCostAsync(cost, amount, new Fx.FxManualInput(request.FxRate, request.FxOverrideReason), cancellationToken);
         await _approvalGate.RefreshPendingFlagAsync(cost, cancellationToken);
+
+        // BR-DF-018: Manual/Import get distinct EconomicIdentity so Rating Apply cannot merge them.
+        var source = string.IsNullOrWhiteSpace(request.SourceType) ? CostSourceTypes.Manual : request.SourceType.Trim();
+        cost.SourceType ??= source;
+        cost.ServiceOccurrenceKey = RatingFinancialApply.IsIndependentManualOrImport(cost.SourceType)
+            ? $"manual:{cost.Id:N}"
+            : cost.ServiceOccurrenceKey;
+        cost.EconomicIdentityKey = RatingFinancialApply.IsIndependentManualOrImport(cost.SourceType)
+            ? RatingFinancialApply.ManualCostIdentityKey(
+                tenantId, cost.BillId, cost.CostTypeCode, cost.VendorPartyId, cost.Id)
+            : cost.EconomicIdentityKey;
 
         _db.Costs.Add(cost);
         _idempotency.Remember(

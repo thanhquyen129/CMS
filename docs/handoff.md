@@ -1,4 +1,8 @@
-﻿## 2026-11-03 — Rating/Financial Dedup P0+P1 (LCMS-CR-RATING-FINANCIAL-DEDUP-01)
+﻿## 2026-11-03 — Rating/Financial Dedup Audit Remaster (100/100 gate)
+- Ambiguity Guard + Resolve API; Manual/Import SoT; surcharge APPLIED-only seed; Workspace A–F; MG inventory/seed thật LSSTEST 1740k/2440k/700k; 55 TC unique evidence; 6 Playwright screenshots. PO UAT NOT RUN; G4 Production NOT RUN.
+- Files: `ResolveAmbiguousObligationCommand.cs`, `RatingFinancialApply.cs`, `BillRatingPanel.tsx`, `BillRatingFinancialWorkspace.tsx`, `RatingFinancialDedup55TcTests.cs`, `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`
+
+## 2026-11-03 — Rating/Financial Dedup P0+P1 (LCMS-CR-RATING-FINANCIAL-DEDUP-01)
 - Calculate ≠ Apply; EconomicIdentity + Expected supersede; EffectiveFactSelector on Bill profile; Apply/Preview APIs; UI tính thử + áp dụng. PO UAT NOT RUN; no Production.
 - Files: `EconomicIdentity.cs`, `EffectiveFactSelector.cs`, `ApplyRatingToFinancialsCommands.cs`, Seed Cost/Revenue, migration `20261103120000`, `BillRatingPanel`/`RateBillForm`/`ApplyRatingFinancialsButton`, `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`, ADR-0043
 

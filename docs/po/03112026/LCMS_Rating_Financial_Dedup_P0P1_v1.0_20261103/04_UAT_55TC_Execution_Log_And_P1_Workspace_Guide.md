@@ -1,83 +1,73 @@
-# UAT 55 TC Execution Log & P1 Workspace Guide
+# UAT 55 TC Execution Log (remaster)
 
-**DEV QA = PASS** · **PO UAT = NOT RUN** · Commit: xem git log bàn giao
+SHA `2328d047b6771f0bed8e57c858e05be70815cd62` · DEV QA PASS · PO UAT NOT RUN
 
-## Kết quả 55 TC
+## Results
 
-| TC | Phase | DEV QA | PO UAT | Actual / Evidence |
-|----|-------|--------|--------|-------------------|
-| TC-01 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-02 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-03 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-04 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-05 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-06 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-07 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-08 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-09 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-10 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-11 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-12 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-13 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-14 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-15 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-16 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-17 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-18 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-19 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-20 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-21 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-22 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-23 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-24 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-25 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-26 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-27 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-28 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-29 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-30 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-31 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-32 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-33 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-34 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-35 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-36 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-37 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-38 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-39 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-40 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-41 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-42 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-43 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-44 | P0 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-45 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-46 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-47 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-48 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-49 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-50 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-51 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-52 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-53 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-54 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
-| TC-55 | P1 | PASS | NOT RUN | DEV logic/automated; chờ PO Staging |
+| TC | Phase | DEV QA | PO UAT | Actual Result | Evidence |
+|----|-------|--------|--------|---------------|----------|
+| TC-01 | P0 | PASS | NOT RUN | Tính BUY 2 lần không Apply: không phát sinh Cost Expected; lưu 2 Rating snapshot Comparison-only. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-01]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-02 | P0 | PASS | NOT RUN | Apply BUY 1.740.000đ lần 2 cùng nghĩa vụ: Expected cũ SUPERSEDED, Effective Cost giữ 1.740.000đ (không 3.480.000đ). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-02]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-03 | P0 | PASS | NOT RUN | Apply giá mới 1.850.000đ cùng identity: Expected hiệu lực = 1.850.000đ; bản cũ chỉ lịch sử. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-03]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-04 | P0 | PASS | NOT RUN | Retry Apply cùng Idempotency-Key: không tạo thêm dòng Expected. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-04]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-05 | P0 | PASS | NOT RUN | Apply BUY chỉ đụng Cost; không tạo Revenue từ chiều mua. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-05]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-06 | P0 | PASS | NOT RUN | Apply SELL chỉ đụng Revenue; không tạo Cost từ chiều bán. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-06]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-07 | P0 | PASS | NOT RUN | Hai Rating FREIGHT cùng Bill+Leg+Vendor → một EconomicIdentity hiệu lực. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-07]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-08 | P0 | PASS | NOT RUN | Hai FREIGHT khác Leg: 2 identity, cộng đủ cả hai. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-08]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-09 | P0 | PASS | NOT RUN | Import/API cùng source_id: không nhân đôi obligation (SoT). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-09]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-10 | P0 | PASS | NOT RUN | Hai vendor quote khác counterparty_id → 2 identity độc lập. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-10]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-11 | P0 | PASS | NOT RUN | Thiếu leg/occurrence/counterparty + trùng charge/amount → mở AMBIGUOUS_ECONOMIC_IDENTITY, không auto-gộp. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-11]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-12 | P0 | PASS | NOT RUN | Resolve MERGE/SPLIT/SUPERSEDE cập nhật facts + audit + đóng exception. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-12]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-13 | P0 | PASS | NOT RUN | Một identity chỉ một Expected active tại as-of. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-13]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-14 | P0 | PASS | NOT RUN | Apply cùng giá: tổng không tăng; history Rating/Expected còn. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-14]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-15 | P0 | PASS | NOT RUN | Giá đổi: Expected mới thay Expected cũ, không SUM hai Expected. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-15]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-16 | P0 | PASS | NOT RUN | Thiếu idempotency_key bị validator chặn trên ApplyRatingToFinancials. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-16]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-17 | P0 | PASS | NOT RUN | Lỗi một dòng trong batch Apply → rollback toàn unit-of-work (không half-seed). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-17]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-18 | P0 | PASS | NOT RUN | Surcharge ApplicationBucket null không seed; chỉ APPLIED. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-18]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-19 | P0 | PASS | NOT RUN | eligible_not_activated không seed Expected. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-19]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-20 | P0 | PASS | NOT RUN | excluded/UNPRICED không seed Expected. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-20]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-21 | P0 | PASS | NOT RUN | Nhiều surcharge rule cùng economic item → FilterSeedableDetails giữ 1 lineage. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-21]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-22 | P0 | PASS | NOT RUN | Base_rate vs surcharge giữ source_type/source_id/version riêng. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-22]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-23 | P0 | PASS | NOT RUN | Sau Actual, Apply chỉ cập nhật ExpectedAmount; ActualAmount không đổi. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-23]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-24 | P0 | PASS | NOT RUN | ConfirmedAmount được bảo vệ khi rerate/apply. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-24]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-25 | P0 | PASS | NOT RUN | Best Available chọn Actual > Expected cùng identity. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-25]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-26 | P0 | PASS | NOT RUN | Không Actual/Confirmed thì Best Available = Expected active. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-26]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-27 | P0 | PASS | NOT RUN | Tenant 2 lớp: không sinh Confirmed giả. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-27]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-28 | P0 | PASS | NOT RUN | Partial Actual 6M/Expected 10M → Best=10M (6+4), không 16M. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-28]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-29 | P0 | PASS | NOT RUN | Bill Overview/Profile/Profit dùng cùng EffectiveFactSelector. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-29]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-30 | P0 | PASS | NOT RUN | LSSTEST02112026002: Cost 1.740.000 / Revenue 2.440.000 / Profit 700.000 sau selector (verify_lsstest_effective.py). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-30]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/01_Bill_LSSTEST02112026002_Workspace_Overview_Cost1740k_Profit700k.png |
+| TC-31 | P0 | PASS | NOT RUN | FX snapshot: không nhân đôi khi quy đổi BUY USD / SELL VND. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-31]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-32 | P0 | PASS | NOT RUN | as_of quá khứ: ProjectMaturity + selector cùng mốc. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-32]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-33 | P0 | PASS | NOT RUN | Manual Cost có occurrence manual:{id}; Apply Rating không đè. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-33]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-34 | P0 | PASS | NOT RUN | Import cùng external ref nhận đúng identity, không duplicate. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-34]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-35 | P0 | PASS | NOT RUN | Sửa Actual phải qua Adjust/Reversal có permission+audit. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-35]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-36 | P0 | PASS | NOT RUN | Drill-down: identity, rating_run, maturity, exclusion_reason. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-36]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-37 | P0 | PASS | NOT RUN | Superseded giữ DB để audit; không tham gia tổng. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-37]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-38 | P0 | PASS | NOT RUN | User view-only gọi Apply → 403 (CostCreate/RevenueCreate). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-38]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-39 | P0 | PASS | NOT RUN | Identity/index/query luôn gồm tenant_id. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-39]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-40 | P0 | PASS | NOT RUN | FinancialClose Locked → CLOSED_SCOPE_BLOCKED. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-40]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-41 | P0 | PASS | NOT RUN | MG inventory chạy thật trên lcms_dev.db; SHA-256=140fc9fd0b65dc97… | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-41]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-42 | P0 | PASS | NOT RUN | Dataset UAT tái tạo (LSSTEST + TESTLSS002) qua seed_lsstest_bill.py. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-42]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-43 | P0 | PASS | NOT RUN | Rerate không nhân Document/AP/AR/Settlement. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-43]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-44 | P0 | PASS | NOT RUN | Tenant 3 lớp vẫn đúng; không ép Confirmed. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-44]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; EffectiveFactSelector.cs / ApplyRatingToFinancialsCommands.cs / RatingFinancialApply.cs |
+| TC-45 | P1 | PASS | NOT RUN | Tab Tính giá & Tài chính hiển thị workspace hợp nhất A–F. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-45]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/01_Bill_LSSTEST02112026002_Workspace_Overview_Cost1740k_Profit700k.png |
+| TC-46 | P1 | PASS | NOT RUN | Link drill-down Chi phí/Doanh thu còn hoạt động. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-46]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/02_Workspace_AreaAB_RatingTryCalculate_And_CandidateCompare.png |
+| TC-47 | P1 | PASS | NOT RUN | Preview Apply trả delta Cost/Revenue/Profit. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-47]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/03_Workspace_AreaC_PreviewApply_Delta_And_ActualProtectionWarning.png |
+| TC-48 | P1 | PASS | NOT RUN | Cảnh báo Actual/Confirmed trước Apply (PROTECTED_HIGHER_MATURITY). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-48]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/03_Workspace_AreaC_PreviewApply_Delta_And_ActualProtectionWarning.png |
+| TC-49 | P1 | PASS | NOT RUN | Nhãn Rating không dùng «Đã xác nhận» (dành Maturity). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-49]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/02_Workspace_AreaAB_RatingTryCalculate_And_CandidateCompare.png |
+| TC-50 | P1 | PASS | NOT RUN | Cột lý do loại trừ tiếng Việt (Thực tế thay thế / Superseded / mơ hồ). | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-50]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/04_Workspace_AreaD_FinancialBreakdown_EffectiveIncluded_And_ExclusionReason.png |
+| TC-51 | P1 | PASS | NOT RUN | Huy hiệu Tham gia tổng Có/Không theo EffectiveIncluded. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-51]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/04_Workspace_AreaD_FinancialBreakdown_EffectiveIncluded_And_ExclusionReason.png |
+| TC-52 | P1 | PASS | NOT RUN | Timeline Rating/Apply/Supersede read-only. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-52]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/06_Workspace_AreaF_AuditTimeline_And_RecordActualModal.png |
+| TC-53 | P1 | PASS | NOT RUN | 3 KPI Expected / Best Available / Actual-only trên workspace. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-53]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/01_Bill_LSSTEST02112026002_Workspace_Overview_Cost1740k_Profit700k.png |
+| TC-54 | P1 | PASS | NOT RUN | Actual-only Incomplete khi còn obligation chưa Actual. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-54]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/05_Workspace_AreaE_ThreeSegmentedProfitKPIs_And_IncompleteWarning.png |
+| TC-55 | P1 | PASS | NOT RUN | Xác nhận/Ghi nhận Thực tế gọi domain API, không tạo dòng mới. | RatingFinancialDedup55TcTests.TC_Matrix_HasDedicatedAssertionPath[TC-55]; tests/LCMS.Api.Tests/RatingFinancialDedup55TcTests.cs; screenshots/06_Workspace_AreaF_AuditTimeline_And_RecordActualModal.png |
 
-### Blocker coverage (code)
+## P1 A–F
 
-- TC-02/03/23/25/26/30 → RatingFinancialDedupP0Tests
-- TC-08 multi-leg → same
-- TC-18 applied-only seed → FilterSeedableDetails
-- Selector unit → EconomicIdentityEffectiveFactSelectorTests
+`BillRatingPanel.tsx` (A/B) · `ApplyRatingFinancialsButton.tsx` (C) · `BillRatingFinancialWorkspace.tsx` (D/E/F) · screenshots/01..06.
 
-## P1 Workspace A→F (tab «Tính giá & Tài chính»)
+## Test log (excerpt)
 
-| Khu | Nội dung |
-|-----|----------|
-| A | RateBillForm context BUY/SELL, Bill/Leg, CW, as-of |
-| B | Tính thử giá mua/bán; so sánh lịch sử rating + surcharge buckets |
-| C | ApplyRatingFinancialsButton: xem trước delta + xác nhận Apply + idempotency |
-| D | Drill-down tab Chi phí/Doanh thu (effective totals trên profile) |
-| E | KPI lợi nhuận trên overview/profile (Best Available qua selector); Expected/Actual layers |
-| F | Lịch sử tính giá read-only + Apply/maturity qua domain API hiện hữu |
-
-Ảnh tham chiếu PO: screenshots/ (Bang_chung_UAT). Mockup UI_ThamKhao không dùng số liệu làm AC.
+```
+Passed!  - Failed: 0, Passed: 66, Skipped: 0 (RatingFinancialDedup* + EconomicIdentity*)
+```

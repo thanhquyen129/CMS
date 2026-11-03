@@ -1,0 +1,503 @@
+{
+  "MG01": {
+    "file": "C:\\A1\\git\\cms\\src\\LCMS.Api\\lcms_dev.db",
+    "bytes": 5394432,
+    "sha256": "140fc9fd0b65dc97c0f07889f3465c42862d973740431e3632e84d771fbc5714",
+    "backup": "C:\\A1\\git\\cms\\docs\\po\\03112026\\LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103\\sql\\lcms_dev_backup_20261103_051100.db",
+    "at": "2026-11-03T05:11:00.690699+00:00"
+  },
+  "MG02_03_04_before": {
+    "ratings": 16,
+    "rating_details": 17,
+    "costs_active": 130,
+    "revenues_active": 127,
+    "costs_superseded": 1,
+    "bills": 133,
+    "financial_documents": 248,
+    "accounts_payable": 124,
+    "accounts_receivable": 123
+  },
+  "MG05_dup_groups_before": [],
+  "MG05_maturity_mix_before": [
+    {
+      "key": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|FREIGHT|bill:7480847e2f804435a097318812ec8fe0|cp:none",
+      "count": 2
+    }
+  ],
+  "MG09_affected_supersede_rows": 0,
+  "MG12_after": {
+    "costs_active": 130,
+    "costs_superseded": 1,
+    "revenues_active": 127
+  },
+  "MG12_dup_groups_after": [],
+  "MG12_maturity_mix_after": [
+    {
+      "key": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|FREIGHT|bill:7480847e2f804435a097318812ec8fe0|cp:none",
+      "count": 2
+    }
+  ],
+  "has_economic_identity_key": true,
+  "sample_bills": [
+    {
+      "id": "01A16CF7-30D8-731C-A50F-928FC7AA575B",
+      "bill_no": "TESTLSS002"
+    },
+    {
+      "id": "7480847E-2F80-4435-A097-318812EC8FE0",
+      "bill_no": "LSSTEST02112026002"
+    }
+  ],
+  "sample_costs": [
+    {
+      "bill_no": "BILL-LEGACY-009",
+      "cost_type_code": "AP-FREIGHT",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "5000000.0",
+      "actual_amount": "5000000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf730d8732d8b9f76b2dc649f67|BUY|AP-FREIGHT|bill:01a16cf730d8732d8b9f76b2dc649f67|01a16cf7300b7c328328e0a011fac4be"
+    },
+    {
+      "bill_no": "DEMO-07-CLOSE-LOCKED",
+      "cost_type_code": "CLOSE-COST",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "500000.0",
+      "actual_amount": "500000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf730d87acc8cec74e32f3a27d8|BUY|CLOSE-COST|bill:01a16cf730d87acc8cec74e32f3a27d8|01a16cf7300b7c328328e0a011fac4be"
+    },
+    {
+      "bill_no": "DEMO-08-CLOSE-REOPEN",
+      "cost_type_code": "REOPEN-COST",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "120000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf730d87619a89b58b12695d277|BUY|REOPEN-COST|bill:01a16cf730d87619a89b58b12695d277|01a16cf7300b7c328328e0a011fac4be"
+    },
+    {
+      "bill_no": "LSSTEST02112026002",
+      "cost_type_code": "FREIGHT",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1440000",
+      "actual_amount": "1440000",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|FREIGHT|bill:7480847e2f804435a097318812ec8fe0|cp:none"
+    },
+    {
+      "bill_no": "LSSTEST02112026002",
+      "cost_type_code": "FREIGHT",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1440000",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|FREIGHT|bill:7480847e2f804435a097318812ec8fe0|cp:none"
+    },
+    {
+      "bill_no": "LSSTEST02112026002",
+      "cost_type_code": "DONGGOI_SGN_HAN_MUA",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "300000",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|DONGGOI_SGN_HAN_MUA|bill:7480847e2f804435a097318812ec8fe0:donggoi|cp:none"
+    },
+    {
+      "bill_no": "LSSTEST02112026002",
+      "cost_type_code": "DONGGOI_SGN_HAN_MUA",
+      "financial_maturity": "expected",
+      "record_status": "superseded",
+      "expected_amount": "300000",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|7480847e2f804435a097318812ec8fe0|BUY|DONGGOI_SGN_HAN_MUA|bill:7480847e2f804435a097318812ec8fe0:donggoi|cp:none"
+    },
+    {
+      "bill_no": "TESTLSS002",
+      "cost_type_code": "FREIGHT",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1440000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf730d8731ca50f928fc7aa575b|BUY|FREIGHT|bill:01a16cf730d8731ca50f928fc7aa575b|cp:none"
+    },
+    {
+      "bill_no": "TESTLSS002",
+      "cost_type_code": "DONGGOI_SGN_HAN_MUA",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "300000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf730d8731ca50f928fc7aa575b|BUY|DONGGOI_SGN_HAN_MUA|bill:01a16cf730d8731ca50f928fc7aa575b|cp:none"
+    },
+    {
+      "bill_no": "VOL-BILL-0001",
+      "cost_type_code": "VOL-COST-0001",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1215000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449071f688da8b456bd4bea2|BUY|VOL-COST-0001|bill:01a16cf7449071f688da8b456bd4bea2|01a16cf73e56760f901640d98be16ae5"
+    },
+    {
+      "bill_no": "VOL-BILL-0002",
+      "cost_type_code": "VOL-COST-0002",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1230000.0",
+      "actual_amount": "1255000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917bd5b8a25a4644807df7|BUY|VOL-COST-0002|bill:01a16cf744917bd5b8a25a4644807df7|01a16cf73e56715399a37aba9da3d083"
+    },
+    {
+      "bill_no": "VOL-BILL-0003",
+      "cost_type_code": "VOL-COST-0003",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1245000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917170af1c76e2342a3e40|BUY|VOL-COST-0003|bill:01a16cf744917170af1c76e2342a3e40|01a16cf73e5673c5b170b390ac78738d"
+    },
+    {
+      "bill_no": "VOL-BILL-0004",
+      "cost_type_code": "VOL-COST-0004",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1260000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917650a34ca92d7cc9fa66|BUY|VOL-COST-0004|bill:01a16cf744917650a34ca92d7cc9fa66|01a16cf73e5670ec96321a98fe91e73d"
+    },
+    {
+      "bill_no": "VOL-BILL-0005",
+      "cost_type_code": "VOL-COST-0005",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1275000.0",
+      "actual_amount": "1300000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917a55b876130e361a09da|BUY|VOL-COST-0005|bill:01a16cf744917a55b876130e361a09da|01a16cf73e56705699bfad08ce0e0d36"
+    },
+    {
+      "bill_no": "VOL-BILL-0006",
+      "cost_type_code": "VOL-COST-0006",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1290000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74491765baccb8994273bd596|BUY|VOL-COST-0006|bill:01a16cf74491765baccb8994273bd596|01a16cf73e5679169cea224fe13b2886"
+    },
+    {
+      "bill_no": "VOL-BILL-0007",
+      "cost_type_code": "VOL-COST-0007",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1305000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917168a34d2e542a459906|BUY|VOL-COST-0007|bill:01a16cf744917168a34d2e542a459906|01a16cf73e567922b63b558cf9454653"
+    },
+    {
+      "bill_no": "VOL-BILL-0008",
+      "cost_type_code": "VOL-COST-0008",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1320000.0",
+      "actual_amount": "1345000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449175fe9f0eacb698e7ced3|BUY|VOL-COST-0008|bill:01a16cf7449175fe9f0eacb698e7ced3|01a16cf73e56709d9c2f195806292567"
+    },
+    {
+      "bill_no": "VOL-BILL-0009",
+      "cost_type_code": "VOL-COST-0009",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1335000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917d008264b878f5b449c3|BUY|VOL-COST-0009|bill:01a16cf744917d008264b878f5b449c3|01a16cf73e56796099f5f80d69729bd6"
+    },
+    {
+      "bill_no": "VOL-BILL-0010",
+      "cost_type_code": "VOL-COST-0010",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1350000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74491725789ff1659d3fb818f|BUY|VOL-COST-0010|bill:01a16cf74491725789ff1659d3fb818f|01a16cf73e56786d968505a1b19421e0"
+    },
+    {
+      "bill_no": "VOL-BILL-0011",
+      "cost_type_code": "VOL-COST-0011",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1365000.0",
+      "actual_amount": "1390000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449175f2aacb398bd190c1fb|BUY|VOL-COST-0011|bill:01a16cf7449175f2aacb398bd190c1fb|01a16cf73e5678ff9f9caa0cab679c5b"
+    },
+    {
+      "bill_no": "VOL-BILL-0012",
+      "cost_type_code": "VOL-COST-0012",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1380000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449176a2b37b33ef7a9eaba6|BUY|VOL-COST-0012|bill:01a16cf7449176a2b37b33ef7a9eaba6|01a16cf73e567333a61bfed23d034315"
+    },
+    {
+      "bill_no": "VOL-BILL-0013",
+      "cost_type_code": "VOL-COST-0013",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1395000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917deea454265ff013d86e|BUY|VOL-COST-0013|bill:01a16cf744917deea454265ff013d86e|01a16cf73e5679ebab33927f1ab9cdce"
+    },
+    {
+      "bill_no": "VOL-BILL-0014",
+      "cost_type_code": "VOL-COST-0014",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1410000.0",
+      "actual_amount": "1435000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917ceb85138ac687260fec|BUY|VOL-COST-0014|bill:01a16cf744917ceb85138ac687260fec|01a16cf73e5675e394576acb5cefdac0"
+    },
+    {
+      "bill_no": "VOL-BILL-0015",
+      "cost_type_code": "VOL-COST-0015",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1425000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917a13aaf53bd6738fe2ad|BUY|VOL-COST-0015|bill:01a16cf744917a13aaf53bd6738fe2ad|01a16cf73e56788b8548c99c27c6b8cd"
+    },
+    {
+      "bill_no": "VOL-BILL-0016",
+      "cost_type_code": "VOL-COST-0016",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1440000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449173faa4e9c1484a7df67a|BUY|VOL-COST-0016|bill:01a16cf7449173faa4e9c1484a7df67a|01a16cf73e567f87b0c4fe0d8cabd183"
+    },
+    {
+      "bill_no": "VOL-BILL-0017",
+      "cost_type_code": "VOL-COST-0017",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1455000.0",
+      "actual_amount": "1480000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74491725b81af9c805e2518d3|BUY|VOL-COST-0017|bill:01a16cf74491725b81af9c805e2518d3|01a16cf73e567d998f6941e2590b8388"
+    },
+    {
+      "bill_no": "VOL-BILL-0018",
+      "cost_type_code": "VOL-COST-0018",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1470000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917bed9682ae924da9204f|BUY|VOL-COST-0018|bill:01a16cf744917bed9682ae924da9204f|01a16cf73e567945a86257bf44f486b5"
+    },
+    {
+      "bill_no": "VOL-BILL-0019",
+      "cost_type_code": "VOL-COST-0019",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1485000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917da4a7f917b81339b2a2|BUY|VOL-COST-0019|bill:01a16cf744917da4a7f917b81339b2a2|01a16cf73e5670cfacaf78d0489a9ca6"
+    },
+    {
+      "bill_no": "VOL-BILL-0020",
+      "cost_type_code": "VOL-COST-0020",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1500000.0",
+      "actual_amount": "1525000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917a9ba42b355e02944ba0|BUY|VOL-COST-0020|bill:01a16cf744917a9ba42b355e02944ba0|01a16cf73e567da19fd8421a1a0b3dd8"
+    },
+    {
+      "bill_no": "VOL-BILL-0021",
+      "cost_type_code": "VOL-COST-0021",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1515000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449173148f5fa3aa9362b134|BUY|VOL-COST-0021|bill:01a16cf7449173148f5fa3aa9362b134|01a16cf73e5677568d6a481cbcf163d7"
+    },
+    {
+      "bill_no": "VOL-BILL-0022",
+      "cost_type_code": "VOL-COST-0022",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1530000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917dc2bc00284bdfeb21b7|BUY|VOL-COST-0022|bill:01a16cf744917dc2bc00284bdfeb21b7|01a16cf73e5675a2b2d7a954edd1c895"
+    },
+    {
+      "bill_no": "VOL-BILL-0023",
+      "cost_type_code": "VOL-COST-0023",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1545000.0",
+      "actual_amount": "1570000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917f379d931eda969ac529|BUY|VOL-COST-0023|bill:01a16cf744917f379d931eda969ac529|01a16cf73e56752bb872c2deaa14b8c6"
+    },
+    {
+      "bill_no": "VOL-BILL-0024",
+      "cost_type_code": "VOL-COST-0024",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1560000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449177d5958be4f0e2a74ed8|BUY|VOL-COST-0024|bill:01a16cf7449177d5958be4f0e2a74ed8|01a16cf73e567073941fd7575e235aff"
+    },
+    {
+      "bill_no": "VOL-BILL-0025",
+      "cost_type_code": "VOL-COST-0025",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1575000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917ce2b0bfede6ae38988a|BUY|VOL-COST-0025|bill:01a16cf744917ce2b0bfede6ae38988a|01a16cf73e56721784945f5033ecb703"
+    },
+    {
+      "bill_no": "VOL-BILL-0026",
+      "cost_type_code": "VOL-COST-0026",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1590000.0",
+      "actual_amount": "1615000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74491724eb429ea1f32ae9105|BUY|VOL-COST-0026|bill:01a16cf74491724eb429ea1f32ae9105|01a16cf73e5677e698fb9311765d1a1b"
+    },
+    {
+      "bill_no": "VOL-BILL-0027",
+      "cost_type_code": "VOL-COST-0027",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1605000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74491720f8c06475e29a78387|BUY|VOL-COST-0027|bill:01a16cf74491720f8c06475e29a78387|01a16cf73e567f8da9013e55d62c8a2b"
+    },
+    {
+      "bill_no": "VOL-BILL-0028",
+      "cost_type_code": "VOL-COST-0028",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1620000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917299b044e3ef0f3eef00|BUY|VOL-COST-0028|bill:01a16cf744917299b044e3ef0f3eef00|01a16cf73e5676b782a7a7e5f2dc4ad1"
+    },
+    {
+      "bill_no": "VOL-BILL-0029",
+      "cost_type_code": "VOL-COST-0029",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1635000.0",
+      "actual_amount": "1660000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917317b339c17e8ed80e20|BUY|VOL-COST-0029|bill:01a16cf744917317b339c17e8ed80e20|01a16cf73e567a3681a8fabfca268f17"
+    },
+    {
+      "bill_no": "VOL-BILL-0030",
+      "cost_type_code": "VOL-COST-0030",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1650000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917072867e22904039334e|BUY|VOL-COST-0030|bill:01a16cf744917072867e22904039334e|01a16cf73e56719fa4fa3f655ccb1ff0"
+    },
+    {
+      "bill_no": "VOL-BILL-0031",
+      "cost_type_code": "VOL-COST-0031",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1665000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744917458bf1623758dba676a|BUY|VOL-COST-0031|bill:01a16cf744917458bf1623758dba676a|01a16cf73e5679f3bbfcb6195c1725b0"
+    },
+    {
+      "bill_no": "VOL-BILL-0032",
+      "cost_type_code": "VOL-COST-0032",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1680000.0",
+      "actual_amount": "1705000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449171608fb5e760b79db909|BUY|VOL-COST-0032|bill:01a16cf7449171608fb5e760b79db909|01a16cf73e567ea9a13b44c0765c0488"
+    },
+    {
+      "bill_no": "VOL-BILL-0033",
+      "cost_type_code": "VOL-COST-0033",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1695000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74491771d80255c451980dc1f|BUY|VOL-COST-0033|bill:01a16cf74491771d80255c451980dc1f|01a16cf73e5671dc8d085a8484e3bc46"
+    },
+    {
+      "bill_no": "VOL-BILL-0034",
+      "cost_type_code": "VOL-COST-0034",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1710000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74492731cb42a4130bac8471b|BUY|VOL-COST-0034|bill:01a16cf74492731cb42a4130bac8471b|01a16cf73e56793296abb0e55b7b1e0f"
+    },
+    {
+      "bill_no": "VOL-BILL-0035",
+      "cost_type_code": "VOL-COST-0035",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1725000.0",
+      "actual_amount": "1750000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449271c98915f3570b8897e5|BUY|VOL-COST-0035|bill:01a16cf7449271c98915f3570b8897e5|01a16cf73e56736686026dfc20eef9ee"
+    },
+    {
+      "bill_no": "VOL-BILL-0036",
+      "cost_type_code": "VOL-COST-0036",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1740000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf7449271509327bf251810ac6f|BUY|VOL-COST-0036|bill:01a16cf7449271509327bf251810ac6f|01a16cf73e567b61babbc78f148b9534"
+    },
+    {
+      "bill_no": "VOL-BILL-0037",
+      "cost_type_code": "VOL-COST-0037",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1755000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744927540af2651ca04bcd787|BUY|VOL-COST-0037|bill:01a16cf744927540af2651ca04bcd787|01a16cf73e567d1c8683a8f5585ea066"
+    },
+    {
+      "bill_no": "VOL-BILL-0038",
+      "cost_type_code": "VOL-COST-0038",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1770000.0",
+      "actual_amount": "1795000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744927b5a859263ecc1f9e21a|BUY|VOL-COST-0038|bill:01a16cf744927b5a859263ecc1f9e21a|01a16cf73e56761d98afcb27773f94f4"
+    },
+    {
+      "bill_no": "VOL-BILL-0039",
+      "cost_type_code": "VOL-COST-0039",
+      "financial_maturity": "expected",
+      "record_status": "active",
+      "expected_amount": "1785000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf74492720595a310ec97a2f997|BUY|VOL-COST-0039|bill:01a16cf74492720595a310ec97a2f997|01a16cf73e567b38a1638b9175b0f0a1"
+    },
+    {
+      "bill_no": "VOL-BILL-0040",
+      "cost_type_code": "VOL-COST-0040",
+      "financial_maturity": "confirmed",
+      "record_status": "active",
+      "expected_amount": "1800000.0",
+      "actual_amount": null,
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744927778bafc6a0e72f36589|BUY|VOL-COST-0040|bill:01a16cf744927778bafc6a0e72f36589|01a16cf73e5671159b45a736f4636a63"
+    },
+    {
+      "bill_no": "VOL-BILL-0041",
+      "cost_type_code": "VOL-COST-0041",
+      "financial_maturity": "actual",
+      "record_status": "active",
+      "expected_amount": "1815000.0",
+      "actual_amount": "1840000.0",
+      "economic_identity_key": "01a16cf72ef2729997300ec040b35eda|01a16cf744927b90a34d6eacbe630a17|BUY|VOL-COST-0041|bill:01a16cf744927b90a34d6eacbe630a17|01a16cf73e567292914dc0dff3b7873d"
+    }
+  ]
+}

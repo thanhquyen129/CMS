@@ -7,7 +7,8 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/bff/") ||
     pathname.startsWith("/privacy") ||
-    pathname.startsWith("/cms/policies/privacy")
+    pathname.startsWith("/cms/policies/privacy") ||
+    pathname.startsWith("/dev/rating-workspace-preview")
   ) {
     return NextResponse.next();
   }

@@ -1,6 +1,6 @@
-# BR/AC Traceability (remaster)
+# BR/AC Traceability
 
-SHA `37f4ed2a6ec8b38d1123556e52cae2790281eb68` · PO UAT = NOT RUN
+SHA `f5cf209be7088f7acd19bc1b63b1be7bdd21cbfd` · PO UAT = NOT RUN
 
 ## 33 BR
 
@@ -44,23 +44,23 @@ SHA `37f4ed2a6ec8b38d1123556e52cae2790281eb68` · PO UAT = NOT RUN
 
 | AC | Phase | DEV | PO UAT | Evidence |
 |----|-------|-----|--------|----------|
-| AC-01 | P0 | PASS | NOT RUN | `TC-01 UnappliedDoesNotCreateFacts + CreateRating seed=false` |
-| AC-02 | P0 | PASS | NOT RUN | `TC-05/06 BuyDoesNotCreateRevenue / SellDoesNotCreateCost` |
-| AC-03 | P0 | PASS | NOT RUN | `TC-02/03/07 Reapply + SameIdentityCollapses` |
-| AC-04 | P0 | PASS | NOT RUN | `TC-11/12 AmbiguityDetected + AmbiguityResolutionActionsValid` |
-| AC-05 | P0 | PASS | NOT RUN | `TC-04/16 IdempotentApplySemantics + IdempotencyKeyRequiredConcept` |
-| AC-06 | P0 | PASS | NOT RUN | `TC-18..20 SurchargeNullBucketBlocked / Eligible / Excluded` |
-| AC-07 | P0 | PASS | NOT RUN | `TC-21/22 DuplicateSurchargeRulesCollapsed + lineage` |
-| AC-08 | P0 | PASS | NOT RUN | `TC-23/24 ActualProtected / ConfirmedProtected` |
-| AC-09 | P0 | PASS | NOT RUN | `TC-25/26/28 BestAvailable + PartialActual` |
-| AC-10 | P0 | PASS | NOT RUN | `TC-29/30 ProfileUsesSelector + SampleBill1740k700k` |
-| AC-11 | P0 | PASS | NOT RUN | `TC-33/34 ManualIndependentKey + ImportSourceDedupConcept` |
-| AC-12 | P0 | PASS | NOT RUN | `TC-38/39/40 RBAC + tenant + closed scope` |
-| AC-13 | P0 | PASS | NOT RUN | `TC-41/42 inventory + dataset rebuild scripts` |
-| AC-14 | P0 | PASS | NOT RUN | `TC-43/44 DocumentsNotDuplicated + ThreeLayerOptionalConfirmed` |
-| AC-15 | P1 | PASS | NOT RUN | `TC-45 WorkspaceTabLabel + BillRatingPanel A–F` |
-| AC-16 | P1 | PASS | NOT RUN | `TC-47/48 PreviewDeltaShape + ActualWarningCopy` |
-| AC-17 | P1 | PASS | NOT RUN | `TC-49 RatingStatusLabelsDistinctFromConfirmed` |
-| AC-18 | P1 | PASS | NOT RUN | `TC-50/51 ExclusionReasonVietnamese + ParticipationBadge` |
-| AC-19 | P1 | PASS | NOT RUN | `TC-52/53 TimelineEventTypes + ThreeKpis` |
-| AC-20 | P1 | PASS | NOT RUN | `TC-54/55 ActualIncompleteWarning + MaturityInPlaceNoNewRow` |
+| AC-01 | P0 | PASS | NOT RUN | `CreateRatingCommand (seed flags default false) + RateBillForm (seed=false) | TC-01` |
+| AC-02 | P0 | PASS | NOT RUN | `ApplyRatingToFinancialsCommand (BUY→Cost, SELL→Revenue tách biệt) | TC-02, TC-04, TC-05, TC-06` |
+| AC-03 | P0 | PASS | NOT RUN | `EconomicIdentity.Build (9-dimension key: giữ độc lập khác Leg/Vendor, gộp đúng cùng nghĩa vụ) | TC-07, TC-08, TC-09, TC-10` |
+| AC-04 | P0 | PASS | NOT RUN | `Ambiguity Guard (AMBIGUOUS_ECONOMIC_IDENTITY) + ResolveAmbiguousObligationCommand có audit | TC-11, TC-12` |
+| AC-05 | P0 | PASS | NOT RUN | `SeedExpectedCosts/RevenuesFromRatingCommand (supersede Expected cũ, giữ tối đa 1 active Expected tại as-of) | TC-02, TC-03, TC-13, TC-14, TC-15` |
+| AC-06 | P0 | PASS | NOT RUN | `IdempotencyScopes.RatingApplyCost/Revenue + Atomic UnitOfWork rollback + RBAC guard | TC-04, TC-16, TC-17, TC-38` |
+| AC-07 | P0 | PASS | NOT RUN | `RatingFinancialApply.FilterSeedableDetails (chỉ seed surcharge APPLIED; chặn NOT_SELECTED/UNPRICED/EXCLUDED; giữ lineage riêng) | TC-18, TC-19, TC-20, TC-21, TC-22` |
+| AC-08 | P0 | PASS | NOT RUN | `HasProtectedMaturity (không ghi đè Confirmed/Actual) + FinancialClose Locked guard + Adjust/Reversal audit | TC-23, TC-24, TC-35, TC-40` |
+| AC-09 | P0 | PASS | NOT RUN | `EffectiveFactSelector (Actual > Confirmed > Expected; Partial Actual = Actual + phần Expected còn lại; hỗ trợ 2/3 lớp) | TC-25, TC-26, TC-27, TC-28, TC-44` |
+| AC-10 | P0 | PASS | NOT RUN | `GetBillFinancialProfileQuery + ChargeProfitability + Export đồng bộ qua EffectiveFactSelector cùng as-of & FX snapshot | TC-25, TC-29, TC-30, TC-31, TC-32` |
+| AC-11 | P0 | PASS | NOT RUN | `ManualCostIdentityKey (manual:{id} độc lập) + Import external_id SoT + Tenant isolation | TC-33, TC-34, TC-39` |
+| AC-12 | P0 | PASS | NOT RUN | `GetBillEffectiveFinancialWorkspaceQuery (drill-down dòng tham gia, dòng bị loại, AppliedFromRatingId, exclusion_reason) | TC-36, TC-37` |
+| AC-13 | P0 | PASS | NOT RUN | `MG01_backup_manifest.json + run_mg_inventory.py + seed_lsstest_bill.py + verify_lsstest_effective.py trên test tenant | TC-41, TC-42` |
+| AC-14 | P0 | PASS | NOT RUN | `ApplyRatingToFinancials không tự sinh hoặc nhân đôi FinancialDocument / AP / AR / Settlement | TC-43` |
+| AC-15 | P1 | PASS | NOT RUN | `BillRatingPanel (Khu vực A/B) + BillRatingFinancialWorkspace (Khu vực D/E/F) + giữ drill-down tab Chi phí/Doanh thu | TC-45, TC-46` |
+| AC-16 | P1 | PASS | NOT RUN | `ApplyRatingFinancialsButton Preview delta + cảnh báo khi có Actual/Confirmed + nhãn trạng thái Rating CP6.5 tách khỏi Maturity | TC-47, TC-48, TC-49` |
+| AC-17 | P1 | PASS | NOT RUN | `Bảng Hồ sơ tài chính Khu vực D hiển thị EffectiveIncluded (Có/Không), EconomicIdentity, nguồn Rating và lý do loại trừ tiếng Việt | TC-50, TC-51` |
+| AC-18 | P1 | PASS | NOT RUN | `Khu vực F Audit Timeline hiển thị lịch sử Rating, Apply, Supersede, version và người thực hiện ở chế độ read-only | TC-52` |
+| AC-19 | P1 | PASS | NOT RUN | `Khu vực E hiển thị 3 thẻ KPI (Lợi nhuận Dự kiến, Ước tính tốt nhất kèm Maturity Mix, Thực tế kèm cảnh báo Incomplete) | TC-53, TC-54` |
+| AC-20 | P1 | PASS | NOT RUN | `Khu vực F thao tác Xác nhận / Ghi nhận Thực tế tại chỗ qua domain API hiện hữu kèm evidence, không tạo dòng mới | TC-55` |

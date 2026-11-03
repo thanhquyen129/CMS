@@ -1,5 +1,6 @@
 # Root Cause, Architecture & EconomicIdentity (Remaster)
 
+**Handover SHA:** `f5cf209be7088f7acd19bc1b63b1be7bdd21cbfd` · **PO UAT:** NOT RUN · **G4:** NOT RUN
 ## Root Cause (Bill LSSTEST02112026002)
 
 1. Seed `SourceId = RatingDetail.Id` → mỗi lần tính = Cost mới cùng FREIGHT.

@@ -1,4 +1,8 @@
-﻿## 2026-11-03 — Rating/Financial Dedup Audit Remaster (100/100 gate)
+﻿## 2026-11-03 — Rating Dedup final polish (MG-13/15 PO NOT RUN + real Next screenshots)
+- MG-13/MG-15 = NOT RUN (PO); AC/TC/I anchors corrected; HTML fixture removed; 6 screenshots from Next `/dev/rating-workspace-preview`. PO UAT NOT RUN; G4 NOT RUN.
+- Files: `scripts/fill_rating_dedup_handover_evidence.py`, `RatingDedupWorkspacePreview.tsx`, `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`
+
+## 2026-11-03 — Rating/Financial Dedup Audit Remaster (100/100 gate)
 - Ambiguity Guard + Resolve API; Manual/Import SoT; surcharge APPLIED-only seed; Workspace A–F; MG inventory/seed thật LSSTEST 1740k/2440k/700k; 55 TC unique evidence; 6 Playwright screenshots. PO UAT NOT RUN; G4 Production NOT RUN.
 - Files: `ResolveAmbiguousObligationCommand.cs`, `RatingFinancialApply.cs`, `BillRatingPanel.tsx`, `BillRatingFinancialWorkspace.tsx`, `RatingFinancialDedup55TcTests.cs`, `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`
 

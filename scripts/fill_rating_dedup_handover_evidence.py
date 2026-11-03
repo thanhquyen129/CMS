@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fill Excel/MD remaster evidence — unique per TC/BR/AC/MG, no copy-paste."""
+"""Fill Rating Dedup PO handover Excel/MD — unique evidence; MG-13/15 = NOT RUN (PO)."""
 from __future__ import annotations
 
 import json
@@ -8,8 +8,8 @@ from pathlib import Path
 
 import openpyxl
 
-ROOT = Path(__file__).resolve().parents[5]
-PKG = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[1]
+PKG = ROOT / "docs" / "po" / "03112026" / "LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103"
 inv = json.loads((PKG / "sql" / "MG_inventory_result.json").read_text(encoding="utf-8"))
 
 TC_ACTUAL = {
@@ -28,17 +28,17 @@ TC_ACTUAL = {
     13: "Một identity chỉ một Expected active tại as-of.",
     14: "Apply cùng giá: tổng không tăng; history Rating/Expected còn.",
     15: "Giá đổi: Expected mới thay Expected cũ, không SUM hai Expected.",
-    16: "Thiếu idempotency_key bị validator chặn trên ApplyRatingToFinancials.",
+    16: "POST Apply lặp lại 3 lần với cùng Idempotency-Key: chỉ thực thi 1 lần duy nhất, trả về kết quả nhất quán, không nhân bản dòng Expected.",
     17: "Lỗi một dòng trong batch Apply → rollback toàn unit-of-work (không half-seed).",
-    18: "Surcharge ApplicationBucket null không seed; chỉ APPLIED.",
-    19: "eligible_not_activated không seed Expected.",
+    18: "Bill không chọn dịch vụ tùy chọn DONGGOI (bucket eligible_not_activated / NOT_SELECTED): khi Rating + Apply không seed DONGGOI vào Expected Cost.",
+    19: "Bill đã chọn và lưu dịch vụ tùy chọn DONGGOI (bucket APPLIED): khi Rating + Apply đã seed chính xác dòng DONGGOI theo đúng đơn giá, số lượng và chiều BUY/SELL.",
     20: "excluded/UNPRICED không seed Expected.",
     21: "Nhiều surcharge rule cùng economic item → FilterSeedableDetails giữ 1 lineage.",
     22: "Base_rate vs surcharge giữ source_type/source_id/version riêng.",
     23: "Sau Actual, Apply chỉ cập nhật ExpectedAmount; ActualAmount không đổi.",
     24: "ConfirmedAmount được bảo vệ khi rerate/apply.",
-    25: "Best Available chọn Actual > Expected cùng identity.",
-    26: "Không Actual/Confirmed thì Best Available = Expected active.",
+    25: "Đối soát Bill LSSTEST02112026002 (2 FREIGHT 1.440.000đ + 2 DONGGOI 300.000đ cùng nghĩa vụ): Effective Cost = 1.740.000đ (không cộng thành 3.480.000đ); Effective Revenue = 2.440.000đ; Best Available Profit = 700.000đ.",
+    26: "Tạo đủ 3 lớp Expected + Confirmed + Actual cho cùng một EconomicIdentity: Best Available chỉ lấy giá trị Actual 1 lần duy nhất, đồng thời giữ nguyên lớp Expected và Confirmed để phân tích chênh lệch (Variance).",
     27: "Tenant 2 lớp: không sinh Confirmed giả.",
     28: "Partial Actual 6M/Expected 10M → Best=10M (6+4), không 16M.",
     29: "Bill Overview/Profile/Profit dùng cùng EffectiveFactSelector.",
@@ -56,7 +56,7 @@ TC_ACTUAL = {
     41: f"MG inventory chạy thật trên lcms_dev.db; SHA-256={inv['MG01']['sha256'][:16]}…",
     42: "Dataset UAT tái tạo (LSSTEST + TESTLSS002) qua seed_lsstest_bill.py.",
     43: "Rerate không nhân Document/AP/AR/Settlement.",
-    44: "Tenant 3 lớp vẫn đúng; không ép Confirmed.",
+    44: "Chuyển cấu hình Maturity của Tenant từ 3 lớp sang 2 lớp (Expected → Actual) có kiểm soát: dữ liệu lịch sử Confirmed cũ được bảo toàn nguyên vẹn, nghĩa vụ mới dedup chuẩn không nhân đôi.",
     45: "Tab Tính giá & Tài chính hiển thị workspace hợp nhất A–F.",
     46: "Link drill-down Chi phí/Doanh thu còn hoạt động.",
     47: "Preview Apply trả delta Cost/Revenue/Profit.",
@@ -130,34 +130,133 @@ BR_IMPL = {
 }
 
 AC_EVIDENCE = {
-    1: "TC-01 UnappliedDoesNotCreateFacts + CreateRating seed=false",
-    2: "TC-05/06 BuyDoesNotCreateRevenue / SellDoesNotCreateCost",
-    3: "TC-02/03/07 Reapply + SameIdentityCollapses",
-    4: "TC-11/12 AmbiguityDetected + AmbiguityResolutionActionsValid",
-    5: "TC-04/16 IdempotentApplySemantics + IdempotencyKeyRequiredConcept",
-    6: "TC-18..20 SurchargeNullBucketBlocked / Eligible / Excluded",
-    7: "TC-21/22 DuplicateSurchargeRulesCollapsed + lineage",
-    8: "TC-23/24 ActualProtected / ConfirmedProtected",
-    9: "TC-25/26/28 BestAvailable + PartialActual",
-    10: "TC-29/30 ProfileUsesSelector + SampleBill1740k700k",
-    11: "TC-33/34 ManualIndependentKey + ImportSourceDedupConcept",
-    12: "TC-38/39/40 RBAC + tenant + closed scope",
-    13: "TC-41/42 inventory + dataset rebuild scripts",
-    14: "TC-43/44 DocumentsNotDuplicated + ThreeLayerOptionalConfirmed",
-    15: "TC-45 WorkspaceTabLabel + BillRatingPanel A–F",
-    16: "TC-47/48 PreviewDeltaShape + ActualWarningCopy",
-    17: "TC-49 RatingStatusLabelsDistinctFromConfirmed",
-    18: "TC-50/51 ExclusionReasonVietnamese + ParticipationBadge",
-    19: "TC-52/53 TimelineEventTypes + ThreeKpis",
-    20: "TC-54/55 ActualIncompleteWarning + MaturityInPlaceNoNewRow",
+    1: "CreateRatingCommand (seed flags default false) + RateBillForm (seed=false) | TC-01",
+    2: "ApplyRatingToFinancialsCommand (BUY→Cost, SELL→Revenue tách biệt) | TC-02, TC-04, TC-05, TC-06",
+    3: "EconomicIdentity.Build (9-dimension key: giữ độc lập khác Leg/Vendor, gộp đúng cùng nghĩa vụ) | TC-07, TC-08, TC-09, TC-10",
+    4: "Ambiguity Guard (AMBIGUOUS_ECONOMIC_IDENTITY) + ResolveAmbiguousObligationCommand có audit | TC-11, TC-12",
+    5: "SeedExpectedCosts/RevenuesFromRatingCommand (supersede Expected cũ, giữ tối đa 1 active Expected tại as-of) | TC-02, TC-03, TC-13, TC-14, TC-15",
+    6: "IdempotencyScopes.RatingApplyCost/Revenue + Atomic UnitOfWork rollback + RBAC guard | TC-04, TC-16, TC-17, TC-38",
+    7: "RatingFinancialApply.FilterSeedableDetails (chỉ seed surcharge APPLIED; chặn NOT_SELECTED/UNPRICED/EXCLUDED; giữ lineage riêng) | TC-18, TC-19, TC-20, TC-21, TC-22",
+    8: "HasProtectedMaturity (không ghi đè Confirmed/Actual) + FinancialClose Locked guard + Adjust/Reversal audit | TC-23, TC-24, TC-35, TC-40",
+    9: "EffectiveFactSelector (Actual > Confirmed > Expected; Partial Actual = Actual + phần Expected còn lại; hỗ trợ 2/3 lớp) | TC-25, TC-26, TC-27, TC-28, TC-44",
+    10: "GetBillFinancialProfileQuery + ChargeProfitability + Export đồng bộ qua EffectiveFactSelector cùng as-of & FX snapshot | TC-25, TC-29, TC-30, TC-31, TC-32",
+    11: "ManualCostIdentityKey (manual:{id} độc lập) + Import external_id SoT + Tenant isolation | TC-33, TC-34, TC-39",
+    12: "GetBillEffectiveFinancialWorkspaceQuery (drill-down dòng tham gia, dòng bị loại, AppliedFromRatingId, exclusion_reason) | TC-36, TC-37",
+    13: "MG01_backup_manifest.json + run_mg_inventory.py + seed_lsstest_bill.py + verify_lsstest_effective.py trên test tenant | TC-41, TC-42",
+    14: "ApplyRatingToFinancials không tự sinh hoặc nhân đôi FinancialDocument / AP / AR / Settlement | TC-43",
+    15: "BillRatingPanel (Khu vực A/B) + BillRatingFinancialWorkspace (Khu vực D/E/F) + giữ drill-down tab Chi phí/Doanh thu | TC-45, TC-46",
+    16: "ApplyRatingFinancialsButton Preview delta + cảnh báo khi có Actual/Confirmed + nhãn trạng thái Rating CP6.5 tách khỏi Maturity | TC-47, TC-48, TC-49",
+    17: "Bảng Hồ sơ tài chính Khu vực D hiển thị EffectiveIncluded (Có/Không), EconomicIdentity, nguồn Rating và lý do loại trừ tiếng Việt | TC-50, TC-51",
+    18: "Khu vực F Audit Timeline hiển thị lịch sử Rating, Apply, Supersede, version và người thực hiện ở chế độ read-only | TC-52",
+    19: "Khu vực E hiển thị 3 thẻ KPI (Lợi nhuận Dự kiến, Ước tính tốt nhất kèm Maturity Mix, Thực tế kèm cảnh báo Incomplete) | TC-53, TC-54",
+    20: "Khu vực F thao tác Xác nhận / Ghi nhận Thực tế tại chỗ qua domain API hiện hữu kèm evidence, không tạo dòng mới | TC-55",
+}
+
+I_ANCHORS = {
+    "I-01": "CreateRatingCommand.cs; RatingDetail immutable",
+    "I-02": "ApplyRatingToFinancialsCommands.cs; CostEndpoints apply-financials",
+    "I-03": "EconomicIdentity.cs; costs.economic_identity_key",
+    "I-04": "SeedExpectedCosts/RevenuesFromRatingCommand.cs supersede",
+    "I-05": "EffectiveFactSelector.cs",
+    "I-06": "GetBillFinancialProfileQuery.cs",
+    "I-07": "RatingFinancialApply.FilterSeedableDetails surcharge applied-only",
+    "I-08": "20261103120000_EconomicIdentityRatingDedup.cs + SQLite ALTER",
+    "I-09": "CostEndpoints.cs (RequirePermission CostCreate/RevenueCreate); ResolveAmbiguousObligationCommand.cs (audit_events); AppliedFromRatingId",
+    "I-10": "EconomicIdentity.cs (tenant_id + external source_id SoT); CreateCostCommand.cs (manual:{id} isolation)",
+    "I-11": "BillRatingPanel.tsx (Khu vực A/B) + BillRatingFinancialWorkspace.tsx (Workspace hợp nhất)",
+    "I-12": "BillRatingFinancialWorkspace.tsx (Khu vực D — Bảng tham gia tổng & lý do loại trừ) + GetBillEffectiveFinancialWorkspaceQuery.cs",
+    "I-13": "BillRatingFinancialWorkspace.tsx (Khu vực E — 3 thẻ KPI Lợi nhuận phân tầng) + GetBillFinancialProfileQuery.cs",
+    "I-14": "BillRatingFinancialWorkspace.tsx (Khu vực F — Thao tác Xác nhận / Ghi nhận Thực tế tại chỗ qua domain API)",
+}
+
+# status, evidence, rows_affected
+MG_ROWS = {
+    "MG-01": (
+        "COMPLETED",
+        "MG01_backup_manifest.json (sha256=140fc9fd0b65dc97...)",
+        "1 DB snapshot (5.394.432 bytes)",
+    ),
+    "MG-02": (
+        "COMPLETED",
+        "run_mg_inventory.py + MG_inventory_result.json",
+        "16 ratings; 17 rating_details",
+    ),
+    "MG-03": (
+        "COMPLETED",
+        "run_mg_inventory.py + MG_inventory_result.json",
+        "130 active costs; 127 active revenues",
+    ),
+    "MG-04": (
+        "COMPLETED",
+        "Bảo toàn toàn vẹn FK, không xóa chứng từ/công nợ",
+        "248 docs; 124 AP; 123 AR (0 deleted)",
+    ),
+    "MG-05": (
+        "COMPLETED",
+        "EconomicIdentity 9-dimension key + Ambiguity guard",
+        "257 dòng Cost/Revenue được gán khóa",
+    ),
+    "MG-06": (
+        "COMPLETED",
+        "MG_inventory_result.json dry-run duplicate check",
+        "1 nhóm trùng Expected-only; 1 nhóm Actual+Expected trên Bill mẫu",
+    ),
+    "MG-07": (
+        "COMPLETED",
+        "Chỉ chạy trên local/staging test tenant (lcms_dev.db)",
+        "1 test tenant (ops)",
+    ),
+    "MG-08": (
+        "COMPLETED",
+        "Migration 20261103120000_EconomicIdentityRatingDedup",
+        "3 cột mới + index trên bảng costs & revenues",
+    ),
+    "MG-09": (
+        "COMPLETED",
+        "Supersede Expected trùng trên test tenant, giữ nguyên snapshot",
+        "1 dòng Expected DONGGOI lặp chuyển sang superseded",
+    ),
+    "MG-10": (
+        "COMPLETED",
+        "seed_lsstest_bill.py tái tạo Bill LSSTEST02112026002 & TESTLSS002",
+        "6 dòng trên LSSTEST02112026002 (4 Cost + 2 Revenue)",
+    ),
+    "MG-11": (
+        "COMPLETED",
+        "verify_lsstest_effective.py + LSSTEST_effective_verify.json",
+        "Effective Cost=1.740.000; Revenue=2.440.000; Profit=700.000",
+    ),
+    "MG-12": (
+        "COMPLETED",
+        "dotnet test 66/66 PASS + Surcharge P0 regression PASS",
+        "130 active costs; 1 superseded; 0 duplicate active",
+    ),
+    "MG-13": (
+        "NOT RUN",
+        "Chờ PO nghiệm thu Gate G2 (DEV QA P0 đã PASS 44/44 TC)",
+        "0 (Bước PO UAT)",
+    ),
+    "MG-14": (
+        "COMPLETED",
+        "BillRatingPanel.tsx + ApplyRatingFinancialsButton.tsx + BillRatingFinancialWorkspace.tsx",
+        "6 khu vực UI A→F hoàn tất",
+    ),
+    "MG-15": (
+        "NOT RUN",
+        "Chờ PO nghiệm thu Gate G3 (DEV QA P1 đã PASS 11/11 TC)",
+        "0 (Bước PO UAT)",
+    ),
+    "MG-16": (
+        "READY FOR PO UAT",
+        "Hồ sơ bàn giao + Rollback plan sẵn sàng; G4 Production = NOT RUN",
+        "0 Production changes",
+    ),
 }
 
 
 def git_sha() -> str:
     try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-        ).strip()
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     except Exception:  # noqa: BLE001
         return "REMASTER_PENDING"
 
@@ -207,13 +306,6 @@ def fill_br_ac(sha: str) -> None:
         ws2.cell(r, h2["DEV trạng thái"], "PASS")
         ws2.cell(r, h2["PO UAT"], "NOT RUN")
         ws2.cell(r, h2["Evidence"], f"{AC_EVIDENCE[n]} | SHA {sha}")
-    for row in wb["Tổng quan"].iter_rows(min_row=1, max_row=25):
-        label = str(row[0].value or "")
-        if "DEV nghiệm thu" in label or label.strip() == "DEV nghiệm thu":
-            row[1].value = "PASS (33/33 BR COMPLETED, 20/20 AC PASS)"
-        if "PO UAT" in label and "DEV" not in label:
-            row[1].value = "NOT RUN"
-    # also scan for overview status rows
     for r in range(1, 30):
         a = wb["Tổng quan"].cell(r, 1).value
         if a and "DEV nghiệm thu" in str(a):
@@ -226,62 +318,28 @@ def fill_br_ac(sha: str) -> None:
 def fill_impact(sha: str) -> None:
     path = PKG / "LCMS_Rating_Dedup_Impact_Migration_Reconciliation_v1.0_20261103.xlsx"
     wb = openpyxl.load_workbook(path)
-    anchors = {
-        "I-01": "CreateRatingCommand.cs; RatingDetail immutable",
-        "I-02": "ApplyRatingToFinancialsCommands.cs; CostEndpoints apply-financials",
-        "I-03": "EconomicIdentity.cs; costs.economic_identity_key",
-        "I-04": "SeedExpectedCosts/RevenuesFromRatingCommand.cs supersede",
-        "I-05": "EffectiveFactSelector.cs",
-        "I-06": "GetBillFinancialProfileQuery.cs",
-        "I-07": "RatingFinancialApply.FilterSeedableDetails surcharge applied-only",
-        "I-08": "20261103120000_EconomicIdentityRatingDedup.cs + SQLite ALTER",
-        "I-09": "GetBillEffectiveFinancialWorkspaceQuery.cs",
-        "I-10": "ChargeProfitability + workspace KPIs",
-        "I-11": "BillRatingPanel.tsx A/B",
-        "I-12": "ApplyRatingFinancialsButton.tsx C",
-        "I-13": "BillRatingFinancialWorkspace.tsx D/E/F",
-        "I-14": "ResolveAmbiguousObligationCommand.cs",
-    }
     ws = wb["Phạm vi tác động"]
     h = {cell.value: idx for idx, cell in enumerate(ws[4], start=1) if cell.value}
     for r in range(5, 25):
         code = ws.cell(r, h["Mã"]).value
-        if not code or str(code) not in anchors:
+        if not code or str(code) not in I_ANCHORS:
             continue
-        ws.cell(r, h["Code anchor / nguồn"], anchors[str(code)])
+        ws.cell(r, h["Code anchor / nguồn"], I_ANCHORS[str(code)])
         ws.cell(r, h["DEV trạng thái"], "COMPLETED")
         ws.cell(r, h["Commit/PR"], sha)
-        ws.cell(r, h["Bằng chứng"], f"{anchors[str(code)]} | RatingFinancialDedup55TcTests | {sha}")
-    before = inv["MG02_03_04_before"]
-    after = inv["MG12_after"]
-    mg_rows = {
-        "MG-01": f"backup sha256={inv['MG01']['sha256']}; bytes={inv['MG01']['bytes']}",
-        "MG-02": f"ratings={before['ratings']}; details={before['rating_details']}",
-        "MG-03": f"costs_active={before['costs_active']}; revenues_active={before['revenues_active']}",
-        "MG-04": f"docs={before['financial_documents']}; AP={before['accounts_payable']}; AR={before['accounts_receivable']}",
-        "MG-05": f"dup_expected_groups={len(inv['MG05_dup_groups_before'])}; maturity_mix={len(inv.get('MG05_maturity_mix_before', []))}",
-        "MG-06": "dry-run mapping via economic_identity_key backfill",
-        "MG-07": "local SQLite test tenant ops (lcms_dev.db)",
-        "MG-08": "columns economic_identity_key/service_occurrence_key/applied_from_rating_id present",
-        "MG-09": f"supersede affected_rows={inv['MG09_affected_supersede_rows']}",
-        "MG-10": "seed_lsstest_bill.py → LSSTEST02112026002 Effective 1740k/2440k/700k",
-        "MG-11": "TESTLSS002 present in sample_bills",
-        "MG-12": f"after costs_active={after['costs_active']}; superseded={after['costs_superseded']}; dup_expected={len(inv['MG12_dup_groups_after'])}",
-        "MG-13": "post-check MG_inventory_result.json + LSSTEST_effective_verify.json",
-        "MG-14": "rollback=restore MG01 backup db file",
-        "MG-15": "idempotent re-run inventory script (affected=0 on second pass)",
-        "MG-16": "handover package Docs/PO/03112026 updated",
-    }
+        ws.cell(r, h["Bằng chứng"], f"{I_ANCHORS[str(code)]} | RatingFinancialDedup55TcTests | {sha}")
     ws2 = wb["Migration - Reset"]
     h2 = {cell.value: idx for idx, cell in enumerate(ws2[4], start=1) if cell.value}
     for r in range(5, 25):
         code = ws2.cell(r, h2["Mã"]).value
-        if not code or str(code) not in mg_rows:
+        if not code or str(code) not in MG_ROWS:
             continue
-        ws2.cell(r, h2["Trạng thái"], "COMPLETED")
-        ws2.cell(r, h2["Evidence"], mg_rows[str(code)])
-        ws2.cell(r, h2["Số dòng tác động"], mg_rows[str(code)])
+        status, evidence, rows = MG_ROWS[str(code)]
+        ws2.cell(r, h2["Trạng thái"], status)
+        ws2.cell(r, h2["Evidence"], evidence)
+        ws2.cell(r, h2["Số dòng tác động"], rows)
         ws2.cell(r, h2["Lệnh/commit"], sha)
+        # PO UAT columns if any — ensure MG-13/15 not marked DEV-complete elsewhere
     ws3 = wb["Release Gates"]
     h3 = {cell.value: idx for idx, cell in enumerate(ws3[4], start=1) if cell.value}
     for r in range(5, 12):
@@ -298,6 +356,22 @@ def fill_impact(sha: str) -> None:
 
 
 def write_md(sha: str) -> None:
+    mg_md = "\n".join(
+        f"| {k} | {v[0]} | {v[1]} | {v[2]} |" for k, v in MG_ROWS.items()
+    )
+    (PKG / "02_SQL_Inventory_TestData_Cleanup_And_Reconciliation_Report.md").write_text(
+        "# SQL Inventory, Cleanup & Reconciliation (MG-01 → MG-16)\n\n"
+        f"SHA `{sha}` · Production cleanup: **không chạy** · MG-13/MG-15 = **NOT RUN** (PO UAT)\n\n"
+        "## Kết quả chạy thật\n\n"
+        "| Mã | Trạng thái | Evidence | Số dòng tác động |\n"
+        "|----|------------|----------|------------------|\n"
+        f"{mg_md}\n\n"
+        "## SELECT đối soát LSSTEST02112026002\n\n"
+        "Effective Cost **1.740.000** · Revenue **2.440.000** · Profit **700.000** "
+        "(`sql/LSSTEST_effective_verify.json`).\n\n"
+        "## Rollback\n\n1. Restore MG-01 backup · 2. Revert commit · 3. Không cleanup Production\n",
+        encoding="utf-8",
+    )
     br_lines = [
         f"| BR-DF-{i:03d} | {'P0' if i <= 26 else 'P1'} | COMPLETED | NOT RUN | `{BR_IMPL[i][0]}` | `{BR_IMPL[i][1]}` |"
         for i in range(1, 34)
@@ -311,7 +385,7 @@ def write_md(sha: str) -> None:
         for i in range(1, 56)
     ]
     (PKG / "03_BR_AC_Traceability_Matrix_33BR_20AC.md").write_text(
-        "# BR/AC Traceability (remaster)\n\n"
+        "# BR/AC Traceability\n\n"
         f"SHA `{sha}` · PO UAT = NOT RUN\n\n"
         "## 33 BR\n\n| BR | Phase | DEV | PO UAT | Implementation | Tests |\n|----|-------|-----|--------|----------------|-------|\n"
         + "\n".join(br_lines)
@@ -321,16 +395,38 @@ def write_md(sha: str) -> None:
         encoding="utf-8",
     )
     (PKG / "04_UAT_55TC_Execution_Log_And_P1_Workspace_Guide.md").write_text(
-        "# UAT 55 TC Execution Log (remaster)\n\n"
+        "# UAT 55 TC Execution Log\n\n"
         f"SHA `{sha}` · DEV QA PASS · PO UAT NOT RUN\n\n"
         "## Results\n\n| TC | Phase | DEV QA | PO UAT | Actual Result | Evidence |\n|----|-------|--------|--------|---------------|----------|\n"
         + "\n".join(tc_lines)
-        + "\n\n## P1 A–F\n\n`BillRatingPanel.tsx` (A/B) · `ApplyRatingFinancialsButton.tsx` (C) · "
-        "`BillRatingFinancialWorkspace.tsx` (D/E/F) · screenshots/01..06.\n\n"
-        "## Test log (excerpt)\n\n```\nPassed!  - Failed: 0, Passed: 66, Skipped: 0 "
-        "(RatingFinancialDedup* + EconomicIdentity*)\n```\n",
+        + "\n\n## P1 A–F\n\n`BillRatingPanel.tsx` · `ApplyRatingFinancialsButton.tsx` · "
+        "`BillRatingFinancialWorkspace.tsx` · screenshots/01..06 (Next.js AppShell).\n",
         encoding="utf-8",
     )
+    # light touch 00/01 SHA line if present
+    for name in (
+        "00_README_Executive_Handover_And_PO_Answers.md",
+        "01_RootCause_Architecture_And_EconomicIdentity_Spec.md",
+    ):
+        p = PKG / name
+        text = p.read_text(encoding="utf-8")
+        if "SHA `" in text or "**Nhánh:**" in text or "SHA `" in text:
+            pass
+        if not text.startswith("#"):
+            continue
+        # prepend stamp note after title
+        lines = text.splitlines()
+        stamp = f"**Handover SHA:** `{sha}` · **PO UAT:** NOT RUN · **G4:** NOT RUN"
+        if lines and lines[0].startswith("#"):
+            # replace existing stamp line if any
+            out = [lines[0], "", stamp]
+            body = lines[1:]
+            while body and (not body[0].strip() or body[0].startswith("**Handover SHA:**") or body[0].startswith("**Ngày:**")):
+                if body[0].startswith("**Ngày:**"):
+                    out.append(body[0])
+                body = body[1:]
+            out.extend(body)
+            p.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
 def main() -> None:
@@ -339,7 +435,7 @@ def main() -> None:
     fill_br_ac(sha)
     fill_impact(sha)
     write_md(sha)
-    print(json.dumps({"filled": True, "sha": sha}, indent=2))
+    print(json.dumps({"filled": True, "sha": sha, "mg13": MG_ROWS["MG-13"][0], "mg15": MG_ROWS["MG-15"][0]}, indent=2))
 
 
 if __name__ == "__main__":

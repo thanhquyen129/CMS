@@ -30,6 +30,10 @@ public class ServiceSelectionDeletedByColumn : Migration
                 """
                 ALTER TABLE service_selection_audits ADD COLUMN deleted_by TEXT NULL;
                 """);
+            migrationBuilder.Sql(
+                """
+                ALTER TABLE surcharge_activation_migration_audits ADD COLUMN deleted_by TEXT NULL;
+                """);
             return;
         }
 
@@ -37,6 +41,7 @@ public class ServiceSelectionDeletedByColumn : Migration
             """
             ALTER TABLE service_selections ADD COLUMN IF NOT EXISTS deleted_by uuid NULL;
             ALTER TABLE service_selection_audits ADD COLUMN IF NOT EXISTS deleted_by uuid NULL;
+            ALTER TABLE surcharge_activation_migration_audits ADD COLUMN IF NOT EXISTS deleted_by uuid NULL;
             """);
     }
 
@@ -54,6 +59,7 @@ public class ServiceSelectionDeletedByColumn : Migration
             """
             ALTER TABLE service_selections DROP COLUMN IF EXISTS deleted_by;
             ALTER TABLE service_selection_audits DROP COLUMN IF EXISTS deleted_by;
+            ALTER TABLE surcharge_activation_migration_audits DROP COLUMN IF EXISTS deleted_by;
             """);
     }
 }

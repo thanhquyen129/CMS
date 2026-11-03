@@ -1,4 +1,8 @@
-﻿## 2026-11-03 — P0: New Bill rating HTTP 500 (service_selections.deleted_by)
+﻿## 2026-11-03 — Gate verify LCMS-UAT-RATING-NEW-BILL-ERROR-01 (EntityBase + smoke + screenshots)
+- EntityBase cols ok trên 3 bảng (incl. `surcharge_activation_migration_audits.deleted_by`). UAT smoke BUY/SELL POST `/api/ratings` 201 + apply ×2 no-double; DEV UI screenshots 01–03 trên Bill `LSSTEST031126001`.
+- Files: `Docs/PO/03112026/LCMS_UAT_Rating_New_Bill_Error_01_Fix/` (README §§4–5, screenshots)
+
+## 2026-11-03 — P0: New Bill rating HTTP 500 (service_selections.deleted_by)
 - Root cause: Postgres 42703 missing `service_selections.deleted_by` (CreateRating soft-delete SELECT). Hotfix ALTER on cms-db + migration `20261103180000` + `NewBillRatingBuySellE2ETests`.
 - Files: `20261103180000_ServiceSelectionDeletedByColumn.cs`, `NewBillRatingBuySellE2ETests.cs`, `Docs/PO/03112026/LCMS_UAT_Rating_New_Bill_Error_01_Fix/`
 

@@ -55,37 +55,145 @@ Migration chính thức mới: `20261103180000_ServiceSelectionDeletedByColumn` 
 Trên Bill mới: nạp Bill + RateVersion OK → tới bước query `ServiceSelections` thì 500.  
 Sau khi có `deleted_by`: CreateRating với `seedExpectedCosts/Revenues = false` lưu `Rating` + `RatingDetail` (base + surcharge buckets) **không** seed Cost/Revenue.
 
-## 4. BUY / SELL độc lập
+## 4. BUY / SELL độc lập — Smoke UAT thực tế (`cms-api` / Bill `LSSTEST031126001`)
 
-Integration test `NewBillRatingBuySellE2ETests`:
+Bill trên `cms-db`: `LSSTEST031126001` id `01a1a0eb-eb40-7923-bca2-e0bb884f5093` (tương đương PO `LSSTEST03112026001`).  
+`seedExpectedCosts=false`, `seedExpectedRevenues=false`, `quantity=120`.
 
-1. Tạo Bill mới (không Rating/Cost/Revenue sẵn).  
-2. Publish RateCard BUY + SELL.  
-3. `POST /api/ratings` BUY `seed*=false` → 200/201, costs=0, revenues=0.  
-4. `POST /api/ratings` SELL `seed*=false` → 200/201, costs=0, revenues=0.  
-5. Apply BUY ×2 + Apply SELL ×2 → Expected sinh ra, **không** tăng count khi Apply lại cùng rating.
+### 4.1 EntityBase column audit (gate chống bẫy Postgres chỉ báo cột đầu)
 
-### Log test (verbatim)
+Đối chiếu đủ thuộc tính `EntityBase`/`TenantEntityBase` (`id`, `tenant_id`, `created_at`, `created_by`, `updated_at`, `updated_by`, `deleted_at`, `deleted_by`, `row_version`) với `information_schema` trên:
 
+- `service_selections` — **ok hết**
+- `service_selection_audits` — **ok hết**
+- `surcharge_activation_migration_audits` — **ok hết** (đã bổ sung `deleted_by` vào migration `20261103180000` + ALTER UAT)
+
+**Không còn cột EntityBase nào MISSING.**
+
+### 4.2 `POST /api/ratings` — CREATE (HTTP 201)
+
+**BUY** (`cost@cms.local`, rateVersion `01a17170-ae29-77f7-844c-8fdc5b3bdb7d`):
+
+```json
+{"id":"01a1a131-d544-77d8-bdac-e824dd458a02"}
 ```
-Passed!  - Failed:     0, Passed:     2, Skipped:     0, Total:     2
-Filter: FullyQualifiedName~NewBillRatingBuySellE2ETests
+HTTP:201
+
+**SELL** (`revenue@cms.local`, rateVersion `01a10a22-29b1-75ef-9607-0b058d95a97a`):
+
+```json
+{"id":"01a1a131-e260-7118-8421-29aac7306afc"}
 ```
+HTTP:201
+
+### 4.3 `GET /api/ratings/{id}` — snapshot (HTTP 200, rút gọn)
+
+**BUY:**
+
+```json
+{
+  "id": "01a1a131-d544-77d8-bdac-e824dd458a02",
+  "billId": "01a1a0eb-eb40-7923-bca2-e0bb884f5093",
+  "rateVersionId": "01a17170-ae29-77f7-844c-8fdc5b3bdb7d",
+  "ratedAt": "2026-11-03T11:36:00.068963+00:00",
+  "currencyCode": "VND",
+  "totalAmount": 1440000.0000,
+  "quantity": 120.0000,
+  "serviceTypeCode": "FREIGHT",
+  "partyTypeCode": "vendor",
+  "routeCode": "SGN-HAN",
+  "status": "completed",
+  "details": [{
+    "ruleCode": "QT0001",
+    "componentCode": "FREIGHT",
+    "financialNature": "cost",
+    "financialMaturity": "expected",
+    "amount": 1440000.0000,
+    "netAmount": 1440000.0000,
+    "vatRate": 8.0000,
+    "vatAmount": 115200.0000,
+    "grossAmount": 1555200.0000
+  }]
+}
+```
+HTTP:200
+
+**SELL:**
+
+```json
+{
+  "id": "01a1a131-e260-7118-8421-29aac7306afc",
+  "billId": "01a1a0eb-eb40-7923-bca2-e0bb884f5093",
+  "rateVersionId": "01a10a22-29b1-75ef-9607-0b058d95a97a",
+  "ratedAt": "2026-11-03T11:36:03.424561+00:00",
+  "currencyCode": "VND",
+  "totalAmount": 2040000.0000,
+  "quantity": 120.0000,
+  "serviceTypeCode": "FREIGHT",
+  "partyTypeCode": "customer",
+  "routeCode": "SGN-HAN",
+  "status": "completed",
+  "details": [{
+    "ruleCode": "BGEMSLOGS_AIR_SGN_HAN_DONGCO",
+    "financialNature": "revenue",
+    "financialMaturity": "expected",
+    "amount": 2040000.0000,
+    "netAmount": 2040000.0000,
+    "vatRate": 8.0000,
+    "vatAmount": 163200.0000,
+    "grossAmount": 2203200.0000
+  }]
+}
+```
+HTTP:200
+
+### 4.4 Apply-financials ×2 — không cộng trùng
+
+**BUY apply 1:**
+
+```json
+{"ratingId":"01a1a131-d544-77d8-bdac-e824dd458a02","direction":"BUY","createdCount":1,"existingCount":0,"factIds":["01a1a131-f690-7578-b21f-0c5c1f3454fa"]}
+```
+HTTP:200
+
+**BUY apply 2 (idempotent):**
+
+```json
+{"ratingId":"01a1a131-d544-77d8-bdac-e824dd458a02","direction":"BUY","createdCount":0,"existingCount":1,"factIds":["01a1a131-f690-7578-b21f-0c5c1f3454fa"]}
+```
+HTTP:200
+
+**SELL apply 1:**
+
+```json
+{"ratingId":"01a1a131-e260-7118-8421-29aac7306afc","direction":"SELL","createdCount":1,"existingCount":0,"factIds":["01a1a131-fee9-723b-b42b-d01135dd9613"]}
+```
+HTTP:200
+
+**SELL apply 2 (idempotent):**
+
+```json
+{"ratingId":"01a1a131-e260-7118-8421-29aac7306afc","direction":"SELL","createdCount":0,"existingCount":1,"factIds":["01a1a131-fee9-723b-b42b-d01135dd9613"]}
+```
+HTTP:200
+
+Integration test `NewBillRatingBuySellE2ETests`: **2/2 PASS**.
 
 ## 5. Hotfix môi trường UAT
 
-Đã chạy trên `cms-db` (Priority 1) **ngay khi xác định RCA**:
+Đã chạy trên `cms-db` (Priority 1) **ngay khi xác định RCA** (+ gate audit EntityBase):
 
 ```sql
 ALTER TABLE service_selections ADD COLUMN IF NOT EXISTS deleted_by uuid NULL;
 ALTER TABLE service_selection_audits ADD COLUMN IF NOT EXISTS deleted_by uuid NULL;
+ALTER TABLE surcharge_activation_migration_audits ADD COLUMN IF NOT EXISTS deleted_by uuid NULL;
 INSERT INTO __ef_migrations_history (migration_id, product_version)
 VALUES ('20261103180000_ServiceSelectionDeletedByColumn', '8.0.0')
 ON CONFLICT DO NOTHING;
 ```
 
-→ **UAT đã mở khóa tính thử** mà không cần chờ image mới (schema-compatible với code đang chạy).  
-Commit code + migration vẫn được ship để môi trường khác / rebuild đồng bộ.
+→ **UAT đã mở khóa tính thử** (smoke BUY/SELL HTTP 201 + UI TryCalculate thành công trên Bill trên).  
+Commit code + migration ship để môi trường khác / rebuild đồng bộ.
 
 ## 6. Commit / File / Deploy
 
@@ -103,4 +211,4 @@ Commit code + migration vẫn được ship để môi trường khác / rebuild
 3. **Tính thử giá BÁN** → tương tự.  
 4. **Áp dụng** BUY rồi SELL (lặp lại) → không cộng trùng Expected.
 
-Screenshots: `screenshots/` (chụp sau khi PO/DEV verify trên UI UAT).
+Screenshots DEV đã verify: `screenshots/01_BUY_TryCalculate_Success.png`, `02_SELL_TryCalculate_Success.png`, `03_Apply_NoDoubleCount.png`.

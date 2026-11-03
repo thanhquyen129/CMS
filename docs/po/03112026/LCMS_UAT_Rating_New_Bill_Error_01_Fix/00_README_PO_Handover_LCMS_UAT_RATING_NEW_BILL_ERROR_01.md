@@ -89,7 +89,7 @@ Commit code + migration vẫn được ship để môi trường khác / rebuild
 
 ## 6. Commit / File / Deploy
 
-- **SHA sửa lỗi:** (stamp sau commit bàn giao)  
+- **SHA sửa lỗi:** 9eb1096c7e55efeb8b2b8a10471cebe8c5aeb822  
 - Files chính:
   - `src/LCMS.Infrastructure/Persistence/Migrations/20261103180000_ServiceSelectionDeletedByColumn.cs`
   - `tests/LCMS.Api.Tests/NewBillRatingBuySellE2ETests.cs`

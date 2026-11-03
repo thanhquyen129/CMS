@@ -1,4 +1,8 @@
-﻿## 2026-11-03 — Rating Dedup final polish (MG-13/15 PO NOT RUN + real Next screenshots)
+﻿## 2026-11-03 — P0: New Bill rating HTTP 500 (service_selections.deleted_by)
+- Root cause: Postgres 42703 missing `service_selections.deleted_by` (CreateRating soft-delete SELECT). Hotfix ALTER on cms-db + migration `20261103180000` + `NewBillRatingBuySellE2ETests`.
+- Files: `20261103180000_ServiceSelectionDeletedByColumn.cs`, `NewBillRatingBuySellE2ETests.cs`, `Docs/PO/03112026/LCMS_UAT_Rating_New_Bill_Error_01_Fix/`
+
+## 2026-11-03 — Rating Dedup final polish (MG-13/15 PO NOT RUN + real Next screenshots)
 - MG-13/MG-15 = NOT RUN (PO); AC/TC/I anchors corrected; HTML fixture removed; 6 screenshots from Next `/dev/rating-workspace-preview`. PO UAT NOT RUN; G4 NOT RUN.
 - Files: `scripts/fill_rating_dedup_handover_evidence.py`, `RatingDedupWorkspacePreview.tsx`, `Docs/PO/03112026/LCMS_Rating_Financial_Dedup_P0P1_v1.0_20261103/`
 

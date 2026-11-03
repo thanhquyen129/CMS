@@ -1,7 +1,7 @@
 # Executive Handover — LCMS-CR-RATING-FINANCIAL-DEDUP-01 (v1.0)
 
 **Ngày:** 03/11/2026  
-**Nhánh:** `main` (SHA cập nhật sau commit bàn giao)  
+**Nhánh:** `main` (af5b81a471e23fa103be3ba734af282db29392a2)  
 **DEV QA:** PASS (logic + automated suite dedup) · **PO UAT:** NOT RUN · **G4 Production:** NOT RUN
 
 ## Tóm tắt điều hành
@@ -11,7 +11,7 @@ P0 sửa gốc: tách **Tính thử** khỏi **Áp dụng**; `EconomicIdentity` 
 ## Trả lời 7 mục bàn giao PO (Mục 11 BA)
 
 1. **Root Cause & Scope** — Seed/idempotency theo `rating_detail_id` tạo Cost mới mỗi lần tính; profile `SUM` mọi dòng `active` → FREIGHT Actual + FREIGHT Expected (+ DONGGOI ×2) = 3.480.000đ. Scope: Rating apply/seed, Cost/Revenue identity, Bill financial totals, UI apply. Không đổi policy activation surcharge UAT OPEN.
-2. **Changelog & SHA** — ADR-0043; migration `20261103120000_EconomicIdentityRatingDedup`; Apply/Preview API; Seed supersede; EffectiveFactSelector; RateBillForm tính thử không seed. SHA: xem git log commit bàn giao.
+2. **Changelog & SHA** — ADR-0043; migration `20261103120000_EconomicIdentityRatingDedup`; Apply/Preview API; Seed supersede; EffectiveFactSelector; RateBillForm tính thử không seed. SHA: af5b81a471e23fa103be3ba734af282db29392a2.
 3. **SQL inventory & cleanup** — Script `sql/reconcile_rating_financial_dedup.sql` (MG-02/03/05/09). Cleanup chỉ tenant test; backup bắt buộc trước chạy UPDATE. Chi tiết: `02_SQL_Inventory_...`.
 4. **33 BR / 20 AC / 55 TC** — DEV = COMPLETED/PASS trên Excel cập nhật trong thư mục này; **PO UAT = NOT RUN** trên mọi dòng. Blocker logic TC-02/03/23/25/26/30 covered by `RatingFinancialDedupP0Tests` + selector tests.
 5. **Staging & PO UAT** — Local/Staging only. Bước: mở Bill → tab Tính giá & Tài chính → Tính thử BUY/SELL → Xem trước → Áp dụng (idempotency) → đối soát Chi phí/Doanh thu/Profit Best Available. Không Production.

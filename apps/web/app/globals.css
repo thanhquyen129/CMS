@@ -5515,3 +5515,13 @@ html[data-layout="horizontal"] .login-page {
 .opref-cw-value.is-missing { color: var(--warning-ink); font-size: 1rem; }
 .readiness-list { margin: 0.35rem 0 0; padding-left: 1.1rem; }
 .readiness-list li { margin: 0.2rem 0; }
+.field.field-has-error label {
+  color: #dc2626 !important;
+}
+
+.field.field-has-error input:not([type="checkbox"]):not([type="radio"]),
+.field.field-has-error select,
+.field.field-has-error textarea {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 1px #dc2626 !important;
+}

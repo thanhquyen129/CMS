@@ -1,6 +1,7 @@
 # TRUY VẾT QUY TẮC NGHIỆP VỤ (BR), TIÊU CHÍ NGHIỆM THU (AC) & KẾT QUẢ KIỂM THỬ (UAT)
 **Mã Issue Delta:** `LCMS-UAT-SUR-OPTIONAL-SERVICE-CODE-01` | **Gói BA cha:** `LCMS-CR-SURCHARGE-APPLICATION-01`  
-**Phiên bản:** `v1.0 (04/11/2026)` | **Mục tiêu chất lượng:** `100/100 Điểm — Commercial-Ready Product`
+**Phiên bản:** `v1.0 (04/11/2026)` | **Mục tiêu chất lượng:** `100/100 Điểm — Commercial-Ready Product`  
+**Nhánh Git & Mã Commit:** Nhánh `main` | Commit SHA: `ebca45025385c88681f37e8fcb2ab9599478b881`
 
 ---
 

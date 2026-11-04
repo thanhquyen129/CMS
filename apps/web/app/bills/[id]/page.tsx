@@ -15,6 +15,8 @@ import { FieldOwnershipPanel } from "@/components/FieldOwnershipPanel";
 import { OperationalContextGrid } from "@/components/OperationalContextGrid";
 import { OperationalReferenceEditor } from "@/components/OperationalReferenceEditor";
 import { PartySnapshotPanel } from "@/components/PartySnapshotPanel";
+import { ServiceSelectionPanel, type ServiceOption } from "@/components/ServiceSelectionPanel";
+import { listOptionalServiceOptions } from "@/lib/rate-cards-server";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { term, type TerminologyMap } from "@/lib/terminology";
@@ -348,7 +350,7 @@ export default async function BillDetailPage({
   const revenueLabel = term(terms, "REVENUE", "Doanh thu");
   const docLabel = term(terms, "FINANCIAL_DOCUMENT", "Chứng từ");
 
-  const [billRes, profileRes, profitRes, chargeRes, costsRes, revenuesRes, apRes, arRes, docsRes] =
+  const [billRes, profileRes, profitRes, chargeRes, costsRes, revenuesRes, apRes, arRes, docsRes, optionalRes] =
     await Promise.all([
       getBill(id),
       getFinancialProfile(id, asOf || null),
@@ -359,7 +361,18 @@ export default async function BillDetailPage({
       listAccountsPayable(),
       listAccountsReceivable(),
       listFinancialDocuments({ billId: id }),
+      listOptionalServiceOptions(),
     ]);
+
+  const optionalOptions: ServiceOption[] = optionalRes.ok
+    ? optionalRes.data.map((row) => ({
+        serviceCode: row.serviceCode,
+        name: row.name,
+        selectionScope: row.selectionScope,
+        hasBuyPrice: row.hasBuyPrice,
+        hasSellPrice: row.hasSellPrice,
+      }))
+    : [];
 
   if (!billRes.ok && billRes.status === 404) {
     return (
@@ -538,6 +551,12 @@ export default async function BillDetailPage({
                 ratingHref={`${tabHref("rating")}#bill-rating`}
               />
             </div>
+            <ServiceSelectionPanel
+              contextType="BILL"
+              contextId={bill.id}
+              options={optionalOptions}
+              title="Dịch vụ bổ sung"
+            />
             <FieldOwnershipPanel objectType="bill" objectId={bill.id} />
             <h2 className="section-title">Snapshot đối tác</h2>
             <PartySnapshotPanel billId={bill.id} />

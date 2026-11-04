@@ -386,11 +386,14 @@ export function SurchargeForm({
         {activationPolicy === "OPTIONAL_OPT_IN" ? (
           <>
             <div className={`field ${fieldErrors.service_code ? "field-has-error" : ""}`}>
-              <label htmlFor="serviceCode">Dịch vụ kích hoạt <span className="req">*</span></label>
+              <label htmlFor="serviceCode" style={fieldErrors.service_code ? { color: "#dc2626", fontWeight: 600 } : undefined}>
+                Dịch vụ kích hoạt <span className="req">*</span>
+              </label>
               <select
                 id="serviceCode"
                 name="serviceCode"
                 value={serviceCode}
+                style={fieldErrors.service_code ? { borderColor: "#dc2626", borderWidth: "2px", boxShadow: "0 0 0 1px #dc2626" } : undefined}
                 onChange={(e) => {
                   setServiceCode(e.target.value);
                   setFieldErrors((prev) => ({ ...prev, service_code: "" }));
@@ -404,9 +407,12 @@ export function SurchargeForm({
                   </option>
                 ))}
               </select>
+              <div className="muted small" style={{ marginTop: "0.25rem" }}>
+                Danh mục kích hoạt chuẩn Tenant: <strong>DONGGOI</strong> (Đóng gói) · <strong>KIEMDEM</strong> (Kiểm đếm) · <strong>NANGHA</strong> (Nâng hạ)
+              </div>
               {fieldErrors.service_code ? (
                 <div id="service_code_error" className="field-error" style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem", fontWeight: 600 }}>
-                  {fieldErrors.service_code}
+                  ⚠️ {fieldErrors.service_code}
                 </div>
               ) : !serviceCode ? (
                 <div className="alert alert-warning sm" style={{ marginTop: "0.25rem", padding: "0.35rem 0.5rem", fontSize: "0.85rem" }}>

@@ -36,49 +36,73 @@ public sealed class ListOptionalServiceOptionsQueryHandler
             throw new TenantRequiredAppException();
         }
 
+        var catalogItems = await _db.MasterCatalogItems.AsNoTracking()
+            .Where(m => m.Kind == MasterCatalogKinds.OptionalService && m.IsActive)
+            .OrderBy(m => m.SortOrder)
+            .ThenBy(m => m.Code)
+            .ToListAsync(cancellationToken);
+
+        var byCode = new Dictionary<string, OptionalServiceOptionDto>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in catalogItems)
+        {
+            var attr = OptionalServiceAttributesParser.Parse(item.AttributesJson);
+            var scope = attr.AllowedContextTypes.Contains(ServiceSelectionContexts.Bill, StringComparer.OrdinalIgnoreCase)
+                ? ServiceSelectionContexts.Bill
+                : attr.AllowedContextTypes.FirstOrDefault() ?? ServiceSelectionContexts.Bill;
+
+            byCode[item.Code] = new OptionalServiceOptionDto(
+                item.Code,
+                item.Name,
+                scope,
+                HasBuyPrice: false,
+                HasSellPrice: false);
+        }
+
         var versions = await _db.SurchargeVersions.AsNoTracking()
             .Where(v => v.PublishStatus == SurchargeVersionStatuses.Published
                         && v.ActivationPolicy == SurchargeActivationPolicies.OptionalOptIn)
             .ToListAsync(cancellationToken);
-        if (versions.Count == 0)
+
+        if (versions.Count > 0)
         {
-            return [];
-        }
+            var surchargeIds = versions.Select(v => v.SurchargeId).Distinct().ToList();
+            var masters = await _db.Surcharges.AsNoTracking()
+                .Where(s => surchargeIds.Contains(s.Id) && s.Status == SurchargeStatuses.Active)
+                .ToListAsync(cancellationToken);
 
-        var surchargeIds = versions.Select(v => v.SurchargeId).Distinct().ToList();
-        var masters = await _db.Surcharges.AsNoTracking()
-            .Where(s => surchargeIds.Contains(s.Id) && s.Status == SurchargeStatuses.Active)
-            .ToListAsync(cancellationToken);
-
-        var catalogItems = await _db.MasterCatalogItems.AsNoTracking()
-            .Where(m => m.Kind == MasterCatalogKinds.OptionalService && m.IsActive)
-            .ToListAsync(cancellationToken);
-        var catalogByCode = catalogItems.ToDictionary(m => m.Code, StringComparer.OrdinalIgnoreCase);
-
-        var byCode = new Dictionary<string, OptionalServiceOptionDto>(StringComparer.OrdinalIgnoreCase);
-        foreach (var master in masters)
-        {
-            var related = versions.Where(v => v.SurchargeId == master.Id).ToList();
-            foreach (var version in related)
+            foreach (var master in masters)
             {
-                var config = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
-                var code = config.ServiceCode ?? master.Code;
-                var scope = config.SelectionScope ?? ServiceSelectionContexts.Bill;
+                var related = versions.Where(v => v.SurchargeId == master.Id).ToList();
+                foreach (var version in related)
+                {
+                    var config = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
+                    var code = config.ServiceCode ?? master.Code;
+                    var scope = config.SelectionScope ?? ServiceSelectionContexts.Bill;
 
-                catalogByCode.TryGetValue(code, out var cat);
-                var displayName = cat?.Name ?? master.Name;
+                    var buy = string.Equals(master.Direction, SurchargeDirections.Buy, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(master.Direction, SurchargeDirections.Both, StringComparison.OrdinalIgnoreCase);
+                    var sell = string.Equals(master.Direction, SurchargeDirections.Sell, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(master.Direction, SurchargeDirections.Both, StringComparison.OrdinalIgnoreCase);
 
-                byCode.TryGetValue(code, out var existing);
-                var buy = string.Equals(master.Direction, SurchargeDirections.Buy, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(master.Direction, SurchargeDirections.Both, StringComparison.OrdinalIgnoreCase);
-                var sell = string.Equals(master.Direction, SurchargeDirections.Sell, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(master.Direction, SurchargeDirections.Both, StringComparison.OrdinalIgnoreCase);
-                byCode[code] = new OptionalServiceOptionDto(
-                    code,
-                    displayName,
-                    scope,
-                    (existing?.HasBuyPrice ?? false) || buy,
-                    (existing?.HasSellPrice ?? false) || sell);
+                    if (byCode.TryGetValue(code, out var existing))
+                    {
+                        byCode[code] = existing with
+                        {
+                            SelectionScope = string.IsNullOrWhiteSpace(existing.SelectionScope) ? scope : existing.SelectionScope,
+                            HasBuyPrice = existing.HasBuyPrice || buy,
+                            HasSellPrice = existing.HasSellPrice || sell
+                        };
+                    }
+                    else
+                    {
+                        byCode[code] = new OptionalServiceOptionDto(
+                            code,
+                            master.Name,
+                            scope,
+                            buy,
+                            sell);
+                    }
+                }
             }
         }
 

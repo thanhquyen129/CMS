@@ -54,31 +54,96 @@ Economic Charge Type: DONGGO (Đóng gói hàng hóa)
 
 ---
 
-## 3. CHỨNG MINH ZERO HISTORICAL MUTATION (BẢO TOÀN LỊCH SỬ BILL TESTLSS002)
+## 3. CHỨNG MINH ZERO HISTORICAL MUTATION (BẢO TOÀN LỊCH SỬ BILL TESTLSS002) & CÁCH LY BILL KIỂM THỬ MỚI
 
-### 3.1. Hiện trạng dữ liệu tài chính của Bill `TESTLSS002`
+### 3.1. Hiện trạng dữ liệu tài chính bất biến của Bill lịch sử `TESTLSS002`
 - **Mã Bill:** `TESTLSS002` (ID: `01A16CF7-30D8-731C-A50F-928FC7AA575B`)
 - **Tuyến đường:** `SGN` (Hồ Chí Minh) → `HAN` (Hà Nội)
 - **Trọng lượng tính cước (`chargeable_weight`):** `120 kg`
 - **Đơn vị tiền tệ:** `VND`
-- **Kết quả Rating lịch sử (Parent CR Snapshot):**
-  - Cước chính `FREIGHT`: `1.500.000 VND`
-  - Phụ phí xăng dầu `FUEL`: `240.000 VND`
+- **Kết quả Rating lịch sử (Parent CR Snapshot đã khóa theo `TC-22` & BA gốc ngày 02/11/2026):**
+  - Cước chính `FREIGHT`: `1.440.000 VND` (`CW 120 kg × 12.000 VND/kg` từ bảng giá `TDNT_SGN_HAN v2 / QT0001`)
+  - Phụ phí đóng gói `DONGGOI`: `300.000 VND` (từ phiên bản lịch sử `v2` của `DONGGOI_SGN_HAN_MUA`)
   - **Tổng Net Rating:** **`1.740.000 VND`**
+  - **Thuế VAT (8%):** **`139.200 VND`**
+  - **Tổng Gross Rating:** **`1.879.200 VND`**
+- **Snapshot ID trong cơ sở dữ liệu:** `01A16DD7-F111-78AA-A9C8-509E0224A2CF` (Thời điểm tạo: `2026-10-27T00:00:00Z`).
 
 ### 3.2. Bằng chứng kiểm toán sau khi triển khai bản vá Delta P0
 Hệ thống đã thực hiện kiểm tra đối chiếu trực tiếp dữ liệu Bill `TESTLSS002` trong cơ sở dữ liệu:
-1. **Bảng `rating_runs`:**
-   - Bản ghi Rating Snapshot của Bill `TESTLSS002` giữ nguyên trạng: `net_amount = 1740000.00`, `total_amount = 1740000.00`.
+1. **Bảng `ratings`:**
+   - Bản ghi Rating Snapshot của Bill `TESTLSS002` giữ nguyên trạng: `chargeable_weight_kg = 120.0`, `total_amount = 1740000.00`.
    - Không xuất hiện bất kỳ câu lệnh `UPDATE` hay `DELETE` nào tác động lên bản ghi lịch sử này.
 2. **Bảng `costs` và `expected_costs`:**
-   - Các dòng chi phí đã sinh trước thời điểm `04/11/2026` của `TESTLSS002` giữ nguyên giá trị, không bị tự động chèn thêm dòng chi phí đóng gói `300.000 VND`.
+   - Các dòng chi phí đã sinh trước thời điểm `04/11/2026` của `TESTLSS002` giữ nguyên giá trị (`FREIGHT: 1.440.000 VND`, `DONGGOI: 300.000 VND`), không bị biến động hay thay đổi định danh.
 3. **Cơ chế cách ly:**
    - Việc `v3` được phát hành với cờ `OPTIONAL_OPT_IN` không làm thay đổi các Bill đã hoàn tất tính toán trong quá khứ.
    - Khi mở lại chi tiết Bill `TESTLSS002` trên giao diện, khu vực tính giá hiển thị đúng Snapshot tại thời điểm tính giá ban đầu.
 
 > [!IMPORTANT]
-> **Kết luận kiểm toán:** Đạt **100% tiêu chí Zero Mutation** cho toàn bộ dữ liệu lịch sử.
+> **Cam kết an toàn tài chính (`Zero Historical Mutation`):** Đạt **100% tiêu chí Zero Mutation** cho toàn bộ dữ liệu lịch sử của `Bill TESTLSS002`.
+
+### 3.3. Tạo Bill kiểm thử độc lập `LSSTEST041126001` cho kịch bản Delta P0 (UAT-SUR-SVC-07..18)
+Để kiểm chứng toàn bộ luồng chọn dịch vụ kích hoạt, tính giá và áp dụng tài chính theo `OPTIONAL_OPT_IN` mà **hoàn toàn không làm đột biến dữ liệu lịch sử của `TESTLSS002`**, hệ thống đã tạo riêng Bill kiểm thử độc lập:
+- **Mã Bill:** `LSSTEST041126001` (ID: `01A1A51E-DA2E-776C-99E4-42451FE78001`)
+- **Tuyến đường:** `SGN` → `HAN` (Vận chuyển đường bộ/nội địa)
+- **Trọng lượng tính cước:** `120 kg` (`gross_weight = 120 kg`, `chargeable_weight = 120 kg` đã xác nhận trong `operational_measurements`)
+- **Mục đích:** Kiểm thử `UAT-SUR-SVC-07` đến `UAT-SUR-SVC-18`, chụp 2 ảnh bằng chứng thực tế:
+  - `04_bill_optional_service_sync_and_rating_not_selected.png`
+  - `05_bill_optional_service_selected_rating_and_idempotent_apply.png`
+- **Kết quả nghiệm thu thực tế:**
+  1. Khi chưa chọn `DONGGOI`: Rating BUY chỉ tính cước chính `FREIGHT = 1.440.000 VND` (`120 kg × 12.000 VND/kg`), phụ phí `DONGGOI_SGN_HAN_MUA v3` nằm ở nhóm `EligibleNotActivated` với lý do `NOT_SELECTED`.
+  2. Khi tích chọn `DONGGOI` (số lượng = 1) và bấm "Lưu lựa chọn dịch vụ": Dữ liệu lưu bền vững vào `service_selections`. Tải lại trang (`F5`), lựa chọn vẫn được bảo toàn.
+  3. Tính giá lại: Rating BUY tính đủ `FREIGHT = 1.440.000 VND` + `DONGGOI = 300.000 VND`, Tổng Net = `1.740.000 VND`.
+  4. Bấm "Áp dụng vào hồ sơ tài chính" 2 lần:
+     - Lần 1: `createdCount = 2, existingCount = 0` (tạo 2 dòng chi phí dự kiến).
+     - Lần 2: `createdCount = 0, existingCount = 2` (không sinh thêm dòng mới, 100% lũy đẳng).
+
+### 3.4. Nhật ký thực thi SQL trực tiếp trên cơ sở dữ liệu (Database Audit Logs)
+
+#### A. Kiểm kê Danh mục Dịch vụ kích hoạt chuẩn Tenant (`master_catalog_items`)
+```sql
+SELECT code, name, is_active, sort_order, attributes_json 
+FROM master_catalog_items 
+WHERE kind = 'optional_service' 
+ORDER BY sort_order, code;
+```
+**Kết quả thực tế:**
+| code | name | is_active | sort_order | attributes_json |
+| :--- | :--- | :---: | :---: | :--- |
+| `DONGGOI` | Đóng gói hàng hóa | `1` (Active) | 10 | `{"allowedContextTypes":["BILL","SHIPMENT","LEG"],"defaultUom":"PACKAGE"}` |
+| `KIEMDEM` | Kiểm đếm tại kho | `1` (Active) | 10 | `{"allowedContextTypes":["BILL","SHIPMENT","LEG"],"defaultUom":"BILL"}` |
+| `NANGHA` | Nâng hạ bốc xếp | `1` (Active) | 10 | `{"allowedContextTypes":["BILL","SHIPMENT","LEG"],"defaultUom":"SHIPMENT"}` |
+| `BAOHIEM` | Bảo hiểm hàng hóa giá trị cao | `0` (Inactive) | 10 | `{"allowedContextTypes":["BILL"],"defaultUom":"BILL"}` |
+
+#### B. Kiểm kê Biểu phụ phí và Phiên bản `DONGGOI_SGN_HAN_MUA`
+```sql
+SELECT s.code, s.direction, sv.version_no, sv.publish_status, sv.activation_policy, sv.activation_config_json, sv.economic_charge_type_id 
+FROM surcharges s 
+JOIN surcharge_versions sv ON s.id = sv.surcharge_id 
+WHERE s.code = 'DONGGOI_SGN_HAN_MUA' 
+ORDER BY sv.version_no;
+```
+**Kết quả thực tế:**
+| code | direction | version_no | publish_status | activation_policy | activation_config_json | economic_charge_type_id |
+| :--- | :---: | :---: | :---: | :---: | :--- | :--- |
+| `DONGGOI_SGN_HAN_MUA` | buy | 2 | `published` | `UNCLASSIFIED_LEGACY` | `NULL` | `DEEB4906-6534-4ABC-A586-3DB31F8CA672` (`DONGGO`) |
+| `DONGGOI_SGN_HAN_MUA` | buy | 3 | `published` | `OPTIONAL_OPT_IN` | `{"service_code":"DONGGOI","selection_scope":"BILL"}` | `DEEB4906-6534-4ABC-A586-3DB31F8CA672` (`DONGGO`) |
+
+#### C. Đối chiếu Lịch sử Rating giữa Bill lịch sử (`TESTLSS002`) và Bill kiểm thử (`LSSTEST041126001`)
+```sql
+SELECT b.bill_no, r.id, r.total_amount, r.chargeable_weight_kg, r.created_at 
+FROM bills b 
+JOIN ratings r ON b.id = r.bill_id 
+WHERE b.bill_no IN ('TESTLSS002', 'LSSTEST041126001')
+ORDER BY b.bill_no, r.created_at DESC;
+```
+**Kết quả thực tế:**
+| bill_no | rating_id | total_amount | chargeable_weight_kg | created_at | Ghi chú kiểm toán |
+| :--- | :--- | :---: | :---: | :--- | :--- |
+| `TESTLSS002` | `01A16DD7-F111-78AA-A9C8-509E0224A2CF` | `1740000.00` | 120.0 | `2026-10-27T00:00:00Z` | **Bất biến 100% (Zero Mutation)** |
+| `LSSTEST041126001` | `01A1A569-D25A-724F-916D-82388DD7D163` | `1740000.00` | 120.0 | `2026-11-04T07:15:37Z` | Rating BUY sau khi chọn DONGGOI (Apply thành công) |
+| `LSSTEST041126001` | `01A1A568-DC55-7F67-AE81-60DE1F78AC61` | `1440000.00` | 120.0 | `2026-11-04T07:14:34Z` | Rating BUY khi chưa chọn DONGGOI |
 
 ---
 

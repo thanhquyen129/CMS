@@ -43,10 +43,12 @@ export function ServiceSelectionPanel({
   contextType,
   contextId,
   options,
+  title = "Dịch vụ / Phụ phí tùy chọn",
 }: {
   contextType: "BILL" | "SHIPMENT" | "LEG";
   contextId: string;
   options: ServiceOption[];
+  title?: string;
 }) {
   const [rows, setRows] = useState<SelectionRow[]>([]);
   const [audits, setAudits] = useState<AuditRow[]>([]);
@@ -131,15 +133,15 @@ export function ServiceSelectionPanel({
   if (options.length === 0) {
     return (
       <div className="panel" id="optional-services">
-        <h3 className="section-title sm">Dịch vụ / Phụ phí tùy chọn</h3>
-        <p className="muted">Chưa có phụ phí OPTIONAL_OPT_IN đang phát hành cho thuê bao này.</p>
+        <h3 className="section-title sm">{title}</h3>
+        <p className="muted">Chưa có dịch vụ bổ sung đang kích hoạt cho thuê bao này.</p>
       </div>
     );
   }
 
   return (
     <div className="panel stack" id="optional-services" style={{ marginTop: "1rem" }}>
-      <h3 className="section-title sm">Dịch vụ / Phụ phí tùy chọn</h3>
+      <h3 className="section-title sm">{title}</h3>
       <p className="note">
         Mặc định không tích chọn. Chỉ sau khi bấm <strong>Lưu lựa chọn dịch vụ</strong> hệ thống mới kích hoạt phụ phí khi tính giá.
         {dirtyCount > 0 ? ` · ${dirtyCount} thay đổi chưa lưu` : ""}

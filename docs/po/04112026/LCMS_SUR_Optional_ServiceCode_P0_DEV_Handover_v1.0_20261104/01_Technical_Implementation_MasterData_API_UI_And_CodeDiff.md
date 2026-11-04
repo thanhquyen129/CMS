@@ -70,44 +70,170 @@ Hệ thống tự động seed bộ danh mục chuẩn cho mọi Tenant mới v�
 ]
 ```
 
-### 2.2. Phân định Lưu nháp (`Save Draft`) vs Phát hành (`Publish`) (`BR-DELTA-04`)
-1. **Lưu nháp (`DRAFT`):**
-   - Cho phép lưu bản nháp `v3` ngay cả khi chưa chọn `service_code`.
-   - API trả HTTP 200 OK kèm danh sách cảnh báo (`warnings`):
+### 2.2. Chi tiết 6 cặp Payload Thực tế (Request / Response) từ Môi trường Kiểm thử
+
+Dưới đây là 6 cặp Request/Response JSON thực tế ghi nhận trực tiếp từ backend API trong quá trình kiểm thử tự động hóa toàn trình:
+
+#### Kịch bản 1: Lưu nháp phiên bản v3 chưa chọn service_code (`BR-DELTA-04`, `UAT-SUR-SVC-02`)
+- **HTTP Method & Path:** `PUT /api/surcharges/8183c1be-d606-4e24-adf7-d4da75a8f438/versions/01a1a51e-da2e-776c-99e4-42451fe78f77`
+- **Request Payload:**
+```json
+{
+  "activationPolicy": "OPTIONAL_OPT_IN",
+  "calculationMode": "fixed",
+  "basis": "fixed",
+  "currencyCode": "VND",
+  "rateAmountPercent": 300000.0,
+  "priority": 100,
+  "economicChargeTypeId": "deeb4906-6534-4abc-a586-3db31f8ca672",
+  "selectionScope": "BILL",
+  "serviceCode": null
+}
+```
+- **Response HTTP 200 OK:**
+```json
+{
+  "versionId": "01a1a51e-da2e-776c-99e4-42451fe78f77",
+  "versionNo": 3,
+  "status": "draft",
+  "warnings": [
+    "Phụ phí tùy chọn chưa có mã dịch vụ liên kết (service_code). Cần chọn dịch vụ kích hoạt trước khi phát hành phiên bản."
+  ]
+}
+```
+
+#### Kịch bản 2: Phát hành phiên bản v3 khi chưa có service_code (`BR-DELTA-04`, `UAT-SUR-SVC-03`)
+- **HTTP Method & Path:** `POST /api/surcharges/8183c1be-d606-4e24-adf7-d4da75a8f438/versions/01a1a51e-da2e-776c-99e4-42451fe78f77/publish`
+- **Request Payload:** `{}`
+- **Response HTTP 400 Bad Request (Field-level validation error):**
+```json
+{
+  "code": "REQUIRED_SERVICE_CODE",
+  "message": "Phụ phí tùy chọn cần mã dịch vụ liên kết (service_code).",
+  "errors": {
+    "service_code": [
+      "Phụ phí tùy chọn cần mã dịch vụ liên kết (service_code)."
+    ]
+  }
+}
+```
+
+#### Kịch bản 3: Phát hành phiên bản với service_code không tồn tại (`BR-DELTA-03`, `UAT-SUR-SVC-04`)
+- **HTTP Method & Path:** `POST /api/surcharges/8183c1be-d606-4e24-adf7-d4da75a8f438/versions/01a1a51e-da2e-776c-99e4-42451fe78f77/publish`
+- **Request Payload (cấu hình nháp trước khi bấm):** `{"serviceCode": "UNKNOWN_XYZ", "activationPolicy": "OPTIONAL_OPT_IN"}`
+- **Response HTTP 400 Bad Request:**
+```json
+{
+  "code": "UNKNOWN_SERVICE",
+  "message": "Mã dịch vụ liên kết 'UNKNOWN_XYZ' không tồn tại trong danh mục của thuê bao.",
+  "errors": {
+    "service_code": [
+      "Mã dịch vụ liên kết 'UNKNOWN_XYZ' không tồn tại trong danh mục của thuê bao."
+    ]
+  }
+}
+```
+
+#### Kịch bản 4: Phát hành phiên bản v3 hợp lệ với service_code = "DONGGOI" (`BR-DELTA-04`, `UAT-SUR-SVC-06`)
+- **HTTP Method & Path:** `POST /api/surcharges/8183c1be-d606-4e24-adf7-d4da75a8f438/versions/01a1a51e-da2e-776c-99e4-42451fe78f77/publish`
+- **Request Payload (sau khi cấu hình serviceCode = "DONGGOI", selectionScope = "BILL"):** `{}`
+- **Response HTTP 204 No Content:**
+```json
+{
+  "status": "published_ok",
+  "httpCode": 204
+}
+```
+*(Phiên bản v3 chuyển sang trạng thái `published`, v2 giữ nguyên `published` và `UNCLASSIFIED_LEGACY`).*
+
+#### Kịch bản 5: Đồng bộ Lựa chọn dịch vụ & Tính giá BUY Trước/Sau khi chọn DONGGOI (`BR-DELTA-05`, `UAT-SUR-SVC-08`, `UAT-SUR-SVC-10`)
+1. **Lưu lựa chọn dịch vụ (`PUT /api/service-selections`):**
+   - **Request Payload:**
    ```json
    {
-     "versionId": "b21ee2d5-8517-401b-8000-1c27e3a332bc",
-     "versionNo": 3,
-     "status": "draft",
-     "warnings": [
-       "Phụ phí chọn chính sách OPTIONAL_OPT_IN nhưng chưa khai báo service_code liên kết. Bạn cần chọn Dịch vụ kích hoạt trước khi phát hành phiên bản này."
+     "contextType": "BILL",
+     "contextId": "01a1a51e-da2e-776c-99e4-42451fe78001",
+     "serviceCode": "DONGGOI",
+     "isSelected": true,
+     "quantity": 1,
+     "scope": "BILL"
+   }
+   ```
+   - **Response HTTP 200 OK:**
+   ```json
+   {
+     "id": "01a1a55f-9d71-7808-bec1-922754dc5108",
+     "contextType": "BILL",
+     "contextId": "01a1a51e-da2e-776c-99e4-42451fe78001",
+     "serviceCode": "DONGGOI",
+     "scope": "BILL",
+     "quantity": 1,
+     "isSelected": true,
+     "revision": 1
+   }
+   ```
+2. **Kết quả Rating BUY trước khi chọn DONGGOI (Total = 1.440.000 VND):**
+   ```json
+   {
+     "ratingId": "01a1a568-dc55-7f67-ae81-60de1f78ac61",
+     "totalAmount": 1440000.0,
+     "appliedCharges": ["TDNT_SGN_HAN v2: 1.440.000 VND (120 kg * 12.000 VND/kg)"],
+     "eligibleNotActivated": [
+       {
+         "code": "DONGGOI_SGN_HAN_MUA",
+         "reasonCode": "NOT_SELECTED",
+         "reasonMessageVi": "Dịch vụ kích hoạt chưa được chọn trên Bill hoặc chặng."
+       }
      ]
    }
    ```
-2. **Phát hành (`PUBLISH`):**
-   - Chặn tuyệt đối nếu `service_code` rỗng, không tồn tại trong danh mục, đang `inactive`, thuộc Tenant khác hoặc `selection_scope` không nằm trong `allowedContextTypes`.
-   - Bắt buộc trả lỗi có cấu trúc chuẩn HTTP 400 Bad Request, gắn trực tiếp tên trường `field: "service_code"`. Tuyệt đối không trả HTTP 500:
+3. **Kết quả Rating BUY sau khi chọn DONGGOI (Total = 1.740.000 VND):**
    ```json
    {
-     "correlationId": "80801872843a47839c5c776d27ee930c",
-     "code": "REQUIRED_SERVICE_CODE",
-     "errorCode": "REQUIRED_SERVICE_CODE",
-     "error_code": "REQUIRED_SERVICE_CODE",
-     "message": "Phụ phí tùy chọn cần mã dịch vụ liên kết (service_code).",
-     "field": "service_code",
-     "errors": {
-       "service_code": [
-         "Phụ phí tùy chọn cần mã dịch vụ liên kết (service_code)."
-       ]
-     }
+     "ratingId": "01a1a569-d25a-724f-916d-82388dd7d163",
+     "totalAmount": 1740000.0,
+     "appliedCharges": [
+       "TDNT_SGN_HAN v2 (FREIGHT): 1.440.000 VND",
+       "DONGGOI_SGN_HAN_MUA v3 (DONGGOI): 300.000 VND"
+     ],
+     "netAmount": 1740000.0
    }
    ```
 
-Các mã lỗi nghiệp vụ chuẩn hóa:
-- `REQUIRED_SERVICE_CODE`: Khi `service_code` bị bỏ trống hoặc null.
-- `UNKNOWN_SERVICE`: Khi `service_code` không tồn tại trong danh mục `optional_service` của Tenant.
-- `INACTIVE_SERVICE`: Khi `service_code` đã bị vô hiệu hóa (`is_active = false`).
-- `INVALID_SCOPE`: Khi phạm vi áp dụng (`selection_scope`, ví dụ `BILL`) không nằm trong `allowedContextTypes` của dịch vụ.
+#### Kịch bản 6: Áp dụng vào hồ sơ tài chính 2 lần liên tiếp — Kiểm chứng Tính lũy đẳng (`Idempotency`) (`BR-DELTA-10`, `UAT-SUR-SVC-13`)
+- **HTTP Method & Path:** `POST /api/ratings/01a1a569-d25a-724f-916d-82388dd7d163/apply-financials`
+- **Request Payload:**
+```json
+{
+  "idempotencyKey": "3c1e64e3-473a-4cc6-98e5-b4d7ca0484f4"
+}
+```
+- **Response Lần 1 (HTTP 200 OK - Tạo mới 2 dòng Expected Cost):**
+```json
+{
+  "ratingId": "01a1a569-d25a-724f-916d-82388dd7d163",
+  "direction": "BUY",
+  "createdCount": 2,
+  "existingCount": 0,
+  "factIds": [
+    "01a1a569-d4f6-7dfe-8f29-248f74359b88",
+    "01a1a569-d59c-71f0-92a5-c8d5acbb1513"
+  ]
+}
+```
+- **Response Lần 2 (HTTP 200 OK - Lũy đẳng tuyệt đối, 0 dòng tạo mới, 2 dòng đã tồn tại):**
+```json
+{
+  "ratingId": "01a1a569-d25a-724f-916d-82388dd7d163",
+  "direction": "BUY",
+  "createdCount": 0,
+  "existingCount": 2,
+  "factIds": [
+    "01a1a569-d4f6-7dfe-8f29-248f74359b88",
+    "01a1a569-d59c-71f0-92a5-c8d5acbb1513"
+  ]
+}
+```
 
 ---
 

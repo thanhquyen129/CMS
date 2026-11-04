@@ -7,6 +7,14 @@ import { PartyTypeahead } from "@/components/PartyTypeahead";
 
 type CardOption = { id: string; label: string };
 type ChargeTypeOption = { id: string; code: string; name: string };
+export type ActivationServiceOption = {
+  serviceCode: string;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+  allowedContextTypes: string[];
+  defaultUom: string;
+};
 
 export type SurchargeFormValues = {
   code?: string;
@@ -30,6 +38,7 @@ export type SurchargeFormValues = {
   activationPolicy?: string | null;
   approvalRef?: string | null;
   serviceCode?: string | null;
+  serviceDisplayName?: string | null;
   selectionScope?: string | null;
   predicateSourceField?: string | null;
   predicateOperator?: string | null;
@@ -40,6 +49,7 @@ export function SurchargeForm({
   cards,
   chargeTypes,
   modes,
+  activationServices = [],
   initial,
   surchargeId,
   versionId,
@@ -48,6 +58,7 @@ export function SurchargeForm({
   cards: CardOption[];
   modes: { value: string; label: string }[];
   chargeTypes: ChargeTypeOption[];
+  activationServices?: ActivationServiceOption[];
   initial?: SurchargeFormValues;
   surchargeId?: string;
   versionId?: string;
@@ -55,27 +66,40 @@ export function SurchargeForm({
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [activationPolicy, setActivationPolicy] = useState(initial?.activationPolicy ?? "OPTIONAL_OPT_IN");
+  const [serviceCode, setServiceCode] = useState(initial?.serviceCode ?? "");
+  const [selectionScope, setSelectionScope] = useState(initial?.selectionScope ?? "BILL");
+  const [basis, setBasis] = useState(initial?.basis ?? (activationPolicy === "OPTIONAL_OPT_IN" ? "per_bill" : "chargeable_weight"));
   const editing = Boolean(surchargeId && versionId);
 
-  async function onSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-    setBusy(true);
-    const fd = new FormData(e.currentTarget);
+  // Filter or augment activation services
+  const serviceOptions = [...activationServices];
+  if (serviceCode && !serviceOptions.some((s) => s.serviceCode.toUpperCase() === serviceCode.toUpperCase())) {
+    serviceOptions.unshift({
+      serviceCode,
+      displayName: initial?.serviceDisplayName || serviceCode,
+      description: null,
+      isActive: true,
+      allowedContextTypes: ["BILL", "SHIPMENT", "LEG"],
+      defaultUom: "PACKAGE",
+    });
+  }
+
+  function buildRequestBody(fd: FormData, willPublish: boolean) {
     const amount = Number(String(fd.get("rateAmountPercent") ?? "").replace(",", "."));
     if (!Number.isFinite(amount) || amount < 0) {
       setError("Đơn giá, số tiền hoặc phần trăm không hợp lệ.");
-      setBusy(false);
-      return;
+      return null;
     }
     const dg = String(fd.get("dangerousGoods") ?? "");
     const economicChargeTypeId = String(fd.get("economicChargeTypeId") ?? "").trim();
     if (!economicChargeTypeId) {
       setError("Chọn khoản mục kinh tế.");
-      setBusy(false);
-      return;
+      return null;
     }
     const direction = String(fd.get("direction") ?? "buy");
     const vendorPartyId = direction === "sell" ? null : String(fd.get("vendorPartyId") ?? "").trim() || null;
@@ -83,12 +107,11 @@ export function SurchargeForm({
     const customerGroupCode = direction === "buy" ? null : String(fd.get("customerGroupCode") ?? "").trim() || null;
     if (customerPartyId && customerGroupCode) {
       setError("Chọn khách hàng hoặc nhóm khách hàng, không cả hai.");
-      setBusy(false);
-      return;
+      return null;
     }
     const policy = String(fd.get("activationPolicy") ?? activationPolicy);
-    const serviceCode = String(fd.get("serviceCode") ?? "").trim() || null;
-    const selectionScope = String(fd.get("selectionScope") ?? "").trim() || null;
+    const selectedSvcCode = String(fd.get("serviceCode") ?? serviceCode ?? "").trim() || null;
+    const selectedScope = String(fd.get("selectionScope") ?? selectionScope ?? "").trim() || null;
     const predicateSourceField = String(fd.get("predicateSourceField") ?? "").trim();
     const predicates = predicateSourceField
       ? [{
@@ -98,12 +121,13 @@ export function SurchargeForm({
           unknownBehavior: "BLOCK_NEEDS_CONTEXT",
         }]
       : [];
-    const body = {
+
+    return {
       code: String(fd.get("code") ?? "").trim(),
       name: String(fd.get("name") ?? "").trim(),
       direction,
-      calculationMode: String(fd.get("calculationMode") ?? "unit_rate"),
-      basis: String(fd.get("basis") ?? "").trim() || null,
+      calculationMode: String(fd.get("calculationMode") ?? "fixed_rate"),
+      basis: String(fd.get("basis") ?? basis ?? "").trim() || null,
       currencyCode: String(fd.get("currencyCode") ?? "VND").trim().toUpperCase(),
       rateAmountPercent: amount,
       transportMode: String(fd.get("transportMode") ?? "").trim() || null,
@@ -112,7 +136,7 @@ export function SurchargeForm({
       rateCardId: String(fd.get("rateCardId") ?? "").trim() || null,
       validFrom: toOffset(fd.get("validFrom")),
       validTo: toOffset(fd.get("validTo")),
-      publish: fd.get("publish") === "on",
+      publish: willPublish,
       vatRate: parseVat(fd.get("vatRate")),
       economicChargeTypeId,
       vendorPartyId,
@@ -120,12 +144,30 @@ export function SurchargeForm({
       customerGroupCode,
       activationPolicy: policy,
       approvalRef: String(fd.get("approvalRef") ?? "").trim() || null,
+      serviceCode: selectedSvcCode,
+      selectionScope: selectedScope,
       activationConfig: {
-        serviceCode,
-        selectionScope,
+        serviceCode: selectedSvcCode,
+        selectionScope: selectedScope,
         predicates,
       },
     };
+  }
+
+  async function handleSaveDraft(form: HTMLFormElement) {
+    setError(null);
+    setFieldErrors({});
+    setWarnings([]);
+    setNotice(null);
+    setBusy(true);
+
+    const fd = new FormData(form);
+    const body = buildRequestBody(fd, false);
+    if (!body) {
+      setBusy(false);
+      return;
+    }
+
     try {
       const url = editing
         ? `/bff/surcharges/${surchargeId}/versions/${versionId}`
@@ -135,13 +177,129 @@ export function SurchargeForm({
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(body),
       });
-      const payload = (await res.json().catch(() => ({}))) as { message?: string; surchargeId?: string };
+      const payload = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        code?: string;
+        field?: string;
+        warnings?: string[];
+        surchargeId?: string;
+        versionId?: string;
+      };
+
       if (!res.ok) {
-        setError(payload.message || "Không lưu được phụ phí.");
+        if (payload.field) {
+          setFieldErrors({ [payload.field]: payload.message || "Dữ liệu không hợp lệ." });
+        }
+        setError(payload.message || "Không lưu được bản nháp phụ phí.");
         return;
       }
-      router.push(`/rate-cards/surcharges/${payload.surchargeId || surchargeId}`);
+
+      if (payload.warnings && payload.warnings.length > 0) {
+        setWarnings(payload.warnings);
+        setNotice("Bản nháp đã lưu thành công nhưng chưa đủ điều kiện phát hành.");
+      } else {
+        setNotice("Đã lưu bản nháp phụ phí thành công.");
+      }
       router.refresh();
+    } catch {
+      setError("Không kết nối được máy chủ.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePublish(form: HTMLFormElement) {
+    setError(null);
+    setFieldErrors({});
+    setWarnings([]);
+    setNotice(null);
+    setBusy(true);
+
+    const fd = new FormData(form);
+    const policy = String(fd.get("activationPolicy") ?? activationPolicy);
+    const selectedSvcCode = String(fd.get("serviceCode") ?? serviceCode ?? "").trim();
+
+    // Field-level client check before publish
+    if (policy === "OPTIONAL_OPT_IN" && !selectedSvcCode) {
+      setFieldErrors({ service_code: "Phụ phí tùy chọn cần mã dịch vụ liên kết (service_code)." });
+      setError("Phụ phí tùy chọn cần mã dịch vụ liên kết (service_code).");
+      setBusy(false);
+      return;
+    }
+
+    const body = buildRequestBody(fd, !editing);
+    if (!body) {
+      setBusy(false);
+      return;
+    }
+
+    try {
+      if (editing) {
+        // First save updated values
+        const putRes = await fetch(`/bff/surcharges/${surchargeId}/versions/${versionId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!putRes.ok) {
+          const putErr = (await putRes.json().catch(() => ({}))) as { message?: string; field?: string };
+          if (putErr.field) {
+            setFieldErrors({ [putErr.field]: putErr.message || "Lỗi lưu bản nháp." });
+          }
+          setError(putErr.message || "Không lưu được bản nháp trước khi phát hành.");
+          setBusy(false);
+          return;
+        }
+
+        // Now call publish endpoint
+        const pubRes = await fetch(`/bff/surcharges/${surchargeId}/versions/${versionId}/publish`, {
+          method: "POST",
+          headers: { Accept: "application/json" },
+        });
+        const pubPayload = (await pubRes.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+          field?: string;
+        };
+
+        if (!pubRes.ok) {
+          const field = pubPayload.field || (pubPayload.code === "REQUIRED_SERVICE_CODE" || pubPayload.code === "UNKNOWN_SERVICE" || pubPayload.code === "INACTIVE_SERVICE" ? "service_code" : undefined);
+          if (field) {
+            setFieldErrors({ [field]: pubPayload.message || "Mã dịch vụ không hợp lệ." });
+          }
+          setError(pubPayload.message || "Không thể phát hành phiên bản phụ phí.");
+          setBusy(false);
+          return;
+        }
+
+        router.push(`/rate-cards/surcharges/${surchargeId}`);
+        router.refresh();
+      } else {
+        // Creating new with publish=true
+        const res = await fetch("/bff/surcharges", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(body),
+        });
+        const payload = (await res.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+          field?: string;
+          surchargeId?: string;
+        };
+
+        if (!res.ok) {
+          if (payload.field) {
+            setFieldErrors({ [payload.field]: payload.message || "Dữ liệu không hợp lệ." });
+          }
+          setError(payload.message || "Không tạo được phụ phí.");
+          setBusy(false);
+          return;
+        }
+
+        router.push(`/rate-cards/surcharges/${payload.surchargeId}`);
+        router.refresh();
+      }
     } catch {
       setError("Không kết nối được máy chủ.");
     } finally {
@@ -152,7 +310,12 @@ export function SurchargeForm({
   const dgValue = initial?.dangerousGoods == null ? "" : initial.dangerousGoods ? "true" : "false";
 
   return (
-    <form onSubmit={onSubmit}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void handleSaveDraft(e.currentTarget);
+      }}
+    >
       <div className="form-grid">
         <div className="field">
           <label htmlFor="code">Mã <span className="req">*</span></label>
@@ -200,11 +363,18 @@ export function SurchargeForm({
             id="activationPolicy"
             name="activationPolicy"
             value={activationPolicy}
-            onChange={(e) => setActivationPolicy(e.target.value)}
+            onChange={(e) => {
+              const nextPolicy = e.target.value;
+              setActivationPolicy(nextPolicy);
+              setFieldErrors({});
+              if (nextPolicy === "OPTIONAL_OPT_IN" && !basis) {
+                setBasis("per_bill");
+              }
+            }}
           >
-            <option value="OPTIONAL_OPT_IN">Tùy chọn có xác nhận</option>
-            <option value="AUTO_CONDITIONAL">Tự động theo điều kiện dữ liệu</option>
-            <option value="MANDATORY_BY_POLICY">Bắt buộc theo chính sách</option>
+            <option value="OPTIONAL_OPT_IN">Tùy chọn có xác nhận (OPTIONAL_OPT_IN)</option>
+            <option value="AUTO_CONDITIONAL">Tự động theo điều kiện dữ liệu (AUTO_CONDITIONAL)</option>
+            <option value="MANDATORY_BY_POLICY">Bắt buộc theo chính sách (MANDATORY_BY_POLICY)</option>
           </select>
         </div>
         {activationPolicy === "MANDATORY_BY_POLICY" ? (
@@ -215,17 +385,55 @@ export function SurchargeForm({
         ) : null}
         {activationPolicy === "OPTIONAL_OPT_IN" ? (
           <>
-            <div className="field">
-              <label htmlFor="serviceCode">Mã dịch vụ liên kết <span className="req">*</span></label>
-              <input id="serviceCode" name="serviceCode" required maxLength={64} defaultValue={initial?.serviceCode ?? initial?.code ?? ""} />
-            </div>
-            <div className="field">
-              <label htmlFor="selectionScope">Phạm vi xác nhận</label>
-              <select id="selectionScope" name="selectionScope" defaultValue={initial?.selectionScope ?? "BILL"}>
-                <option value="BILL">Bill</option>
-                <option value="SHIPMENT">Shipment</option>
-                <option value="LEG">Chặng</option>
+            <div className={`field ${fieldErrors.service_code ? "field-has-error" : ""}`}>
+              <label htmlFor="serviceCode">Dịch vụ kích hoạt <span className="req">*</span></label>
+              <select
+                id="serviceCode"
+                name="serviceCode"
+                value={serviceCode}
+                onChange={(e) => {
+                  setServiceCode(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, service_code: "" }));
+                  setWarnings([]);
+                }}
+              >
+                <option value="">-- Chọn dịch vụ kích hoạt --</option>
+                {serviceOptions.map((svc) => (
+                  <option key={svc.serviceCode} value={svc.serviceCode}>
+                    {svc.serviceCode} — {svc.displayName} ({svc.allowedContextTypes.join(", ")} | {svc.defaultUom})
+                  </option>
+                ))}
               </select>
+              {fieldErrors.service_code ? (
+                <div id="service_code_error" className="field-error" style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem", fontWeight: 600 }}>
+                  {fieldErrors.service_code}
+                </div>
+              ) : !serviceCode ? (
+                <div className="alert alert-warning sm" style={{ marginTop: "0.25rem", padding: "0.35rem 0.5rem", fontSize: "0.85rem" }}>
+                  ⚠️ Cần chọn Dịch vụ kích hoạt trước khi phát hành phiên bản này. Bạn vẫn có thể Lưu nháp.
+                </div>
+              ) : null}
+            </div>
+            <div className={`field ${fieldErrors.selection_scope ? "field-has-error" : ""}`}>
+              <label htmlFor="selectionScope">Phạm vi lựa chọn <span className="req">*</span></label>
+              <select
+                id="selectionScope"
+                name="selectionScope"
+                value={selectionScope}
+                onChange={(e) => {
+                  setSelectionScope(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, selection_scope: "" }));
+                }}
+              >
+                <option value="BILL">Theo Vận đơn (BILL)</option>
+                <option value="SHIPMENT">Theo Lô hàng (SHIPMENT)</option>
+                <option value="LEG">Theo Chặng (LEG)</option>
+              </select>
+              {fieldErrors.selection_scope ? (
+                <div id="selection_scope_error" className="field-error" style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "0.25rem", fontWeight: 600 }}>
+                  {fieldErrors.selection_scope}
+                </div>
+              ) : null}
             </div>
           </>
         ) : null}
@@ -251,25 +459,26 @@ export function SurchargeForm({
         ) : null}
         <div className="field">
           <label htmlFor="calculationMode">Cách tính <span className="req">*</span></label>
-          <select id="calculationMode" name="calculationMode" defaultValue={initial?.calculationMode ?? "unit_rate"}>
-            <option value="unit_rate">Đơn giá × số lượng</option>
-            <option value="fixed_rate">Số tiền cố định</option>
-            <option value="container_rate">Theo container</option>
-            <option value="weight_break">Bậc trọng lượng</option>
-            <option value="percentage">Phần trăm cước chính</option>
-            <option value="composite">Công thức có sàn/trần</option>
+          <select id="calculationMode" name="calculationMode" defaultValue={initial?.calculationMode ?? "fixed_rate"}>
+            <option value="fixed_rate">Số tiền cố định (FIXED_RATE)</option>
+            <option value="unit_rate">Đơn giá × số lượng (UNIT_RATE)</option>
+            <option value="container_rate">Theo container (CONTAINER_RATE)</option>
+            <option value="weight_break">Bậc trọng lượng (WEIGHT_BREAK)</option>
+            <option value="percentage">Phần trăm cước chính (PERCENTAGE)</option>
+            <option value="composite">Công thức có sàn/trần (COMPOSITE)</option>
           </select>
         </div>
         <div className="field">
-          <label htmlFor="basis">Cơ sở tính</label>
-          <select id="basis" name="basis" defaultValue={initial?.basis ?? "chargeable_weight"}>
-            <option value="chargeable_weight">Trọng lượng tính cước</option>
-            <option value="gross_weight">Trọng lượng thực</option>
-            <option value="quantity">Số lượng</option>
-            <option value="per_bill">Theo Bill</option>
-            <option value="per_unit">Theo đơn vị</option>
-            <option value="per_shipment">Theo Shipment</option>
-            <option value="per_leg">Theo chặng</option>
+          <label htmlFor="basis">Cơ sở tính / Đơn vị tính số lượng</label>
+          <select id="basis" name="basis" value={basis} onChange={(e) => setBasis(e.target.value)}>
+            <option value="per_bill">Theo Vận đơn (PER_BILL)</option>
+            <option value="per_unit">Theo Đơn vị / Kiện (PER_UNIT)</option>
+            <option value="per_package">Theo Kiện bao gói (PER_PACKAGE)</option>
+            <option value="per_shipment">Theo Lô hàng (PER_SHIPMENT)</option>
+            <option value="per_leg">Theo Chặng (PER_LEG)</option>
+            <option value="chargeable_weight">Trọng lượng tính cước (CHARGEABLE_WEIGHT)</option>
+            <option value="gross_weight">Trọng lượng thực (GROSS_WEIGHT)</option>
+            <option value="quantity">Số lượng (QUANTITY)</option>
           </select>
         </div>
         <div className="field">
@@ -324,16 +533,40 @@ export function SurchargeForm({
           <input id="validTo" name="validTo" type="date" defaultValue={dateInput(initial?.validTo)} />
         </div>
       </div>
+
       {editing ? null : (
-        <label className="checkbox-field">
-          <input type="checkbox" name="publish" /> Phát hành ngay
+        <label className="checkbox-field" style={{ marginTop: "1rem" }}>
+          <input type="checkbox" name="publish" /> Phát hành ngay sau khi tạo
         </label>
       )}
-      {error ? <div className="alert alert-error" role="alert">{error}</div> : null}
-      <div className="cta-row">
+
+      {notice ? <div className="alert alert-success" role="status" style={{ marginTop: "1rem" }}>{notice}</div> : null}
+      {warnings.length > 0 ? (
+        <div className="alert alert-warning" role="alert" style={{ marginTop: "1rem" }}>
+          {warnings.map((w, idx) => (
+            <p key={idx} style={{ margin: "0.25rem 0" }}>⚠️ {w}</p>
+          ))}
+        </div>
+      ) : null}
+      {error ? <div className="alert alert-error" role="alert" style={{ marginTop: "1rem" }}>{error}</div> : null}
+
+      <div className="cta-row" style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem", alignItems: "center" }}>
         <button className="btn btn-primary" type="submit" disabled={busy}>
-          {busy ? "Đang lưu…" : editing ? "Lưu phiên bản nháp" : "Tạo phụ phí"}
+          {busy ? "Đang xử lý…" : editing ? "Lưu phiên bản nháp" : "Tạo phụ phí"}
         </button>
+        {editing ? (
+          <button
+            className="btn btn-success"
+            type="button"
+            disabled={busy}
+            onClick={(e) => {
+              const form = e.currentTarget.closest("form");
+              if (form) void handlePublish(form);
+            }}
+          >
+            Phát hành phiên bản
+          </button>
+        ) : null}
       </div>
     </form>
   );

@@ -48,6 +48,7 @@ public sealed class ExceptionHandlingMiddleware
         string message;
         object? errors = null;
         object? missing = null;
+        string? field = null;
 
         switch (exception)
         {
@@ -62,6 +63,7 @@ public sealed class ExceptionHandlingMiddleware
                 code = validation.ErrorCode;
                 message = validation.Message;
                 errors = validation.Errors;
+                field = validation.Field;
                 break;
             case AppException app:
                 statusCode = app.StatusCode;
@@ -87,9 +89,15 @@ public sealed class ExceptionHandlingMiddleware
         {
             ["correlationId"] = correlationId,
             ["code"] = code,
+            ["errorCode"] = code,
             ["error_code"] = code,
             ["message"] = message
         };
+
+        if (!string.IsNullOrEmpty(field))
+        {
+            payload["field"] = field;
+        }
 
         if (errors is not null)
         {

@@ -1,4 +1,8 @@
-﻿## 2026-11-03 — Gate verify LCMS-UAT-RATING-NEW-BILL-ERROR-01 (EntityBase + smoke + screenshots)
+## 2026-11-04 — P0: LCMS-UAT-SUR-OPTIONAL-SERVICE-CODE-01 (service_code link for OPTIONAL_OPT_IN surcharges)
+- Catalog `optional_service` in MasterCatalogItems with tenant seeding (DONGGOI, KIEMDEM, NANGHA, BAOHIEM). Added GET `/api/surcharges/activation-services` endpoint + BFF route. UI Combobox lookup on SurchargeForm with inline warning on draft and field-level error highlight on publish. Publish validation checks required/unknown/inactive/scope. 18/18 UAT-SUR-SVC and 33/33 parent regression tests PASS.
+- Files: `src/LCMS.Domain/Entities/MasterCatalogItem.cs`, `src/LCMS.Application/Surcharges/OptionalServiceCatalogSeeder.cs`, `src/LCMS.Application/Surcharges/ListActivationServicesQuery.cs`, `src/LCMS.Application/Surcharges/SurchargeCommands.cs`, `src/LCMS.Api/Endpoints/SurchargeEndpoints.cs`, `apps/web/components/SurchargeForm.tsx`, `apps/web/lib/rate-cards-server.ts`, `tests/LCMS.Api.Tests/SurchargeOptionalServiceCodeTests.cs`, `docs/po/04112026/LCMS_SUR_Optional_ServiceCode_P0_DEV_Handover_v1.0_20261104/`
+
+## 2026-11-03 — Gate verify LCMS-UAT-RATING-NEW-BILL-ERROR-01 (EntityBase + smoke + screenshots)
 - EntityBase cols ok trên 3 bảng (incl. `surcharge_activation_migration_audits.deleted_by`). UAT smoke BUY/SELL POST `/api/ratings` 201 + apply ×2 no-double; DEV UI screenshots 01–03 trên Bill `LSSTEST031126001`.
 - Files: `Docs/PO/03112026/LCMS_UAT_Rating_New_Bill_Error_01_Fix/` (README §§4–5, screenshots)
 

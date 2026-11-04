@@ -139,9 +139,10 @@ public static class SurchargeActivationValidator
         {
             if (string.IsNullOrWhiteSpace(config.ServiceCode))
             {
-                throw ValidationAppException.Coded(
+                throw ValidationAppException.CodedField(
+                    "service_code",
                     "Phụ phí tùy chọn cần mã dịch vụ liên kết (service_code).",
-                    "OPTIONAL_SERVICE_CODE_REQUIRED");
+                    "REQUIRED_SERVICE_CODE");
             }
         }
     }

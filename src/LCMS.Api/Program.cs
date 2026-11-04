@@ -198,6 +198,7 @@ static async Task MigrateDatabaseAsync(WebApplication app)
     await TenantAccessSeeder.SeedSystemRolesForAllTenantsAsync(db, CancellationToken.None);
     await TenantLicenseSeeder.EnsureForAllTenantsAsync(db, CancellationToken.None);
     await EconomicChargeCatalogSeeder.EnsureForDemoAndOpsTenantsAsync(db, CancellationToken.None);
+    await LCMS.Application.Surcharges.OptionalServiceCatalogSeeder.EnsureForAllTenantsAsync(db, CancellationToken.None);
 }
 
 static async Task SeedDemoIfEnabledAsync(WebApplication app)

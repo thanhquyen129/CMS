@@ -1,3 +1,4 @@
+using LCMS.Application.Surcharges;
 using FluentValidation;
 using LCMS.Application.Abstractions;
 using LCMS.Application.Catalog;
@@ -58,6 +59,7 @@ public sealed class CreateTenantCommandHandler : IRequestHandler<CreateTenantCom
         await TenantAccessSeeder.SeedAdminRoleAsync(_db, tenant.Id, cancellationToken);
         await TenantLicenseSeeder.EnsureForCurrentTenantAsync(_db, tenant.Id, cancellationToken);
         await TransportModeCatalog.EnsureBaselineAsync(_db, tenant.Id, cancellationToken);
+        await OptionalServiceCatalogSeeder.EnsureForTenantAsync(_db, tenant.Id, cancellationToken);
 
         return tenant.Id;
     }

@@ -8,6 +8,7 @@ export const CATALOG_KINDS: { id: string; label: string; group: "core" | "transp
   { id: "pricing_component", label: "Cấu phần cước chính", group: "other" },
   { id: "document_type", label: "Loại chứng từ", group: "other" },
   { id: "payment_term", label: "Điều khoản thanh toán", group: "other" },
+  { id: "optional_service", label: "Dịch vụ kích hoạt / bổ sung", group: "core" },
 ];
 
 export const LOCATION_CLASSES = [

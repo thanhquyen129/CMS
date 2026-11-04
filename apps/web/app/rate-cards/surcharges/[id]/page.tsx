@@ -7,7 +7,7 @@ import { SurchargeVersionActions } from "@/components/SurchargeVersionActions";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { fetchTerminology } from "@/lib/api";
 import { formatDateOnlyVi, formatDateTimeVi } from "@/lib/money";
-import { listEconomicChargeTypes, listRateCards, getSurcharge } from "@/lib/rate-cards-server";
+import { listEconomicChargeTypes, listRateCards, getSurcharge, listActivationServices } from "@/lib/rate-cards-server";
 import { unwrapPaged } from "@/lib/paging";
 import { listCatalog } from "@/lib/catalog";
 import { catalogModeOptions } from "@/lib/create-workspace";
@@ -39,6 +39,8 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
   const activeTypes = chargeTypes.ok ? chargeTypes.data.filter((row) => row.isActive) : [];
   const modeCatalog = await listCatalog("transport_mode");
   const modeOptions = catalogModeOptions(modeCatalog.ok ? modeCatalog.data : []);
+  const actRes = await listActivationServices(false);
+  const activationServices = actRes.ok ? actRes.data : [];
   const row = detail.data;
   const draft = row.versions.find((v) => v.publishStatus === "draft");
   const latestPublished = row.versions.find((v) => v.publishStatus === "published");
@@ -114,6 +116,7 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
               cards={options}
               chargeTypes={activeTypes}
               modes={modeOptions}
+              activationServices={activationServices}
               lockCode
               surchargeId={row.id}
               versionId={draft.id}
@@ -138,7 +141,8 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
                 customerGroupCode: rule.customerGroupCode,
                 activationPolicy: draft.activationPolicy,
                 approvalRef: draft.approvalRef,
-                serviceCode: row.code,
+                serviceCode: draft.serviceCode ?? null,
+                selectionScope: draft.selectionScope ?? "BILL",
               }}
             />
           </>

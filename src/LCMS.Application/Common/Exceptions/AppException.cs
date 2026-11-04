@@ -16,12 +16,14 @@ public abstract class AppException : Exception
 
 public sealed class ValidationAppException : AppException
 {
+    public string? Field { get; }
     public IReadOnlyDictionary<string, string[]> Errors { get; }
 
     public ValidationAppException(IReadOnlyDictionary<string, string[]> errors)
         : base("Dữ liệu không hợp lệ.", StatusCodes.BadRequest, "validation_failed")
     {
         Errors = errors;
+        Field = errors.Keys.FirstOrDefault(k => !string.IsNullOrEmpty(k));
     }
 
     public ValidationAppException(string vietnameseMessage)
@@ -33,11 +35,22 @@ public sealed class ValidationAppException : AppException
     public ValidationAppException(string field, string error)
         : base(error, StatusCodes.BadRequest, "validation_failed")
     {
+        Field = field;
         Errors = new Dictionary<string, string[]> { { field, new[] { error } } };
     }
 
     public static ValidationAppException Coded(string vietnameseMessage, string errorCode) =>
         new(vietnameseMessage, errorCode, coded: true);
+
+    public static ValidationAppException CodedField(string field, string vietnameseMessage, string errorCode) =>
+        new(field, vietnameseMessage, errorCode);
+
+    private ValidationAppException(string field, string vietnameseMessage, string errorCode)
+        : base(vietnameseMessage, StatusCodes.BadRequest, errorCode)
+    {
+        Field = field;
+        Errors = new Dictionary<string, string[]> { { field, new[] { vietnameseMessage } } };
+    }
 
     private ValidationAppException(string vietnameseMessage, string errorCode, bool coded)
         : base(vietnameseMessage, StatusCodes.BadRequest, errorCode)
@@ -88,8 +101,8 @@ public sealed class PeriodLockedAppException : AppException
 
 public sealed class ForbiddenAppException : AppException
 {
-    public ForbiddenAppException(string vietnameseMessage = "Bạn không có quyền thực hiện thao tác này.")
-        : base(vietnameseMessage, StatusCodes.Forbidden, "forbidden")
+    public ForbiddenAppException(string vietnameseMessage = "Bạn không có quyền thực hiện thao tác này.", string? errorCode = null)
+        : base(vietnameseMessage, StatusCodes.Forbidden, string.IsNullOrWhiteSpace(errorCode) ? "FORBIDDEN" : errorCode)
     {
     }
 }

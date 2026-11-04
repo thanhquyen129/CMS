@@ -198,7 +198,12 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
         if (request.Publish)
         {
             await SurchargeActivationFields.PreparePublishAsync(
-                _permissions, version, config, cancellationToken);
+                _db,
+                tenantId,
+                _permissions,
+                version,
+                config,
+                cancellationToken);
             version.PublishStatus = SurchargeVersionStatuses.Published;
             version.PublishedAt = DateTimeOffset.UtcNow;
             version.ValidFrom ??= version.PublishedAt;
@@ -213,6 +218,12 @@ public sealed class CreateSurchargeCommandHandler : IRequestHandler<CreateSurcha
     }
 }
 
+public sealed record UpdateSurchargeVersionResult(
+    Guid VersionId,
+    int VersionNo,
+    string Status,
+    IReadOnlyList<string> Warnings);
+
 public sealed record UpdateSurchargeVersionCommand(
     Guid SurchargeId,
     Guid VersionId,
@@ -225,9 +236,9 @@ public sealed record UpdateSurchargeVersionCommand(
     Guid? EconomicChargeTypeId = null,
     string? ActivationPolicy = null,
     ActivationConfigInput? ActivationConfig = null,
-    string? ApprovalRef = null) : IRequest<Guid>;
+    string? ApprovalRef = null) : IRequest<UpdateSurchargeVersionResult>;
 
-public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<UpdateSurchargeVersionCommand, Guid>
+public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<UpdateSurchargeVersionCommand, UpdateSurchargeVersionResult>
 {
     private readonly ILcmsDbContext _db;
     private readonly ITenantContext _tenant;
@@ -240,17 +251,17 @@ public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<Updat
         _permissions = permissions;
     }
 
-    public async Task<Guid> Handle(UpdateSurchargeVersionCommand request, CancellationToken cancellationToken)
+    public async Task<UpdateSurchargeVersionResult> Handle(UpdateSurchargeVersionCommand request, CancellationToken cancellationToken)
     {
         if (!_tenant.HasTenant)
         {
             throw new TenantRequiredAppException();
         }
 
-        var direction = request.Direction.Trim().ToLowerInvariant();
-        await SurchargeWriteGuard.EnsureDirectionAsync(_db, _permissions, direction, write: true, cancellationToken);
         var surcharge = await _db.Surcharges.FirstOrDefaultAsync(s => s.Id == request.SurchargeId, cancellationToken)
             ?? throw new NotFoundAppException("Không tìm thấy phụ phí.");
+        var direction = (string.IsNullOrWhiteSpace(request.Direction) ? surcharge.Direction : request.Direction).Trim().ToLowerInvariant();
+        await SurchargeWriteGuard.EnsureDirectionAsync(_db, _permissions, direction, write: true, cancellationToken);
         var version = await _db.SurchargeVersions.FirstOrDefaultAsync(
             v => v.Id == request.VersionId && v.SurchargeId == surcharge.Id,
             cancellationToken) ?? throw new NotFoundAppException("Không tìm thấy phiên bản phụ phí.");
@@ -259,7 +270,7 @@ public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<Updat
             throw new ConflictAppException("Phiên bản phụ phí đã phát hành bất biến. Hãy tạo phiên bản mới.");
         }
 
-        surcharge.Name = request.Name.Trim();
+        surcharge.Name = string.IsNullOrWhiteSpace(request.Name) ? surcharge.Name : request.Name.Trim();
         surcharge.Direction = direction;
         version.ValidFrom = request.ValidFrom;
         version.ValidTo = request.ValidTo;
@@ -293,7 +304,18 @@ public sealed class UpdateSurchargeVersionCommandHandler : IRequestHandler<Updat
         SurchargePartnerRules.Ensure(direction, request.Rule);
         await SurchargeGraph.ReplaceRulesAsync(_db, _tenant.TenantId!.Value, version.Id, request.Rule, cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
-        return version.Id;
+
+        var warnings = new List<string>();
+        if (string.Equals(version.ActivationPolicy, SurchargeActivationPolicies.OptionalOptIn, StringComparison.OrdinalIgnoreCase))
+        {
+            var conf = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
+            if (string.IsNullOrWhiteSpace(conf.ServiceCode))
+            {
+                warnings.Add("Phụ phí tùy chọn chưa có mã dịch vụ liên kết (service_code). Cần chọn dịch vụ kích hoạt trước khi phát hành phiên bản.");
+            }
+        }
+
+        return new UpdateSurchargeVersionResult(version.Id, version.VersionNo, version.PublishStatus, warnings);
     }
 }
 
@@ -380,7 +402,13 @@ public sealed class PublishSurchargeVersionCommandHandler : IRequestHandler<Publ
         }
 
         var config = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
-        await SurchargeActivationFields.PreparePublishAsync(_permissions, version, config, cancellationToken);
+        await SurchargeActivationFields.PreparePublishAsync(
+            _db,
+            _tenant.TenantId!.Value,
+            _permissions,
+            version,
+            config,
+            cancellationToken);
         version.PublishStatus = SurchargeVersionStatuses.Published;
         version.PublishedAt = DateTimeOffset.UtcNow;
         version.ValidFrom ??= version.PublishedAt;
@@ -817,6 +845,8 @@ internal static class SurchargeActivationFields
     }
 
     public static async Task PreparePublishAsync(
+        ILcmsDbContext db,
+        Guid tenantId,
         IPermissionService permissions,
         SurchargeVersion version,
         ActivationConfig config,
@@ -824,6 +854,51 @@ internal static class SurchargeActivationFields
     {
         version.ActivationPolicy = SurchargeActivationValidator.Normalize(version.ActivationPolicy);
         SurchargeActivationValidator.EnsurePublishable(version, config);
+
+        if (string.Equals(
+                version.ActivationPolicy,
+                SurchargeActivationPolicies.OptionalOptIn,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var serviceCode = config.ServiceCode!.Trim().ToUpperInvariant();
+            var serviceItem = await db.MasterCatalogItems.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(
+                    m => m.TenantId == tenantId
+                         && m.Kind == MasterCatalogKinds.OptionalService
+                         && m.Code == serviceCode
+                         && m.DeletedAt == null,
+                    cancellationToken);
+
+            if (serviceItem is null)
+            {
+                throw ValidationAppException.CodedField(
+                    "service_code",
+                    $"Mã dịch vụ liên kết '{serviceCode}' không tồn tại trong danh mục của thuê bao.",
+                    "UNKNOWN_SERVICE");
+            }
+
+            if (!serviceItem.IsActive)
+            {
+                throw ValidationAppException.CodedField(
+                    "service_code",
+                    $"Dịch vụ liên kết '{serviceCode}' đang ngừng hoạt động.",
+                    "INACTIVE_SERVICE");
+            }
+
+            if (!string.IsNullOrWhiteSpace(config.SelectionScope))
+            {
+                var scope = config.SelectionScope.Trim().ToUpperInvariant();
+                var allowed = OptionalServiceAttributesParser.Parse(serviceItem.AttributesJson).AllowedContextTypes;
+                if (!allowed.Contains(scope, StringComparer.OrdinalIgnoreCase) || !ServiceSelectionContexts.All.Contains(scope))
+                {
+                    throw ValidationAppException.CodedField(
+                        "selection_scope",
+                        $"Phạm vi lựa chọn '{scope}' không hợp lệ hoặc không thuộc phạm vi cho phép của dịch vụ ({string.Join(", ", allowed)}).",
+                        "INVALID_SCOPE");
+                }
+            }
+        }
+
         if (string.Equals(
                 version.ActivationPolicy,
                 SurchargeActivationPolicies.MandatoryByPolicy,

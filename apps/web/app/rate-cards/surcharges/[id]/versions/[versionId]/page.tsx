@@ -69,6 +69,24 @@ export default async function SurchargeVersionDetailPage({ params }: { params: P
             <tr><th>Phát hành lúc</th><td>{version.publishedAt ? formatDateTimeVi(version.publishedAt) : "—"}</td></tr>
             <tr><th>Khoản mục kinh tế</th><td>{version.economicChargeTypeCode ? `${version.economicChargeTypeCode} — ${version.economicChargeTypeName}` : "Chưa gắn"}</td></tr>
             <tr><th>Chính sách kích hoạt</th><td>{policyLabel(version.activationPolicy)}</td></tr>
+            {version.activationPolicy === "OPTIONAL_OPT_IN" || version.serviceCode ? (
+              <>
+                <tr>
+                  <th>Dịch vụ kích hoạt</th>
+                  <td>
+                    {version.serviceCode ? (
+                      <span><strong>{version.serviceCode}</strong>{version.serviceDisplayName ? ` — ${version.serviceDisplayName}` : ""}</span>
+                    ) : (
+                      <span className="muted">Chưa gắn</span>
+                    )}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Phạm vi lựa chọn</th>
+                  <td>{version.selectionScope || "BILL"}</td>
+                </tr>
+              </>
+            ) : null}
             <tr><th>Căn cứ phê duyệt</th><td>{version.approvalRef || "—"}</td></tr>
             <tr><th>Cấu hình kích hoạt</th><td><code>{version.activationConfigJson || "—"}</code></td></tr>
             <tr><th>Cách tính</th><td>{rule?.calculationMode || "—"}</td></tr>

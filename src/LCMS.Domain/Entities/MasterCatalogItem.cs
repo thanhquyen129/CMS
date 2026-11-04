@@ -32,11 +32,12 @@ public static class MasterCatalogKinds
     public const string TransportRoute = "transport_route";
     public const string TransportMode = "transport_mode";
     public const string Location = "location";
+    public const string OptionalService = "optional_service";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         CostType, RevenueType, ServiceType, PricingComponent, DocumentType, PaymentTerm,
-        TransportRoute, TransportMode, Location
+        TransportRoute, TransportMode, Location, OptionalService
     };
 
     public static readonly IReadOnlySet<string> LocationClasses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

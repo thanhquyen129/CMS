@@ -210,6 +210,9 @@ export type SurchargeVersionRow = {
   activationPolicy?: string;
   activationConfigJson?: string | null;
   approvalRef?: string | null;
+  serviceCode?: string | null;
+  serviceDisplayName?: string | null;
+  selectionScope?: string | null;
   rules: {
     id: string;
     calculationMode: string;
@@ -264,6 +267,20 @@ export type OptionalServiceOption = {
 
 export function listOptionalServiceOptions(): Promise<ApiResult<OptionalServiceOption[]>> {
   return apiGet<OptionalServiceOption[]>("/api/service-selections/optional-catalog");
+}
+
+
+export type ActivationServiceItem = {
+  serviceCode: string;
+  displayName: string;
+  description: string | null;
+  isActive: boolean;
+  allowedContextTypes: string[];
+  defaultUom: string;
+};
+
+export function listActivationServices(activeOnly: boolean = false): Promise<ApiResult<ActivationServiceItem[]>> {
+  return apiGet<ActivationServiceItem[]>(`/api/surcharges/activation-services?activeOnly=${activeOnly}`);
 }
 
 export function listAppendices(): Promise<ApiResult<AppendixRow[]>> {

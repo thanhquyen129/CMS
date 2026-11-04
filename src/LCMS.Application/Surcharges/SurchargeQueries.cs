@@ -39,7 +39,10 @@ public sealed record SurchargeVersionDto(
     string? ActivationConfigJson = null,
     string? ApprovalRef = null,
     Guid? ApprovedByUserId = null,
-    DateTimeOffset? ApprovedAt = null);
+    DateTimeOffset? ApprovedAt = null,
+    string? ServiceCode = null,
+    string? ServiceDisplayName = null,
+    string? SelectionScope = null);
 
 public sealed record SurchargeDetailDto(
     Guid Id,
@@ -95,6 +98,9 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
         var chargeTypes = await _db.EconomicChargeTypes.AsNoTracking()
             .Where(t => chargeTypeIds.Contains(t.Id))
             .ToDictionaryAsync(t => t.Id, cancellationToken);
+        var optionalCatalog = await _db.MasterCatalogItems.AsNoTracking()
+            .Where(m => m.Kind == MasterCatalogKinds.OptionalService)
+            .ToDictionaryAsync(m => m.Code, m => m.Name, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
         var versionDtos = versions.Select(version =>
         {
@@ -122,7 +128,9 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
                     scope?.CustomerGroupCode);
             }).ToList();
             chargeTypes.TryGetValue(version.EconomicChargeTypeId ?? Guid.Empty, out var chargeType);
-            return MapVersion(version, ruleDtos, chargeType);
+            var vConfig = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
+            optionalCatalog.TryGetValue(vConfig.ServiceCode ?? string.Empty, out var svcName);
+            return MapVersion(version, ruleDtos, chargeType, svcName);
         }).ToList();
 
         return new SurchargeDetailDto(
@@ -138,8 +146,11 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
     internal static SurchargeVersionDto MapVersion(
         SurchargeVersion version,
         IReadOnlyList<SurchargeRuleDto> ruleDtos,
-        EconomicChargeType? chargeType) =>
-        new(
+        EconomicChargeType? chargeType,
+        string? serviceDisplayName = null)
+    {
+        var config = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
+        return new(
             version.Id,
             version.VersionNo,
             version.PublishStatus,
@@ -155,7 +166,11 @@ public sealed class GetSurchargeQueryHandler : IRequestHandler<GetSurchargeQuery
             version.ActivationConfigJson,
             version.ApprovalRef,
             version.ApprovedByUserId,
-            version.ApprovedAt);
+            version.ApprovedAt,
+            config.ServiceCode,
+            serviceDisplayName ?? config.ServiceCode,
+            config.SelectionScope);
+    }
 }
 
 public sealed record GetSurchargeVersionQuery(Guid SurchargeId, Guid VersionId) : IRequest<SurchargeVersionDetailDto>;
@@ -233,12 +248,24 @@ public sealed class GetSurchargeVersionQueryHandler : IRequestHandler<GetSurchar
                 scope?.CustomerGroupCode);
         }).ToList();
 
+        string? serviceDisplayName = null;
+        var config = SurchargeActivationConfigParser.Parse(version.ActivationConfigJson);
+        if (!string.IsNullOrWhiteSpace(config.ServiceCode))
+        {
+            var item = await _db.MasterCatalogItems.AsNoTracking()
+                .FirstOrDefaultAsync(
+                    m => m.Kind == MasterCatalogKinds.OptionalService
+                         && m.Code == config.ServiceCode.Trim().ToUpperInvariant(),
+                    cancellationToken);
+            serviceDisplayName = item?.Name;
+        }
+
         return new SurchargeVersionDetailDto(
             surcharge.Id,
             surcharge.Code,
             surcharge.Name,
             surcharge.Direction,
-            GetSurchargeQueryHandler.MapVersion(version, ruleDtos, chargeType),
+            GetSurchargeQueryHandler.MapVersion(version, ruleDtos, chargeType, serviceDisplayName),
             version.IsPublished);
     }
 }

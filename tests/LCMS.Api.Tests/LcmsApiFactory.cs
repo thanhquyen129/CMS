@@ -45,6 +45,7 @@ public class LcmsApiFactory : WebApplicationFactory<Program>
         await db.Database.EnsureDeletedAsync();
         await db.Database.EnsureCreatedAsync();
         await CurrencyCatalogSeeder.EnsureBaselineAsync(db);
+        await LCMS.Application.Surcharges.OptionalServiceCatalogSeeder.EnsureForAllTenantsAsync(db);
     }
 
     protected override void Dispose(bool disposing)

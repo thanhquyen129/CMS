@@ -1,4 +1,5 @@
 using LCMS.Application.Surcharges;
+using LCMS.Domain.Entities;
 using MediatR;
 
 namespace LCMS.Api.Endpoints;
@@ -8,6 +9,8 @@ public static class SurchargeEndpoints
     public static IEndpointRouteBuilder MapSurchargeEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/surcharges").WithTags("Surcharges");
+        group.MapGet("/activation-services", async (bool? activeOnly, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new ListActivationServicesQuery(activeOnly), ct)));
         group.MapPost("/", async (SaveSurchargeRequest body, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(
@@ -42,7 +45,7 @@ public static class SurchargeEndpoints
             ISender sender,
             CancellationToken ct) =>
         {
-            await sender.Send(
+            var result = await sender.Send(
                 new UpdateSurchargeVersionCommand(
                     id,
                     versionId,
@@ -57,7 +60,7 @@ public static class SurchargeEndpoints
                     ToActivation(body),
                     body.ApprovalRef),
                 ct);
-            return Results.NoContent();
+            return Results.Ok(result);
         });
         group.MapPost("/{id:guid}/versions/{versionId:guid}/publish", async (
             Guid id,
@@ -135,19 +138,27 @@ public static class SurchargeEndpoints
 
     private static ActivationConfigInput? ToActivation(SaveSurchargeRequest body)
     {
-        if (body.ActivationConfig is not null)
-        {
-            return body.ActivationConfig;
-        }
+        var svc = !string.IsNullOrWhiteSpace(body.ServiceCode)
+            ? body.ServiceCode
+            : body.ActivationConfig?.ServiceCode;
+        var scope = !string.IsNullOrWhiteSpace(body.SelectionScope)
+            ? body.SelectionScope
+            : body.ActivationConfig?.SelectionScope;
+        var preds = body.Predicates ?? body.ActivationConfig?.Predicates;
+        var notes = body.ActivationConfig?.PolicyNotes;
 
-        if (string.IsNullOrWhiteSpace(body.ServiceCode)
-            && string.IsNullOrWhiteSpace(body.SelectionScope)
-            && (body.Predicates is null || body.Predicates.Count == 0))
+        if (string.IsNullOrWhiteSpace(svc)
+            && string.IsNullOrWhiteSpace(scope)
+            && (preds is null || preds.Count == 0))
         {
+            if (string.Equals(body.ActivationPolicy, SurchargeActivationPolicies.OptionalOptIn, StringComparison.OrdinalIgnoreCase))
+            {
+                return new ActivationConfigInput(null, scope, preds, notes);
+            }
             return null;
         }
 
-        return new ActivationConfigInput(body.ServiceCode, body.SelectionScope, body.Predicates);
+        return new ActivationConfigInput(svc, scope, preds, notes);
     }
 }
 

@@ -92,11 +92,18 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
                 <td>v{version.versionNo}</td>
                 <td>{version.economicChargeTypeCode ? `${version.economicChargeTypeCode} — ${version.economicChargeTypeName}` : "Chưa gắn"}</td>
                 <td>{version.publishStatus === "published" ? "Đã phát hành" : "Nháp"}</td>
-                <td>{version.activationPolicy || "—"}</td>
+                <td>
+                  <span>{version.activationPolicy || "—"}</span>
+                  {version.serviceCode ? (
+                    <span className="muted" style={{ display: "block", fontSize: "0.85em" }}>
+                      ({version.serviceCode} · {version.selectionScope || "BILL"})
+                    </span>
+                  ) : null}
+                </td>
                 <td>{formatDateOnlyVi(version.validFrom)}</td>
                 <td>{formatDateOnlyVi(version.validTo)}</td>
                 <td>{version.publishedAt ? formatDateTimeVi(version.publishedAt) : "—"}</td>
-                <td>{version.rules.map((item) => item.calculationMode).join(", ") || "—"}</td>
+                <td>{version.rules.map((item) => (item.calculationMode === "fixed_rate" ? "fixed" : item.calculationMode)).join(", ") || "—"}</td>
                 <td>{version.rules.map((item) => `${item.rateAmountPercent} ${item.currencyCode}`).join(", ") || "—"}</td>
                 <td>
                   {version.publishStatus === "published" ? (
@@ -146,6 +153,41 @@ export default async function SurchargeDetailPage({ params }: { params: Params }
               }}
             />
           </>
+        ) : latestPublished ? (
+          <div className="card" style={{ marginTop: "1.5rem", padding: "1.25rem", border: "1px solid var(--border, #e2e8f0)", borderRadius: "8px", background: "var(--bg-subtle, #f8fafc)" }}>
+            <h2 style={{ fontSize: "1.2rem", marginTop: 0, marginBottom: "1rem", color: "#0f172a" }}>
+              Chi tiết phiên bản đã phát hành: v{latestPublished.versionNo} (Chỉ đọc)
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+              <div>
+                <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>Trạng thái phát hành</span>
+                <strong>Đã phát hành (Read-only)</strong>
+              </div>
+              <div>
+                <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>Chính sách kích hoạt</span>
+                <strong>{latestPublished.activationPolicy || "—"}</strong>
+              </div>
+              <div>
+                <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>Dịch vụ kích hoạt</span>
+                <strong>{latestPublished.serviceCode ? `${latestPublished.serviceCode} — Đóng gói hàng hóa` : "Không yêu cầu"}</strong>
+              </div>
+              <div>
+                <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>Phạm vi lựa chọn</span>
+                <strong>{latestPublished.selectionScope || "BILL"}</strong>
+              </div>
+              <div>
+                <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>Khoản mục kinh tế</span>
+                <strong>{latestPublished.economicChargeTypeCode ? `${latestPublished.economicChargeTypeCode} — ${latestPublished.economicChargeTypeName}` : "Chưa gắn"}</strong>
+              </div>
+              <div>
+                <span className="muted" style={{ display: "block", fontSize: "0.85rem" }}>Đơn giá / Tỷ lệ</span>
+                <strong>{latestPublished.rules.map((item) => `${item.rateAmountPercent} ${item.currencyCode} (${item.calculationMode === "fixed_rate" ? "fixed" : item.calculationMode})`).join(", ") || "—"}</strong>
+              </div>
+            </div>
+            <p className="muted" style={{ marginTop: "1rem", marginBottom: 0, fontStyle: "italic" }}>
+              Phiên bản đã phát hành là bất biến (Read-only). Bấm &quot;Tạo phiên bản mới&quot; để thay đổi đơn giá hoặc điều kiện áp dụng.
+            </p>
+          </div>
         ) : (
           <p className="muted">Phiên bản đã phát hành giữ nguyên. Bấm tạo phiên bản mới để đổi đơn giá hoặc điều kiện.</p>
         )}
